@@ -8,7 +8,8 @@ Goal: when `Hide Locked Teleports` is enabled and Shortest Path chooses a locked
 
 Current implementation status:
 - Drew-side outbound support is implemented. Locked minigame statuses are converted into `blockedTransportKeys`, included in `ShortestPathBridge.buildConfigOverride`, and sent on normal route refresh/replay.
-- Drew replays the saved/current target once when posted Shortest Path telemetry still contains a locked transport, with a signature guard so the old jar is not spammed if it ignores the new key.
+- Drew first replays the saved/current target with the exact blocked list when posted Shortest Path telemetry still contains a locked transport.
+- If the same locked minigame route survives that exact replay, Drew escalates to the stock Shortest Path category hook `useTeleportationMinigames=false` for that reroute signature. This is a real reroute with the active jar, but it disables all minigame teleports.
 - The Shortest Path-side source patch is staged at `docs/patches/shortest-path-blocked-transport-keys.patch` against `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea` / Plugin Hub Shortest Path `1.20.6`.
 
 ## Important Constraint
@@ -53,7 +54,8 @@ Shortest Path-side patch contents:
 Drew-side work completed:
 - Convert locked minigame statuses into blocked transport keys.
 - Include those keys in `ShortestPathBridge.buildConfigOverride`.
-- When a posted route contains a locked route, replay the saved/current target with the blocked list.
+- When a posted route contains a locked route, replay the saved/current target with the blocked list first.
+- When stock Shortest Path ignores that exact list and posts the same locked minigame route again, send `useTeleportationMinigames=false` as the temporary broad fallback.
 - Add tests that verify blocked keys are sent only when `Hide Locked Teleports` is enabled.
 
 Next concrete steps:
@@ -64,7 +66,7 @@ Next concrete steps:
 
 ## Temporary Fallback
 
-If a full Shortest Path patch is too much for one pass, a blunt fallback can temporarily disable a whole category when the current route uses a locked transport. Example: a locked minigame route can trigger `useTeleportationMinigames=false`.
+Implemented for minigame teleports. If the exact `blockedTransportKeys` replay does not change the route and the same locked minigame route is posted again, Drew temporarily disables the whole minigame teleport category with `useTeleportationMinigames=false`.
 
 This is not exact enough for the final behavior because it also blocks minigame teleports that Drew has already confirmed unlocked.
 

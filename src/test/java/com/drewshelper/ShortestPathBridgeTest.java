@@ -118,6 +118,16 @@ public class ShortestPathBridgeTest
     }
 
     @Test
+    public void canDisableMinigameTeleportCategoryForFallbackReroute()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig() {},
+            Arrays.asList("teleportation_minigames:nightmare_zone"), true);
+
+        assertEquals(false, overrides.get("useTeleportationMinigames"));
+        assertEquals(Arrays.asList("teleportation_minigames:nightmare_zone"), overrides.get("blockedTransportKeys"));
+    }
+
+    @Test
     public void omitsBlockedTransportKeysWhenFilteringDisabled()
     {
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()

@@ -18,7 +18,10 @@
 - Added Drew-side exact blocked-transport config support: scanned locked minigames now become `blockedTransportKeys` such as `teleportation_minigames:nightmare_zone`.
 - Added a guarded reroute replay when posted Shortest Path telemetry still contains a locked transport.
 - Added `docs/patches/shortest-path-blocked-transport-keys.patch`, a source patch for Shortest Path `1.20.6` / `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea`.
+- Adjusted the overlay so `Current Route Step` stays left/white and the `X/Y` step count renders right/orange like the other stat rows.
+- Added a stock-jar fallback for locked minigame routes: after one exact `blockedTransportKeys` replay is ignored, Drew sends `useTeleportationMinigames=false` for the active reroute signature so Shortest Path recalculates without minigame teleports.
+- Added a bridge test for the minigame-category fallback override.
 
 ## Open Technical Note
 
-Exact locked-route rerouting is wired on Drew's side but still depends on running the patched Shortest Path build. The stock installed Shortest Path jar safely ignores `blockedTransportKeys`, so do not claim active exact rerouting until the patched/forked jar is installed and tested.
+Exact locked-route rerouting is wired on Drew's side but still depends on running the patched Shortest Path build. The stock installed Shortest Path jar safely ignores `blockedTransportKeys`; Drew now escalates to `useTeleportationMinigames=false` after that exact replay fails, which is a real but broad fallback. Do not claim active exact per-destination rerouting until the patched/forked jar is installed and tested.

@@ -58,8 +58,9 @@ final class DrewsHelperOverlay extends OverlayPanel
         if (snapshot.isEmpty())
         {
             panelComponent.getChildren().add(LineComponent.builder()
-                .left("Current Route Step 0/0")
-                .leftColor(WARNING)
+                .left("Current Route Step")
+                .right("0/0")
+                .rightColor(WARNING)
                 .build());
             addMinigameScanLine();
             addLockedRoutesLine(snapshot);
@@ -67,11 +68,11 @@ final class DrewsHelperOverlay extends OverlayPanel
         }
 
         int currentStep = transports.isEmpty() ? 0 : 1;
-        Color routeStepColor = getRouteStepColor(transports);
 
         panelComponent.getChildren().add(LineComponent.builder()
-            .left("Current Route Step " + currentStep + "/" + transports.size())
-            .leftColor(routeStepColor)
+            .left("Current Route Step")
+            .right(currentStep + "/" + transports.size())
+            .rightColor(WARNING)
             .build());
         for (int i = 0; i < transports.size(); i++)
         {
@@ -101,18 +102,6 @@ final class DrewsHelperOverlay extends OverlayPanel
         }
 
         return transports;
-    }
-
-    private Color getRouteStepColor(List<RouteTransport> transports)
-    {
-        if (transports.isEmpty())
-        {
-            return WARNING;
-        }
-
-        return teleportAvailabilityService.isAvailable(transports.get(0), config)
-            ? READY_GREEN
-            : WARNING;
     }
 
     private void addMinigameScanLine()

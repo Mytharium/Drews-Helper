@@ -64,14 +64,15 @@ public class DrewsHelperPlugin extends Plugin
     private int gameTicks;
     private int routeRefreshBurstTicks;
     private boolean replaySavedTargetDuringBurst;
-    private String lastLockedRouteRerouteSignature;
+    private String lastExactLockedRouteRerouteSignature;
+    private String activeMinigameCategoryFallbackSignature;
 
     @Override
     protected void startUp()
     {
         gameTicks = 0;
         routeRefreshBurstTicks = 0;
-        lastLockedRouteRerouteSignature = "";
+        clearLockedRouteRerouteState();
         routeTransportState.update(sessionState.loadRouteSnapshot());
         minigameTeleportUnlockState.restore(sessionState.loadMinigameStatuses());
         overlayManager.remove(teleportHighlightOverlay);
@@ -116,7 +117,7 @@ public class DrewsHelperPlugin extends Plugin
         if (minigameTeleportUnlockState.scanVisibleInterface(client))
         {
             sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
-            lastLockedRouteRerouteSignature = "";
+            clearLockedRouteRerouteState();
             scheduleRouteRefreshBurst(true);
             return;
         }
@@ -159,7 +160,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         if ("drewshelper".equals(event.getGroup()))
         {
-            lastLockedRouteRerouteSignature = "";
+            clearLockedRouteRerouteState();
             scheduleRouteRefreshBurst(false);
         }
     }
@@ -182,13 +183,21 @@ public class DrewsHelperPlugin extends Plugin
             {
                 OptionalInt target = includeSavedTarget ? getRouteReplayTarget() : OptionalInt.empty();
                 Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
+                boolean disableMinigameTeleports = isMinigameCategoryFallbackActive(target, blockedTransportKeys);
                 if (target.isPresent())
                 {
-                    shortestPathBridge.requestPath(config, target, blockedTransportKeys);
+                    shortestPathBridge.requestPath(
+                        config,
+                        target,
+                        blockedTransportKeys,
+                        disableMinigameTeleports);
                 }
                 else
                 {
-                    shortestPathBridge.requestTransportFeed(config, blockedTransportKeys);
+                    shortestPathBridge.requestTransportFeed(
+                        config,
+                        blockedTransportKeys,
+                        disableMinigameTeleports);
                 }
             }
             catch (RuntimeException ex)
@@ -215,19 +224,28 @@ public class DrewsHelperPlugin extends Plugin
 
         OptionalInt target = getRouteReplayTarget();
         String rerouteSignature = buildRerouteSignature(target, blockedTransportKeys);
-        if (rerouteSignature.equals(lastLockedRouteRerouteSignature))
+        if (rerouteSignature.equals(activeMinigameCategoryFallbackSignature))
         {
             return;
         }
 
-        lastLockedRouteRerouteSignature = rerouteSignature;
-        if (target.isPresent())
+        boolean useMinigameCategoryFallback = rerouteSignature.equals(lastExactLockedRouteRerouteSignature);
+        if (useMinigameCategoryFallback)
         {
-            shortestPathBridge.requestPath(config, target, blockedTransportKeys);
+            activeMinigameCategoryFallbackSignature = rerouteSignature;
         }
         else
         {
-            shortestPathBridge.requestTransportFeed(config, blockedTransportKeys);
+            lastExactLockedRouteRerouteSignature = rerouteSignature;
+        }
+
+        if (target.isPresent())
+        {
+            shortestPathBridge.requestPath(config, target, blockedTransportKeys, useMinigameCategoryFallback);
+        }
+        else
+        {
+            shortestPathBridge.requestTransportFeed(config, blockedTransportKeys, useMinigameCategoryFallback);
         }
     }
 
@@ -249,12 +267,33 @@ public class DrewsHelperPlugin extends Plugin
         return routeTransportState.getSnapshot().getLastTransportDestinationPacked();
     }
 
+    private boolean isMinigameCategoryFallbackActive(OptionalInt target, Set<String> blockedTransportKeys)
+    {
+        if (activeMinigameCategoryFallbackSignature.isEmpty())
+        {
+            return false;
+        }
+
+        return !target.isPresent()
+            || activeMinigameCategoryFallbackSignature.equals(buildRerouteSignature(target, blockedTransportKeys));
+    }
+
+    private void clearLockedRouteRerouteState()
+    {
+        lastExactLockedRouteRerouteSignature = "";
+        activeMinigameCategoryFallbackSignature = "";
+    }
+
     private static String buildRerouteSignature(OptionalInt target, Set<String> blockedTransportKeys)
     {
         List<String> sortedKeys = new ArrayList<>(blockedTransportKeys);
         Collections.sort(sortedKeys);
-        return (target.isPresent() ? String.valueOf(target.getAsInt()) : "current")
-            + "|" + String.join(",", sortedKeys);
+        return buildTargetSignature(target) + "|" + String.join(",", sortedKeys);
+    }
+
+    private static String buildTargetSignature(OptionalInt target)
+    {
+        return target.isPresent() ? String.valueOf(target.getAsInt()) : "current";
     }
 
     String getEnabledFeatureSummary()

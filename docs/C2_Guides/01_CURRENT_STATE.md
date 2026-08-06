@@ -16,6 +16,7 @@ Last updated: 2026-08-06.
 - Per-destination minigame statuses persist across logout, world hop, and client restart.
 - The in-game overlay now reports minigame state as `Minigame Teleports: X/18 Unlocked`.
 - Drew converts scanned locked minigames into stable Shortest Path transport keys such as `teleportation_minigames:nightmare_zone`, sends them as `config.blockedTransportKeys`, and replays the saved/current target once when posted telemetry still contains a locked route.
+- If stock Shortest Path posts the same locked minigame route after that exact-key replay, Drew escalates to the supported category fallback `useTeleportationMinigames=false` so the active jar can do a real recalculation today.
 - A source patch for Shortest Path `1.20.6` / `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea` is staged at `docs/patches/shortest-path-blocked-transport-keys.patch`.
 
 ## Current Overlay Layout
@@ -24,7 +25,7 @@ Expected route overlay shape:
 
 ```text
 Drew's Helper
-Current Route Step 1/3
+Current Route Step       1/3
 1. Nightmare Zone Minigame Teleport
 2. Bounty Hunter Minigame Teleport
 3. Spirit tree -> Tree Gnome Village
@@ -52,4 +53,6 @@ Shortest Path currently exposes plugin-message control for:
 
 The installed Shortest Path config supports category-level transport toggles/costs such as boats, ships, spirit trees, fairy rings, minigame teleports, POH, spells, items, portals, and similar groups.
 
-The stock installed jar still does not consume `blockedTransportKeys`; it safely ignores that unknown override. Exact per-destination rerouting becomes active after applying and running the staged Shortest Path patch/fork. Until that patched Shortest Path build is installed, Drew can identify/list locked routes and reroute whole disabled categories that Shortest Path already exposes, but the individual minigame block list will not change the stock pathfinder result.
+The stock installed jar still does not consume `blockedTransportKeys`; it safely ignores that unknown override. Exact per-destination rerouting becomes active after applying and running the staged Shortest Path patch/fork.
+
+Until that patched Shortest Path build is installed, Drew falls back to Shortest Path's supported `useTeleportationMinigames=false` setting after it sees the same locked minigame route survive one exact-key replay. That produces a real recalculation with the stock jar, but it blocks the whole minigame teleport category, including any minigames Drew has already confirmed unlocked.

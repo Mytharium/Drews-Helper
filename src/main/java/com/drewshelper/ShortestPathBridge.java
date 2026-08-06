@@ -33,6 +33,7 @@ final class ShortestPathBridge
     private static final String POH_JEWELLERY_BOX_TIER_KEY = "pohJewelleryBoxTier";
     private static final String USE_FAIRY_RINGS_KEY = "useFairyRings";
     private static final String USE_SPIRIT_TREES_KEY = "useSpiritTrees";
+    private static final String USE_TELEPORTATION_MINIGAMES_KEY = "useTeleportationMinigames";
     private static final String OBJECT_INFO_KEY = "objectInfo";
     private static final String DISPLAY_INFO_KEY = "displayInfo";
 
@@ -53,7 +54,15 @@ final class ShortestPathBridge
 
     void requestTransportFeed(DrewsHelperConfig config, Collection<String> blockedTransportKeys)
     {
-        requestPath(config, OptionalInt.empty(), blockedTransportKeys);
+        requestTransportFeed(config, blockedTransportKeys, false);
+    }
+
+    void requestTransportFeed(
+        DrewsHelperConfig config,
+        Collection<String> blockedTransportKeys,
+        boolean disableMinigameTeleports)
+    {
+        requestPath(config, OptionalInt.empty(), blockedTransportKeys, disableMinigameTeleports);
     }
 
     void requestPath(DrewsHelperConfig config, OptionalInt targetPacked)
@@ -63,8 +72,17 @@ final class ShortestPathBridge
 
     void requestPath(DrewsHelperConfig config, OptionalInt targetPacked, Collection<String> blockedTransportKeys)
     {
+        requestPath(config, targetPacked, blockedTransportKeys, false);
+    }
+
+    void requestPath(
+        DrewsHelperConfig config,
+        OptionalInt targetPacked,
+        Collection<String> blockedTransportKeys,
+        boolean disableMinigameTeleports)
+    {
         Map<String, Object> data = new HashMap<>();
-        data.put(CONFIG_KEY, buildConfigOverride(config, blockedTransportKeys));
+        data.put(CONFIG_KEY, buildConfigOverride(config, blockedTransportKeys, disableMinigameTeleports));
 
         Player localPlayer = client.getLocalPlayer();
         if (localPlayer != null)
@@ -96,6 +114,14 @@ final class ShortestPathBridge
 
     static Map<String, Object> buildConfigOverride(DrewsHelperConfig config, Collection<String> blockedTransportKeys)
     {
+        return buildConfigOverride(config, blockedTransportKeys, false);
+    }
+
+    static Map<String, Object> buildConfigOverride(
+        DrewsHelperConfig config,
+        Collection<String> blockedTransportKeys,
+        boolean disableMinigameTeleports)
+    {
         Map<String, Object> configOverride = new HashMap<>();
         configOverride.put(POST_TRANSPORTS_KEY, true);
 
@@ -119,6 +145,10 @@ final class ShortestPathBridge
         configOverride.put(POH_JEWELLERY_BOX_TIER_KEY, jewelleryBoxTier.toString());
         configOverride.put(USE_FAIRY_RINGS_KEY, config.fairyRingsUnlocked());
         configOverride.put(USE_SPIRIT_TREES_KEY, config.spiritTreesUnlocked());
+        if (disableMinigameTeleports)
+        {
+            configOverride.put(USE_TELEPORTATION_MINIGAMES_KEY, false);
+        }
 
         List<String> normalizedBlockedKeys = normalizedBlockedTransportKeys(blockedTransportKeys);
         if (!normalizedBlockedKeys.isEmpty())
