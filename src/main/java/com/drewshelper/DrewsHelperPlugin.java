@@ -67,6 +67,7 @@ public class DrewsHelperPlugin extends Plugin
     private boolean replaySavedTargetDuringBurst;
     private String lastExactLockedRouteRerouteSignature;
     private String activeMinigameCategoryFallbackSignature;
+    private int lastMinigameFallbackCorrectionTick;
 
     @Override
     protected void startUp()
@@ -109,6 +110,7 @@ public class DrewsHelperPlugin extends Plugin
             if (shouldSuppressUnavailableTransportSnapshot(snapshot))
             {
                 log.debug("Ignoring locked Shortest Path snapshot while Drew minigame fallback is active");
+                requestActiveMinigameFallbackCorrection();
                 return;
             }
 
@@ -257,6 +259,36 @@ public class DrewsHelperPlugin extends Plugin
         }
     }
 
+    private void requestActiveMinigameFallbackCorrection()
+    {
+        if (gameTicks == lastMinigameFallbackCorrectionTick)
+        {
+            return;
+        }
+
+        Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
+        if (blockedTransportKeys.isEmpty())
+        {
+            return;
+        }
+
+        OptionalInt target = getRouteReplayTarget();
+        if (!isMinigameCategoryFallbackActive(target, blockedTransportKeys))
+        {
+            return;
+        }
+
+        lastMinigameFallbackCorrectionTick = gameTicks;
+        if (target.isPresent())
+        {
+            shortestPathBridge.requestPath(config, target, blockedTransportKeys, true);
+        }
+        else
+        {
+            shortestPathBridge.requestTransportFeed(config, blockedTransportKeys, true);
+        }
+    }
+
     private void saveShortestPathTarget(OptionalInt pathTarget, boolean drewRequest)
     {
         if (!drewRequest && !sessionState.loadShortestPathTarget().equals(pathTarget))
@@ -314,13 +346,8 @@ public class DrewsHelperPlugin extends Plugin
 
     private OptionalInt getRouteReplayTarget()
     {
-        OptionalInt savedTarget = sessionState.loadShortestPathTarget();
-        if (savedTarget.isPresent())
-        {
-            return savedTarget;
-        }
-
-        return routeTransportState.getSnapshot().getLastTransportDestinationPacked();
+        // Transport destinations are intermediate route steps, not the final path target.
+        return sessionState.loadShortestPathTarget();
     }
 
     private boolean isMinigameCategoryFallbackActive(OptionalInt target, Set<String> blockedTransportKeys)
@@ -338,6 +365,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         lastExactLockedRouteRerouteSignature = "";
         activeMinigameCategoryFallbackSignature = "";
+        lastMinigameFallbackCorrectionTick = -1;
     }
 
     private static String buildRerouteSignature(OptionalInt target, Set<String> blockedTransportKeys)
