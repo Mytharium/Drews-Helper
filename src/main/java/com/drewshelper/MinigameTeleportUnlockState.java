@@ -1,8 +1,9 @@
 package com.drewshelper;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,26 +36,33 @@ final class MinigameTeleportUnlockState
             return false;
         }
 
-        int scanned = 0;
-        boolean changed = false;
-        for (Widget row : MinigameTeleportWidgets.findVisibleDestinationWidgets(client))
+        Map<String, MinigameTeleportStatus> scannedDestinations = new HashMap<>();
+        for (Widget row : MinigameTeleportWidgets.findVisibleScanWidgets(client))
         {
-            String destination = MinigameTeleportNames.destinationName(row);
-            String key = MinigameTeleportNames.normalize(destination);
+            String text = MinigameTeleportNames.allWidgetText(row);
+            List<String> destinations = MinigameTeleportNames.knownDestinationNames(text);
+            if (destinations.size() != 1)
+            {
+                continue;
+            }
+
+            String key = MinigameTeleportNames.normalize(destinations.get(0));
             if (key.isEmpty())
             {
                 continue;
             }
 
             MinigameTeleportStatus status = inferStatus(row, client);
-            changed |= recordNormalized(key, status);
-            scanned++;
+            scannedDestinations.merge(key, status, MinigameTeleportUnlockState::mergeStatus);
         }
 
-        if (scanned > 0)
+        boolean changed = false;
+        for (Map.Entry<String, MinigameTeleportStatus> entry : scannedDestinations.entrySet())
         {
-            lastScanRows = scanned;
+            changed |= recordNormalized(entry.getKey(), entry.getValue());
         }
+
+        lastScanRows = scannedDestinations.size();
         return changed;
     }
 
@@ -98,6 +106,16 @@ final class MinigameTeleportUnlockState
         return statuses.size();
     }
 
+    int getAvailableDestinationCount()
+    {
+        return countStatus(MinigameTeleportStatus.AVAILABLE);
+    }
+
+    int getLockedDestinationCount()
+    {
+        return countStatus(MinigameTeleportStatus.LOCKED);
+    }
+
     int getLastScanRows()
     {
         return lastScanRows;
@@ -105,7 +123,16 @@ final class MinigameTeleportUnlockState
 
     Map<String, MinigameTeleportStatus> snapshotStatuses()
     {
-        return Collections.unmodifiableMap(new HashMap<>(statuses));
+        Map<String, MinigameTeleportStatus> lockedStatuses = new HashMap<>();
+        for (Map.Entry<String, MinigameTeleportStatus> entry : statuses.entrySet())
+        {
+            if (entry.getValue() == MinigameTeleportStatus.LOCKED)
+            {
+                lockedStatuses.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return Collections.unmodifiableMap(lockedStatuses);
     }
 
     void restore(Map<String, MinigameTeleportStatus> restoredStatuses)
@@ -119,14 +146,17 @@ final class MinigameTeleportUnlockState
 
         for (Map.Entry<String, MinigameTeleportStatus> entry : restoredStatuses.entrySet())
         {
-            record(entry.getKey(), entry.getValue());
+            if (entry.getValue() == MinigameTeleportStatus.LOCKED)
+            {
+                record(entry.getKey(), entry.getValue());
+            }
         }
         lastScanRows = statuses.size();
     }
 
     private boolean recordNormalized(String key, MinigameTeleportStatus status)
     {
-        if (key.isEmpty() || status == null)
+        if (key.isEmpty() || status == null || status == MinigameTeleportStatus.UNKNOWN)
         {
             return false;
         }
@@ -163,8 +193,7 @@ final class MinigameTeleportUnlockState
     private static MinigameTeleportStatus inferStatus(Widget row)
     {
         String text = MinigameTeleportNames.normalize(MinigameTeleportNames.allWidgetText(row));
-        if (containsAny(text, "locked", "requirement", "requirements", "requires", "not unlocked",
-            "not completed", "cannot teleport", "not eligible", "unavailable"))
+        if (looksLocked(text))
         {
             return MinigameTeleportStatus.LOCKED;
         }
@@ -195,13 +224,7 @@ final class MinigameTeleportUnlockState
             return true;
         }
 
-        Widget[] children = widget.getNestedChildren();
-        if (children == null)
-        {
-            return false;
-        }
-
-        for (Widget child : children)
+        for (Widget child : MinigameTeleportWidgets.getAllChildren(widget))
         {
             if (hasUsableAction(child))
             {
@@ -225,13 +248,7 @@ final class MinigameTeleportUnlockState
             return true;
         }
 
-        Widget[] children = widget.getNestedChildren();
-        if (children == null)
-        {
-            return false;
-        }
-
-        for (Widget child : children)
+        for (Widget child : MinigameTeleportWidgets.getAllChildren(widget))
         {
             if (hasDisabledTextColor(child))
             {
@@ -252,6 +269,44 @@ final class MinigameTeleportUnlockState
         String normalized = action.toLowerCase(Locale.ROOT);
         return normalized.contains("teleport")
             || normalized.contains("join");
+    }
+
+    private static MinigameTeleportStatus mergeStatus(
+        MinigameTeleportStatus current,
+        MinigameTeleportStatus candidate)
+    {
+        if (current == MinigameTeleportStatus.LOCKED || candidate == MinigameTeleportStatus.LOCKED)
+        {
+            return MinigameTeleportStatus.LOCKED;
+        }
+
+        if (current == MinigameTeleportStatus.AVAILABLE || candidate == MinigameTeleportStatus.AVAILABLE)
+        {
+            return MinigameTeleportStatus.AVAILABLE;
+        }
+
+        return MinigameTeleportStatus.UNKNOWN;
+    }
+
+    static boolean looksLocked(String normalizedText)
+    {
+        return containsAny(normalizedText, "locked", "requirement", "requirements", "requires", "required",
+            "not unlocked", "not completed", "cannot teleport", "not eligible", "unavailable",
+            "completion", "completions", "speak to", "quest boss", "combat level");
+    }
+
+    private int countStatus(MinigameTeleportStatus status)
+    {
+        int count = 0;
+        for (MinigameTeleportStatus savedStatus : statuses.values())
+        {
+            if (savedStatus == status)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static boolean containsAny(String text, String... needles)

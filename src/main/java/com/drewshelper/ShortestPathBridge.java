@@ -6,10 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.PluginMessage;
 
@@ -20,6 +22,7 @@ final class ShortestPathBridge
     private static final String PATH_ACTION = "path";
     private static final String TRANSPORTS_ACTION = "transports";
     private static final String START_KEY = "start";
+    private static final String TARGET_KEY = "target";
     private static final String CONFIG_KEY = "config";
     private static final String POST_TRANSPORTS_KEY = "postTransports";
     private static final String USE_POH_KEY = "usePoh";
@@ -41,6 +44,11 @@ final class ShortestPathBridge
 
     void requestTransportFeed(DrewsHelperConfig config)
     {
+        requestPath(config, OptionalInt.empty());
+    }
+
+    void requestPath(DrewsHelperConfig config, OptionalInt targetPacked)
+    {
         Map<String, Object> data = new HashMap<>();
         data.put(CONFIG_KEY, buildConfigOverride(config));
 
@@ -49,6 +57,10 @@ final class ShortestPathBridge
         {
             data.put(START_KEY, localPlayer.getWorldLocation());
         }
+        if (targetPacked != null && targetPacked.isPresent())
+        {
+            data.put(TARGET_KEY, targetPacked.getAsInt());
+        }
 
         eventBus.post(new PluginMessage(SHORTEST_PATH_NAMESPACE, PATH_ACTION, data));
     }
@@ -56,6 +68,11 @@ final class ShortestPathBridge
     Optional<RouteTransportSnapshot> parseTransportMessage(PluginMessage event)
     {
         return parseTransportSnapshot(event);
+    }
+
+    OptionalInt parsePathTarget(PluginMessage event)
+    {
+        return parsePathTargetMessage(event);
     }
 
     static Map<String, Object> buildConfigOverride(DrewsHelperConfig config)
@@ -100,15 +117,35 @@ final class ShortestPathBridge
 
         List<?> objectInfos = listValue(data.get(OBJECT_INFO_KEY));
         List<?> displayInfos = listValue(data.get(DISPLAY_INFO_KEY));
+        List<?> destinations = listValue(data.get("destination"));
         int count = Math.max(objectInfos.size(), displayInfos.size());
 
         List<RouteTransport> transports = new ArrayList<>(count);
         for (int i = 0; i < count; i++)
         {
-            transports.add(new RouteTransport(stringAt(objectInfos, i), stringAt(displayInfos, i)));
+            transports.add(new RouteTransport(
+                stringAt(objectInfos, i),
+                stringAt(displayInfos, i),
+                packedWorldPointAt(destinations, i)));
         }
 
         return Optional.of(new RouteTransportSnapshot(transports));
+    }
+
+    static OptionalInt parsePathTargetMessage(PluginMessage event)
+    {
+        if (!SHORTEST_PATH_NAMESPACE.equals(event.getNamespace()) || !PATH_ACTION.equals(event.getName()))
+        {
+            return OptionalInt.empty();
+        }
+
+        Map<String, Object> data = event.getData();
+        if (data == null)
+        {
+            return OptionalInt.empty();
+        }
+
+        return packedWorldPoint(data.get(TARGET_KEY));
     }
 
     private static List<?> listValue(Object value)
@@ -130,5 +167,50 @@ final class ShortestPathBridge
 
         Object value = values.get(index);
         return value == null ? "" : String.valueOf(value);
+    }
+
+    private static int packedWorldPointAt(List<?> values, int index)
+    {
+        if (index >= values.size())
+        {
+            return -1;
+        }
+
+        return packedWorldPoint(values.get(index)).orElse(-1);
+    }
+
+    private static OptionalInt packedWorldPoint(Object value)
+    {
+        if (value instanceof Integer)
+        {
+            int packedPoint = (Integer) value;
+            return packedPoint == -1 ? OptionalInt.empty() : OptionalInt.of(packedPoint);
+        }
+
+        if (value instanceof WorldPoint)
+        {
+            return OptionalInt.of(packWorldPoint((WorldPoint) value));
+        }
+
+        if (value instanceof Iterable<?>)
+        {
+            for (Object item : (Iterable<?>) value)
+            {
+                OptionalInt packedPoint = packedWorldPoint(item);
+                if (packedPoint.isPresent())
+                {
+                    return packedPoint;
+                }
+            }
+        }
+
+        return OptionalInt.empty();
+    }
+
+    private static int packWorldPoint(WorldPoint point)
+    {
+        return (point.getX() & 0x7FFF)
+            | ((point.getY() & 0x7FFF) << 15)
+            | ((point.getPlane() & 0x3) << 30);
     }
 }

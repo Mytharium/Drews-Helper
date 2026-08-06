@@ -1,20 +1,29 @@
 package com.drewshelper;
 
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.regex.Pattern;
 
 final class RouteTransport
 {
+    private static final int UNDEFINED_WORLD_POINT = -1;
     private static final Pattern HTML_TAG = Pattern.compile("<[^>]+>");
     private static final int MAX_DISPLAY_LENGTH = 48;
 
     private final String objectInfo;
     private final String displayInfo;
+    private final int destinationPacked;
 
     RouteTransport(String objectInfo, String displayInfo)
     {
+        this(objectInfo, displayInfo, UNDEFINED_WORLD_POINT);
+    }
+
+    RouteTransport(String objectInfo, String displayInfo, int destinationPacked)
+    {
         this.objectInfo = clean(objectInfo);
         this.displayInfo = clean(displayInfo);
+        this.destinationPacked = destinationPacked;
     }
 
     String getObjectInfo()
@@ -25,6 +34,13 @@ final class RouteTransport
     String getDisplayInfo()
     {
         return displayInfo;
+    }
+
+    OptionalInt getDestinationPacked()
+    {
+        return destinationPacked == UNDEFINED_WORLD_POINT
+            ? OptionalInt.empty()
+            : OptionalInt.of(destinationPacked);
     }
 
     boolean hasInstruction()
@@ -86,12 +102,14 @@ final class RouteTransport
             return false;
         }
         RouteTransport other = (RouteTransport) obj;
-        return objectInfo.equals(other.objectInfo) && displayInfo.equals(other.displayInfo);
+        return destinationPacked == other.destinationPacked
+            && objectInfo.equals(other.objectInfo)
+            && displayInfo.equals(other.displayInfo);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(objectInfo, displayInfo);
+        return Objects.hash(objectInfo, displayInfo, destinationPacked);
     }
 }

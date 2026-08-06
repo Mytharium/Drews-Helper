@@ -1,8 +1,11 @@
 package com.drewshelper;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import net.runelite.api.widgets.Widget;
 
 final class MinigameTeleportNames
@@ -64,7 +67,7 @@ final class MinigameTeleportNames
         }
 
         List<String> texts = new ArrayList<>();
-        collectText(widget, texts);
+        collectText(widget, texts, Collections.newSetFromMap(new IdentityHashMap<>()));
         for (String text : texts)
         {
             String clean = clean(text);
@@ -80,7 +83,7 @@ final class MinigameTeleportNames
     static String allWidgetText(Widget widget)
     {
         List<String> texts = new ArrayList<>();
-        collectText(widget, texts);
+        collectText(widget, texts, Collections.newSetFromMap(new IdentityHashMap<>()));
         return String.join(" ", texts);
     }
 
@@ -105,22 +108,29 @@ final class MinigameTeleportNames
 
     static String knownDestinationName(String text)
     {
+        List<String> destinations = knownDestinationNames(text);
+        return destinations.isEmpty() ? "" : destinations.get(0);
+    }
+
+    static List<String> knownDestinationNames(String text)
+    {
         String normalized = normalize(text);
         if (normalized.isEmpty())
         {
-            return "";
+            return Collections.emptyList();
         }
 
+        List<String> matches = new ArrayList<>();
         for (String destination : KNOWN_DESTINATIONS)
         {
             String key = normalize(destination);
             if (matchesDestination(normalized, key))
             {
-                return destination;
+                matches.add(destination);
             }
         }
 
-        return "";
+        return matches;
     }
 
     static boolean matchesDestination(String normalizedA, String normalizedB)
@@ -145,20 +155,12 @@ final class MinigameTeleportNames
             return 0;
         }
 
-        int count = 0;
-        for (String destination : KNOWN_DESTINATIONS)
-        {
-            if (matchesDestination(normalized, normalize(destination)))
-            {
-                count++;
-            }
-        }
-        return count;
+        return knownDestinationNames(normalized).size();
     }
 
-    private static void collectText(Widget widget, List<String> texts)
+    private static void collectText(Widget widget, List<String> texts, Set<Widget> visited)
     {
-        if (widget == null || widget.isHidden())
+        if (!MinigameTeleportWidgets.isVisible(widget) || !visited.add(widget))
         {
             return;
         }
@@ -175,15 +177,9 @@ final class MinigameTeleportNames
             texts.add(name);
         }
 
-        Widget[] children = widget.getNestedChildren();
-        if (children == null)
+        for (Widget child : MinigameTeleportWidgets.getAllChildren(widget))
         {
-            return;
-        }
-
-        for (Widget child : children)
-        {
-            collectText(child, texts);
+            collectText(child, texts, visited);
         }
     }
 

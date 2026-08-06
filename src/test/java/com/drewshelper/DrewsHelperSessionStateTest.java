@@ -14,8 +14,8 @@ public class DrewsHelperSessionStateTest
     public void roundTripsSavedRouteSnapshot()
     {
         RouteTransportSnapshot snapshot = new RouteTransportSnapshot(Arrays.asList(
-            new RouteTransport("Games necklace", "Burthorpe"),
-            new RouteTransport("Minigame Teleport", "Nightmare Zone")));
+            new RouteTransport("Games necklace", "Burthorpe", 114691924),
+            new RouteTransport("Minigame Teleport", "Nightmare Zone", 111555555)));
 
         RouteTransportSnapshot restored = DrewsHelperSessionState.decodeRouteSnapshot(
             DrewsHelperSessionState.encodeRouteSnapshot(snapshot));
@@ -23,6 +23,7 @@ public class DrewsHelperSessionStateTest
         assertEquals(2, restored.size());
         assertEquals("Games necklace -> Burthorpe", restored.getTransports().get(0).toDisplayLine());
         assertEquals("Minigame Teleport -> Nightmare Zone", restored.getTransports().get(1).toDisplayLine());
+        assertEquals(111555555, restored.getLastTransportDestinationPacked().getAsInt());
     }
 
     @Test
@@ -45,5 +46,26 @@ public class DrewsHelperSessionStateTest
 
         assertEquals(MinigameTeleportStatus.LOCKED, restored.get("nightmare zone"));
         assertEquals(MinigameTeleportStatus.AVAILABLE, restored.get("giants foundry"));
+    }
+
+    @Test
+    public void decodesOldTwoColumnRouteSnapshots()
+    {
+        String oldSnapshot = "R2FtZXMgbmVja2xhY2U,QnVydGhvcnBl";
+
+        RouteTransportSnapshot restored = DrewsHelperSessionState.decodeRouteSnapshot(oldSnapshot);
+
+        assertEquals(1, restored.size());
+        assertFalse(restored.getLastTransportDestinationPacked().isPresent());
+    }
+
+    @Test
+    public void roundTripsShortestPathTarget()
+    {
+        String encoded = DrewsHelperSessionState.encodeShortestPathTarget(112187530);
+
+        assertEquals(112187530, DrewsHelperSessionState.decodeShortestPathTarget(encoded).getAsInt());
+        assertFalse(DrewsHelperSessionState.decodeShortestPathTarget("").isPresent());
+        assertFalse(DrewsHelperSessionState.decodeShortestPathTarget("bad").isPresent());
     }
 }

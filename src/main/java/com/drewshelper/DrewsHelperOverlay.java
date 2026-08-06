@@ -140,21 +140,34 @@ final class DrewsHelperOverlay extends OverlayPanel
 
     private void addMinigameScanLine()
     {
-        int known = minigameTeleportUnlockState.getKnownDestinationCount();
-        if (known == 0)
+        int visibleRows = minigameTeleportUnlockState.getLastScanRows();
+        int available = minigameTeleportUnlockState.getAvailableDestinationCount();
+        int locked = minigameTeleportUnlockState.getLockedDestinationCount();
+        int known = available + locked;
+        if (visibleRows == 0 && known == 0)
         {
             panelComponent.getChildren().add(LineComponent.builder()
                 .left("Minigames")
-                .right("Open UI to scan")
+                .right("Open UI")
                 .rightColor(WARNING)
+                .build());
+            return;
+        }
+
+        if (visibleRows == 0)
+        {
+            panelComponent.getChildren().add(LineComponent.builder()
+                .left("Minigames")
+                .right(available + " ok / " + locked + " locked")
+                .rightColor(locked > 0 ? WARNING : READY_GREEN)
                 .build());
             return;
         }
 
         panelComponent.getChildren().add(LineComponent.builder()
             .left("Minigames")
-            .right(known + " known")
-            .rightColor(READY_GREEN)
+            .right(visibleRows + " visible; " + available + " ok / " + locked + " locked")
+            .rightColor(locked > 0 ? WARNING : READY_GREEN)
             .build());
     }
 }

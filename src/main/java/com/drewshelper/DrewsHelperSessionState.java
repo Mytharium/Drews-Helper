@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.StringJoiner;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -19,6 +20,7 @@ final class DrewsHelperSessionState
 {
     private static final String CONFIG_GROUP = "drewshelper";
     private static final String LAST_ROUTE_KEY = "lastRouteSnapshot";
+    private static final String LAST_SHORTEST_PATH_TARGET_KEY = "lastShortestPathTarget";
     private static final String MINIGAME_STATUS_KEY = "minigameTeleportStatuses";
     private static final int MAX_SAVED_TRANSPORTS = 32;
 
@@ -43,6 +45,21 @@ final class DrewsHelperSessionState
         }
 
         configManager.setConfiguration(CONFIG_GROUP, LAST_ROUTE_KEY, encodeRouteSnapshot(snapshot));
+    }
+
+    OptionalInt loadShortestPathTarget()
+    {
+        return decodeShortestPathTarget(configManager.getConfiguration(CONFIG_GROUP, LAST_SHORTEST_PATH_TARGET_KEY));
+    }
+
+    void saveShortestPathTarget(int packedTarget)
+    {
+        if (packedTarget == -1)
+        {
+            return;
+        }
+
+        configManager.setConfiguration(CONFIG_GROUP, LAST_SHORTEST_PATH_TARGET_KEY, encodeShortestPathTarget(packedTarget));
     }
 
     Map<String, MinigameTeleportStatus> loadMinigameStatuses()
@@ -74,7 +91,12 @@ final class DrewsHelperSessionState
                 continue;
             }
 
-            rows.add(encode(transport.getObjectInfo()) + "," + encode(transport.getDisplayInfo()));
+            String destination = transport.getDestinationPacked().isPresent()
+                ? String.valueOf(transport.getDestinationPacked().getAsInt())
+                : "";
+            rows.add(encode(transport.getObjectInfo()) + ","
+                + encode(transport.getDisplayInfo()) + ","
+                + destination);
             saved++;
             if (saved >= MAX_SAVED_TRANSPORTS)
             {
@@ -97,14 +119,17 @@ final class DrewsHelperSessionState
         for (String row : rows)
         {
             String[] columns = row.split(",", -1);
-            if (columns.length != 2)
+            if (columns.length != 2 && columns.length != 3)
             {
                 continue;
             }
 
             try
             {
-                transports.add(new RouteTransport(decode(columns[0]), decode(columns[1])));
+                transports.add(new RouteTransport(
+                    decode(columns[0]),
+                    decode(columns[1]),
+                    columns.length == 3 ? decodePackedWorldPoint(columns[2]) : -1));
             }
             catch (IllegalArgumentException ex)
             {
@@ -113,6 +138,22 @@ final class DrewsHelperSessionState
         }
 
         return transports.isEmpty() ? RouteTransportSnapshot.EMPTY : new RouteTransportSnapshot(transports);
+    }
+
+    static String encodeShortestPathTarget(int packedTarget)
+    {
+        return String.valueOf(packedTarget);
+    }
+
+    static OptionalInt decodeShortestPathTarget(String value)
+    {
+        if (value == null || value.trim().isEmpty())
+        {
+            return OptionalInt.empty();
+        }
+
+        int packedTarget = decodePackedWorldPoint(value);
+        return packedTarget == -1 ? OptionalInt.empty() : OptionalInt.of(packedTarget);
     }
 
     static String encodeMinigameStatuses(Map<String, MinigameTeleportStatus> statuses)
@@ -164,5 +205,24 @@ final class DrewsHelperSessionState
     private static String decode(String value)
     {
         return new String(Base64.getUrlDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    private static int decodePackedWorldPoint(String value)
+    {
+        if (value == null || value.trim().isEmpty())
+        {
+            return -1;
+        }
+
+        try
+        {
+            int packedPoint = Integer.parseInt(value.trim());
+            return packedPoint == -1 ? -1 : packedPoint;
+        }
+        catch (NumberFormatException ex)
+        {
+            log.debug("Ignoring invalid saved shortest path target", ex);
+            return -1;
+        }
     }
 }

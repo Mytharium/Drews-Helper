@@ -13,7 +13,7 @@ This build establishes the plugin shell, Plugin Hub metadata, local RuneLite lau
 - Shortest Path transport-feed bridge with config overrides for early in-game route telemetry
 - Drew's Helper overlay showing the active route feed, next unlocked transport, hidden locked transports, minigame scan state, and first route transports
 - Minigame/grouping teleport UI scanner/highlighter for the magic tab/spell, matching destination row, current Grouping selection, and teleport button
-- Session restore for the last route transport feed and scanned minigame teleport statuses after plugin toggle, logout, or client restart
+- Session restore for the last route transport feed, Quest Helper/Shortest Path target messages, and scanned minigame teleport statuses after plugin toggle, logout, or client restart
 
 ## Build
 
@@ -43,13 +43,13 @@ If the overlay stays on `Route Feed: Waiting`, Shortest Path has not produced a 
 2. Leave `Hide Locked Teleports` checked.
 3. Set a Shortest Path destination that recommends a minigame teleport.
 4. Open the magic tab. Drew's Helper should highlight the minigame teleport spell.
-5. Open the minigame/grouping teleport interface. Drew's Helper scans the visible destination rows and the current Grouping selection.
-6. Watch the overlay for `Minigames: <n> known`.
+5. Open the minigame/grouping teleport interface. Drew's Helper scans destination rows that are currently visible in the scroll window.
+6. Watch the overlay for `Minigames: <visible> visible; <ok> ok / <locked> locked`.
 7. If the recommended destination is not the current Grouping selection, open the dropdown so Drew's Helper can scan/highlight the matching destination.
 8. If the recommended destination is the current Grouping selection, Drew's Helper highlights the destination and the Teleport button.
 9. If the recommended destination is detected as locked, Drew's Helper marks it as locked/hidden locally and highlights the matching row in warning color while the interface is open.
 
-Unknown minigame destinations are not treated as locked. Drew's Helper only blocks a minigame destination after the game interface has exposed that exact row as locked or unavailable.
+Unknown minigame destinations are not treated as locked. Drew's Helper only blocks a minigame destination after the game interface has exposed that exact visible row as locked or unavailable. Highlight boxes are clipped to the minigame window, so offscreen scrolled rows are not highlighted.
 
 ## Test Session Restore
 
@@ -58,5 +58,8 @@ Unknown minigame destinations are not treated as locked. Drew's Helper only bloc
 3. Toggle Drew's Helper off, then back on.
 4. The overlay should restore the previous route immediately, then refresh it from Shortest Path within the next few ticks.
 5. Log out and back in with the same client open. Drew's Helper should request a fresh feed immediately after login instead of waiting for the normal refresh interval.
+6. For Quest Helper routes, Drew's Helper captures the `shortestpath/path` target message and replays that target after login so the Shortest Path marker/path is set again.
+
+Manual Shortest Path map-click targets are internal to Shortest Path and are not published in its transport feed. Until Shortest Path publishes those targets, Drew's Helper can only replay a best-effort target from the last saved transport destination for manual routes.
 
 Publishing notes are in `docs/PUBLISHING.md`.

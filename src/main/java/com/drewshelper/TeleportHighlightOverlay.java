@@ -64,7 +64,10 @@ final class TeleportHighlightOverlay extends Overlay
         }
 
         MinigameTeleportStatus status = minigameTeleportUnlockState.getStatus(routeTransport.get());
-        if (status != MinigameTeleportStatus.LOCKED && !renderFirstVisibleSpellWidget(graphics))
+        boolean minigameInterfaceOpen = MinigameTeleportWidgets.isMinigameInterfaceOpen(client);
+        if (!minigameInterfaceOpen
+            && status != MinigameTeleportStatus.LOCKED
+            && !renderFirstVisibleSpellWidget(graphics))
         {
             renderFirstVisibleMagicTab(graphics);
         }
@@ -128,13 +131,11 @@ final class TeleportHighlightOverlay extends Overlay
 
         Color outline = status == MinigameTeleportStatus.LOCKED ? LOCKED : HIGHLIGHT;
         Color fill = status == MinigameTeleportStatus.LOCKED ? LOCKED_FILL : HIGHLIGHT_FILL;
-        boolean renderedDestination = false;
         for (Widget row : MinigameTeleportWidgets.findVisibleDestinationWidgets(client))
         {
             if (MinigameTeleportWidgets.matchesDestination(row, destination))
             {
                 renderWidget(graphics, row, outline, fill);
-                renderedDestination = true;
             }
         }
 
@@ -145,23 +146,16 @@ final class TeleportHighlightOverlay extends Overlay
             renderWidget(graphics, MinigameTeleportWidgets.getGroupingTeleportButton(client), outline, fill);
             return;
         }
-
-        if (!renderedDestination && isVisible(currentGame))
-        {
-            renderWidget(graphics, currentGame, LOCKED, LOCKED_FILL);
-            Widget dropdown = MinigameTeleportWidgets.getGroupingDropdown(client);
-            renderWidget(graphics, dropdown == null ? currentGame : dropdown, LOCKED, LOCKED_FILL);
-        }
     }
 
     private static boolean renderWidget(Graphics2D graphics, Widget widget, Color outline, Color fill)
     {
-        if (!isVisible(widget))
+        Rectangle bounds = MinigameTeleportWidgets.visibleBounds(widget);
+        if (bounds == null)
         {
             return false;
         }
 
-        Rectangle bounds = widget.getBounds();
         Rectangle highlightBounds = new Rectangle(bounds);
         highlightBounds.grow(2, 2);
 
@@ -173,16 +167,5 @@ final class TeleportHighlightOverlay extends Overlay
         graphics.draw(highlightBounds);
         graphics.setStroke(previousStroke);
         return true;
-    }
-
-    private static boolean isVisible(Widget widget)
-    {
-        if (widget == null || widget.isHidden())
-        {
-            return false;
-        }
-
-        Rectangle bounds = widget.getBounds();
-        return bounds != null && bounds.width > 0 && bounds.height > 0;
     }
 }

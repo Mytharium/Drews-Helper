@@ -3,6 +3,7 @@ package com.drewshelper;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
@@ -13,8 +14,11 @@ import net.runelite.api.widgets.WidgetInfo;
 
 final class MinigameTeleportWidgets
 {
-    private static final int MAX_DESTINATION_WIDGET_HEIGHT = 80;
-    private static final int MAX_DESTINATION_WIDGET_WIDTH = 520;
+    private static final int MINIGAMES_GROUP = WidgetInfo.TO_GROUP(InterfaceID.Minigames.UNIVERSE);
+    private static final int GROUPING_GROUP = WidgetInfo.TO_GROUP(InterfaceID.Grouping.UNIVERSE);
+    private static final int MAX_HIGHLIGHT_WIDGET_HEIGHT = 140;
+    private static final int MAX_HIGHLIGHT_WIDGET_WIDTH = 900;
+    private static final int MIN_VISIBLE_WIDGET_SIZE = 4;
 
     static final int[] SPELL_WIDGETS = {
         InterfaceID.MagicSpellbook.TELEPORT_MINIGAME_STANDARD,
@@ -69,34 +73,47 @@ final class MinigameTeleportWidgets
 
     static List<Widget> findVisibleDestinationWidgets(Client client)
     {
+        return findVisibleKnownDestinationWidgets(client, true);
+    }
+
+    static List<Widget> findVisibleScanWidgets(Client client)
+    {
+        return findVisibleKnownDestinationWidgets(client, true);
+    }
+
+    private static List<Widget> findVisibleKnownDestinationWidgets(Client client, boolean singleDestinationOnly)
+    {
         if (client == null)
         {
             return Collections.emptyList();
         }
 
         Set<Widget> candidates = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         for (int widgetId : DESTINATION_ROWS)
         {
-            collectDestinationCandidates(client.getWidget(widgetId), candidates);
+            collectDestinationCandidates(client.getWidget(widgetId), candidates, visited, singleDestinationOnly);
         }
         for (int widgetId : INTERFACE_ROOTS)
         {
-            collectDestinationCandidates(client.getWidget(widgetId), candidates);
+            collectDestinationCandidates(client.getWidget(widgetId), candidates, visited, singleDestinationOnly);
         }
 
-        if (candidates.isEmpty())
+        Widget[] roots = client.getWidgetRoots();
+        if (roots != null)
         {
-            Widget[] roots = client.getWidgetRoots();
-            if (roots != null)
+            for (Widget root : roots)
             {
-                for (Widget root : roots)
+                if (isMinigameInterfaceWidget(root))
                 {
-                    collectDestinationCandidates(root, candidates);
+                    collectDestinationCandidates(root, candidates, visited, singleDestinationOnly);
                 }
             }
         }
 
-        return new ArrayList<>(candidates);
+        List<Widget> widgets = new ArrayList<>(candidates);
+        widgets.sort(Comparator.comparingInt(MinigameTeleportWidgets::area));
+        return widgets;
     }
 
     static Widget getGroupingCurrentGame(Client client)
@@ -104,14 +121,42 @@ final class MinigameTeleportWidgets
         return client == null ? null : client.getWidget(InterfaceID.Grouping.CURRENTGAME);
     }
 
-    static Widget getGroupingDropdown(Client client)
-    {
-        return client == null ? null : client.getWidget(InterfaceID.Grouping.DROPDOWN_TOP);
-    }
-
     static Widget getGroupingTeleportButton(Client client)
     {
         return client == null ? null : client.getWidget(InterfaceID.Grouping.TELEPORT);
+    }
+
+    static boolean isMinigameInterfaceOpen(Client client)
+    {
+        if (client == null)
+        {
+            return false;
+        }
+
+        for (int widgetId : INTERFACE_ROOTS)
+        {
+            Widget widget = client.getWidget(widgetId);
+            if (isVisible(widget))
+            {
+                return true;
+            }
+        }
+
+        Widget[] roots = client.getWidgetRoots();
+        if (roots == null)
+        {
+            return false;
+        }
+
+        for (Widget root : roots)
+        {
+            if (isMinigameInterfaceWidget(root) && isVisible(root))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     static boolean isGroupingCurrentGame(Widget widget)
@@ -139,50 +184,145 @@ final class MinigameTeleportWidgets
 
     static boolean isVisible(Widget widget)
     {
+        Rectangle bounds = visibleBounds(widget);
+        return bounds != null
+            && bounds.width >= MIN_VISIBLE_WIDGET_SIZE
+            && bounds.height >= MIN_VISIBLE_WIDGET_SIZE;
+    }
+
+    static Rectangle visibleBounds(Widget widget)
+    {
         if (widget == null || widget.isHidden())
         {
-            return false;
+            return null;
         }
 
         Rectangle bounds = widget.getBounds();
-        return bounds != null && bounds.width > 0 && bounds.height > 0;
+        if (!hasArea(bounds))
+        {
+            return null;
+        }
+
+        Rectangle visible = new Rectangle(bounds);
+        Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        Widget parent = widget.getParent();
+        while (parent != null && visited.add(parent))
+        {
+            if (parent.isHidden())
+            {
+                return null;
+            }
+
+            Rectangle parentBounds = parent.getBounds();
+            if (hasArea(parentBounds))
+            {
+                visible = visible.intersection(parentBounds);
+                if (!hasArea(visible))
+                {
+                    return null;
+                }
+            }
+
+            parent = parent.getParent();
+        }
+
+        return visible;
     }
 
-    private static void collectDestinationCandidates(Widget widget, Set<Widget> candidates)
+    static List<Widget> getAllChildren(Widget widget)
     {
-        if (!isVisible(widget))
+        if (widget == null)
+        {
+            return Collections.emptyList();
+        }
+
+        List<Widget> children = new ArrayList<>();
+        addChildren(children, widget.getChildren());
+        addChildren(children, widget.getDynamicChildren());
+        addChildren(children, widget.getStaticChildren());
+        addChildren(children, widget.getNestedChildren());
+        return children;
+    }
+
+    private static void collectDestinationCandidates(
+        Widget widget,
+        Set<Widget> candidates,
+        Set<Widget> visited,
+        boolean singleDestinationOnly)
+    {
+        if (!isVisible(widget) || !visited.add(widget))
         {
             return;
         }
 
-        if (isDestinationCandidate(widget))
+        if (isDestinationCandidate(widget, singleDestinationOnly))
         {
             candidates.add(widget);
         }
 
-        Widget[] children = widget.getNestedChildren();
-        if (children == null)
+        for (Widget child : getAllChildren(widget))
+        {
+            collectDestinationCandidates(child, candidates, visited, singleDestinationOnly);
+        }
+    }
+
+    private static void addChildren(List<Widget> children, Widget[] childArray)
+    {
+        if (childArray == null)
         {
             return;
         }
 
-        for (Widget child : children)
+        for (Widget child : childArray)
         {
-            collectDestinationCandidates(child, candidates);
+            if (child != null && !children.contains(child))
+            {
+                children.add(child);
+            }
         }
     }
 
-    private static boolean isDestinationCandidate(Widget widget)
+    private static boolean isDestinationCandidate(Widget widget, boolean singleDestinationOnly)
     {
         String text = MinigameTeleportNames.allWidgetText(widget);
-        if (MinigameTeleportNames.knownDestinationCount(text) != 1)
+        int destinationCount = MinigameTeleportNames.knownDestinationCount(text);
+        if (destinationCount == 0 || (singleDestinationOnly && destinationCount != 1))
         {
             return false;
         }
 
-        Rectangle bounds = widget.getBounds();
-        return bounds.height <= MAX_DESTINATION_WIDGET_HEIGHT
-            && bounds.width <= MAX_DESTINATION_WIDGET_WIDTH;
+        Rectangle bounds = visibleBounds(widget);
+        return bounds != null
+            && (!singleDestinationOnly
+                || (bounds.height <= MAX_HIGHLIGHT_WIDGET_HEIGHT
+                    && bounds.width <= MAX_HIGHLIGHT_WIDGET_WIDTH));
+    }
+
+    private static int area(Widget widget)
+    {
+        Rectangle bounds = visibleBounds(widget);
+        if (bounds == null)
+        {
+            return Integer.MAX_VALUE;
+        }
+
+        return bounds.width * bounds.height;
+    }
+
+    private static boolean hasArea(Rectangle bounds)
+    {
+        return bounds != null && bounds.width > 0 && bounds.height > 0;
+    }
+
+    private static boolean isMinigameInterfaceWidget(Widget widget)
+    {
+        if (widget == null)
+        {
+            return false;
+        }
+
+        int group = WidgetInfo.TO_GROUP(widget.getId());
+        return group == MINIGAMES_GROUP || group == GROUPING_GROUP;
     }
 
     private MinigameTeleportWidgets()

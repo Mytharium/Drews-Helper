@@ -1,6 +1,7 @@
 package com.drewshelper;
 
 import com.google.inject.Provides;
+import java.util.OptionalInt;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.eventbus.Subscribe;
@@ -55,6 +56,7 @@ public class DrewsHelperPlugin extends Plugin
 
     private int gameTicks;
     private int routeRefreshBurstTicks;
+    private boolean replaySavedTargetDuringBurst;
 
     @Override
     protected void startUp()
@@ -67,7 +69,7 @@ public class DrewsHelperPlugin extends Plugin
         overlayManager.remove(overlay);
         overlayManager.add(overlay);
         overlayManager.add(teleportHighlightOverlay);
-        scheduleRouteRefreshBurst();
+        scheduleRouteRefreshBurst(true);
         log.debug("Drew's Helper started: {}", getEnabledFeatureSummary());
     }
 
@@ -84,6 +86,12 @@ public class DrewsHelperPlugin extends Plugin
     @Subscribe
     public void onPluginMessage(PluginMessage event)
     {
+        OptionalInt pathTarget = shortestPathBridge.parsePathTarget(event);
+        if (pathTarget.isPresent())
+        {
+            sessionState.saveShortestPathTarget(pathTarget.getAsInt());
+        }
+
         shortestPathBridge.parseTransportMessage(event).ifPresent(snapshot ->
         {
             routeTransportState.update(snapshot);
@@ -102,12 +110,16 @@ public class DrewsHelperPlugin extends Plugin
         if (routeRefreshBurstTicks > 0)
         {
             routeRefreshBurstTicks--;
-            requestTransportFeedIfEnabled();
+            requestTransportFeedIfEnabled(replaySavedTargetDuringBurst);
+            if (routeRefreshBurstTicks == 0)
+            {
+                replaySavedTargetDuringBurst = false;
+            }
             return;
         }
         if (gameTicks % TRANSPORT_FEED_REQUEST_INTERVAL_TICKS == 0)
         {
-            requestTransportFeedIfEnabled();
+            requestTransportFeedIfEnabled(false);
         }
     }
 
@@ -116,7 +128,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         if (event.getGameState() == GameState.LOGGED_IN)
         {
-            scheduleRouteRefreshBurst();
+            scheduleRouteRefreshBurst(true);
             return;
         }
 
@@ -134,7 +146,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         if ("drewshelper".equals(event.getGroup()))
         {
-            scheduleRouteRefreshBurst();
+            scheduleRouteRefreshBurst(false);
         }
     }
 
@@ -143,7 +155,7 @@ public class DrewsHelperPlugin extends Plugin
         return config.pathingReplacementEnabled();
     }
 
-    private void requestTransportFeedIfEnabled()
+    private void requestTransportFeedIfEnabled(boolean includeSavedTarget)
     {
         if (client.getGameState() != GameState.LOGGED_IN)
         {
@@ -154,7 +166,15 @@ public class DrewsHelperPlugin extends Plugin
         {
             try
             {
-                shortestPathBridge.requestTransportFeed(config);
+                OptionalInt target = includeSavedTarget ? getRouteReplayTarget() : OptionalInt.empty();
+                if (target.isPresent())
+                {
+                    shortestPathBridge.requestPath(config, target);
+                }
+                else
+                {
+                    shortestPathBridge.requestTransportFeed(config);
+                }
             }
             catch (RuntimeException ex)
             {
@@ -163,10 +183,22 @@ public class DrewsHelperPlugin extends Plugin
         }
     }
 
-    private void scheduleRouteRefreshBurst()
+    private void scheduleRouteRefreshBurst(boolean replaySavedTarget)
     {
         routeRefreshBurstTicks = Math.max(routeRefreshBurstTicks, TRANSPORT_FEED_REFRESH_BURST_TICKS);
-        requestTransportFeedIfEnabled();
+        replaySavedTargetDuringBurst = replaySavedTargetDuringBurst || replaySavedTarget;
+        requestTransportFeedIfEnabled(replaySavedTarget);
+    }
+
+    private OptionalInt getRouteReplayTarget()
+    {
+        OptionalInt savedTarget = sessionState.loadShortestPathTarget();
+        if (savedTarget.isPresent())
+        {
+            return savedTarget;
+        }
+
+        return routeTransportState.getSnapshot().getLastTransportDestinationPacked();
     }
 
     String getEnabledFeatureSummary()

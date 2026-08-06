@@ -3,6 +3,8 @@ package com.drewshelper;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalInt;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.events.PluginMessage;
 import org.junit.Test;
 
@@ -18,6 +20,7 @@ public class ShortestPathBridgeTest
         Map<String, Object> data = new HashMap<>();
         data.put("objectInfo", Arrays.asList("Games necklace", "Spirit tree"));
         data.put("displayInfo", Arrays.asList("Burthorpe", "Tree Gnome Village"));
+        data.put("destination", Arrays.asList(new WorldPoint(2900, 3500, 0), new WorldPoint(2461, 3443, 0)));
 
         RouteTransportSnapshot snapshot = ShortestPathBridge.parseTransportSnapshot(
             new PluginMessage("shortestpath", "transports", data)).orElse(RouteTransportSnapshot.EMPTY);
@@ -25,6 +28,7 @@ public class ShortestPathBridgeTest
         assertFalse(snapshot.isEmpty());
         assertEquals(2, snapshot.size());
         assertEquals("Games necklace -> Burthorpe", snapshot.getNextTransport().get().toDisplayLine());
+        assertTrue(snapshot.getLastTransportDestinationPacked().isPresent());
     }
 
     @Test
@@ -74,5 +78,27 @@ public class ShortestPathBridgeTest
         assertEquals(true, overrides.get("postTransports"));
         assertFalse(overrides.containsKey("useTeleportationMinigames"));
         assertFalse(overrides.containsKey("usePoh"));
+    }
+
+    @Test
+    public void capturesShortestPathTargetFromQuestHelperMessage()
+    {
+        Map<String, Object> data = new HashMap<>();
+        data.put("target", new WorldPoint(3210, 3424, 0));
+
+        OptionalInt target = ShortestPathBridge.parsePathTargetMessage(
+            new PluginMessage("shortestpath", "path", data));
+
+        assertTrue(target.isPresent());
+        assertEquals(112200842, target.getAsInt());
+    }
+
+    @Test
+    public void ignoresShortestPathPathMessageWithoutTarget()
+    {
+        OptionalInt target = ShortestPathBridge.parsePathTargetMessage(
+            new PluginMessage("shortestpath", "path", new HashMap<>()));
+
+        assertFalse(target.isPresent());
     }
 }
