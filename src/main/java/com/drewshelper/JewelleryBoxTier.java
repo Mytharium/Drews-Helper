@@ -1,14 +1,15 @@
 package com.drewshelper;
 
-public enum QuestPrepDestination
+public enum JewelleryBoxTier
 {
-    BANK("Bank"),
-    GENERAL_STORES("General Stores"),
-    GRAND_EXCHANGE("Grand Exchange");
+    NONE("None"),
+    BASIC("Basic"),
+    FANCY("Fancy"),
+    ORNATE("Ornate");
 
     private final String displayName;
 
-    QuestPrepDestination(String displayName)
+    JewelleryBoxTier(String displayName)
     {
         this.displayName = displayName;
     }
