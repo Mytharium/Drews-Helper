@@ -21,17 +21,18 @@ gradlew.bat run
 
 ## Current Runtime Shape
 
-Drew's Helper now vendors a Drew-owned pathfinder, visible in RuneLite as `Drew Path`. The source is adapted from the BSD-2-Clause `Skretzo/shortest-path` fork, but it is compiled and launched from the `Drews Helper` project instead of relying on the Plugin Hub Shortest Path mod.
+Drew's Helper now vendors a Drew-owned pathfinder as an internal Drew's Shortest Path feature. The source is adapted from the BSD-2-Clause `Skretzo/shortest-path` fork, but it is compiled and launched from the `Drews Helper` project instead of relying on the Plugin Hub Shortest Path mod.
 
 Runtime shape:
-- `gradlew.bat run` loads both `shortestpath.ShortestPathPlugin` (`Drew Path`) and `com.drewshelper.DrewsHelperPlugin`.
+- `gradlew.bat run` loads only `com.drewshelper.DrewsHelperPlugin` as the visible RuneLite plugin.
+- `DrewsHelperPlugin` starts the vendored `shortestpath.ShortestPathPlugin` internally as Drew's Shortest Path route engine.
 - The `shortestpath` plugin-message namespace is intentionally retained for Quest Helper / Drew Helper compatibility.
-- `Drew Path` uses config group `drewpath`, not the stock Shortest Path config group.
+- The internal route engine still uses config group `drewpath` for its inherited defaults until those options are merged into Drew's Helper config.
 - There should be no active `shortest-path_*.jar` in `C:\Users\drews\.runelite\plugins`.
 - Old Shortest Path jars are backed up under `C:\Users\drews\.runelite\plugins-c2-backups`.
 
 Owned Drew systems:
-- `src/main/java/shortestpath/**` owns pathfinding, map/minimap/tile overlays, transport data, and the `blockedTransportKeys` solver hook.
+- `src/main/java/shortestpath/**` owns the internal route engine, map/minimap/tile overlays, transport data, and the `blockedTransportKeys` solver hook.
 - `ShortestPathBridge` sends `shortestpath/path` requests, captures Quest Helper target messages, and parses posted transport lists.
 - `RouteTransportState` stores the latest route transport snapshot in memory.
 - `DrewsHelperSessionState` persists route snapshots, Shortest Path targets, and minigame locked/unlocked statuses in RuneLite config.

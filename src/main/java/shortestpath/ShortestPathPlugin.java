@@ -26,6 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.inject.Singleton;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -82,6 +83,7 @@ import shortestpath.transport.TransportType;
 	+
 	"Right click on the world map or shift right click a tile to use", tags = {"pathfinder", "map", "waypoint",
 	"navigation"})
+@Singleton
 public class ShortestPathPlugin extends Plugin
 {
 	protected static final String CONFIG_GROUP = "drewpath";
@@ -361,6 +363,11 @@ public class ShortestPathPlugin extends Plugin
 		keyManager.registerKeyListener(clearPathKeylistener);
 	}
 
+	public void startDrewsHelperFeature()
+	{
+		startUp();
+	}
+
 	@Override
 	protected void shutDown()
 	{
@@ -377,6 +384,11 @@ public class ShortestPathPlugin extends Plugin
 		}
 
 		keyManager.unregisterKeyListener(clearPathKeylistener);
+	}
+
+	public void stopDrewsHelperFeature()
+	{
+		shutDown();
 	}
 
 	public void restartPathfinding(int start, Set<Integer> ends, boolean canReviveFiltered)

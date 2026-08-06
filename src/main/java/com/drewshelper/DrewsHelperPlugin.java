@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.api.Client;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.PluginMessage;
 import net.runelite.api.GameState;
@@ -19,6 +20,8 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import shortestpath.ShortestPathConfig;
+import shortestpath.ShortestPathPlugin;
 
 @Slf4j
 @PluginDescriptor(
@@ -40,6 +43,12 @@ public class DrewsHelperPlugin extends Plugin
 
     @Inject
     private OverlayManager overlayManager;
+
+    @Inject
+    private EventBus eventBus;
+
+    @Inject
+    private ShortestPathPlugin drewShortestPath;
 
     @Inject
     private DrewsHelperOverlay overlay;
@@ -65,11 +74,13 @@ public class DrewsHelperPlugin extends Plugin
     private int gameTicks;
     private int routeRefreshBurstTicks;
     private boolean replaySavedTargetDuringBurst;
+    private boolean drewShortestPathStarted;
     private String lastExactLockedRouteRerouteSignature;
 
     @Override
     protected void startUp()
     {
+        startDrewsShortestPathFeature();
         gameTicks = 0;
         routeRefreshBurstTicks = 0;
         clearLockedRouteRerouteState();
@@ -90,7 +101,40 @@ public class DrewsHelperPlugin extends Plugin
         sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
         overlayManager.remove(teleportHighlightOverlay);
         overlayManager.remove(overlay);
+        stopDrewsShortestPathFeature();
         log.debug("Drew's Helper stopped");
+    }
+
+    private void startDrewsShortestPathFeature()
+    {
+        if (drewShortestPathStarted)
+        {
+            return;
+        }
+
+        eventBus.register(drewShortestPath);
+        try
+        {
+            drewShortestPath.startDrewsHelperFeature();
+            drewShortestPathStarted = true;
+        }
+        catch (RuntimeException ex)
+        {
+            eventBus.unregister(drewShortestPath);
+            throw ex;
+        }
+    }
+
+    private void stopDrewsShortestPathFeature()
+    {
+        if (!drewShortestPathStarted)
+        {
+            return;
+        }
+
+        eventBus.unregister(drewShortestPath);
+        drewShortestPath.stopDrewsHelperFeature();
+        drewShortestPathStarted = false;
     }
 
     @Subscribe(priority = PLUGIN_MESSAGE_PRIORITY)
@@ -327,5 +371,11 @@ public class DrewsHelperPlugin extends Plugin
     DrewsHelperConfig provideConfig(ConfigManager configManager)
     {
         return configManager.getConfig(DrewsHelperConfig.class);
+    }
+
+    @Provides
+    ShortestPathConfig provideShortestPathConfig(ConfigManager configManager)
+    {
+        return configManager.getConfig(ShortestPathConfig.class);
     }
 }
