@@ -158,6 +158,11 @@ final class MinigameTeleportNames
         return knownDestinationNames(normalized).size();
     }
 
+    static int totalDestinationCount()
+    {
+        return KNOWN_DESTINATIONS.length;
+    }
+
     private static void collectText(Widget widget, List<String> texts, Set<Widget> visited)
     {
         if (!MinigameTeleportWidgets.isVisible(widget) || !visited.add(widget))

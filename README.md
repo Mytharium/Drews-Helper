@@ -11,9 +11,9 @@ This build establishes the plugin shell, Plugin Hub metadata, local RuneLite lau
 - Routing options for Drew's Shortest Path, Chain Quests, and Quest Preparation sources
 - Teleport options for highlighting, locked-teleport filtering, cooldown rerouting, hosted POH fallback, manual unlocks, minigame/grouping teleport scanning, and jewellery box tier selection
 - Shortest Path transport-feed bridge with config overrides for early in-game route telemetry
-- Drew's Helper overlay showing the active route feed, next unlocked transport, hidden locked transports, minigame scan state, and first route transports
+- Drew's Helper overlay showing the active route feed, next unlocked transport, hidden locked transports, minigame unlocked count, and first route transports
 - Minigame/grouping teleport UI scanner/highlighter for the magic tab/spell, matching destination row, current Grouping selection, and teleport button
-- Session restore for the last route transport feed, Quest Helper/Shortest Path target messages, and scanned minigame teleport statuses after plugin toggle, logout, or client restart
+- Session restore for the last route transport feed, Quest Helper/Shortest Path target messages, and scanned locked/unlocked minigame teleport statuses after plugin toggle, logout, or client restart
 
 ## Build
 
@@ -43,13 +43,13 @@ If the overlay stays on `Route Feed: Waiting`, Shortest Path has not produced a 
 2. Leave `Hide Locked Teleports` checked.
 3. Set a Shortest Path destination that recommends a minigame teleport.
 4. Open the magic tab. Drew's Helper should highlight the minigame teleport spell.
-5. Open the minigame/grouping teleport interface. Drew's Helper scans destination rows that are currently visible in the scroll window.
-6. Watch the overlay for `Minigames: <visible> visible; <ok> ok / <locked> locked`.
+5. Open the minigame/grouping teleport interface. Drew's Helper scans destination rows that are currently visible in the scroll window and refreshes its cached locked/unlocked statuses.
+6. Watch the overlay for `Minigames: <unlocked>/18 Unlocked`; after any row is classified, `Stored Scan: <known>/18` shows how many locked/unlocked decisions are cached.
 7. If the recommended destination is not the current Grouping selection, open the dropdown so Drew's Helper can scan/highlight the matching destination.
 8. If the recommended destination is the current Grouping selection, Drew's Helper highlights the destination and the Teleport button.
 9. If the recommended destination is detected as locked, Drew's Helper marks it as locked/hidden locally and highlights the matching row in warning color while the interface is open.
 
-Unknown minigame destinations are not treated as locked. Drew's Helper only blocks a minigame destination after the game interface has exposed that exact visible row as locked or unavailable. Highlight boxes are clipped to the minigame window, so offscreen scrolled rows are not highlighted.
+Unknown minigame destinations are not treated as locked. Drew's Helper stores scanned locked/unlocked minigames after plugin toggle, logout, or client restart, then refreshes those statuses whenever the minigame interface exposes the row again. Highlight boxes are clipped to the minigame window and deduped to the destination row, so text children and offscreen scrolled rows are not highlighted separately.
 
 ## Test Session Restore
 

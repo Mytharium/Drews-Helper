@@ -131,15 +131,33 @@ final class TeleportHighlightOverlay extends Overlay
 
         Color outline = status == MinigameTeleportStatus.LOCKED ? LOCKED : HIGHLIGHT;
         Color fill = status == MinigameTeleportStatus.LOCKED ? LOCKED_FILL : HIGHLIGHT_FILL;
+        Widget bestMatch = null;
+        int bestArea = -1;
         for (Widget row : MinigameTeleportWidgets.findVisibleDestinationWidgets(client))
         {
             if (MinigameTeleportWidgets.matchesDestination(row, destination))
             {
-                renderWidget(graphics, row, outline, fill);
+                Rectangle bounds = MinigameTeleportWidgets.visibleBounds(row);
+                int area = bounds == null ? -1 : bounds.width * bounds.height;
+                if (area > bestArea)
+                {
+                    bestMatch = row;
+                    bestArea = area;
+                }
             }
         }
 
         Widget currentGame = MinigameTeleportWidgets.getGroupingCurrentGame(client);
+        if (bestMatch != null)
+        {
+            renderWidget(graphics, bestMatch, outline, fill);
+            if (MinigameTeleportWidgets.matchesDestination(currentGame, destination))
+            {
+                renderWidget(graphics, MinigameTeleportWidgets.getGroupingTeleportButton(client), outline, fill);
+            }
+            return;
+        }
+
         if (MinigameTeleportWidgets.matchesDestination(currentGame, destination))
         {
             renderWidget(graphics, currentGame, outline, fill);

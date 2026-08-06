@@ -49,7 +49,7 @@ public class MinigameTeleportUnlockStateTest
     }
 
     @Test
-    public void persistsOnlyLockedStatuses()
+    public void persistsAvailableAndLockedStatuses()
     {
         MinigameTeleportUnlockState state = new MinigameTeleportUnlockState();
         state.record("Giants' Foundry", MinigameTeleportStatus.AVAILABLE);
@@ -58,9 +58,17 @@ public class MinigameTeleportUnlockStateTest
         MinigameTeleportUnlockState restored = new MinigameTeleportUnlockState();
         restored.restore(state.snapshotStatuses());
 
-        assertEquals(MinigameTeleportStatus.UNKNOWN,
+        assertEquals(MinigameTeleportStatus.AVAILABLE,
             restored.getStatus(new RouteTransport("Minigame Teleport", "Giants' Foundry", -1)));
         assertEquals(MinigameTeleportStatus.LOCKED,
             restored.getStatus(new RouteTransport("Minigame Teleport", "Nightmare Zone", -1)));
+    }
+
+    @Test
+    public void exposesSupportedDestinationTotal()
+    {
+        MinigameTeleportUnlockState state = new MinigameTeleportUnlockState();
+
+        assertEquals(18, state.getTotalDestinationCount());
     }
 }

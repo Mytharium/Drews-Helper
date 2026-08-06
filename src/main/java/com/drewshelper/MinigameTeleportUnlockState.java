@@ -116,6 +116,11 @@ final class MinigameTeleportUnlockState
         return countStatus(MinigameTeleportStatus.LOCKED);
     }
 
+    int getTotalDestinationCount()
+    {
+        return MinigameTeleportNames.totalDestinationCount();
+    }
+
     int getLastScanRows()
     {
         return lastScanRows;
@@ -123,16 +128,16 @@ final class MinigameTeleportUnlockState
 
     Map<String, MinigameTeleportStatus> snapshotStatuses()
     {
-        Map<String, MinigameTeleportStatus> lockedStatuses = new HashMap<>();
+        Map<String, MinigameTeleportStatus> knownStatuses = new HashMap<>();
         for (Map.Entry<String, MinigameTeleportStatus> entry : statuses.entrySet())
         {
-            if (entry.getValue() == MinigameTeleportStatus.LOCKED)
+            if (entry.getValue() != MinigameTeleportStatus.UNKNOWN)
             {
-                lockedStatuses.put(entry.getKey(), entry.getValue());
+                knownStatuses.put(entry.getKey(), entry.getValue());
             }
         }
 
-        return Collections.unmodifiableMap(lockedStatuses);
+        return Collections.unmodifiableMap(knownStatuses);
     }
 
     void restore(Map<String, MinigameTeleportStatus> restoredStatuses)
@@ -146,12 +151,11 @@ final class MinigameTeleportUnlockState
 
         for (Map.Entry<String, MinigameTeleportStatus> entry : restoredStatuses.entrySet())
         {
-            if (entry.getValue() == MinigameTeleportStatus.LOCKED)
+            if (entry.getValue() != MinigameTeleportStatus.UNKNOWN)
             {
                 record(entry.getKey(), entry.getValue());
             }
         }
-        lastScanRows = statuses.size();
     }
 
     private boolean recordNormalized(String key, MinigameTeleportStatus status)
@@ -208,7 +212,7 @@ final class MinigameTeleportUnlockState
             return MinigameTeleportStatus.LOCKED;
         }
 
-        return MinigameTeleportStatus.UNKNOWN;
+        return MinigameTeleportStatus.AVAILABLE;
     }
 
     private static boolean hasUsableAction(Widget widget)
