@@ -41,8 +41,20 @@ public class DrewsHelperSessionStateTest
         statuses.put("nightmare zone", MinigameTeleportStatus.LOCKED);
         statuses.put("giants foundry", MinigameTeleportStatus.AVAILABLE);
 
-        Map<String, MinigameTeleportStatus> restored = DrewsHelperSessionState.decodeMinigameStatuses(
-            DrewsHelperSessionState.encodeMinigameStatuses(statuses));
+        String encoded = DrewsHelperSessionState.encodeMinigameStatuses(statuses);
+        Map<String, MinigameTeleportStatus> restored = DrewsHelperSessionState.decodeMinigameStatuses(encoded);
+
+        assertFalse(encoded.contains("\n"));
+        assertEquals(MinigameTeleportStatus.LOCKED, restored.get("nightmare zone"));
+        assertEquals(MinigameTeleportStatus.AVAILABLE, restored.get("giants foundry"));
+    }
+
+    @Test
+    public void decodesOldNewlineMinigameStatuses()
+    {
+        String oldSnapshot = "bmlnaHRtYXJlIHpvbmU,LOCKED\nZ2lhbnRzIGZvdW5kcnk,AVAILABLE";
+
+        Map<String, MinigameTeleportStatus> restored = DrewsHelperSessionState.decodeMinigameStatuses(oldSnapshot);
 
         assertEquals(MinigameTeleportStatus.LOCKED, restored.get("nightmare zone"));
         assertEquals(MinigameTeleportStatus.AVAILABLE, restored.get("giants foundry"));

@@ -101,7 +101,7 @@ final class DrewsHelperOverlay extends OverlayPanel
         if (hiddenCount > 0)
         {
             panelComponent.getChildren().add(LineComponent.builder()
-                .left("Hidden Locked")
+                .left("Locked Routes")
                 .right(String.valueOf(hiddenCount))
                 .rightColor(WARNING)
                 .build());
@@ -109,7 +109,7 @@ final class DrewsHelperOverlay extends OverlayPanel
         if (lockedTransport != null)
         {
             panelComponent.getChildren().add(LineComponent.builder()
-                .left("Locked: " + lockedTransport.toDisplayLine())
+                .left(lockedTransport.toDisplayLine())
                 .leftColor(WARNING)
                 .build());
         }

@@ -158,7 +158,7 @@ final class DrewsHelperSessionState
 
     static String encodeMinigameStatuses(Map<String, MinigameTeleportStatus> statuses)
     {
-        StringJoiner rows = new StringJoiner("\n");
+        StringJoiner rows = new StringJoiner(";");
         statuses.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .forEach(entry -> rows.add(encode(entry.getKey()) + "," + entry.getValue().name()));
@@ -173,7 +173,7 @@ final class DrewsHelperSessionState
         }
 
         Map<String, MinigameTeleportStatus> statuses = new HashMap<>();
-        String[] rows = value.split("\\n");
+        String[] rows = value.split("[\\n;]");
         for (String row : rows)
         {
             String[] columns = row.split(",", -1);

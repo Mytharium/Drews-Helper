@@ -56,7 +56,6 @@ final class TeleportHighlightOverlay extends Overlay
             return null;
         }
 
-        minigameTeleportUnlockState.scanVisibleInterface(client);
         Optional<RouteTransport> routeTransport = getHighlightTransport();
         if (routeTransport.isEmpty() || !teleportAvailabilityService.isMinigameTeleport(routeTransport.get()))
         {
