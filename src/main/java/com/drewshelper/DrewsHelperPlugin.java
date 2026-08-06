@@ -4,10 +4,13 @@ import com.google.inject.Provides;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.api.Client;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.PluginMessage;
+import net.runelite.api.GameState;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -21,9 +24,13 @@ import net.runelite.client.ui.overlay.OverlayManager;
 public class DrewsHelperPlugin extends Plugin
 {
     private static final int TRANSPORT_FEED_REQUEST_INTERVAL_TICKS = 100;
+    private static final int TRANSPORT_FEED_REFRESH_BURST_TICKS = 10;
 
     @Inject
     private DrewsHelperConfig config;
+
+    @Inject
+    private Client client;
 
     @Inject
     private OverlayManager overlayManager;
@@ -32,44 +39,93 @@ public class DrewsHelperPlugin extends Plugin
     private DrewsHelperOverlay overlay;
 
     @Inject
+    private TeleportHighlightOverlay teleportHighlightOverlay;
+
+    @Inject
     private RouteTransportState routeTransportState;
 
     @Inject
     private ShortestPathBridge shortestPathBridge;
 
+    @Inject
+    private MinigameTeleportUnlockState minigameTeleportUnlockState;
+
+    @Inject
+    private DrewsHelperSessionState sessionState;
+
     private int gameTicks;
+    private int routeRefreshBurstTicks;
 
     @Override
     protected void startUp()
     {
         gameTicks = 0;
-        routeTransportState.clear();
+        routeRefreshBurstTicks = 0;
+        routeTransportState.update(sessionState.loadRouteSnapshot());
+        minigameTeleportUnlockState.restore(sessionState.loadMinigameStatuses());
+        overlayManager.remove(teleportHighlightOverlay);
+        overlayManager.remove(overlay);
         overlayManager.add(overlay);
-        requestTransportFeedIfEnabled();
+        overlayManager.add(teleportHighlightOverlay);
+        scheduleRouteRefreshBurst();
         log.debug("Drew's Helper started: {}", getEnabledFeatureSummary());
     }
 
     @Override
     protected void shutDown()
     {
+        sessionState.saveRouteSnapshot(routeTransportState.getSnapshot());
+        sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
+        overlayManager.remove(teleportHighlightOverlay);
         overlayManager.remove(overlay);
-        routeTransportState.clear();
         log.debug("Drew's Helper stopped");
     }
 
     @Subscribe
     public void onPluginMessage(PluginMessage event)
     {
-        shortestPathBridge.parseTransportMessage(event).ifPresent(routeTransportState::update);
+        shortestPathBridge.parseTransportMessage(event).ifPresent(snapshot ->
+        {
+            routeTransportState.update(snapshot);
+            sessionState.saveRouteSnapshot(snapshot);
+        });
     }
 
     @Subscribe
     public void onGameTick(GameTick tick)
     {
         gameTicks++;
+        if (minigameTeleportUnlockState.scanVisibleInterface(client))
+        {
+            sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
+        }
+        if (routeRefreshBurstTicks > 0)
+        {
+            routeRefreshBurstTicks--;
+            requestTransportFeedIfEnabled();
+            return;
+        }
         if (gameTicks % TRANSPORT_FEED_REQUEST_INTERVAL_TICKS == 0)
         {
             requestTransportFeedIfEnabled();
+        }
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() == GameState.LOGGED_IN)
+        {
+            scheduleRouteRefreshBurst();
+            return;
+        }
+
+        if (event.getGameState() == GameState.LOGIN_SCREEN
+            || event.getGameState() == GameState.HOPPING
+            || event.getGameState() == GameState.CONNECTION_LOST)
+        {
+            sessionState.saveRouteSnapshot(routeTransportState.getSnapshot());
+            sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
         }
     }
 
@@ -78,7 +134,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         if ("drewshelper".equals(event.getGroup()))
         {
-            requestTransportFeedIfEnabled();
+            scheduleRouteRefreshBurst();
         }
     }
 
@@ -89,10 +145,28 @@ public class DrewsHelperPlugin extends Plugin
 
     private void requestTransportFeedIfEnabled()
     {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
         if (config.pathingReplacementEnabled() || config.teleportAssistEnabled())
         {
-            shortestPathBridge.requestTransportFeed();
+            try
+            {
+                shortestPathBridge.requestTransportFeed(config);
+            }
+            catch (RuntimeException ex)
+            {
+                log.warn("Unable to request Shortest Path transport feed", ex);
+            }
         }
+    }
+
+    private void scheduleRouteRefreshBurst()
+    {
+        routeRefreshBurstTicks = Math.max(routeRefreshBurstTicks, TRANSPORT_FEED_REFRESH_BURST_TICKS);
+        requestTransportFeedIfEnabled();
     }
 
     String getEnabledFeatureSummary()

@@ -49,6 +49,11 @@ final class RouteTransport
         return "Unknown transport";
     }
 
+    String toSearchText()
+    {
+        return (objectInfo + " " + displayInfo).trim().toLowerCase();
+    }
+
     private static String clean(String value)
     {
         if (value == null)

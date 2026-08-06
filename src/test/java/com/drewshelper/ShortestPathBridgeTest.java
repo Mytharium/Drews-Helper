@@ -47,4 +47,32 @@ public class ShortestPathBridgeTest
         assertTrue(snapshot.getNextTransport().isPresent());
         assertEquals("Varrock Teleport", snapshot.getNextTransport().get().toDisplayLine());
     }
+
+    @Test
+    public void buildsShortestPathAvailabilityOverrides()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig() {});
+
+        assertEquals(true, overrides.get("postTransports"));
+        assertFalse(overrides.containsKey("useTeleportationMinigames"));
+        assertEquals(false, overrides.get("usePoh"));
+        assertEquals("None", overrides.get("pohJewelleryBoxTier"));
+    }
+
+    @Test
+    public void omitsAvailabilityOverridesWhenFilteringDisabled()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean filterUnavailableTeleports()
+            {
+                return false;
+            }
+        });
+
+        assertEquals(true, overrides.get("postTransports"));
+        assertFalse(overrides.containsKey("useTeleportationMinigames"));
+        assertFalse(overrides.containsKey("usePoh"));
+    }
 }

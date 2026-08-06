@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import net.runelite.api.Client;
+import net.runelite.api.Player;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.PluginMessage;
 
@@ -17,26 +19,36 @@ final class ShortestPathBridge
     private static final String SHORTEST_PATH_NAMESPACE = "shortestpath";
     private static final String PATH_ACTION = "path";
     private static final String TRANSPORTS_ACTION = "transports";
+    private static final String START_KEY = "start";
     private static final String CONFIG_KEY = "config";
     private static final String POST_TRANSPORTS_KEY = "postTransports";
+    private static final String USE_POH_KEY = "usePoh";
+    private static final String USE_POH_MOUNTED_ITEMS_KEY = "usePohMountedItems";
+    private static final String USE_POH_PORTALS_KEY = "useTeleportationPortalsPoh";
+    private static final String POH_JEWELLERY_BOX_TIER_KEY = "pohJewelleryBoxTier";
     private static final String OBJECT_INFO_KEY = "objectInfo";
     private static final String DISPLAY_INFO_KEY = "displayInfo";
 
+    private final Client client;
     private final EventBus eventBus;
 
     @Inject
-    ShortestPathBridge(EventBus eventBus)
+    ShortestPathBridge(Client client, EventBus eventBus)
     {
+        this.client = client;
         this.eventBus = eventBus;
     }
 
-    void requestTransportFeed()
+    void requestTransportFeed(DrewsHelperConfig config)
     {
-        Map<String, Object> configOverride = new HashMap<>();
-        configOverride.put(POST_TRANSPORTS_KEY, true);
-
         Map<String, Object> data = new HashMap<>();
-        data.put(CONFIG_KEY, configOverride);
+        data.put(CONFIG_KEY, buildConfigOverride(config));
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer != null)
+        {
+            data.put(START_KEY, localPlayer.getWorldLocation());
+        }
 
         eventBus.post(new PluginMessage(SHORTEST_PATH_NAMESPACE, PATH_ACTION, data));
     }
@@ -44,6 +56,33 @@ final class ShortestPathBridge
     Optional<RouteTransportSnapshot> parseTransportMessage(PluginMessage event)
     {
         return parseTransportSnapshot(event);
+    }
+
+    static Map<String, Object> buildConfigOverride(DrewsHelperConfig config)
+    {
+        Map<String, Object> configOverride = new HashMap<>();
+        configOverride.put(POST_TRANSPORTS_KEY, true);
+
+        if (config == null || !config.filterUnavailableTeleports())
+        {
+            return configOverride;
+        }
+
+        JewelleryBoxTier jewelleryBoxTier = config.pohJewelryBoxTier() == null
+            ? JewelleryBoxTier.NONE
+            : config.pohJewelryBoxTier();
+
+        boolean useOwnedPoh = config.pohMountedGloryUnlocked()
+            || config.pohPortalChamberUnlocked()
+            || config.pohPortalNexusUnlocked()
+            || jewelleryBoxTier != JewelleryBoxTier.NONE;
+
+        configOverride.put(USE_POH_KEY, useOwnedPoh);
+        configOverride.put(USE_POH_MOUNTED_ITEMS_KEY, config.pohMountedGloryUnlocked());
+        configOverride.put(USE_POH_PORTALS_KEY, config.pohPortalChamberUnlocked() || config.pohPortalNexusUnlocked());
+        configOverride.put(POH_JEWELLERY_BOX_TIER_KEY, jewelleryBoxTier.toString());
+
+        return configOverride;
     }
 
     static Optional<RouteTransportSnapshot> parseTransportSnapshot(PluginMessage event)
