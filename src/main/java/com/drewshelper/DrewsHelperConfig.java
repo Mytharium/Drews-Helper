@@ -3,72 +3,89 @@ package com.drewshelper;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 
 @ConfigGroup("drewshelper")
 public interface DrewsHelperConfig extends Config
 {
-    @ConfigItem(keyName = "pathingReplacementEnabled", name = "Use Drew's pathing", description = "Own route decisions instead of stock Shortest Path.", position = 0)
+    @ConfigSection(
+        name = "Routing Options",
+        description = "Route destination and pathing preferences.",
+        position = 0,
+        closedByDefault = false
+    )
+    String routingOptions = "routingOptions";
+
+    @ConfigSection(
+        name = "Teleport Options",
+        description = "Teleport availability and guidance preferences.",
+        position = 1,
+        closedByDefault = false
+    )
+    String teleportOptions = "teleportOptions";
+
+    @ConfigItem(keyName = "pathingReplacementEnabled", name = "Drew's Pathing", description = "Own route decisions instead of stock Shortest Path.", section = routingOptions, position = 0)
     default boolean pathingReplacementEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "preferLocalExits", name = "Prefer nearby exits", description = "Prefer nearby exits before global teleports.", position = 1)
+    @ConfigItem(keyName = "preferLocalExits", name = "Nearby Exits", description = "Prefer nearby exits before global teleports.", section = routingOptions, position = 1)
     default boolean preferLocalExits()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "teleportAssistEnabled", name = "Teleport highlighter", description = "Highlight the selected route teleport UI.", position = 2)
-    default boolean teleportAssistEnabled()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "filterUnavailableTeleports", name = "Hide locked teleports", description = "Filter teleports when requirements are missing.", position = 3)
-    default boolean filterUnavailableTeleports()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "cooldownAwareReroute", name = "Reroute cooldowns", description = "Recalculate when a teleport is cooling down.", position = 4)
-    default boolean cooldownAwareReroute()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "questPrepRouting", name = "Quest prep routing", description = "Route to prep when Quest Helper needs items.", position = 5)
+    @ConfigItem(keyName = "questPrepRouting", name = "Quest Prep", description = "Route to prep before quest locations when Quest Helper needs items.", section = routingOptions, position = 2)
     default boolean questPrepRouting()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "grandExchangePrepRouting", name = "GE for buyables", description = "Route to GE for missing tradeable quest items.", position = 6)
-    default boolean grandExchangePrepRouting()
+    @ConfigItem(keyName = "questPrepDestination", name = "Quest Prep Destination", description = "Choose where quest prep should route for missing required items.", section = routingOptions, position = 3)
+    default QuestPrepDestination questPrepDestination()
     {
-        return false;
+        return QuestPrepDestination.GENERAL_STORES;
     }
 
-    @ConfigItem(keyName = "fairyRingsUnlocked", name = "Fairy rings", description = "Allow fairy ring routes.", position = 7)
+    @ConfigItem(keyName = "teleportAssistEnabled", name = "Teleport Highlighter", description = "Highlight the selected route teleport UI.", section = teleportOptions, position = 0)
+    default boolean teleportAssistEnabled()
+    {
+        return true;
+    }
+
+    @ConfigItem(keyName = "filterUnavailableTeleports", name = "Hide Locked Teleports", description = "Filter teleports when requirements are missing.", section = teleportOptions, position = 1)
+    default boolean filterUnavailableTeleports()
+    {
+        return true;
+    }
+
+    @ConfigItem(keyName = "cooldownAwareReroute", name = "Reroute Cooldowns", description = "Recalculate when a teleport is cooling down.", section = teleportOptions, position = 2)
+    default boolean cooldownAwareReroute()
+    {
+        return true;
+    }
+
+    @ConfigItem(keyName = "spiritTreesUnlocked", name = "Unlocked: Spirit Trees", description = "Allow spirit tree routes.", section = teleportOptions, position = 3)
+    default boolean spiritTreesUnlocked()
+    {
+        return true;
+    }
+
+    @ConfigItem(keyName = "fairyRingsUnlocked", name = "Unlocked: Fairy Rings", description = "Allow fairy ring routes.", section = teleportOptions, position = 4)
     default boolean fairyRingsUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "spiritTreesUnlocked", name = "Spirit trees", description = "Allow spirit tree routes.", position = 8)
-    default boolean spiritTreesUnlocked()
-    {
-        return false;
-    }
-
-    @ConfigItem(keyName = "pohJewelryBoxUnlocked", name = "POH jewelry box", description = "Allow POH jewelry box routes.", position = 9)
-    default boolean pohJewelryBoxUnlocked()
-    {
-        return false;
-    }
-
-    @ConfigItem(keyName = "pohMountedGloryUnlocked", name = "POH mounted glory", description = "Allow POH mounted glory routes.", position = 10)
+    @ConfigItem(keyName = "pohMountedGloryUnlocked", name = "Unlocked: POH Mounted Glory", description = "Allow POH mounted glory routes.", section = teleportOptions, position = 5)
     default boolean pohMountedGloryUnlocked()
+    {
+        return false;
+    }
+
+    @ConfigItem(keyName = "pohJewelryBoxUnlocked", name = "Unlocked: POH Jewelry Box", description = "Allow POH jewelry box routes.", section = teleportOptions, position = 6)
+    default boolean pohJewelryBoxUnlocked()
     {
         return false;
     }

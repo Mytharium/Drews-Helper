@@ -43,7 +43,7 @@ public class DrewsHelperPlugin extends Plugin
             + ", cooldownAwareReroute=" + config.cooldownAwareReroute()
             + ", preferLocalExits=" + config.preferLocalExits()
             + ", questPrepRouting=" + config.questPrepRouting()
-            + ", grandExchangePrepRouting=" + config.grandExchangePrepRouting();
+            + ", questPrepDestination=" + config.questPrepDestination();
     }
 
     @Provides
