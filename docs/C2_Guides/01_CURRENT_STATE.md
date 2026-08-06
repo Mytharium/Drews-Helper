@@ -15,6 +15,8 @@ Last updated: 2026-08-06.
 - The highlighter draws one outer row box for a minigame destination instead of also boxing the text child.
 - Per-destination minigame statuses persist across logout, world hop, and client restart.
 - The in-game overlay now reports minigame state as `Minigame Teleports: X/18 Unlocked`.
+- Drew converts scanned locked minigames into stable Shortest Path transport keys such as `teleportation_minigames:nightmare_zone`, sends them as `config.blockedTransportKeys`, and replays the saved/current target once when posted telemetry still contains a locked route.
+- A source patch for Shortest Path `1.20.6` / `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea` is staged at `docs/patches/shortest-path-blocked-transport-keys.patch`.
 
 ## Current Overlay Layout
 
@@ -50,4 +52,4 @@ Shortest Path currently exposes plugin-message control for:
 
 The installed Shortest Path config supports category-level transport toggles/costs such as boats, ships, spirit trees, fairy rings, minigame teleports, POH, spells, items, portals, and similar groups.
 
-It does not expose a per-destination or per-transport block list through `shortestpath/path`. Because of that, Drew can identify and list locked routes, and can reroute whole disabled categories that Shortest Path already exposes. Exact rerouting around only one locked minigame destination requires a Shortest Path patch or a Drew-owned route solver.
+The stock installed jar still does not consume `blockedTransportKeys`; it safely ignores that unknown override. Exact per-destination rerouting becomes active after applying and running the staged Shortest Path patch/fork. Until that patched Shortest Path build is installed, Drew can identify/list locked routes and reroute whole disabled categories that Shortest Path already exposes, but the individual minigame block list will not change the stock pathfinder result.

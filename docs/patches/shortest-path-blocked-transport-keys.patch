@@ -1,0 +1,178 @@
+diff --git a/src/main/java/shortestpath/ShortestPathPlugin.java b/src/main/java/shortestpath/ShortestPathPlugin.java
+index 427405a..8f47227 100644
+--- a/src/main/java/shortestpath/ShortestPathPlugin.java
++++ b/src/main/java/shortestpath/ShortestPathPlugin.java
+@@ -12,6 +12,7 @@ import java.awt.geom.Ellipse2D;
+ import java.awt.image.BufferedImage;
+ import java.util.ArrayList;
+ import java.util.Arrays;
++import java.util.Collection;
+ import java.util.EnumSet;
+ import java.util.HashMap;
+ import java.util.HashSet;
+@@ -253,6 +254,48 @@ public class ShortestPathPlugin extends Plugin
+ 		return defaultValue;
+ 	}
+ 
++	public static Set<String> overrideStringSet(String configOverrideKey)
++	{
++		if (configOverride.isEmpty())
++		{
++			return Set.of();
++		}
++
++		Object value = configOverride.get(configOverrideKey);
++		if (value instanceof Collection<?>)
++		{
++			Set<String> strings = new HashSet<>();
++			for (Object item : (Collection<?>) value)
++			{
++				addOverrideString(strings, item);
++			}
++			return strings.isEmpty() ? Set.of() : Set.copyOf(strings);
++		}
++
++		if (value instanceof String)
++		{
++			Set<String> strings = new HashSet<>();
++			addOverrideString(strings, value);
++			return strings.isEmpty() ? Set.of() : Set.copyOf(strings);
++		}
++
++		return Set.of();
++	}
++
++	private static void addOverrideString(Set<String> strings, Object value)
++	{
++		if (value == null)
++		{
++			return;
++		}
++
++		String text = String.valueOf(value).trim();
++		if (!text.isEmpty())
++		{
++			strings.add(text);
++		}
++	}
++
+ 	public static TeleportationItem override(String configOverrideKey, TeleportationItem defaultValue)
+ 	{
+ 		if (!configOverride.isEmpty())
+diff --git a/src/main/java/shortestpath/pathfinder/PathfinderConfig.java b/src/main/java/shortestpath/pathfinder/PathfinderConfig.java
+index 71a7900..595e694 100644
+--- a/src/main/java/shortestpath/pathfinder/PathfinderConfig.java
++++ b/src/main/java/shortestpath/pathfinder/PathfinderConfig.java
+@@ -6,6 +6,7 @@ import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.HashSet;
+ import java.util.List;
++import java.util.Locale;
+ import java.util.Map;
+ import java.util.Set;
+ 
+@@ -128,6 +129,7 @@ public class PathfinderConfig
+ 	private JewelleryBoxTier pohJewelleryBoxTier;
+ 	private int costConsumableTeleportationItems;
+ 	private int currencyThreshold;
++	private Set<String> blockedTransportKeys = Set.of();
+ 	@Getter
+ 	private boolean isOnSailingBoat;
+ 
+@@ -283,6 +285,7 @@ public class PathfinderConfig
+ 		// Other settings (useTeleportationItems is now managed by transportTypeConfig)
+ 		currencyThreshold = ShortestPathPlugin.override("currencyThreshold", config.currencyThreshold());
+ 		includeBankPath = ShortestPathPlugin.override("includeBankPath", config.includeBankPath());
++		blockedTransportKeys = ShortestPathPlugin.overrideStringSet("blockedTransportKeys");
+ 
+ 		// Note: Transport type costs are now managed by transportTypeConfig.getCost()
+ 		costConsumableTeleportationItems = ShortestPathPlugin.override("costConsumableTeleportationItems", config.costConsumableTeleportationItems());
+@@ -693,6 +696,11 @@ public class PathfinderConfig
+ 		final boolean isQuestLocked = transport.isQuestLocked();
+ 		TransportType type = transport.getType();
+ 
++		if (isBlockedTransport(transport))
++		{
++			return false;
++		}
++
+ 		// Check if transport type is enabled in config
+ 		if (!transportTypeConfig.isEnabled(type))
+ 		{
+@@ -748,6 +756,76 @@ public class PathfinderConfig
+ 		return true;
+ 	}
+ 
++	private boolean isBlockedTransport(Transport transport)
++	{
++		if (blockedTransportKeys.isEmpty())
++		{
++			return false;
++		}
++
++		String key = transportKey(transport);
++		if (key.isEmpty())
++		{
++			return false;
++		}
++
++		for (String blockedKey : blockedTransportKeys)
++		{
++			if (key.equals(blockedKey) || key.startsWith(blockedKey + "_"))
++			{
++				return true;
++			}
++		}
++
++		return false;
++	}
++
++	private static String transportKey(Transport transport)
++	{
++		TransportType type = transport.getType();
++		String typeKey = type == null ? "" : slug(type.getResourcePath()
++			.replace("/transports/", "")
++			.replace(".tsv", ""));
++		if (typeKey.isEmpty())
++		{
++			return "";
++		}
++
++		String label = transport.getDisplayInfo() == null || transport.getDisplayInfo().trim().isEmpty()
++			? transport.getObjectInfo()
++			: transport.getDisplayInfo();
++		String labelKey = slug(cleanTransportLabel(label));
++		return labelKey.isEmpty() ? "" : typeKey + ":" + labelKey;
++	}
++
++	private static String cleanTransportLabel(String label)
++	{
++		if (label == null)
++		{
++			return "";
++		}
++
++		return label
++			.replaceAll("<[^>]+>", " ")
++			.replace("Minigame Teleport", "")
++			.replace("Grouping Teleport", "")
++			.replaceAll(":\\s*\\d+\\.\\s*", " ");
++	}
++
++	private static String slug(String text)
++	{
++		if (text == null)
++		{
++			return "";
++		}
++
++		return text.toLowerCase(Locale.ROOT)
++			.replace("'", "")
++			.replace("\u2019", "")
++			.replaceAll("[^a-z0-9]+", "_")
++			.replaceAll("^_+|_+$", "");
++	}
++
+ 	private boolean checkPlantedSpiritTrees(Transport transport)
+ 	{
+ 		int originX = WorldPointUtil.unpackWorldX(transport.getOrigin());

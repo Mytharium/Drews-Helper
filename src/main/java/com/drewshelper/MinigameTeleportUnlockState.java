@@ -3,9 +3,11 @@ package com.drewshelper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -114,6 +116,20 @@ final class MinigameTeleportUnlockState
     int getLockedDestinationCount()
     {
         return countStatus(MinigameTeleportStatus.LOCKED);
+    }
+
+    Set<String> getLockedDestinationKeys()
+    {
+        Set<String> lockedKeys = new HashSet<>();
+        for (Map.Entry<String, MinigameTeleportStatus> entry : statuses.entrySet())
+        {
+            if (entry.getValue() == MinigameTeleportStatus.LOCKED)
+            {
+                lockedKeys.add(entry.getKey());
+            }
+        }
+
+        return Collections.unmodifiableSet(lockedKeys);
     }
 
     int getTotalDestinationCount()

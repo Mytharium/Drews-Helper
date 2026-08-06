@@ -23,3 +23,9 @@ The backend may keep scan/cache counters for debugging, but the normal overlay s
 Date: 2026-08-06
 
 Shortest Path's current plugin-message bridge accepts start, target, and existing config overrides. It does not expose a per-transport blocked list. Exact rerouting around individual locked routes requires patching Shortest Path or adding a Drew-owned route solver.
+
+## D-0005: Use `blockedTransportKeys` As The Exact Reroute Contract
+
+Date: 2026-08-06
+
+Drew remains a Shortest Path client rather than owning a full route graph. Exact locked-route rerouting uses a small Shortest Path fork patch: Drew sends `config.blockedTransportKeys` values like `teleportation_minigames:nightmare_zone`, and patched Shortest Path filters matching transports before building usable pathfinder edges. The stock Shortest Path jar ignores the unknown key, so exact rerouting is only active once the patched Shortest Path build is installed.

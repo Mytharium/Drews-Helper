@@ -1,12 +1,14 @@
 package com.drewshelper;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.TreeSet;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -46,13 +48,23 @@ final class ShortestPathBridge
 
     void requestTransportFeed(DrewsHelperConfig config)
     {
-        requestPath(config, OptionalInt.empty());
+        requestTransportFeed(config, Collections.emptySet());
+    }
+
+    void requestTransportFeed(DrewsHelperConfig config, Collection<String> blockedTransportKeys)
+    {
+        requestPath(config, OptionalInt.empty(), blockedTransportKeys);
     }
 
     void requestPath(DrewsHelperConfig config, OptionalInt targetPacked)
     {
+        requestPath(config, targetPacked, Collections.emptySet());
+    }
+
+    void requestPath(DrewsHelperConfig config, OptionalInt targetPacked, Collection<String> blockedTransportKeys)
+    {
         Map<String, Object> data = new HashMap<>();
-        data.put(CONFIG_KEY, buildConfigOverride(config));
+        data.put(CONFIG_KEY, buildConfigOverride(config, blockedTransportKeys));
 
         Player localPlayer = client.getLocalPlayer();
         if (localPlayer != null)
@@ -79,6 +91,11 @@ final class ShortestPathBridge
 
     static Map<String, Object> buildConfigOverride(DrewsHelperConfig config)
     {
+        return buildConfigOverride(config, Collections.emptySet());
+    }
+
+    static Map<String, Object> buildConfigOverride(DrewsHelperConfig config, Collection<String> blockedTransportKeys)
+    {
         Map<String, Object> configOverride = new HashMap<>();
         configOverride.put(POST_TRANSPORTS_KEY, true);
 
@@ -103,7 +120,32 @@ final class ShortestPathBridge
         configOverride.put(USE_FAIRY_RINGS_KEY, config.fairyRingsUnlocked());
         configOverride.put(USE_SPIRIT_TREES_KEY, config.spiritTreesUnlocked());
 
+        List<String> normalizedBlockedKeys = normalizedBlockedTransportKeys(blockedTransportKeys);
+        if (!normalizedBlockedKeys.isEmpty())
+        {
+            configOverride.put(ShortestPathTransportKey.BLOCKED_TRANSPORT_KEYS_CONFIG, normalizedBlockedKeys);
+        }
+
         return configOverride;
+    }
+
+    private static List<String> normalizedBlockedTransportKeys(Collection<String> blockedTransportKeys)
+    {
+        if (blockedTransportKeys == null || blockedTransportKeys.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+
+        TreeSet<String> sortedKeys = new TreeSet<>();
+        for (String key : blockedTransportKeys)
+        {
+            if (key != null && !key.trim().isEmpty())
+            {
+                sortedKeys.add(key.trim());
+            }
+        }
+
+        return new ArrayList<>(sortedKeys);
     }
 
     static Optional<RouteTransportSnapshot> parseTransportSnapshot(PluginMessage event)

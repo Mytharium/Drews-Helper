@@ -1,7 +1,11 @@
 package com.drewshelper;
 
 import com.google.inject.Provides;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.OptionalInt;
+import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.eventbus.Subscribe;
@@ -52,17 +56,22 @@ public class DrewsHelperPlugin extends Plugin
     private MinigameTeleportUnlockState minigameTeleportUnlockState;
 
     @Inject
+    private TeleportAvailabilityService teleportAvailabilityService;
+
+    @Inject
     private DrewsHelperSessionState sessionState;
 
     private int gameTicks;
     private int routeRefreshBurstTicks;
     private boolean replaySavedTargetDuringBurst;
+    private String lastLockedRouteRerouteSignature;
 
     @Override
     protected void startUp()
     {
         gameTicks = 0;
         routeRefreshBurstTicks = 0;
+        lastLockedRouteRerouteSignature = "";
         routeTransportState.update(sessionState.loadRouteSnapshot());
         minigameTeleportUnlockState.restore(sessionState.loadMinigameStatuses());
         overlayManager.remove(teleportHighlightOverlay);
@@ -96,6 +105,7 @@ public class DrewsHelperPlugin extends Plugin
         {
             routeTransportState.update(snapshot);
             sessionState.saveRouteSnapshot(snapshot);
+            requestLockedRouteReroute(snapshot);
         });
     }
 
@@ -106,6 +116,9 @@ public class DrewsHelperPlugin extends Plugin
         if (minigameTeleportUnlockState.scanVisibleInterface(client))
         {
             sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
+            lastLockedRouteRerouteSignature = "";
+            scheduleRouteRefreshBurst(true);
+            return;
         }
         if (routeRefreshBurstTicks > 0)
         {
@@ -146,6 +159,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         if ("drewshelper".equals(event.getGroup()))
         {
+            lastLockedRouteRerouteSignature = "";
             scheduleRouteRefreshBurst(false);
         }
     }
@@ -167,19 +181,53 @@ public class DrewsHelperPlugin extends Plugin
             try
             {
                 OptionalInt target = includeSavedTarget ? getRouteReplayTarget() : OptionalInt.empty();
+                Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
                 if (target.isPresent())
                 {
-                    shortestPathBridge.requestPath(config, target);
+                    shortestPathBridge.requestPath(config, target, blockedTransportKeys);
                 }
                 else
                 {
-                    shortestPathBridge.requestTransportFeed(config);
+                    shortestPathBridge.requestTransportFeed(config, blockedTransportKeys);
                 }
             }
             catch (RuntimeException ex)
             {
                 log.warn("Unable to request Shortest Path transport feed", ex);
             }
+        }
+    }
+
+    private void requestLockedRouteReroute(RouteTransportSnapshot snapshot)
+    {
+        if (client.getGameState() != GameState.LOGGED_IN
+            || !config.filterUnavailableTeleports()
+            || !teleportAvailabilityService.getFirstUnavailable(snapshot, config).isPresent())
+        {
+            return;
+        }
+
+        Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
+        if (blockedTransportKeys.isEmpty())
+        {
+            return;
+        }
+
+        OptionalInt target = getRouteReplayTarget();
+        String rerouteSignature = buildRerouteSignature(target, blockedTransportKeys);
+        if (rerouteSignature.equals(lastLockedRouteRerouteSignature))
+        {
+            return;
+        }
+
+        lastLockedRouteRerouteSignature = rerouteSignature;
+        if (target.isPresent())
+        {
+            shortestPathBridge.requestPath(config, target, blockedTransportKeys);
+        }
+        else
+        {
+            shortestPathBridge.requestTransportFeed(config, blockedTransportKeys);
         }
     }
 
@@ -199,6 +247,14 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         return routeTransportState.getSnapshot().getLastTransportDestinationPacked();
+    }
+
+    private static String buildRerouteSignature(OptionalInt target, Set<String> blockedTransportKeys)
+    {
+        List<String> sortedKeys = new ArrayList<>(blockedTransportKeys);
+        Collections.sort(sortedKeys);
+        return (target.isPresent() ? String.valueOf(target.getAsInt()) : "current")
+            + "|" + String.join(",", sortedKeys);
     }
 
     String getEnabledFeatureSummary()

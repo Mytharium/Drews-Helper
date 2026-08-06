@@ -1,6 +1,7 @@
 package com.drewshelper;
 
 import java.util.Arrays;
+import java.util.Collections;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -55,5 +56,30 @@ public class TeleportAvailabilityServiceTest
         assertEquals(allowed, service.getFirstAvailable(snapshot, new DrewsHelperConfig() {}).get());
         assertEquals(1, service.countUnavailable(snapshot, new DrewsHelperConfig() {}));
         assertEquals(Arrays.asList(locked), service.getUnavailableTransports(snapshot, new DrewsHelperConfig() {}));
+    }
+
+    @Test
+    public void convertsLockedMinigamesToBlockedTransportKeys()
+    {
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+        minigameTeleportUnlockState.record("Giants' Foundry", MinigameTeleportStatus.AVAILABLE);
+
+        assertEquals(Collections.singleton("teleportation_minigames:nightmare_zone"),
+            service.getBlockedTransportKeys(new DrewsHelperConfig() {}));
+    }
+
+    @Test
+    public void doesNotBlockTransportKeysWhenFilteringDisabled()
+    {
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+
+        assertTrue(service.getBlockedTransportKeys(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean filterUnavailableTeleports()
+            {
+                return false;
+            }
+        }).isEmpty());
     }
 }

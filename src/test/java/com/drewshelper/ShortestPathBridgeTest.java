@@ -107,6 +107,32 @@ public class ShortestPathBridgeTest
     }
 
     @Test
+    public void sendsBlockedTransportKeysWhenFilteringEnabled()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig() {},
+            Arrays.asList("teleportation_minigames:nightmare_zone", "", "teleportation_minigames:blast_furnace"));
+
+        assertEquals(Arrays.asList(
+            "teleportation_minigames:blast_furnace",
+            "teleportation_minigames:nightmare_zone"), overrides.get("blockedTransportKeys"));
+    }
+
+    @Test
+    public void omitsBlockedTransportKeysWhenFilteringDisabled()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean filterUnavailableTeleports()
+            {
+                return false;
+            }
+        }, Arrays.asList("teleportation_minigames:nightmare_zone"));
+
+        assertFalse(overrides.containsKey("blockedTransportKeys"));
+    }
+
+    @Test
     public void capturesShortestPathTargetFromQuestHelperMessage()
     {
         Map<String, Object> data = new HashMap<>();
