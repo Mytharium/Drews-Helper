@@ -29,6 +29,8 @@ final class ShortestPathBridge
     private static final String USE_POH_MOUNTED_ITEMS_KEY = "usePohMountedItems";
     private static final String USE_POH_PORTALS_KEY = "useTeleportationPortalsPoh";
     private static final String POH_JEWELLERY_BOX_TIER_KEY = "pohJewelleryBoxTier";
+    private static final String USE_FAIRY_RINGS_KEY = "useFairyRings";
+    private static final String USE_SPIRIT_TREES_KEY = "useSpiritTrees";
     private static final String OBJECT_INFO_KEY = "objectInfo";
     private static final String DISPLAY_INFO_KEY = "displayInfo";
 
@@ -98,6 +100,8 @@ final class ShortestPathBridge
         configOverride.put(USE_POH_MOUNTED_ITEMS_KEY, config.pohMountedGloryUnlocked());
         configOverride.put(USE_POH_PORTALS_KEY, config.pohPortalChamberUnlocked() || config.pohPortalNexusUnlocked());
         configOverride.put(POH_JEWELLERY_BOX_TIER_KEY, jewelleryBoxTier.toString());
+        configOverride.put(USE_FAIRY_RINGS_KEY, config.fairyRingsUnlocked());
+        configOverride.put(USE_SPIRIT_TREES_KEY, config.spiritTreesUnlocked());
 
         return configOverride;
     }

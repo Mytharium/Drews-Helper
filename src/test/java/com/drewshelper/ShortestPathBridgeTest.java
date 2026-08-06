@@ -61,6 +61,8 @@ public class ShortestPathBridgeTest
         assertFalse(overrides.containsKey("useTeleportationMinigames"));
         assertEquals(false, overrides.get("usePoh"));
         assertEquals("None", overrides.get("pohJewelleryBoxTier"));
+        assertEquals(false, overrides.get("useFairyRings"));
+        assertEquals(true, overrides.get("useSpiritTrees"));
     }
 
     @Test
@@ -78,6 +80,30 @@ public class ShortestPathBridgeTest
         assertEquals(true, overrides.get("postTransports"));
         assertFalse(overrides.containsKey("useTeleportationMinigames"));
         assertFalse(overrides.containsKey("usePoh"));
+        assertFalse(overrides.containsKey("useFairyRings"));
+        assertFalse(overrides.containsKey("useSpiritTrees"));
+    }
+
+    @Test
+    public void sendsWholeCategoryUnlocksToShortestPath()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean spiritTreesUnlocked()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean fairyRingsUnlocked()
+            {
+                return true;
+            }
+        });
+
+        assertEquals(false, overrides.get("useSpiritTrees"));
+        assertEquals(true, overrides.get("useFairyRings"));
     }
 
     @Test

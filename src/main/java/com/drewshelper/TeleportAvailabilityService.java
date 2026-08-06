@@ -1,6 +1,8 @@
 package com.drewshelper;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -47,18 +49,21 @@ final class TeleportAvailabilityService
 
     Optional<RouteTransport> getFirstUnavailable(RouteTransportSnapshot snapshot, DrewsHelperConfig config)
     {
-        return snapshot.getTransports().stream()
-            .filter(RouteTransport::hasInstruction)
-            .filter(transport -> !isAvailable(transport, config))
+        return getUnavailableTransports(snapshot, config).stream()
             .findFirst();
     }
 
     int countUnavailable(RouteTransportSnapshot snapshot, DrewsHelperConfig config)
     {
-        return (int) snapshot.getTransports().stream()
+        return getUnavailableTransports(snapshot, config).size();
+    }
+
+    List<RouteTransport> getUnavailableTransports(RouteTransportSnapshot snapshot, DrewsHelperConfig config)
+    {
+        return snapshot.getTransports().stream()
             .filter(RouteTransport::hasInstruction)
             .filter(transport -> !isAvailable(transport, config))
-            .count();
+            .collect(Collectors.toList());
     }
 
     boolean isMinigameTeleport(RouteTransport transport)

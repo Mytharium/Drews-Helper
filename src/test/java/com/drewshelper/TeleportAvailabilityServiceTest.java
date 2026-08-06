@@ -54,5 +54,6 @@ public class TeleportAvailabilityServiceTest
 
         assertEquals(allowed, service.getFirstAvailable(snapshot, new DrewsHelperConfig() {}).get());
         assertEquals(1, service.countUnavailable(snapshot, new DrewsHelperConfig() {}));
+        assertEquals(Arrays.asList(locked), service.getUnavailableTransports(snapshot, new DrewsHelperConfig() {}));
     }
 }

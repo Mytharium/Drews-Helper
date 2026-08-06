@@ -3,6 +3,7 @@ package com.drewshelper;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -16,7 +17,6 @@ final class DrewsHelperOverlay extends OverlayPanel
     private static final Color MUTED = new Color(190, 190, 190);
     private static final Color WARNING = new Color(230, 170, 70);
     private static final int PANEL_WIDTH = 320;
-    private static final int MAX_TRANSPORT_ROWS = 4;
 
     private final DrewsHelperConfig config;
     private final RouteTransportState routeTransportState;
@@ -54,88 +54,65 @@ final class DrewsHelperOverlay extends OverlayPanel
             .build());
 
         RouteTransportSnapshot snapshot = routeTransportState.getSnapshot();
+        List<RouteTransport> transports = instructionTransports(snapshot);
         if (snapshot.isEmpty())
         {
             panelComponent.getChildren().add(LineComponent.builder()
-                .left("Route Feed")
-                .right("Waiting")
-                .rightColor(WARNING)
-                .build());
-            panelComponent.getChildren().add(LineComponent.builder()
-                .left("Shortest Path")
-                .right("No transports")
-                .rightColor(MUTED)
+                .left("Current Route Step 0/0")
+                .leftColor(WARNING)
                 .build());
             addMinigameScanLine();
+            addLockedRoutesLine(snapshot);
             return super.render(graphics);
         }
 
-        RouteTransport nextTransport = teleportAvailabilityService.getFirstAvailable(snapshot, config).orElse(null);
-        RouteTransport lockedTransport = teleportAvailabilityService.getFirstUnavailable(snapshot, config).orElse(null);
-        int hiddenCount = teleportAvailabilityService.countUnavailable(snapshot, config);
+        int currentStep = transports.isEmpty() ? 0 : 1;
+        Color routeStepColor = getRouteStepColor(transports);
 
         panelComponent.getChildren().add(LineComponent.builder()
-            .left("Route Feed")
-            .right("Active")
-            .rightColor(READY_GREEN)
+            .left("Current Route Step " + currentStep + "/" + transports.size())
+            .leftColor(routeStepColor)
             .build());
-        if (nextTransport == null)
-        {
-            panelComponent.getChildren().add(LineComponent.builder()
-                .left("Next: No unlocked transport")
-                .leftColor(WARNING)
-                .build());
-        }
-        else
-        {
-            panelComponent.getChildren().add(LineComponent.builder()
-                .left("Next: " + nextTransport.toDisplayLine())
-                .leftColor(READY_GREEN)
-                .build());
-        }
-        panelComponent.getChildren().add(LineComponent.builder()
-            .left("Transports")
-            .right(String.valueOf(snapshot.size()))
-            .rightColor(MUTED)
-            .build());
-        if (hiddenCount > 0)
-        {
-            panelComponent.getChildren().add(LineComponent.builder()
-                .left("Locked Routes")
-                .right(String.valueOf(hiddenCount))
-                .rightColor(WARNING)
-                .build());
-        }
-        if (lockedTransport != null)
-        {
-            panelComponent.getChildren().add(LineComponent.builder()
-                .left(lockedTransport.toDisplayLine())
-                .leftColor(WARNING)
-                .build());
-        }
-        addMinigameScanLine();
-
-        List<RouteTransport> transports = snapshot.getTransports();
-        int rows = Math.min(transports.size(), MAX_TRANSPORT_ROWS);
-        for (int i = 0; i < rows; i++)
+        for (int i = 0; i < transports.size(); i++)
         {
             RouteTransport transport = transports.get(i);
             boolean locked = !teleportAvailabilityService.isAvailable(transport, config);
             panelComponent.getChildren().add(LineComponent.builder()
                 .left((i + 1) + ". " + transport.toDisplayLine())
-                .leftColor(locked ? WARNING : (transport.equals(nextTransport) ? READY_GREEN : MUTED))
+                .leftColor(locked ? WARNING : (i == 0 ? READY_GREEN : MUTED))
                 .build());
         }
 
-        if (transports.size() > MAX_TRANSPORT_ROWS)
-        {
-            panelComponent.getChildren().add(LineComponent.builder()
-                .left("+ " + (transports.size() - MAX_TRANSPORT_ROWS) + " more")
-                .leftColor(MUTED)
-                .build());
-        }
+        addMinigameScanLine();
+        addLockedRoutesLine(snapshot);
 
         return super.render(graphics);
+    }
+
+    private List<RouteTransport> instructionTransports(RouteTransportSnapshot snapshot)
+    {
+        List<RouteTransport> transports = new ArrayList<>();
+        for (RouteTransport transport : snapshot.getTransports())
+        {
+            if (transport.hasInstruction())
+            {
+                transports.add(transport);
+            }
+        }
+
+        return transports;
+    }
+
+    private Color getRouteStepColor(List<RouteTransport> transports)
+    {
+        if (transports.isEmpty())
+        {
+            return WARNING;
+        }
+
+        return teleportAvailabilityService.isAvailable(transports.get(0), config)
+            ? READY_GREEN
+            : WARNING;
     }
 
     private void addMinigameScanLine()
@@ -146,16 +123,31 @@ final class DrewsHelperOverlay extends OverlayPanel
         int total = minigameTeleportUnlockState.getTotalDestinationCount();
 
         panelComponent.getChildren().add(LineComponent.builder()
-            .left("Minigames")
+            .left("Minigame Teleports")
             .right(available + "/" + total + " Unlocked")
             .rightColor(known < total || locked > 0 ? WARNING : READY_GREEN)
             .build());
-        if (known > 0)
+    }
+
+    private void addLockedRoutesLine(RouteTransportSnapshot snapshot)
+    {
+        if (!config.filterUnavailableTeleports())
+        {
+            return;
+        }
+
+        List<RouteTransport> lockedRoutes = teleportAvailabilityService.getUnavailableTransports(snapshot, config);
+        panelComponent.getChildren().add(LineComponent.builder()
+            .left("Locked Routes")
+            .right(lockedRoutes.isEmpty() ? "None" : String.valueOf(lockedRoutes.size()))
+            .rightColor(lockedRoutes.isEmpty() ? MUTED : WARNING)
+            .build());
+
+        for (int i = 0; i < lockedRoutes.size(); i++)
         {
             panelComponent.getChildren().add(LineComponent.builder()
-                .left("Stored Scan")
-                .right(known + "/" + total)
-                .rightColor(known < total ? WARNING : READY_GREEN)
+                .left((i + 1) + ". " + lockedRoutes.get(i).toDisplayLine())
+                .leftColor(WARNING)
                 .build());
         }
     }
