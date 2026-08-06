@@ -26,6 +26,7 @@ final class ShortestPathBridge
     private static final String START_KEY = "start";
     private static final String TARGET_KEY = "target";
     private static final String CONFIG_KEY = "config";
+    private static final String DREWS_HELPER_REQUEST_KEY = "drewsHelperRequest";
     private static final String POST_TRANSPORTS_KEY = "postTransports";
     private static final String USE_POH_KEY = "usePoh";
     private static final String USE_POH_MOUNTED_ITEMS_KEY = "usePohMountedItems";
@@ -83,6 +84,7 @@ final class ShortestPathBridge
     {
         Map<String, Object> data = new HashMap<>();
         data.put(CONFIG_KEY, buildConfigOverride(config, blockedTransportKeys, disableMinigameTeleports));
+        data.put(DREWS_HELPER_REQUEST_KEY, true);
 
         Player localPlayer = client.getLocalPlayer();
         if (localPlayer != null)
@@ -105,6 +107,11 @@ final class ShortestPathBridge
     OptionalInt parsePathTarget(PluginMessage event)
     {
         return parsePathTargetMessage(event);
+    }
+
+    boolean isDrewsHelperPathRequest(PluginMessage event)
+    {
+        return isDrewsHelperPathRequestMessage(event);
     }
 
     static Map<String, Object> buildConfigOverride(DrewsHelperConfig config)
@@ -157,6 +164,37 @@ final class ShortestPathBridge
         }
 
         return configOverride;
+    }
+
+    static boolean addConfigOverrideToPathRequest(
+        PluginMessage event,
+        DrewsHelperConfig config,
+        Collection<String> blockedTransportKeys,
+        boolean disableMinigameTeleports)
+    {
+        if (!SHORTEST_PATH_NAMESPACE.equals(event.getNamespace()) || !PATH_ACTION.equals(event.getName()))
+        {
+            return false;
+        }
+
+        Map<String, Object> data = event.getData();
+        if (data == null)
+        {
+            return false;
+        }
+
+        Map<String, Object> mergedConfig = mapValue(data.get(CONFIG_KEY));
+        mergedConfig.putAll(buildConfigOverride(config, blockedTransportKeys, disableMinigameTeleports));
+
+        try
+        {
+            data.put(CONFIG_KEY, mergedConfig);
+            return true;
+        }
+        catch (UnsupportedOperationException ex)
+        {
+            return putAllIntoExistingConfig(data.get(CONFIG_KEY), mergedConfig);
+        }
     }
 
     private static List<String> normalizedBlockedTransportKeys(Collection<String> blockedTransportKeys)
@@ -222,6 +260,57 @@ final class ShortestPathBridge
         }
 
         return packedWorldPoint(data.get(TARGET_KEY));
+    }
+
+    static boolean isDrewsHelperPathRequestMessage(PluginMessage event)
+    {
+        if (!SHORTEST_PATH_NAMESPACE.equals(event.getNamespace()) || !PATH_ACTION.equals(event.getName()))
+        {
+            return false;
+        }
+
+        Map<String, Object> data = event.getData();
+        return data != null && Boolean.TRUE.equals(data.get(DREWS_HELPER_REQUEST_KEY));
+    }
+
+    private static Map<String, Object> mapValue(Object value)
+    {
+        Map<String, Object> map = new HashMap<>();
+        if (!(value instanceof Map<?, ?>))
+        {
+            return map;
+        }
+
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet())
+        {
+            Object key = entry.getKey();
+            if (key != null)
+            {
+                map.put(String.valueOf(key), entry.getValue());
+            }
+        }
+
+        return map;
+    }
+
+    private static boolean putAllIntoExistingConfig(Object value, Map<String, Object> configOverride)
+    {
+        if (!(value instanceof Map<?, ?>))
+        {
+            return false;
+        }
+
+        try
+        {
+            @SuppressWarnings("unchecked")
+            Map<Object, Object> existingConfig = (Map<Object, Object>) value;
+            existingConfig.putAll(configOverride);
+            return true;
+        }
+        catch (UnsupportedOperationException | ClassCastException ex)
+        {
+            return false;
+        }
     }
 
     private static List<?> listValue(Object value)

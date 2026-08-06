@@ -35,3 +35,9 @@ Drew remains a Shortest Path client rather than owning a full route graph. Exact
 Date: 2026-08-06
 
 Until the patched Shortest Path build is active, Drew may force a real stock-jar reroute by escalating from exact `blockedTransportKeys` to `useTeleportationMinigames=false` when the same locked minigame route is posted again. This fallback is intentionally broad and must be described as blocking the whole minigame teleport category, not as exact Nightmare-Zone-only routing.
+
+## D-0007: Drew Must Arbitrate Incoming Shortest Path Requests
+
+Date: 2026-08-06
+
+When Drew owns an active locked-route fallback, it must apply that policy to incoming `shortestpath/path` plugin messages before Shortest Path consumes them instead of only posting a competing request afterward. Use high-priority `PluginMessage` handling to merge Drew's config overrides into the existing request, preserve the external request's target/start data, and suppress stale locked transport snapshots while the fallback signature is active.

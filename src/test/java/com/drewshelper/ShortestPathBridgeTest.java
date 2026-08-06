@@ -128,6 +128,54 @@ public class ShortestPathBridgeTest
     }
 
     @Test
+    public void addsAvailabilityOverridesToExistingPathRequest()
+    {
+        Map<String, Object> existingConfig = new HashMap<>();
+        existingConfig.put("customShortestPathSetting", 7);
+        Map<String, Object> data = new HashMap<>();
+        data.put("target", 112200842);
+        data.put("config", existingConfig);
+
+        boolean changed = ShortestPathBridge.addConfigOverrideToPathRequest(
+            new PluginMessage("shortestpath", "path", data),
+            new DrewsHelperConfig() {},
+            Arrays.asList("teleportation_minigames:nightmare_zone"),
+            true);
+
+        assertTrue(changed);
+        Map<?, ?> mergedConfig = (Map<?, ?>) data.get("config");
+        assertEquals(7, mergedConfig.get("customShortestPathSetting"));
+        assertEquals(true, mergedConfig.get("postTransports"));
+        assertEquals(false, mergedConfig.get("useTeleportationMinigames"));
+        assertEquals(Arrays.asList("teleportation_minigames:nightmare_zone"), mergedConfig.get("blockedTransportKeys"));
+    }
+
+    @Test
+    public void ignoresNonPathRequestWhenAddingOverrides()
+    {
+        Map<String, Object> data = new HashMap<>();
+
+        boolean changed = ShortestPathBridge.addConfigOverrideToPathRequest(
+            new PluginMessage("shortestpath", "transports", data),
+            new DrewsHelperConfig() {},
+            Arrays.asList("teleportation_minigames:nightmare_zone"),
+            true);
+
+        assertFalse(changed);
+        assertFalse(data.containsKey("config"));
+    }
+
+    @Test
+    public void detectsDrewsHelperPathRequestMarker()
+    {
+        Map<String, Object> data = new HashMap<>();
+        data.put("drewsHelperRequest", true);
+
+        assertTrue(ShortestPathBridge.isDrewsHelperPathRequestMessage(
+            new PluginMessage("shortestpath", "path", data)));
+    }
+
+    @Test
     public void omitsBlockedTransportKeysWhenFilteringDisabled()
     {
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()

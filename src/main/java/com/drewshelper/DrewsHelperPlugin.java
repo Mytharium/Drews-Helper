@@ -30,6 +30,7 @@ public class DrewsHelperPlugin extends Plugin
 {
     private static final int TRANSPORT_FEED_REQUEST_INTERVAL_TICKS = 100;
     private static final int TRANSPORT_FEED_REFRESH_BURST_TICKS = 10;
+    private static final float PLUGIN_MESSAGE_PRIORITY = 1000.0f;
 
     @Inject
     private DrewsHelperConfig config;
@@ -93,17 +94,24 @@ public class DrewsHelperPlugin extends Plugin
         log.debug("Drew's Helper stopped");
     }
 
-    @Subscribe
+    @Subscribe(priority = PLUGIN_MESSAGE_PRIORITY)
     public void onPluginMessage(PluginMessage event)
     {
         OptionalInt pathTarget = shortestPathBridge.parsePathTarget(event);
         if (pathTarget.isPresent())
         {
-            sessionState.saveShortestPathTarget(pathTarget.getAsInt());
+            saveShortestPathTarget(pathTarget, shortestPathBridge.isDrewsHelperPathRequest(event));
+            applyShortestPathRequestPolicy(event, pathTarget);
         }
 
         shortestPathBridge.parseTransportMessage(event).ifPresent(snapshot ->
         {
+            if (shouldSuppressUnavailableTransportSnapshot(snapshot))
+            {
+                log.debug("Ignoring locked Shortest Path snapshot while Drew minigame fallback is active");
+                return;
+            }
+
             routeTransportState.update(snapshot);
             sessionState.saveRouteSnapshot(snapshot);
             requestLockedRouteReroute(snapshot);
@@ -247,6 +255,54 @@ public class DrewsHelperPlugin extends Plugin
         {
             shortestPathBridge.requestTransportFeed(config, blockedTransportKeys, useMinigameCategoryFallback);
         }
+    }
+
+    private void saveShortestPathTarget(OptionalInt pathTarget, boolean drewRequest)
+    {
+        if (!drewRequest && !sessionState.loadShortestPathTarget().equals(pathTarget))
+        {
+            clearLockedRouteRerouteState();
+        }
+
+        sessionState.saveShortestPathTarget(pathTarget.getAsInt());
+    }
+
+    private void applyShortestPathRequestPolicy(PluginMessage event, OptionalInt target)
+    {
+        if (!config.filterUnavailableTeleports())
+        {
+            return;
+        }
+
+        Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
+        if (blockedTransportKeys.isEmpty())
+        {
+            return;
+        }
+
+        boolean disableMinigameTeleports = isMinigameCategoryFallbackActive(target, blockedTransportKeys);
+        shortestPathBridge.addConfigOverrideToPathRequest(
+            event,
+            config,
+            blockedTransportKeys,
+            disableMinigameTeleports);
+    }
+
+    private boolean shouldSuppressUnavailableTransportSnapshot(RouteTransportSnapshot snapshot)
+    {
+        if (!config.filterUnavailableTeleports()
+            || !teleportAvailabilityService.getFirstUnavailable(snapshot, config).isPresent())
+        {
+            return false;
+        }
+
+        Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
+        if (blockedTransportKeys.isEmpty())
+        {
+            return false;
+        }
+
+        return isMinigameCategoryFallbackActive(getRouteReplayTarget(), blockedTransportKeys);
     }
 
     private void scheduleRouteRefreshBurst(boolean replaySavedTarget)

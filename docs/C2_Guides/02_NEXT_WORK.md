@@ -10,6 +10,7 @@ Current implementation status:
 - Drew-side outbound support is implemented. Locked minigame statuses are converted into `blockedTransportKeys`, included in `ShortestPathBridge.buildConfigOverride`, and sent on normal route refresh/replay.
 - Drew first replays the saved/current target with the exact blocked list when posted Shortest Path telemetry still contains a locked transport.
 - If the same locked minigame route survives that exact replay, Drew escalates to the stock Shortest Path category hook `useTeleportationMinigames=false` for that reroute signature. This is a real reroute with the active jar, but it disables all minigame teleports.
+- Once the stock-jar fallback is active, Drew merges that policy into later incoming `shortestpath/path` requests at high event-bus priority and suppresses stale locked transport snapshots, preventing the route from flipping between Shortest Path's unfiltered recommendation and Drew's fallback.
 - The Shortest Path-side source patch is staged at `docs/patches/shortest-path-blocked-transport-keys.patch` against `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea` / Plugin Hub Shortest Path `1.20.6`.
 
 ## Important Constraint
@@ -56,6 +57,7 @@ Drew-side work completed:
 - Include those keys in `ShortestPathBridge.buildConfigOverride`.
 - When a posted route contains a locked route, replay the saved/current target with the blocked list first.
 - When stock Shortest Path ignores that exact list and posts the same locked minigame route again, send `useTeleportationMinigames=false` as the temporary broad fallback.
+- Merge the active Drew policy into incoming `shortestpath/path` messages before Shortest Path consumes them, so repeated Quest Helper/Shortest Path refreshes inherit the fallback instead of overwriting it.
 - Add tests that verify blocked keys are sent only when `Hide Locked Teleports` is enabled.
 
 Next concrete steps:
@@ -67,6 +69,8 @@ Next concrete steps:
 ## Temporary Fallback
 
 Implemented for minigame teleports. If the exact `blockedTransportKeys` replay does not change the route and the same locked minigame route is posted again, Drew temporarily disables the whole minigame teleport category with `useTeleportationMinigames=false`.
+
+The fallback is now applied as an arbitration policy as well as an outbound replay: Drew mutates later `shortestpath/path` request configs before Shortest Path sees them and refuses to save stale locked snapshots while that fallback signature is active.
 
 This is not exact enough for the final behavior because it also blocks minigame teleports that Drew has already confirmed unlocked.
 
