@@ -5,22 +5,27 @@ Last updated: 2026-08-06.
 ## Working
 
 - Drew's Helper launches as a RuneLite external plugin through `gradlew.bat run`.
-- The overlay receives Shortest Path transport telemetry through `shortestpath/transports`.
+- `gradlew.bat run` now loads two Drew-owned plugins in one RuneLite client: `Drew Path` plus `Drew's Helper`.
+- `Drew Path` is vendored under `src/main/java/shortestpath/**` with resources under `src/main/resources/**`; it no longer depends on the Plugin Hub Shortest Path jar being installed.
+- The overlay receives Drew Path transport telemetry through the retained `shortestpath/transports` protocol.
 - The overlay no longer uses the narrow right-column `Next` display for route text.
 - Quest Helper route targets sent through `shortestpath/path` are captured and replayed after login/startup.
-- Drew passes whole-category unlock settings for spirit trees, fairy rings, and owned POH features into Shortest Path when `Hide Locked Teleports` is enabled, so those supported categories can trigger real Shortest Path recalculation.
+- Drew passes whole-category unlock settings for spirit trees, fairy rings, and owned POH features into Drew Path when `Hide Locked Teleports` is enabled, so those supported categories can trigger real path recalculation.
 - The last route snapshot is restored locally after plugin toggle, logout, world hop, or client restart.
 - The minigame/grouping teleport UI scanner works against the real Grouping UI and walks all RuneLite widget child arrays.
 - Minigame destination highlighting is clipped to visible widget bounds, so scrolled-off entries should not leave boxes stuck at the top/bottom of the panel.
 - The highlighter draws one outer row box for a minigame destination instead of also boxing the text child.
 - Per-destination minigame statuses persist across logout, world hop, and client restart.
 - The in-game overlay now reports minigame state as `Minigame Teleports: X/18 Unlocked`.
-- Drew converts scanned locked minigames into stable Shortest Path transport keys such as `teleportation_minigames:nightmare_zone`, sends them as `config.blockedTransportKeys`, and replays a real captured route target once when posted telemetry still contains a locked route.
-- If stock Shortest Path posts the same locked minigame route after that exact-key replay, Drew escalates to the supported category fallback `useTeleportationMinigames=false` so the active jar can do a real recalculation today.
-- Drew's `PluginMessage` subscriber now runs at high priority and merges the active locked-teleport policy into incoming `shortestpath/path` requests before Shortest Path consumes them, including config-only path refreshes with no target, so Quest Helper/Shortest Path refreshes should not reassert the locked minigame route over Drew's fallback.
-- While the minigame-category fallback is active for the current target, Drew ignores stale transport snapshots that still contain locked minigame teleports instead of saving/displaying them over the valid fallback route.
+- Drew converts scanned locked minigames into stable transport keys such as `teleportation_minigames:nightmare_zone`, sends them as `config.blockedTransportKeys`, and replays a real captured route target once when posted telemetry still contains a locked route.
+- Drew Path consumes `config.blockedTransportKeys` directly and filters matching transports before path edges are built.
+- Drew's `PluginMessage` subscriber now runs at high priority and merges active locked-teleport policy into incoming `shortestpath/path` requests before Drew Path consumes them, including config-only path refreshes with no target.
+- The old broad stock-jar fallback (`useTeleportationMinigames=false` after exact reroute fails) is no longer part of the normal route loop. Exact keys are the expected behavior.
 - If Drew has not captured a real `shortestpath/path` target, it sends config-only route requests and lets Shortest Path reuse its own current target set. Drew must not treat a transport destination from `shortestpath/transports` as the final route target.
 - A source patch for Shortest Path `1.20.6` / `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea` is staged at `docs/patches/shortest-path-blocked-transport-keys.patch`.
+- A custom Shortest Path fork was previously built from `Skretzo/shortest-path@8551e6016d053aa5930bb16485069a6997718da3`; that source has now been vendored into `Drews Helper` as `Drew Path`.
+- The current-head patch for the installed fork is staged at `docs/patches/shortest-path-blocked-transport-keys-current.patch`.
+- The old active `shortest-path_*.jar` was moved out of `C:\Users\drews\.runelite\plugins` to `C:\Users\drews\.runelite\plugins-c2-backups\shortest-path_j65TV2lGDTkVcJlwg4jIvqU_Z2mHP1lUWx9t9lfkfRY.removed-for-drewpath-20260806-165054.jar`.
 
 ## Current Overlay Layout
 
@@ -47,15 +52,35 @@ Locked Routes           1
 
 The cache refreshes whenever the menu exposes the row again.
 
-## Known Limitations
+## Drew Path Runtime
 
-Shortest Path currently exposes plugin-message control for:
+Active source:
+- Project: `C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper`
+- Vendored solver: `src/main/java/shortestpath/**`
+- Vendored resources: `src/main/resources/**`
+- Dev launcher: `src/test/java/com/drewshelper/DrewsHelperPluginTest.java`
+
+Plugin identity:
+- Visible RuneLite plugin name: `Drew Path`
+- Config group: `drewpath`
+- Compatibility message namespace: `shortestpath`
+
+There should be no active Plugin Hub Shortest Path jar in:
+
+```text
+C:\Users\drews\.runelite\plugins
+```
+
+Drew Path consumes:
 - `start`
 - `target`
 - `config` overrides
+- `config.blockedTransportKeys`
 
-The installed Shortest Path config supports category-level transport toggles/costs such as boats, ships, spirit trees, fairy rings, minigame teleports, POH, spells, items, portals, and similar groups.
+Expected exact key shape: `teleportation_minigames:nightmare_zone`.
 
-The stock installed jar still does not consume `blockedTransportKeys`; it safely ignores that unknown override. Exact per-destination rerouting becomes active after applying and running the staged Shortest Path patch/fork.
+## Known Limitations
 
-Until that patched Shortest Path build is installed, Drew falls back to Shortest Path's supported `useTeleportationMinigames=false` setting after it sees the same locked minigame route survive one exact-key replay. That produces a real recalculation with the stock jar, but it blocks the whole minigame teleport category, including any minigames Drew has already confirmed unlocked. If no real target was captured, the fallback is sent as a config-only request so Shortest Path keeps its current target instead of Drew guessing from route telemetry.
+Drew Path is integrated and build-verified, but the in-game route behavior still needs live testing. Expected behavior: when `Nightmare Zone Minigame Teleport` is scanned as locked, Drew Path should exclude only `teleportation_minigames:nightmare_zone` and still allow other valid minigame teleports.
+
+If every minigame teleport disappears from the route, treat that as evidence that an old fallback path or stale Plugin Hub plugin is active. The normal Drew-owned route loop is exact-key only now.

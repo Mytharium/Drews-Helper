@@ -21,9 +21,17 @@ gradlew.bat run
 
 ## Current Runtime Shape
 
-Drew's Helper does not replace Shortest Path's pathfinder yet. It bridges into Shortest Path by sending plugin messages and requesting transport telemetry with `postTransports=true`.
+Drew's Helper now vendors a Drew-owned pathfinder, visible in RuneLite as `Drew Path`. The source is adapted from the BSD-2-Clause `Skretzo/shortest-path` fork, but it is compiled and launched from the `Drews Helper` project instead of relying on the Plugin Hub Shortest Path mod.
+
+Runtime shape:
+- `gradlew.bat run` loads both `shortestpath.ShortestPathPlugin` (`Drew Path`) and `com.drewshelper.DrewsHelperPlugin`.
+- The `shortestpath` plugin-message namespace is intentionally retained for Quest Helper / Drew Helper compatibility.
+- `Drew Path` uses config group `drewpath`, not the stock Shortest Path config group.
+- There should be no active `shortest-path_*.jar` in `C:\Users\drews\.runelite\plugins`.
+- Old Shortest Path jars are backed up under `C:\Users\drews\.runelite\plugins-c2-backups`.
 
 Owned Drew systems:
+- `src/main/java/shortestpath/**` owns pathfinding, map/minimap/tile overlays, transport data, and the `blockedTransportKeys` solver hook.
 - `ShortestPathBridge` sends `shortestpath/path` requests, captures Quest Helper target messages, and parses posted transport lists.
 - `RouteTransportState` stores the latest route transport snapshot in memory.
 - `DrewsHelperSessionState` persists route snapshots, Shortest Path targets, and minigame locked/unlocked statuses in RuneLite config.
@@ -34,4 +42,4 @@ Owned Drew systems:
 
 ## Resume Rule
 
-Start tomorrow's work in `02_NEXT_WORK.md`. The main unresolved feature is exact locked-route rerouting. Do not present Drew's filtered overlay as a true reroute unless Shortest Path's path calculation is actually changed.
+Start tomorrow's work in `02_NEXT_WORK.md`. Exact locked-route rerouting is now integrated into Drew's Helper, but still needs live RuneLite route testing. Do not call it proven until the in-game route markers and Drew overlay both avoid a locked destination such as Nightmare Zone while still allowing other available minigame teleports.
