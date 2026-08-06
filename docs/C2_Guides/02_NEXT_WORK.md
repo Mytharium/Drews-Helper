@@ -10,7 +10,7 @@ Current implementation status:
 - Drew-side outbound support is implemented. Locked minigame statuses are converted into `blockedTransportKeys`, included in `ShortestPathBridge.buildConfigOverride`, and sent on normal route refresh/replay.
 - Drew first replays a real captured target with the exact blocked list when posted Shortest Path telemetry still contains a locked transport. If no real target is known, Drew sends a config-only request and lets Shortest Path reuse its current target set.
 - If the same locked minigame route survives that exact replay, Drew escalates to the stock Shortest Path category hook `useTeleportationMinigames=false` for that reroute signature. This is a real reroute with the active jar, but it disables all minigame teleports.
-- Once the stock-jar fallback is active, Drew merges that policy into later incoming `shortestpath/path` requests at high event-bus priority, suppresses stale locked transport snapshots, and immediately reasserts the fallback if a locked snapshot leaks through.
+- Once the stock-jar fallback is active, Drew merges that policy into later incoming `shortestpath/path` requests at high event-bus priority, including config-only path refreshes with no target, suppresses stale locked transport snapshots, and immediately reasserts the fallback if a locked snapshot leaks through.
 - The Shortest Path-side source patch is staged at `docs/patches/shortest-path-blocked-transport-keys.patch` against `Skretzo/shortest-path@9953d52745f711a38c9cdd4a00bb1d0d57d1fdea` / Plugin Hub Shortest Path `1.20.6`.
 
 ## Important Constraint
@@ -57,7 +57,7 @@ Drew-side work completed:
 - Include those keys in `ShortestPathBridge.buildConfigOverride`.
 - When a posted route contains a locked route, replay the saved/current target with the blocked list first.
 - When stock Shortest Path ignores that exact list and posts the same locked minigame route again, send `useTeleportationMinigames=false` as the temporary broad fallback.
-- Merge the active Drew policy into incoming `shortestpath/path` messages before Shortest Path consumes them, so repeated Quest Helper/Shortest Path refreshes inherit the fallback instead of overwriting it.
+- Merge the active Drew policy into incoming `shortestpath/path` messages before Shortest Path consumes them, including config-only messages without a target, so repeated Quest Helper/Shortest Path refreshes inherit the fallback instead of overwriting it.
 - Do not replay from `shortestpath/transports` destinations. Those are intermediate transport steps, not the final route target. Use the saved `shortestpath/path` target when present; otherwise send config-only requests.
 - Add tests that verify blocked keys are sent only when `Hide Locked Teleports` is enabled.
 
@@ -71,7 +71,7 @@ Next concrete steps:
 
 Implemented for minigame teleports. If the exact `blockedTransportKeys` replay does not change the route and the same locked minigame route is posted again, Drew temporarily disables the whole minigame teleport category with `useTeleportationMinigames=false`.
 
-The fallback is now applied as an arbitration policy as well as an outbound replay: Drew mutates later `shortestpath/path` request configs before Shortest Path sees them, refuses to save stale locked snapshots while that fallback signature is active, and reasserts the fallback once per game tick if a stale locked snapshot leaks through.
+The fallback is now applied as an arbitration policy as well as an outbound replay: Drew mutates later `shortestpath/path` request configs before Shortest Path sees them, including targetless config refreshes that otherwise replace Shortest Path's static config override, refuses to save stale locked snapshots while that fallback signature is active, and reasserts the fallback once per game tick if a stale locked snapshot leaks through.
 
 This is not exact enough for the final behavior because it also blocks minigame teleports that Drew has already confirmed unlocked.
 

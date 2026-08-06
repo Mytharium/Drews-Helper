@@ -109,6 +109,11 @@ final class ShortestPathBridge
         return parsePathTargetMessage(event);
     }
 
+    boolean isPathRequest(PluginMessage event)
+    {
+        return isPathRequestMessage(event);
+    }
+
     boolean isDrewsHelperPathRequest(PluginMessage event)
     {
         return isDrewsHelperPathRequestMessage(event);
@@ -172,7 +177,7 @@ final class ShortestPathBridge
         Collection<String> blockedTransportKeys,
         boolean disableMinigameTeleports)
     {
-        if (!SHORTEST_PATH_NAMESPACE.equals(event.getNamespace()) || !PATH_ACTION.equals(event.getName()))
+        if (!isPathRequestMessage(event))
         {
             return false;
         }
@@ -248,7 +253,7 @@ final class ShortestPathBridge
 
     static OptionalInt parsePathTargetMessage(PluginMessage event)
     {
-        if (!SHORTEST_PATH_NAMESPACE.equals(event.getNamespace()) || !PATH_ACTION.equals(event.getName()))
+        if (!isPathRequestMessage(event))
         {
             return OptionalInt.empty();
         }
@@ -264,13 +269,20 @@ final class ShortestPathBridge
 
     static boolean isDrewsHelperPathRequestMessage(PluginMessage event)
     {
-        if (!SHORTEST_PATH_NAMESPACE.equals(event.getNamespace()) || !PATH_ACTION.equals(event.getName()))
+        if (!isPathRequestMessage(event))
         {
             return false;
         }
 
         Map<String, Object> data = event.getData();
         return data != null && Boolean.TRUE.equals(data.get(DREWS_HELPER_REQUEST_KEY));
+    }
+
+    static boolean isPathRequestMessage(PluginMessage event)
+    {
+        return event != null
+            && SHORTEST_PATH_NAMESPACE.equals(event.getNamespace())
+            && PATH_ACTION.equals(event.getName());
     }
 
     private static Map<String, Object> mapValue(Object value)

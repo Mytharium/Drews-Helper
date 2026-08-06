@@ -98,10 +98,13 @@ public class DrewsHelperPlugin extends Plugin
     @Subscribe(priority = PLUGIN_MESSAGE_PRIORITY)
     public void onPluginMessage(PluginMessage event)
     {
-        OptionalInt pathTarget = shortestPathBridge.parsePathTarget(event);
-        if (pathTarget.isPresent())
+        if (shortestPathBridge.isPathRequest(event))
         {
-            saveShortestPathTarget(pathTarget, shortestPathBridge.isDrewsHelperPathRequest(event));
+            OptionalInt pathTarget = shortestPathBridge.parsePathTarget(event);
+            if (pathTarget.isPresent())
+            {
+                saveShortestPathTarget(pathTarget, shortestPathBridge.isDrewsHelperPathRequest(event));
+            }
             applyShortestPathRequestPolicy(event, pathTarget);
         }
 

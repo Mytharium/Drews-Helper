@@ -211,4 +211,35 @@ public class ShortestPathBridgeTest
 
         assertFalse(target.isPresent());
     }
+
+    @Test
+    public void detectsConfigOnlyShortestPathPathRequest()
+    {
+        Map<String, Object> data = new HashMap<>();
+        data.put("config", new HashMap<>());
+
+        assertTrue(ShortestPathBridge.isPathRequestMessage(
+            new PluginMessage("shortestpath", "path", data)));
+    }
+
+    @Test
+    public void addsFallbackOverridesToConfigOnlyPathRequest()
+    {
+        Map<String, Object> existingConfig = new HashMap<>();
+        existingConfig.put("postTransports", true);
+        Map<String, Object> data = new HashMap<>();
+        data.put("config", existingConfig);
+
+        boolean changed = ShortestPathBridge.addConfigOverrideToPathRequest(
+            new PluginMessage("shortestpath", "path", data),
+            new DrewsHelperConfig() {},
+            Arrays.asList("teleportation_minigames:nightmare_zone"),
+            true);
+
+        assertTrue(changed);
+        Map<?, ?> mergedConfig = (Map<?, ?>) data.get("config");
+        assertEquals(true, mergedConfig.get("postTransports"));
+        assertEquals(false, mergedConfig.get("useTeleportationMinigames"));
+        assertEquals(Arrays.asList("teleportation_minigames:nightmare_zone"), mergedConfig.get("blockedTransportKeys"));
+    }
 }
