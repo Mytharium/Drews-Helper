@@ -11,14 +11,14 @@ import static org.junit.Assert.assertNotNull;
 public class DrewsHelperPluginDescriptorTest
 {
     @Test
-    public void pluginDescriptorMatchesUiShellMetadata()
+    public void pluginDescriptorMatchesWaypointRouteMetadata()
     {
         PluginDescriptor descriptor = DrewsHelperPlugin.class.getAnnotation(PluginDescriptor.class);
 
         assertNotNull(descriptor);
         assertEquals("Drew's Helper", descriptor.name());
-        assertEquals("UI shell for Drew's Helper.", descriptor.description());
-        assertArrayEquals(new String[] {"ui", "helper"}, descriptor.tags());
+        assertEquals("Waypoint placement and walking route guidance.", descriptor.description());
+        assertArrayEquals(new String[] {"ui", "helper", "waypoint", "route"}, descriptor.tags());
         assertFalse(descriptor.hidden());
     }
 }

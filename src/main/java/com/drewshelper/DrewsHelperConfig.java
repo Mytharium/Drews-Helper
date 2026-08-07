@@ -1,5 +1,6 @@
 package com.drewshelper;
 
+import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -47,6 +48,14 @@ public interface DrewsHelperConfig extends Config
         closedByDefault = true
     )
     String otherTransportationOptions = "otherTransportationOptions";
+
+    @ConfigSection(
+        name = "Settings",
+        description = "Waypoint path colour preferences.",
+        position = 5,
+        closedByDefault = false
+    )
+    String waypointSettings = "waypointSettings";
 
     @ConfigItem(keyName = "pathingReplacementEnabled", name = "Drew's Shortest Path", description = "Own route decisions instead of stock Shortest Path, including nearby exits before global teleports.", section = routingOptions, position = 0)
     default boolean pathingReplacementEnabled()
@@ -256,6 +265,42 @@ public interface DrewsHelperConfig extends Config
     default boolean otherItemsEnabled()
     {
         return true;
+    }
+
+    @ConfigItem(keyName = "pathColor", name = "Path Colour", description = "Colour used for Drew's walking route overlay. Default: Burgundy (#800020).", section = waypointSettings, position = 0)
+    default Color pathColor()
+    {
+        return new Color(0x800020);
+    }
+
+    @ConfigItem(keyName = "waypoint1PathColor", name = "Waypoint #1", description = "Marker colour for waypoint #1. Default: Dark Gray (#A9A9A9).", section = waypointSettings, position = 1)
+    default Color waypoint1PathColor()
+    {
+        return new Color(0xA9A9A9);
+    }
+
+    @ConfigItem(keyName = "waypoint2PathColor", name = "Waypoint #2", description = "Marker colour for waypoint #2. Default: Blue (#0072B2).", section = waypointSettings, position = 2)
+    default Color waypoint2PathColor()
+    {
+        return new Color(0x0072B2);
+    }
+
+    @ConfigItem(keyName = "waypoint3PathColor", name = "Waypoint #3", description = "Marker colour for waypoint #3. Default: Green/Teal (#009E73).", section = waypointSettings, position = 3)
+    default Color waypoint3PathColor()
+    {
+        return new Color(0x009E73);
+    }
+
+    @ConfigItem(keyName = "waypoint4PathColor", name = "Waypoint #4", description = "Marker colour for waypoint #4. Default: Magenta/Purple (#CC79A7).", section = waypointSettings, position = 4)
+    default Color waypoint4PathColor()
+    {
+        return new Color(0xCC79A7);
+    }
+
+    @ConfigItem(keyName = "waypoint5PathColor", name = "Waypoint #5", description = "Marker colour for waypoint #5. Default: Orange (#E69F00).", section = waypointSettings, position = 5)
+    default Color waypoint5PathColor()
+    {
+        return new Color(0xE69F00);
     }
 
     default boolean hostedPohTeleports()

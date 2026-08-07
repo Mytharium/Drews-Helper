@@ -127,6 +127,40 @@ Next work is UI-only:
 - Confirm the RuneLite plugin list shows only `Drew's Helper`.
 - Confirm the overlay panel appears when the preserved UI toggles allow it.
 - Confirm the config buttons/dropdowns are still visible.
+- Open the world map, right-click inside the map bounds, and confirm `Set -> Waypoint #1` through `Set -> Waypoint #5` appear.
+- Place all five waypoints, confirm colored markers appear, restart the plugin/client, and confirm the markers reload from hidden config.
 - Do not debug or restore route drawing, shortest path telemetry, minigame teleport scanning, tab highlighting, or route diagnostics unless Myth explicitly asks to rebuild those systems from scratch.
 
 Everything below this reset note is historical context from the removed route-engine attempt.
+
+## 2026-08-07 Upstream Reference Analysis
+
+Before rebuilding any route feature, read:
+
+```text
+docs/C2_Guides/RUNEMORO_SHORTEST_PATH_DEEP_DIVE.md
+```
+
+Next route work should not start by restoring `src/main/java/shortestpath/**`. Start from the UI shell and design a Drew-owned variant with:
+- one authoritative `RouteEngine`;
+- structured `TransportEdge` metadata;
+- typed `RoutePolicy` from Drew's config UI;
+- immutable `RouteResult` / `RouteSnapshot`;
+- worker cancellation or version-token stale-result rejection;
+- map/minimap/tile/HUD/highlighter views derived from the same snapshot;
+- tests before live RuneLite wiring.
+## Waypoint Colour Settings Follow-Up
+
+Waypoint markers now consume waypoint marker colours from `DrewsHelperConfig.waypoint1PathColor()` through `waypoint5PathColor()`, with `Waypoint #1` defaulting to `#A9A9A9`. `DrewsHelperConfig.pathColor()` owns the route overlay colour and defaults to `#800020`. The current implementation uses RuneLite native `Color` config controls; if Myth wants an always-visible custom hex text field over a swatch instead of RuneLite's built-in colour picker, build that as a custom Swing/plugin-panel control rather than route-engine code.
+
+Current waypoint-routing state:
+- A Drew-owned walking route layer reads the five saved `waypointNPosition` values as ordered destinations.
+- `src/main/java/shortestpath/**` remains deleted; do not restore it.
+- `src/main/resources/collision-map.zip` is present as a third-party walking-collision data source from Runemoro's BSD-licensed project; keep `THIRD_PARTY_NOTICES.md` with it.
+- World map, minimap, scene tile, and Drew overlay views all read one authoritative `DrewsHelperRouteSnapshot`.
+
+Next route work:
+- Live-test world-map and in-scene path drawing after setting two or more waypoints.
+- Add diagnostics if live drawing or solve timing is unclear.
+- Do not add teleports/fast travel until the walking-only route is stable.
+- Plane changes need a deliberate ladder/stair/transport model before they can work.

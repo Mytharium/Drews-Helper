@@ -4,17 +4,33 @@ Last updated: 2026-08-07.
 
 ## Current Runtime Reset
 
-As of the 2026-08-07 UI-only reset, Drew's Helper is intentionally reduced to the visible plugin UI shell and config buttons only.
+As of the 2026-08-07 UI-only reset plus Myth's waypoint follow-up, Drew's Helper is intentionally reduced to the visible plugin UI/config shell plus five Drew-owned world-map waypoints.
 
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.
-- `DrewsHelperOverlay` keeps the in-client overlay panel.
+- `DrewsHelperPlugin` owns five persistent world-map waypoint slots, world-map right-click menu entries, and `WorldMapPoint` marker registration.
+- `DrewsHelperOverlay` keeps the in-client overlay panel and reports placed waypoint count/coordinates.
 - `JewelleryBoxTier` and `PortalNexusTier` remain only because the config UI dropdowns need those enum values.
 - The vendored `shortestpath` route engine, pathfinder, map/minimap/tile overlays, transport resources, minigame scanner, teleport highlighter, route telemetry bridge, route diagnostics, saved route state, and route behavior tests have been removed.
 - `run-drews-helper-dev.bat` launches the plain Gradle dev client again; the route-diagnostic tee/collector tools are no longer part of the project.
 
-Everything below this note is historical context from the removed route-engine attempt unless a future guide entry explicitly revives it.
+Everything below this note is historical context from the removed route-engine attempt unless a future guide entry explicitly revives it. The active exception is the waypoint marker surface, which is newly rebuilt without restoring the old route engine.
+
+## Active Reference Analysis
+
+Myth requested a deep analysis of Runemoro's upstream `shortest-path` after the UI-only reset. The analysis is now captured in:
+
+```text
+docs/C2_Guides/RUNEMORO_SHORTEST_PATH_DEEP_DIVE.md
+```
+
+Current takeaways:
+- Runemoro's working shape is a single route owner: target, pathfinder, loaded resources, marker, and overlays all live under `ShortestPathPlugin`.
+- The solver is breadth-first search over collision-map tile edges plus transport edges.
+- Runtime parses only the first six integers from `transports.txt`; labels, object IDs, requirements, and comments are ignored.
+- A Drew variant should use Runemoro as an architecture reference, not as a direct restoration of the removed integration.
+- Future route work should start with a typed route model, structured transport metadata, worker version tokens, route result statuses, and one immutable snapshot consumed by map/minimap/tile/HUD/highlighter views.
 
 ## Working
 
@@ -115,3 +131,48 @@ Expected exact key shape: `teleportation_minigames:nightmare_zone`.
 Drew's Shortest Path is integrated and build-verified, but the in-game route behavior still needs live testing after the 2026-08-07 policy-refresh patch. Expected behavior: when `Nightmare Zone Minigame Teleport` is scanned as locked and `Hide Locked Teleports` is enabled, the route engine should exclude only `teleportation_minigames:nightmare_zone` and still allow other valid minigame teleports. Turning `Hide Locked Teleports` off should keep the scan cache, stop sending blocked minigame keys, and highlight/use Nightmare Zone again if the solver prefers it.
 
 If every minigame teleport disappears from the route, treat that as evidence that an old fallback path or stale Plugin Hub plugin is active. The normal Drew-owned route loop is exact-key only now.
+## 2026-08-07 Waypoint Colour Settings
+
+The config surface has a separate `Settings` section directly below `Other Transportation`. It owns one native RuneLite `Color` config control for the route path plus five native RuneLite `Color` controls for waypoint marker colours:
+- Path Colour: Burgundy `#800020`
+- Waypoint #1: Dark Gray `#A9A9A9`
+- Waypoint #2: Blue `#0072B2`
+- Waypoint #3: Green/Teal `#009E73`
+- Waypoint #4: Magenta/Purple `#CC79A7`
+- Waypoint #5: Orange `#E69F00`
+
+The waypoint values color the matching Drew waypoint marker on the world map. `Path Colour` colors the Drew walking route overlays.
+
+## 2026-08-07 Waypoint Placement
+
+Drew's Helper now provides the first non-route rebuild surface after the reset:
+- Open the world map and right-click inside the map bounds.
+- The plugin adds waypoint menu entries in visible order `Waypoint #1` through `Waypoint #5`.
+- Empty slots show `Set -> Waypoint #X`; placed slots show `Cancel -> Waypoint #X` and clear only that slot.
+- Selecting one stores that map tile as a hidden Drew config value (`waypointNPosition`) encoded as `x,y,plane`.
+- The plugin registers a colored `WorldMapPoint` marker for each stored waypoint and reloads those markers on plugin startup.
+- If at least one waypoint exists, the world-map menu also offers `Clear -> All Waypoints`.
+- The overlay displays `Waypoints X/5` and the coordinates of each placed waypoint.
+
+This is now the input surface for Drew walking route guidance. Fast travel, transport scoring, Quest Helper integration, minigame scanning, and teleport highlighter behavior remain removed.
+
+## 2026-08-07 Walking Route Guidance
+
+Myth explicitly asked to rebuild route guidance from placed waypoints, walking only:
+- The old `src/main/java/shortestpath/**` package remains absent.
+- Drew's new route owner is `com.drewshelper.routing/**`.
+- `DrewsHelperPlugin` reads the player location and ordered non-empty waypoint slots, then calculates player -> waypoint #1 -> waypoint #2 and onward.
+- Empty waypoint slots are skipped, preserving ordered route intent without forcing all five slots to exist.
+- The first solver uses A* over Runemoro's `collision-map.zip` walking collision data and includes no transports, teleports, plugin messages, minigame scanning, Quest Helper targets, or teleport UI highlighter.
+- Route work runs on a single background worker; waypoint/player changes cancel stale work through a request id before publishing one immutable `DrewsHelperRouteSnapshot`.
+- `DrewsHelperRouteMapOverlay`, `DrewsHelperRouteMinimapOverlay`, and `DrewsHelperRouteTileOverlay` all render that same route snapshot using `DrewsHelperConfig.pathColor()`.
+- The walking solver keeps shortest distance as the first priority, then orders equal-cost choices toward the waypoint with Myth's observed primary-axis forward/cardinal preference before diagonal cleanup when one axis is longer. Do not reintroduce the older target-line penalty; it looked prettier but could disagree with how the player actually walks after clicking the endpoint.
+- `DrewsHelperRouteTileOverlay` draws placed waypoint endpoint badges on in-scene tiles using the same numbered circle icon style as the waypoint map/minimap marker, using each waypoint's configured marker colour over the shared path colour.
+- `DrewsHelperRouteMinimapOverlay` also draws nearby placed waypoint endpoint icons on top of the route squares.
+- The Drew overlay now reports route status and walking distance in tiles.
+- `THIRD_PARTY_NOTICES.md` records the BSD 2-Clause notice for the copied Runemoro collision-map resource.
+
+Known first-pass limits:
+- Plane changes are not routed yet because ladders/stairs/transports are intentionally excluded.
+- There is no partial path display; if an exact walking segment cannot be found, the overlay reports no walking path for that segment.
+- The route is committed after calculation. Exact on-route player movement trims every leading route tile before the player's current tile, so walk and run speed both leave the current tile highlighted. Nearby movement variance within 10 tiles of the committed route preserves the route without recalculating. A new background route is submitted only when waypoints/config change or the player is more than 10 tiles away from the committed route.
