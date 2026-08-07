@@ -1,5 +1,6 @@
 package com.drewshelper;
 
+import com.drewshelper.routing.DrewsHelperRouteSolverMode;
 import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -89,6 +90,18 @@ public interface DrewsHelperConfig extends Config
 
     @ConfigItem(keyName = "questPreparationGrandExchange", name = "Use: Grand Exchange", description = "Reserved for using the Grand Exchange as a quest preparation stop.", section = routingOptions, position = 5)
     default boolean questPreparationGrandExchange()
+    {
+        return false;
+    }
+
+    @ConfigItem(keyName = "routeSolverMode", name = "Route Solver", description = "Select the route solver used for the visible waypoint path.", section = routingOptions, position = 6)
+    default DrewsHelperRouteSolverMode routeSolverMode()
+    {
+        return DrewsHelperRouteSolverMode.A_STAR;
+    }
+
+    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Benchmark Movement", description = "Also solve with the other solver and log DREW_ROUTE_BENCH movement comparisons while you walk the route.", section = routingOptions, position = 7)
+    default boolean routeBenchmarkEnabled()
     {
         return false;
     }

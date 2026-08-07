@@ -5,7 +5,9 @@ import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class DrewsHelperRouteSnapshotTest
 {
@@ -84,5 +86,23 @@ public class DrewsHelperRouteSnapshotTest
         assertEquals(1, consumed.getPath().size());
         assertEquals(new WorldPoint(100, 102, 0), consumed.getPath().get(0));
         assertEquals(0, consumed.getWalkingDistance());
+    }
+
+    @Test
+    public void doesNotTreatNormalWalkingStepsAsTransportJumps()
+    {
+        WorldPoint point = new WorldPoint(100, 100, 0);
+
+        assertFalse(DrewsHelperRouteSnapshot.isTransportJump(point, new WorldPoint(101, 100, 0)));
+        assertFalse(DrewsHelperRouteSnapshot.isTransportJump(point, new WorldPoint(101, 101, 0)));
+    }
+
+    @Test
+    public void treatsDistantAndPlaneChangingStepsAsTransportJumps()
+    {
+        WorldPoint point = new WorldPoint(100, 100, 0);
+
+        assertTrue(DrewsHelperRouteSnapshot.isTransportJump(point, new WorldPoint(110, 100, 0)));
+        assertTrue(DrewsHelperRouteSnapshot.isTransportJump(point, new WorldPoint(100, 100, 1)));
     }
 }

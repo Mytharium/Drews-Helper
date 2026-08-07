@@ -161,6 +161,9 @@ Current waypoint-routing state:
 
 Next route work:
 - Live-test world-map and in-scene path drawing after setting two or more waypoints.
+- Live-test `Routing Options` -> `Benchmark Movement` with both `Route Solver: A*` and `Route Solver: BFS`. Walk/click the same waypoint route and compare `DREW_ROUTE_BENCH` log lines for first-step direction, first 5/10 movement ticks, full sequence match, length delta, max lateral deviation, turn delta, solve time, and expanded nodes.
+- For the next benchmark run, use the coordinate trace fields before retuning movement order: compare `start`, `target`, `primaryPath10`, `alternatePath10`, `actualPath10`, `primaryDivergence`, `alternateDivergence`, and `primaryCandidates` / `alternateCandidates`. The candidate trace should show the exact fork tile, the legal moves in solver order, which tile Drew predicted, and which tile the client actually chose.
+- After the 2026-08-07 final path-ranking patch, do not keep retesting A* versus BFS for the same late forks. A* and BFS both share the final client-style shortest-path reconstruction now. The next useful route test is collision validation: for Path 1, watch `(2939,3222,0) -> (2938,3221,0)`; for Path 3, watch `(2967,3231,0) -> (2968,3230,0)`. The live client walked those continuations, but the static collision graph currently treats them as longer than the client path. If `idx=0` appears, discard that sample as stale target/recalc timing.
 - Add diagnostics if live drawing or solve timing is unclear.
 - Do not add teleports/fast travel until the walking-only route is stable.
 - Plane changes need a deliberate ladder/stair/transport model before they can work.

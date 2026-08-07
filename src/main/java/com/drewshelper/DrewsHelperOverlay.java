@@ -68,6 +68,16 @@ final class DrewsHelperOverlay extends OverlayPanel
                 .build());
         }
 
+        String benchmarkSummary = plugin.getRouteBenchmarkSummary();
+        if (!benchmarkSummary.isEmpty())
+        {
+            panelComponent.getChildren().add(LineComponent.builder()
+                .left("Benchmark")
+                .right(benchmarkSummary)
+                .rightColor(MUTED)
+                .build());
+        }
+
         panelComponent.getChildren().add(LineComponent.builder()
             .left("Waypoints")
             .right(plugin.getPlacedWaypointCount() + "/" + DrewsHelperPlugin.MAX_WAYPOINTS)

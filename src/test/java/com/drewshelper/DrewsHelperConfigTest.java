@@ -1,5 +1,6 @@
 package com.drewshelper;
 
+import com.drewshelper.routing.DrewsHelperRouteSolverMode;
 import java.awt.Color;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -70,6 +71,23 @@ public class DrewsHelperConfigTest
                 assertFalse("routeDiagnosticsEnabled".equals(item.keyName()));
             }
         }
+    }
+
+    @Test
+    public void routeSolverBenchmarkControlsDefaultToCurrentSafeMode() throws Exception
+    {
+        DrewsHelperConfig config = new DrewsHelperConfig() {};
+        Method solverMode = DrewsHelperConfig.class.getMethod("routeSolverMode");
+        Method benchmarkEnabled = DrewsHelperConfig.class.getMethod("routeBenchmarkEnabled");
+        ConfigItem solverModeItem = solverMode.getAnnotation(ConfigItem.class);
+        ConfigItem benchmarkEnabledItem = benchmarkEnabled.getAnnotation(ConfigItem.class);
+
+        assertNotNull(solverModeItem);
+        assertNotNull(benchmarkEnabledItem);
+        assertEquals("routingOptions", solverModeItem.section());
+        assertEquals("routingOptions", benchmarkEnabledItem.section());
+        assertEquals(DrewsHelperRouteSolverMode.A_STAR, config.routeSolverMode());
+        assertFalse(config.routeBenchmarkEnabled());
     }
 
     @Test

@@ -18,20 +18,28 @@ public final class DrewsHelperTransportGraph
     private static final String RESOURCE = "/drewshelper-transports.tsv";
 
     private final Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesBySource;
+    private final Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesByDestination;
     private final int edgeCount;
 
     private DrewsHelperTransportGraph(Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesBySource)
     {
         Map<WorldPoint, List<DrewsHelperTransportEdge>> immutableEdges = new HashMap<>();
+        Map<WorldPoint, List<DrewsHelperTransportEdge>> incomingEdges = new HashMap<>();
         int count = 0;
         for (Map.Entry<WorldPoint, List<DrewsHelperTransportEdge>> entry : edgesBySource.entrySet())
         {
             List<DrewsHelperTransportEdge> edges = Collections.unmodifiableList(new ArrayList<>(entry.getValue()));
             immutableEdges.put(entry.getKey(), edges);
             count += edges.size();
+
+            for (DrewsHelperTransportEdge edge : edges)
+            {
+                incomingEdges.computeIfAbsent(edge.getDestination(), key -> new ArrayList<>()).add(edge);
+            }
         }
 
         this.edgesBySource = Collections.unmodifiableMap(immutableEdges);
+        this.edgesByDestination = immutableEdgeMap(incomingEdges);
         this.edgeCount = count;
     }
 
@@ -103,6 +111,11 @@ public final class DrewsHelperTransportGraph
         return edgesBySource.getOrDefault(source, Collections.emptyList());
     }
 
+    public List<DrewsHelperTransportEdge> edgesTo(WorldPoint destination)
+    {
+        return edgesByDestination.getOrDefault(destination, Collections.emptyList());
+    }
+
     public boolean isEmpty()
     {
         return edgeCount == 0;
@@ -111,6 +124,18 @@ public final class DrewsHelperTransportGraph
     public int getEdgeCount()
     {
         return edgeCount;
+    }
+
+    private static Map<WorldPoint, List<DrewsHelperTransportEdge>> immutableEdgeMap(
+        Map<WorldPoint, List<DrewsHelperTransportEdge>> mutableEdges
+    )
+    {
+        Map<WorldPoint, List<DrewsHelperTransportEdge>> immutableEdges = new HashMap<>();
+        for (Map.Entry<WorldPoint, List<DrewsHelperTransportEdge>> entry : mutableEdges.entrySet())
+        {
+            immutableEdges.put(entry.getKey(), Collections.unmodifiableList(new ArrayList<>(entry.getValue())));
+        }
+        return Collections.unmodifiableMap(immutableEdges);
     }
 
     private static WorldPoint parseWorldPoint(String encoded, int lineNumber) throws IOException

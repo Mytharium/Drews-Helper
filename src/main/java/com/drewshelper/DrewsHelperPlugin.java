@@ -2,7 +2,10 @@ package com.drewshelper;
 
 import com.google.inject.Provides;
 import com.drewshelper.routing.DrewsHelperCollisionMap;
+import com.drewshelper.routing.DrewsHelperRouteBenchmark;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
+import com.drewshelper.routing.DrewsHelperRouteSearchMetrics;
+import com.drewshelper.routing.DrewsHelperRouteSolverMode;
 import com.drewshelper.routing.DrewsHelperRouteStatus;
 import com.drewshelper.routing.DrewsHelperTransportGraph;
 import com.drewshelper.routing.DrewsHelperWalkingRouteEngine;
@@ -14,6 +17,7 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -101,6 +105,8 @@ public class DrewsHelperPlugin extends Plugin
     private int routeRequestId;
     private boolean routeDirty = true;
     private String lastRouteSignature = "";
+    private RouteBenchmarkCapture routeBenchmarkCapture;
+    private volatile String routeBenchmarkSummary = "";
 
     @Override
     protected void startUp()
@@ -114,6 +120,7 @@ public class DrewsHelperPlugin extends Plugin
         routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
         routeDirty = true;
         lastRouteSignature = "";
+        clearRouteBenchmark();
         overlayManager.remove(overlay);
         overlayManager.remove(routeMapOverlay);
         overlayManager.remove(routeMinimapOverlay);
@@ -138,6 +145,7 @@ public class DrewsHelperPlugin extends Plugin
             routeExecutor = null;
         }
         routeSnapshot = DrewsHelperRouteSnapshot.disabled();
+        clearRouteBenchmark();
         removeWaypointMarkers();
         overlayManager.remove(routeTileOverlay);
         overlayManager.remove(routeMinimapOverlay);
@@ -157,6 +165,7 @@ public class DrewsHelperPlugin extends Plugin
 
         if (routeSnapshot.getStatus() == DrewsHelperRouteStatus.READY)
         {
+            recordRouteBenchmarkPosition();
             advanceCommittedRouteIfNeeded();
         }
     }
@@ -206,6 +215,8 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         if ("pathingReplacementEnabled".equals(event.getKey())
+            || "routeSolverMode".equals(event.getKey())
+            || "routeBenchmarkEnabled".equals(event.getKey())
             || "useWildernessTransports".equals(event.getKey()))
         {
             markRouteDirty();
@@ -243,6 +254,11 @@ public class DrewsHelperPlugin extends Plugin
     public DrewsHelperRouteSnapshot getRouteSnapshot()
     {
         return routeSnapshot;
+    }
+
+    public String getRouteBenchmarkSummary()
+    {
+        return routeBenchmarkSummary;
     }
 
     private void loadWaypoints()
@@ -306,6 +322,7 @@ public class DrewsHelperPlugin extends Plugin
             routeDirty = false;
             lastRouteSignature = "";
             cancelRouteFuture();
+            clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.disabled();
             return;
         }
@@ -316,6 +333,7 @@ public class DrewsHelperPlugin extends Plugin
             routeDirty = false;
             lastRouteSignature = "";
             cancelRouteFuture();
+            clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
             return;
         }
@@ -326,19 +344,22 @@ public class DrewsHelperPlugin extends Plugin
             routeDirty = true;
             lastRouteSignature = "";
             cancelRouteFuture();
+            clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.noPlayer();
             return;
         }
 
         WorldPoint start = localPlayer.getWorldLocation();
         boolean useWildernessTransports = config().wildernessTransportsEnabled();
-        String signature = routeSignature(start, destinations, useWildernessTransports);
+        DrewsHelperRouteSolverMode solverMode = config().routeSolverMode();
+        boolean benchmarkMovement = config().routeBenchmarkEnabled();
+        String signature = routeSignature(start, destinations, useWildernessTransports, solverMode, benchmarkMovement);
         if (!routeDirty && signature.equals(lastRouteSignature))
         {
             return;
         }
 
-        submitRoute(start, destinations, signature, useWildernessTransports);
+        submitRoute(start, destinations, signature, useWildernessTransports, solverMode, benchmarkMovement);
     }
 
     private void advanceCommittedRouteIfNeeded()
@@ -349,6 +370,7 @@ public class DrewsHelperPlugin extends Plugin
             routeDirty = true;
             lastRouteSignature = "";
             cancelRouteFuture();
+            clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.noPlayer();
             return;
         }
@@ -389,7 +411,9 @@ public class DrewsHelperPlugin extends Plugin
         WorldPoint start,
         List<WorldPoint> destinations,
         String signature,
-        boolean useWildernessTransports
+        boolean useWildernessTransports,
+        DrewsHelperRouteSolverMode solverMode,
+        boolean benchmarkMovement
     )
     {
         if (routeExecutor == null)
@@ -401,6 +425,7 @@ public class DrewsHelperPlugin extends Plugin
         int requestId = ++routeRequestId;
         List<WorldPoint> routeDestinations = new ArrayList<>(destinations);
         routeSnapshot = DrewsHelperRouteSnapshot.calculating(routeDestinations);
+        clearRouteBenchmark();
         lastRouteSignature = signature;
         routeDirty = false;
 
@@ -409,7 +434,12 @@ public class DrewsHelperPlugin extends Plugin
             DrewsHelperRouteSnapshot calculatedSnapshot;
             try
             {
-                calculatedSnapshot = routeEngine(useWildernessTransports).solve(start, routeDestinations);
+                calculatedSnapshot = routeEngine(useWildernessTransports).solve(
+                    start,
+                    routeDestinations,
+                    solverMode,
+                    benchmarkMovement
+                );
             }
             catch (InterruptedException ex)
             {
@@ -428,6 +458,7 @@ public class DrewsHelperPlugin extends Plugin
                 if (requestId == routeRequestId)
                 {
                     routeSnapshot = publishSnapshot;
+                    startRouteBenchmarkIfNeeded(publishSnapshot);
                 }
                 return true;
             });
@@ -465,11 +496,15 @@ public class DrewsHelperPlugin extends Plugin
     private static String routeSignature(
         WorldPoint start,
         List<WorldPoint> destinations,
-        boolean useWildernessTransports
+        boolean useWildernessTransports,
+        DrewsHelperRouteSolverMode solverMode,
+        boolean benchmarkMovement
     )
     {
         StringBuilder signature = new StringBuilder();
         signature.append(useWildernessTransports ? "wilderness=1|" : "wilderness=0|");
+        signature.append("solver=").append(solverMode == null ? DrewsHelperRouteSolverMode.A_STAR : solverMode).append('|');
+        signature.append(benchmarkMovement ? "benchmark=1|" : "benchmark=0|");
         appendPoint(signature, start);
         for (WorldPoint destination : destinations)
         {
@@ -486,6 +521,82 @@ public class DrewsHelperPlugin extends Plugin
             .append(point.getY())
             .append(',')
             .append(point.getPlane());
+    }
+
+    private void clearRouteBenchmark()
+    {
+        routeBenchmarkCapture = null;
+        routeBenchmarkSummary = "";
+    }
+
+    private void startRouteBenchmarkIfNeeded(DrewsHelperRouteSnapshot snapshot)
+    {
+        clearRouteBenchmark();
+        if (!config().routeBenchmarkEnabled()
+            || snapshot.getStatus() != DrewsHelperRouteStatus.READY
+            || !snapshot.hasPath()
+            || !snapshot.hasBenchmarkPath())
+        {
+            return;
+        }
+
+        routeBenchmarkCapture = new RouteBenchmarkCapture(
+            snapshot.getPrimaryMetrics().getSolverMode(),
+            snapshot.getPath(),
+            snapshot.getBenchmarkMetrics().getSolverMode(),
+            snapshot.getBenchmarkPath(),
+            routeEngine
+        );
+        routeBenchmarkSummary = "Waiting for movement";
+        log.info(
+            "DREW_ROUTE_BENCH start primary={} alternate={}",
+            searchMetricsSummary(snapshot.getPrimaryMetrics()),
+            searchMetricsSummary(snapshot.getBenchmarkMetrics())
+        );
+        log.info("DREW_ROUTE_BENCH {}", routeBenchmarkCapture.startTraceLine());
+    }
+
+    private void recordRouteBenchmarkPosition()
+    {
+        RouteBenchmarkCapture capture = routeBenchmarkCapture;
+        if (capture == null)
+        {
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null || localPlayer.getWorldLocation() == null)
+        {
+            return;
+        }
+
+        RouteBenchmarkUpdate update = capture.record(localPlayer.getWorldLocation());
+        if (update == null)
+        {
+            return;
+        }
+
+        routeBenchmarkSummary = update.overlaySummary();
+        log.info("DREW_ROUTE_BENCH {}", update.logLine());
+        if (update.isComplete())
+        {
+            routeBenchmarkCapture = null;
+        }
+    }
+
+    private static String searchMetricsSummary(DrewsHelperRouteSearchMetrics metrics)
+    {
+        return metrics.getSolverMode()
+            + " found=" + metrics.isRouteFound()
+            + " solve=" + formatMillis(metrics.getSolveTimeMillis())
+            + " expanded=" + metrics.getExpandedNodes()
+            + " steps=" + metrics.getRouteStepCount()
+            + " turns=" + metrics.getTurnCount();
+    }
+
+    private static String formatMillis(double millis)
+    {
+        return String.format(Locale.ROOT, "%.2fms", millis);
     }
 
     static int routePathIndex(List<WorldPoint> path, WorldPoint point)
@@ -583,6 +694,198 @@ public class DrewsHelperPlugin extends Plugin
         int getDistanceFromRoute()
         {
             return distanceFromRoute;
+        }
+    }
+
+    private static final class RouteBenchmarkCapture
+    {
+        private final DrewsHelperRouteSolverMode primaryMode;
+        private final List<WorldPoint> primaryPath;
+        private final DrewsHelperRouteSolverMode alternateMode;
+        private final List<WorldPoint> alternatePath;
+        private final DrewsHelperWalkingRouteEngine routeEngine;
+        private final WorldPoint target;
+        private final int maxMovementTicks;
+        private final List<WorldPoint> actualPath = new ArrayList<>();
+
+        private RouteBenchmarkCapture(
+            DrewsHelperRouteSolverMode primaryMode,
+            List<WorldPoint> primaryPath,
+            DrewsHelperRouteSolverMode alternateMode,
+            List<WorldPoint> alternatePath,
+            DrewsHelperWalkingRouteEngine routeEngine
+        )
+        {
+            this.primaryMode = primaryMode;
+            this.primaryPath = new ArrayList<>(primaryPath);
+            this.alternateMode = alternateMode;
+            this.alternatePath = new ArrayList<>(alternatePath);
+            this.routeEngine = routeEngine;
+            this.target = primaryPath.get(primaryPath.size() - 1);
+            this.maxMovementTicks = Math.max(
+                50,
+                Math.max(
+                    DrewsHelperRouteBenchmark.pathDistance(primaryPath),
+                    DrewsHelperRouteBenchmark.pathDistance(alternatePath)
+                ) + 25
+            );
+        }
+
+        private String startTraceLine()
+        {
+            return "trace start=" + DrewsHelperRouteBenchmark.formatPoint(primaryPath.get(0))
+                + " target=" + DrewsHelperRouteBenchmark.formatPoint(target)
+                + " primaryMode=" + primaryMode
+                + " primaryPath10=" + DrewsHelperRouteBenchmark.formatPathPrefix(primaryPath)
+                + " alternateMode=" + alternateMode
+                + " alternatePath10=" + DrewsHelperRouteBenchmark.formatPathPrefix(alternatePath);
+        }
+
+        private RouteBenchmarkUpdate record(WorldPoint point)
+        {
+            if (actualPath.isEmpty())
+            {
+                actualPath.add(point);
+                return null;
+            }
+
+            if (actualPath.get(actualPath.size() - 1).equals(point))
+            {
+                return null;
+            }
+
+            actualPath.add(point);
+            int movementTicks = actualPath.size() - 1;
+            boolean reachedTarget = point.equals(target);
+            boolean movementLimitReached = movementTicks >= maxMovementTicks;
+            boolean shouldReport = reachedTarget
+                || movementLimitReached
+                || movementTicks == 1
+                || movementTicks == 5
+                || movementTicks == 10
+                || movementTicks % 25 == 0;
+
+            if (!shouldReport)
+            {
+                return null;
+            }
+
+            return new RouteBenchmarkUpdate(
+                movementTicks,
+                reachedTarget || movementLimitReached,
+                reachedTarget ? "target" : movementLimitReached ? "limit" : "progress",
+                DrewsHelperRouteBenchmark.compare(primaryMode, primaryPath, actualPath),
+                DrewsHelperRouteBenchmark.compare(alternateMode, alternatePath, actualPath),
+                DrewsHelperRouteBenchmark.formatPathPrefix(primaryPath),
+                DrewsHelperRouteBenchmark.formatPathPrefix(alternatePath),
+                DrewsHelperRouteBenchmark.formatPathPrefix(actualPath),
+                DrewsHelperRouteBenchmark.formatDivergence(primaryPath, actualPath, reachedTarget || movementLimitReached),
+                DrewsHelperRouteBenchmark.formatDivergence(alternatePath, actualPath, reachedTarget || movementLimitReached),
+                candidateTrace(primaryPath, reachedTarget || movementLimitReached),
+                candidateTrace(alternatePath, reachedTarget || movementLimitReached)
+            );
+        }
+
+        private String candidateTrace(List<WorldPoint> predictedPath, boolean actualComplete)
+        {
+            int divergenceIndex = DrewsHelperRouteBenchmark.firstDivergenceIndex(
+                predictedPath,
+                actualPath,
+                actualComplete
+            );
+            if (divergenceIndex < 1 || routeEngine == null)
+            {
+                return "none";
+            }
+
+            WorldPoint from = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex - 1);
+            WorldPoint predicted = DrewsHelperRouteBenchmark.pointAt(predictedPath, divergenceIndex);
+            WorldPoint actual = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex);
+            if (from == null)
+            {
+                return "none";
+            }
+
+            return "from=" + DrewsHelperRouteBenchmark.formatPoint(from)
+                + " target=" + DrewsHelperRouteBenchmark.formatPoint(target)
+                + " candidates=" + DrewsHelperRouteBenchmark.formatMoveCandidates(
+                    routeEngine.moveCandidates(from, target),
+                    predicted,
+                    actual
+                );
+        }
+    }
+
+    private static final class RouteBenchmarkUpdate
+    {
+        private final int movementTicks;
+        private final boolean complete;
+        private final String reason;
+        private final DrewsHelperRouteBenchmark.Report primaryReport;
+        private final DrewsHelperRouteBenchmark.Report alternateReport;
+        private final String primaryPathTrace;
+        private final String alternatePathTrace;
+        private final String actualPathTrace;
+        private final String primaryDivergenceTrace;
+        private final String alternateDivergenceTrace;
+        private final String primaryCandidateTrace;
+        private final String alternateCandidateTrace;
+
+        private RouteBenchmarkUpdate(
+            int movementTicks,
+            boolean complete,
+            String reason,
+            DrewsHelperRouteBenchmark.Report primaryReport,
+            DrewsHelperRouteBenchmark.Report alternateReport,
+            String primaryPathTrace,
+            String alternatePathTrace,
+            String actualPathTrace,
+            String primaryDivergenceTrace,
+            String alternateDivergenceTrace,
+            String primaryCandidateTrace,
+            String alternateCandidateTrace
+        )
+        {
+            this.movementTicks = movementTicks;
+            this.complete = complete;
+            this.reason = reason;
+            this.primaryReport = primaryReport;
+            this.alternateReport = alternateReport;
+            this.primaryPathTrace = primaryPathTrace;
+            this.alternatePathTrace = alternatePathTrace;
+            this.actualPathTrace = actualPathTrace;
+            this.primaryDivergenceTrace = primaryDivergenceTrace;
+            this.alternateDivergenceTrace = alternateDivergenceTrace;
+            this.primaryCandidateTrace = primaryCandidateTrace;
+            this.alternateCandidateTrace = alternateCandidateTrace;
+        }
+
+        private boolean isComplete()
+        {
+            return complete;
+        }
+
+        private String overlaySummary()
+        {
+            return primaryReport.getSolverMode()
+                + " " + primaryReport.getFirstTenMatches() + "/" + primaryReport.getFirstTenCompared()
+                + " | " + alternateReport.getSolverMode()
+                + " " + alternateReport.getFirstTenMatches() + "/" + alternateReport.getFirstTenCompared();
+        }
+
+        private String logLine()
+        {
+            return "ticks=" + movementTicks
+                + " reason=" + reason
+                + " primary={" + primaryReport.summary() + "}"
+                + " alternate={" + alternateReport.summary() + "}"
+                + " primaryPath10=" + primaryPathTrace
+                + " alternatePath10=" + alternatePathTrace
+                + " actualPath10=" + actualPathTrace
+                + " primaryDivergence={" + primaryDivergenceTrace + "}"
+                + " alternateDivergence={" + alternateDivergenceTrace + "}"
+                + " primaryCandidates={" + primaryCandidateTrace + "}"
+                + " alternateCandidates={" + alternateCandidateTrace + "}";
         }
     }
 

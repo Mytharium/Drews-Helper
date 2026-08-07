@@ -36,6 +36,9 @@ public final class DrewsHelperRouteSnapshot
     private final List<WorldPoint> destinations;
     private final String message;
     private final int walkingDistance;
+    private final DrewsHelperRouteSearchMetrics primaryMetrics;
+    private final List<WorldPoint> benchmarkPath;
+    private final DrewsHelperRouteSearchMetrics benchmarkMetrics;
 
     private DrewsHelperRouteSnapshot(
         DrewsHelperRouteStatus status,
@@ -45,11 +48,42 @@ public final class DrewsHelperRouteSnapshot
         int walkingDistance
     )
     {
+        this(
+            status,
+            path,
+            destinations,
+            message,
+            walkingDistance,
+            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.A_STAR),
+            Collections.emptyList(),
+            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.BFS)
+        );
+    }
+
+    private DrewsHelperRouteSnapshot(
+        DrewsHelperRouteStatus status,
+        List<WorldPoint> path,
+        List<WorldPoint> destinations,
+        String message,
+        int walkingDistance,
+        DrewsHelperRouteSearchMetrics primaryMetrics,
+        List<WorldPoint> benchmarkPath,
+        DrewsHelperRouteSearchMetrics benchmarkMetrics
+    )
+    {
         this.status = status;
         this.path = Collections.unmodifiableList(new ArrayList<>(path));
         this.destinations = Collections.unmodifiableList(new ArrayList<>(destinations));
         this.message = message;
         this.walkingDistance = walkingDistance;
+        this.primaryMetrics = primaryMetrics == null
+            ? DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.A_STAR)
+            : primaryMetrics;
+        this.benchmarkPath = Collections.unmodifiableList(new ArrayList<>(
+            benchmarkPath == null ? Collections.emptyList() : benchmarkPath));
+        this.benchmarkMetrics = benchmarkMetrics == null
+            ? DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.BFS)
+            : benchmarkMetrics;
     }
 
     public static DrewsHelperRouteSnapshot disabled()
@@ -80,12 +114,38 @@ public final class DrewsHelperRouteSnapshot
 
     public static DrewsHelperRouteSnapshot ready(List<WorldPoint> path, List<WorldPoint> destinations, int walkingDistance)
     {
+        return ready(
+            path,
+            destinations,
+            walkingDistance,
+            DrewsHelperRouteSolverMode.A_STAR,
+            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.A_STAR),
+            Collections.emptyList(),
+            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.BFS)
+        );
+    }
+
+    public static DrewsHelperRouteSnapshot ready(
+        List<WorldPoint> path,
+        List<WorldPoint> destinations,
+        int walkingDistance,
+        DrewsHelperRouteSolverMode solverMode,
+        DrewsHelperRouteSearchMetrics primaryMetrics,
+        List<WorldPoint> benchmarkPath,
+        DrewsHelperRouteSearchMetrics benchmarkMetrics
+    )
+    {
         return new DrewsHelperRouteSnapshot(
             DrewsHelperRouteStatus.READY,
             path,
             destinations,
             "Route ready",
-            walkingDistance
+            walkingDistance,
+            primaryMetrics == null
+                ? DrewsHelperRouteSearchMetrics.empty(solverMode)
+                : primaryMetrics,
+            benchmarkPath,
+            benchmarkMetrics
         );
     }
 
@@ -159,12 +219,52 @@ public final class DrewsHelperRouteSnapshot
             path.subList(consumedTileCount, path.size()),
             destinations,
             message,
-            Math.max(0, walkingDistance - consumedTileCount)
+            Math.max(0, walkingDistance - consumedTileCount),
+            primaryMetrics,
+            benchmarkPath,
+            benchmarkMetrics
         );
     }
 
     public boolean hasPath()
     {
         return !path.isEmpty();
+    }
+
+    public DrewsHelperRouteSearchMetrics getPrimaryMetrics()
+    {
+        return primaryMetrics;
+    }
+
+    public List<WorldPoint> getBenchmarkPath()
+    {
+        return benchmarkPath;
+    }
+
+    public DrewsHelperRouteSearchMetrics getBenchmarkMetrics()
+    {
+        return benchmarkMetrics;
+    }
+
+    public boolean hasBenchmarkPath()
+    {
+        return !benchmarkPath.isEmpty() && benchmarkMetrics.isRouteFound();
+    }
+
+    public static boolean isTransportJump(WorldPoint from, WorldPoint to)
+    {
+        if (from == null || to == null)
+        {
+            return false;
+        }
+
+        if (from.getPlane() != to.getPlane())
+        {
+            return true;
+        }
+
+        int deltaX = Math.abs(from.getX() - to.getX());
+        int deltaY = Math.abs(from.getY() - to.getY());
+        return Math.max(deltaX, deltaY) > 1;
     }
 }

@@ -267,3 +267,51 @@ Myth asked to add the basic click/pay/default OSRS transport families without ad
 The only visible transport toggle added in this pass is `Other Transportation` -> `Use: Wilderness Transports`, default OFF. It controls both Wilderness levers and Wilderness obelisks because those are dangerous/different-enough routes. It does not control ordinary click objects such as gangplanks, ship boarding edges, gates, ladders, or paid non-Wilderness travel.
 
 The active implementation remains Drew-owned: generated resource `src/main/resources/drewshelper-transports.tsv`, loader/graph classes in `com.drewshelper.routing`, and existing route overlays consuming one `DrewsHelperRouteSnapshot`. Do not restore `src/main/java/shortestpath/**`, plugin-message telemetry, teleport highlighter behavior, or route diagnostics to support these transports unless Myth explicitly asks for a new Drew-owned rebuild.
+
+## D-0037: Transport Jumps Render As Dotted Route Connectors
+
+Date: 2026-08-07
+
+Myth confirmed baseline transports work, but the route looked clunky when ships, minecarts, carpets, or other terrain-crossing transports appeared only as separated highlighted tiles. Drew should render those non-walking route segments as dotted connectors so the player can see where the transport takes them.
+
+Do not add a separate transport overlay or independent transport state. The committed `DrewsHelperRouteSnapshot` remains the route source of truth. A segment is considered a transport jump for rendering when two consecutive route points are not normal same-plane one-tile movement: either their planes differ or their Chebyshev tile distance is greater than one. Normal walking cardinal and diagonal steps must not be dotted.
+
+World-map rendering should draw dotted connectors for visible transport jumps using the configured route colour. Minimap rendering may draw the same dotted connector only when both jump endpoints can be projected into minimap range. Transport labels/action text remain future polish; this decision only covers visual connectors.
+
+## D-0038: World-Map Routes Keep A Minimum Screen Footprint
+
+Date: 2026-08-07
+
+Myth reported that waypoint icons and dotted transport connectors remain easy to locate when the world map is zoomed out, but normal route tiles shrink with the map and become harder to see. Drew's world-map route rendering should keep the actual committed route data unchanged while giving each route tile a minimum screen-space footprint.
+
+The active rule is: close zoom still uses the projected map tile size; when that projected tile is smaller than 4px, render a centered 4px route marker clipped to the world-map widget. This applies only to the world-map route overlay. Do not change route solving, minimap route size, scene-tile highlights, waypoint icons, or transport jump detection for this polish pass.
+
+## D-0039: BFS Is A Benchmarkable Solver Mode, Not The Default Yet
+
+Date: 2026-08-07
+
+Myth asked to test whether Runemoro-style breadth-first search matches real OSRS character walking better than Drew's current A* tie-breaks. Drew's route system should therefore expose BFS as a selectable solver mode and add a live benchmark path, but A* remains the default until in-game movement data proves BFS produces a better route shape.
+
+Benchmark mode must solve both selected and alternate strategies for the same waypoint route, preserve the selected solver as the displayed route, and compare both predicted paths against actual player movement captured on game ticks. The required comparison fields are first-step direction, first 5 and 10 movement ticks, full tile-sequence match, path length, max lateral deviation, turn count, solve time, and expanded node count.
+
+Do not restore the deleted `src/main/java/shortestpath/**` package for this. BFS belongs inside `com.drewshelper.routing` and must use the same Drew-owned collision map, transport graph, immutable snapshot contract, route worker cancellation, and overlays as A*. Future optimization may add packed tile keys or bidirectional BFS, but the first pass prioritizes correctness, deterministic tie order, and benchmark visibility.
+
+## D-0040: Walking Route Ties Delay Diagonal Forks When Cardinal Is Also Shortest
+
+Date: 2026-08-07
+
+Supersedes the detailed movement-order part of D-0034. Myth's clean A* benchmark samples showed the first 10 movement tiles matching, then the client diverging later at equal-length fork points. The repeated pattern was not BFS versus A*: both solvers produced the same highlighted route, while the client chose a cardinal branch and rejoined at the same final path length.
+
+Drew's walking solver should keep exact shortest route length first. When one axis is longer, legal cardinal movement toward either target axis now outranks the diagonal move; the primary-axis cardinal still ranks first, but secondary-axis cardinal is allowed to beat diagonal when the full path length stays equal. Diagonal remains first only when both axes are tied, because a cardinal step from a tied open-field position lengthens the Chebyshev route.
+
+A* should not return the first target path immediately for short walking segments. After the first target is found, it may continue through same-shortest-cost candidates within a bounded refinement window and choose the path with the better client-style move preference. The old fewest-turn preference is not a deciding tie-breaker for route shape anymore; live evidence showed it favored visually smooth diagonals that the client did not always walk.
+
+## D-0041: Final Walking Path Ranking Uses Reverse Distances, Not First Target Hit
+
+Date: 2026-08-07
+
+Supersedes the implementation mechanism in `D-0040` while keeping its intent. Continuing A* after the first target hit was not enough because equal-length alternatives could be lost before the final target comparison. Drew's walking solver should now separate shortest-distance discovery from route-shape selection on short route segments: first find the shortest segment length, then compute bounded reverse distances from the target and reconstruct an exact-shortest path by the same legal client-style candidate order used in benchmark diagnostics.
+
+This keeps shortest route length as the hard contract while making displayed equal-length forks deterministic. A* remains the default; BFS remains a benchmark mode and shares the same final path-ranking pass so benchmark differences are search cost and graph coverage, not inconsistent tie code.
+
+Myth's post-`D-0040` Path 1 and Path 3 tests revealed a different issue: the live client walked continuations that the static collision graph does not rank as equally short. Specifically, `(2939,3222,0) -> (2938,3221,0)` toward `(2932,3214,0)` and `(2967,3231,0) -> (2968,3230,0)` toward `(2970,3229,0)` are legal live steps, but Drew's graph continuation from those tiles is longer than the client path. Treat those samples as collision-map/live-client disagreement until a collision override or updated collision resource is validated; do not keep tuning A* versus BFS for them.
