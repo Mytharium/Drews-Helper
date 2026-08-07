@@ -215,7 +215,9 @@ final class ShortestPathBridge
         configOverride.put(USE_POH_OBELISK_KEY, config.pohObeliskUnlocked());
         configOverride.put(POH_JEWELLERY_BOX_TIER_KEY, jewelleryBoxTier.toString());
 
-        List<String> normalizedBlockedKeys = normalizedBlockedTransportKeys(blockedTransportKeys);
+        List<String> normalizedBlockedKeys = config.filterUnavailableTeleports()
+            ? normalizedBlockedTransportKeys(blockedTransportKeys)
+            : Collections.emptyList();
         if (!normalizedBlockedKeys.isEmpty())
         {
             configOverride.put(ShortestPathTransportKey.BLOCKED_TRANSPORT_KEYS_CONFIG, normalizedBlockedKeys);

@@ -62,4 +62,10 @@ public class ShortestPathPluginOverrideTest
 
 		assertTrue(ShortestPathPlugin.overrideStringSet("blockedTransportKeys").isEmpty());
 	}
+
+	@Test
+	public void drewsInternalConfigPostsTransportTelemetryByDefault()
+	{
+		assertTrue(new DrewShortestPathInternalConfig().postTransports());
+	}
 }

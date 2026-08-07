@@ -446,6 +446,17 @@ public class ShortestPathPlugin extends Plugin
 		restartPathfinding(start, ends, true);
 	}
 
+	public void applyDrewsHelperPathRequest(WorldPoint startPoint, OptionalInt targetPacked, Map<String, Object> configOverride)
+	{
+		Integer target = null;
+		if (targetPacked != null && targetPacked.isPresent())
+		{
+			target = targetPacked.getAsInt();
+		}
+
+		handlePathRequest(startPoint, target, configOverride);
+	}
+
 	public OptionalInt getPrimaryTargetPacked()
 	{
 		synchronized (pathfinderMutex)
@@ -600,87 +611,15 @@ public class ShortestPathPlugin extends Plugin
 		if (PLUGIN_MESSAGE_PATH.equals(action))
 		{
 			Map<String, Object> data = event.getData();
-			Object objStart = data.getOrDefault(PLUGIN_MESSAGE_START, null);
-			Object objTarget = data.getOrDefault(PLUGIN_MESSAGE_TARGET, null);
-			Object objConfigOverride = data.getOrDefault(PLUGIN_MESSAGE_CONFIG_OVERRIDE, null);
-
-			@SuppressWarnings("unchecked")
-			Map<String, Object> configOverride = (objConfigOverride instanceof Map<?, ?>) ? ((Map<String, Object>) objConfigOverride) : null;
-			boolean configChanged = configOverride != null && !configOverride.isEmpty();
-			if (configChanged)
+			if (data == null)
 			{
-				ShortestPathPlugin.configOverride.clear();
-				for (String key : configOverride.keySet())
-				{
-					ShortestPathPlugin.configOverride.put(key, configOverride.get(key));
-				}
-				cacheConfigValues();
-			}
-
-			if (objStart == null && objTarget == null)
-			{
-				if (configChanged && pathfinder != null)
-				{
-					restartPathfinding(pathfinder.getStart(), pathfinder.getTargets());
-				}
 				return;
 			}
 
-			int start = (objStart instanceof WorldPoint) ? WorldPointUtil.packWorldPoint((WorldPoint) objStart)
-				: ((objStart instanceof Integer) ? ((int) objStart) : WorldPointUtil.UNDEFINED);
-			if (start == WorldPointUtil.UNDEFINED)
-			{
-				if (client.getLocalPlayer() == null)
-				{
-					return;
-				}
-				start = WorldPointUtil.packWorldPoint(client.getLocalPlayer().getWorldLocation());
-			}
-
-			Set<Integer> targets = new HashSet<>();
-			if (objTarget instanceof Integer)
-			{
-				int packedPoint = (Integer) objTarget;
-				if (packedPoint == WorldPointUtil.UNDEFINED)
-				{
-					return;
-				}
-				targets.add(packedPoint);
-			}
-			else if (objTarget instanceof WorldPoint)
-			{
-				int packedPoint = WorldPointUtil.packWorldPoint((WorldPoint) objTarget);
-				if (packedPoint == WorldPointUtil.UNDEFINED)
-				{
-					return;
-				}
-				targets.add(packedPoint);
-			}
-			else if (objTarget instanceof Set<?>)
-			{
-				@SuppressWarnings("unchecked")
-				Set<Object> objTargets = (Set<Object>) objTarget;
-				for (Object obj : objTargets)
-				{
-					int packedPoint = WorldPointUtil.UNDEFINED;
-					if (obj instanceof Integer)
-					{
-						packedPoint = (Integer) obj;
-					}
-					else if (obj instanceof WorldPoint)
-					{
-						packedPoint = WorldPointUtil.packWorldPoint((WorldPoint) obj);
-					}
-					if (packedPoint == WorldPointUtil.UNDEFINED)
-					{
-						return;
-					}
-					targets.add(packedPoint);
-				}
-			}
-
-			boolean useOld = targets.isEmpty() && pathfinder != null;
-			restartPathfinding(start, useOld ? pathfinder.getTargets() : targets, useOld);
+			handlePathRequest(
+				data.getOrDefault(PLUGIN_MESSAGE_START, null),
+				data.getOrDefault(PLUGIN_MESSAGE_TARGET, null),
+				data.getOrDefault(PLUGIN_MESSAGE_CONFIG_OVERRIDE, null));
 		}
 		else if (PLUGIN_MESSAGE_CLEAR.equals(action))
 		{
@@ -688,6 +627,87 @@ public class ShortestPathPlugin extends Plugin
 			cacheConfigValues();
 			setTarget(WorldPointUtil.UNDEFINED);
 		}
+	}
+
+	private void handlePathRequest(Object objStart, Object objTarget, Object objConfigOverride)
+	{
+		@SuppressWarnings("unchecked")
+		Map<String, Object> configOverride = (objConfigOverride instanceof Map<?, ?>) ? ((Map<String, Object>) objConfigOverride) : null;
+		boolean configChanged = configOverride != null && !configOverride.isEmpty();
+		if (configChanged)
+		{
+			ShortestPathPlugin.configOverride.clear();
+			for (String key : configOverride.keySet())
+			{
+				ShortestPathPlugin.configOverride.put(key, configOverride.get(key));
+			}
+			cacheConfigValues();
+		}
+
+		if (objStart == null && objTarget == null)
+		{
+			if (configChanged && pathfinder != null)
+			{
+				restartPathfinding(pathfinder.getStart(), pathfinder.getTargets());
+			}
+			return;
+		}
+
+		int start = (objStart instanceof WorldPoint) ? WorldPointUtil.packWorldPoint((WorldPoint) objStart)
+			: ((objStart instanceof Integer) ? ((int) objStart) : WorldPointUtil.UNDEFINED);
+		if (start == WorldPointUtil.UNDEFINED)
+		{
+			if (client.getLocalPlayer() == null)
+			{
+				return;
+			}
+			start = WorldPointUtil.packWorldPoint(client.getLocalPlayer().getWorldLocation());
+		}
+
+		Set<Integer> targets = new HashSet<>();
+		if (objTarget instanceof Integer)
+		{
+			int packedPoint = (Integer) objTarget;
+			if (packedPoint == WorldPointUtil.UNDEFINED)
+			{
+				return;
+			}
+			targets.add(packedPoint);
+		}
+		else if (objTarget instanceof WorldPoint)
+		{
+			int packedPoint = WorldPointUtil.packWorldPoint((WorldPoint) objTarget);
+			if (packedPoint == WorldPointUtil.UNDEFINED)
+			{
+				return;
+			}
+			targets.add(packedPoint);
+		}
+		else if (objTarget instanceof Set<?>)
+		{
+			@SuppressWarnings("unchecked")
+			Set<Object> objTargets = (Set<Object>) objTarget;
+			for (Object obj : objTargets)
+			{
+				int packedPoint = WorldPointUtil.UNDEFINED;
+				if (obj instanceof Integer)
+				{
+					packedPoint = (Integer) obj;
+				}
+				else if (obj instanceof WorldPoint)
+				{
+					packedPoint = WorldPointUtil.packWorldPoint((WorldPoint) obj);
+				}
+				if (packedPoint == WorldPointUtil.UNDEFINED)
+				{
+					return;
+				}
+				targets.add(packedPoint);
+			}
+		}
+
+		boolean useOld = targets.isEmpty() && pathfinder != null;
+		restartPathfinding(start, useOld ? pathfinder.getTargets() : targets, useOld);
 	}
 
 	public void postPluginMessages()

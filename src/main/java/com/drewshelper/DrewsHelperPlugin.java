@@ -4,6 +4,7 @@ import com.google.inject.Provides;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 import javax.inject.Inject;
@@ -77,6 +78,7 @@ public class DrewsHelperPlugin extends Plugin
     private boolean observedActiveShortestPathTarget;
     private OptionalInt lastSyncedShortestPathTarget = OptionalInt.empty();
     private String lastExactLockedRouteRerouteSignature;
+    private String lastDrewsShortestPathRequestSignature;
 
     @Override
     protected void startUp()
@@ -86,6 +88,7 @@ public class DrewsHelperPlugin extends Plugin
         routeRefreshBurstTicks = 0;
         observedActiveShortestPathTarget = false;
         lastSyncedShortestPathTarget = sessionState.loadShortestPathTarget();
+        lastDrewsShortestPathRequestSignature = "";
         clearLockedRouteRerouteState();
         routeTransportState.update(sessionState.loadRouteSnapshot());
         minigameTeleportUnlockState.restore(sessionState.loadMinigameStatuses());
@@ -100,7 +103,7 @@ public class DrewsHelperPlugin extends Plugin
     @Override
     protected void shutDown()
     {
-        syncActiveShortestPathTarget();
+        syncActiveShortestPathTarget(false);
         sessionState.saveRouteSnapshot(routeTransportState.getSnapshot());
         sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
         overlayManager.remove(teleportHighlightOverlay);
@@ -166,7 +169,7 @@ public class DrewsHelperPlugin extends Plugin
     public void onGameTick(GameTick tick)
     {
         gameTicks++;
-        syncActiveShortestPathTarget();
+        syncActiveShortestPathTarget(true);
         if (minigameTeleportUnlockState.scanVisibleInterface(client))
         {
             sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
@@ -214,6 +217,8 @@ public class DrewsHelperPlugin extends Plugin
         if ("drewshelper".equals(event.getGroup()))
         {
             clearLockedRouteRerouteState();
+            lastDrewsShortestPathRequestSignature = "";
+            routeTransportState.clear();
             scheduleRouteRefreshBurst(true);
         }
     }
@@ -236,21 +241,7 @@ public class DrewsHelperPlugin extends Plugin
             {
                 OptionalInt target = includeSavedTarget ? getRouteReplayTarget() : OptionalInt.empty();
                 Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
-                if (target.isPresent())
-                {
-                    shortestPathBridge.requestPath(
-                        config,
-                        target,
-                        blockedTransportKeys,
-                        false);
-                }
-                else
-                {
-                    shortestPathBridge.requestTransportFeed(
-                        config,
-                        blockedTransportKeys,
-                        false);
-                }
+                requestDrewsShortestPath(target, blockedTransportKeys, false);
             }
             catch (RuntimeException ex)
             {
@@ -280,14 +271,34 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         lastExactLockedRouteRerouteSignature = rerouteSignature;
-        if (target.isPresent())
+        requestDrewsShortestPath(target, blockedTransportKeys, false);
+    }
+
+    private void requestDrewsShortestPath(
+        OptionalInt target,
+        Set<String> blockedTransportKeys,
+        boolean disableMinigameTeleports)
+    {
+        if (!drewShortestPathStarted || client.getLocalPlayer() == null)
         {
-            shortestPathBridge.requestPath(config, target, blockedTransportKeys, false);
+            return;
         }
-        else
+
+        Map<String, Object> configOverride = ShortestPathBridge.buildConfigOverride(
+            config,
+            blockedTransportKeys,
+            disableMinigameTeleports);
+        OptionalInt signatureTarget = target;
+        if (!signatureTarget.isPresent())
         {
-            shortestPathBridge.requestTransportFeed(config, blockedTransportKeys, false);
+            signatureTarget = drewShortestPath.getPrimaryTargetPacked();
         }
+        String requestSignature = buildRequestSignature(signatureTarget, configOverride);
+        drewShortestPath.applyDrewsHelperPathRequest(
+            client.getLocalPlayer().getWorldLocation(),
+            target,
+            configOverride);
+        lastDrewsShortestPathRequestSignature = requestSignature;
     }
 
     private void saveShortestPathTarget(OptionalInt pathTarget, boolean drewRequest)
@@ -302,7 +313,7 @@ public class DrewsHelperPlugin extends Plugin
         observedActiveShortestPathTarget = true;
     }
 
-    private void syncActiveShortestPathTarget()
+    private void syncActiveShortestPathTarget(boolean refreshChangedTarget)
     {
         if (!drewShortestPathStarted)
         {
@@ -312,7 +323,8 @@ public class DrewsHelperPlugin extends Plugin
         OptionalInt activeTarget = drewShortestPath.getPrimaryTargetPacked();
         if (activeTarget.isPresent())
         {
-            if (!activeTarget.equals(lastSyncedShortestPathTarget))
+            boolean targetChanged = !activeTarget.equals(lastSyncedShortestPathTarget);
+            if (targetChanged)
             {
                 clearLockedRouteRerouteState();
                 sessionState.saveShortestPathTarget(activeTarget.getAsInt());
@@ -320,6 +332,13 @@ public class DrewsHelperPlugin extends Plugin
 
             lastSyncedShortestPathTarget = activeTarget;
             observedActiveShortestPathTarget = true;
+            if (refreshChangedTarget && (targetChanged || isRoutePolicyDirty(activeTarget)))
+            {
+                requestDrewsShortestPath(
+                    activeTarget,
+                    teleportAvailabilityService.getBlockedTransportKeys(config),
+                    false);
+            }
             return;
         }
 
@@ -361,6 +380,15 @@ public class DrewsHelperPlugin extends Plugin
     private OptionalInt getRouteReplayTarget()
     {
         // Transport destinations are intermediate route steps, not the final path target.
+        if (drewShortestPathStarted)
+        {
+            OptionalInt activeTarget = drewShortestPath.getPrimaryTargetPacked();
+            if (activeTarget.isPresent())
+            {
+                return activeTarget;
+            }
+        }
+
         return sessionState.loadShortestPathTarget();
     }
 
@@ -374,6 +402,26 @@ public class DrewsHelperPlugin extends Plugin
         List<String> sortedKeys = new ArrayList<>(blockedTransportKeys);
         Collections.sort(sortedKeys);
         return buildTargetSignature(target) + "|" + String.join(",", sortedKeys);
+    }
+
+    private boolean isRoutePolicyDirty(OptionalInt target)
+    {
+        Map<String, Object> configOverride = ShortestPathBridge.buildConfigOverride(
+            config,
+            teleportAvailabilityService.getBlockedTransportKeys(config),
+            false);
+        return !buildRequestSignature(target, configOverride).equals(lastDrewsShortestPathRequestSignature);
+    }
+
+    private static String buildRequestSignature(OptionalInt target, Map<String, Object> configOverride)
+    {
+        List<String> entries = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : configOverride.entrySet())
+        {
+            entries.add(entry.getKey() + "=" + entry.getValue());
+        }
+        Collections.sort(entries);
+        return buildTargetSignature(target) + "|" + String.join(",", entries);
     }
 
     private static String buildTargetSignature(OptionalInt target)

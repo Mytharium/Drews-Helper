@@ -62,15 +62,13 @@ final class TeleportHighlightOverlay extends Overlay
             return null;
         }
 
-        MinigameTeleportStatus status = minigameTeleportUnlockState.getStatus(routeTransport.get());
         boolean minigameInterfaceOpen = MinigameTeleportWidgets.isMinigameInterfaceOpen(client);
         if (!minigameInterfaceOpen
-            && status != MinigameTeleportStatus.LOCKED
             && !renderFirstVisibleSpellWidget(graphics))
         {
             renderFirstVisibleMagicTab(graphics);
         }
-        renderMinigameDestination(graphics, routeTransport.get(), status);
+        renderMinigameDestination(graphics, routeTransport.get());
 
         return null;
     }
@@ -78,21 +76,7 @@ final class TeleportHighlightOverlay extends Overlay
     private Optional<RouteTransport> getHighlightTransport()
     {
         RouteTransportSnapshot snapshot = routeTransportState.getSnapshot();
-        Optional<RouteTransport> available = teleportAvailabilityService.getFirstAvailable(snapshot, config);
-        if (available.isPresent() && teleportAvailabilityService.isMinigameTeleport(available.get()))
-        {
-            return available;
-        }
-
-        Optional<RouteTransport> next = snapshot.getNextTransport();
-        if (next.isPresent()
-            && teleportAvailabilityService.isAvailable(next.get(), config)
-            && teleportAvailabilityService.isMinigameTeleport(next.get()))
-        {
-            return next;
-        }
-
-        return Optional.empty();
+        return teleportAvailabilityService.getFirstAvailableMinigame(snapshot, config);
     }
 
     private boolean renderFirstVisibleSpellWidget(Graphics2D graphics)
@@ -121,8 +105,7 @@ final class TeleportHighlightOverlay extends Overlay
 
     private void renderMinigameDestination(
         Graphics2D graphics,
-        RouteTransport routeTransport,
-        MinigameTeleportStatus status)
+        RouteTransport routeTransport)
     {
         String destination = MinigameTeleportNames.destinationKey(routeTransport);
         if (destination.isEmpty())
@@ -130,8 +113,9 @@ final class TeleportHighlightOverlay extends Overlay
             return;
         }
 
-        Color outline = status == MinigameTeleportStatus.LOCKED ? LOCKED : HIGHLIGHT;
-        Color fill = status == MinigameTeleportStatus.LOCKED ? LOCKED_FILL : HIGHLIGHT_FILL;
+        boolean unavailable = !teleportAvailabilityService.isAvailable(routeTransport, config);
+        Color outline = unavailable ? LOCKED : HIGHLIGHT;
+        Color fill = unavailable ? LOCKED_FILL : HIGHLIGHT_FILL;
         Widget bestMatch = null;
         int bestArea = -1;
         for (Widget row : MinigameTeleportWidgets.findVisibleDestinationWidgets(client))

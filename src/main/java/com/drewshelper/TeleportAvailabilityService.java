@@ -50,6 +50,25 @@ final class TeleportAvailabilityService
             .findFirst();
     }
 
+    Optional<RouteTransport> getFirstAvailableMinigame(RouteTransportSnapshot snapshot, DrewsHelperConfig config)
+    {
+        return snapshot.getTransports().stream()
+            .filter(RouteTransport::hasInstruction)
+            .filter(this::isMinigameTeleport)
+            .filter(transport -> isAvailable(transport, config))
+            .findFirst();
+    }
+
+    List<RouteTransport> getRouteDisplayTransports(RouteTransportSnapshot snapshot, DrewsHelperConfig config)
+    {
+        return snapshot.getTransports().stream()
+            .filter(RouteTransport::hasInstruction)
+            .filter(transport -> config == null
+                || !config.filterUnavailableTeleports()
+                || isAvailable(transport, config))
+            .collect(Collectors.toList());
+    }
+
     Optional<RouteTransport> getFirstUnavailable(RouteTransportSnapshot snapshot, DrewsHelperConfig config)
     {
         return getUnavailableTransports(snapshot, config).stream()

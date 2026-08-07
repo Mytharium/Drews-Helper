@@ -59,6 +59,69 @@ public class TeleportAvailabilityServiceTest
     }
 
     @Test
+    public void hidesLockedRouteTransportsWhenFilteringEnabled()
+    {
+        RouteTransport locked = new RouteTransport("", "Nightmare Zone Minigame Teleport");
+        RouteTransport allowed = new RouteTransport("", "Pest Control Minigame Teleport");
+        RouteTransportSnapshot snapshot = new RouteTransportSnapshot(Arrays.asList(locked, allowed));
+
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+
+        assertEquals(Arrays.asList(allowed), service.getRouteDisplayTransports(snapshot, new DrewsHelperConfig() {}));
+    }
+
+    @Test
+    public void keepsLockedRouteTransportsWhenFilteringDisabled()
+    {
+        RouteTransport locked = new RouteTransport("", "Nightmare Zone Minigame Teleport");
+        RouteTransport allowed = new RouteTransport("", "Pest Control Minigame Teleport");
+        RouteTransportSnapshot snapshot = new RouteTransportSnapshot(Arrays.asList(locked, allowed));
+
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+
+        assertEquals(Arrays.asList(locked, allowed), service.getRouteDisplayTransports(snapshot, new DrewsHelperConfig()
+        {
+            @Override
+            public boolean filterUnavailableTeleports()
+            {
+                return false;
+            }
+        }));
+    }
+
+    @Test
+    public void findsFirstAvailableMinigameAfterLockedAndNonMinigameSteps()
+    {
+        RouteTransport locked = new RouteTransport("", "Nightmare Zone Minigame Teleport");
+        RouteTransport ship = new RouteTransport("Ship", "Port Sarim");
+        RouteTransport allowed = new RouteTransport("", "Pest Control Minigame Teleport");
+        RouteTransportSnapshot snapshot = new RouteTransportSnapshot(Arrays.asList(locked, ship, allowed));
+
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+
+        assertEquals(allowed, service.getFirstAvailableMinigame(snapshot, new DrewsHelperConfig() {}).get());
+    }
+
+    @Test
+    public void findsLockedMinigameWhenFilteringDisabled()
+    {
+        RouteTransport locked = new RouteTransport("", "Nightmare Zone Minigame Teleport");
+        RouteTransport allowed = new RouteTransport("", "Pest Control Minigame Teleport");
+        RouteTransportSnapshot snapshot = new RouteTransportSnapshot(Arrays.asList(locked, allowed));
+
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+
+        assertEquals(locked, service.getFirstAvailableMinigame(snapshot, new DrewsHelperConfig()
+        {
+            @Override
+            public boolean filterUnavailableTeleports()
+            {
+                return false;
+            }
+        }).get());
+    }
+
+    @Test
     public void filteringDisabledTreatsScannedLockedMinigameAsAvailable()
     {
         RouteTransport locked = new RouteTransport("", "Nightmare Zone Minigame Teleport");

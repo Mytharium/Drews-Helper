@@ -6,6 +6,12 @@ import javax.inject.Singleton;
 final class DrewShortestPathInternalConfig implements ShortestPathConfig
 {
 	@Override
+	public boolean postTransports()
+	{
+		return true;
+	}
+
+	@Override
 	public void setBuiltTeleportationBoxes(String content)
 	{
 	}

@@ -322,7 +322,7 @@ public class ShortestPathBridgeTest
     }
 
     @Test
-    public void keepsBlockedTransportKeysWhenFilteringDisabled()
+    public void dropsBlockedTransportKeysWhenFilteringDisabled()
     {
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
         {
@@ -333,7 +333,7 @@ public class ShortestPathBridgeTest
             }
         }, Arrays.asList("teleportation_minigames:nightmare_zone"));
 
-        assertEquals(Arrays.asList("teleportation_minigames:nightmare_zone"), overrides.get("blockedTransportKeys"));
+        assertFalse(overrides.containsKey("blockedTransportKeys"));
     }
 
     @Test

@@ -1,6 +1,6 @@
 # Next Work
 
-Last updated: 2026-08-06.
+Last updated: 2026-08-07.
 
 ## Drew's Shortest Path Build Plan
 
@@ -30,7 +30,7 @@ Current implementation status:
 - Drew-side outbound support is implemented. Locked minigame statuses are converted into `blockedTransportKeys`, included in `ShortestPathBridge.buildConfigOverride`, and sent on normal route refresh/replay.
 - Drew's Shortest Path is vendored directly into `Drews Helper` under `src/main/java/shortestpath/**` with resources under `src/main/resources/**`.
 - `gradlew.bat run` loads only visible plugin `Drew's Helper`; `DrewsHelperPlugin` starts the vendored route engine internally.
-- Drew's Shortest Path keeps the `shortestpath/path` and `shortestpath/transports` plugin-message namespace for Quest Helper / Drew Helper compatibility.
+- Drew's Shortest Path keeps the `shortestpath/path` and `shortestpath/transports` plugin-message namespace for Quest Helper compatibility and route telemetry.
 - Drew's Shortest Path uses hidden runtime defaults for remaining inherited display/debug/threshold behavior. Add Drew-owned config items later only when Myth wants those controls visible.
 - Drew's Helper now owns the transportation unlock menu shape:
   - Base Drew's Shortest Path transports: gates/passages, boats, ordinary ships/ferries, charter ships, magic carpets, minecarts, home teleports, teleport levers, fixed teleport portals, spellbook teleports, and minigame teleports are always enabled internally.
@@ -38,8 +38,10 @@ Current implementation status:
   - `Advanced Transportation`: spirit trees, fairy rings, mounted glory, portal chamber, portal nexus tier, and jewelry box tier.
   - `Other Transportation`: standard/ancient/lunar/Arceuus/other tablets, 1-use items, teleport scrolls, achievement diary items, combat achievement items, skill capes, quest related items, and other items.
 - Locked minigames are scanner-filtered by exact `blockedTransportKeys` while `Hide Locked Teleports` is enabled, even though Minigame Teleports are a base-on category. Turning that toggle off keeps the scan cache but stops sending blocked keys so the base solver can use those routes again.
-- Config changes now replay the saved/current target, and targetless config-only `shortestpath/path` messages refresh the internal engine's current path. This is required for toggles to update the active route instead of waiting for a new destination.
-- Minigame hint overlays now prefer the first available route transport, so a locked Nightmare Zone hint should not remain over the path tile while Drew's HUD is showing Pest Control as the active route step.
+- Config changes now mark the route policy dirty, clear stale HUD telemetry, and replay the saved/current target directly into the internal engine with Drew's current override. Targetless external `shortestpath/path` messages still refresh the internal engine's current path, but Drew-origin toggle refreshes do not rely on plugin-message subscriber ordering.
+- Manual right-click/shift-click route targets are now immediately re-requested through Drew's override when observed, and the hidden internal config defaults `postTransports=true` so Drew's HUD receives transport telemetry even for manual routes created inside the internal engine.
+- Drew's HUD hides unavailable route transports from the main route step list while `Hide Locked Teleports` is enabled, but still shows them under `Locked Routes`.
+- Minigame hint overlays now prefer the first available minigame route transport, so a locked Nightmare Zone hint should not remain active when an available minigame step such as Pest Control exists. When `Hide Locked Teleports` is off, cached locked minigames are still highlightable because the route policy is allowing them.
 - Wiki comparison open decisions: whether to expose wilderness obelisks, POH fairy ring, POH spirit tree, and POH wilderness obelisk in Advanced/Other; and whether to add exact transport-item subtype filtering beyond the internal broad `useTeleportationItems` mode.
 - Drew's Shortest Path consumes `config.blockedTransportKeys` directly and filters matching transports before path edges are built.
 - The old active Plugin Hub `shortest-path_*.jar` was moved out of `.runelite\plugins` and backed up under `.runelite\plugins-c2-backups`.
@@ -74,7 +76,8 @@ Drew-side work completed:
 - Convert locked minigame statuses into blocked transport keys.
 - Include those keys in `ShortestPathBridge.buildConfigOverride`.
 - When a posted route contains a locked route, replay the saved/current target with the blocked list.
-- Merge active Drew policy into incoming `shortestpath/path` messages before the internal route engine consumes them, including config-only messages without a target.
+- When a manual internal target is observed, immediately replay it through Drew's current route policy instead of waiting for the periodic transport-feed request.
+- Merge active Drew policy into incoming external `shortestpath/path` messages before the internal route engine consumes them, including config-only messages without a target. Use direct internal route-engine calls for Drew-origin refreshes and reroutes.
 - Do not replay from `shortestpath/transports` destinations. Those are intermediate transport steps, not the final route target.
 - Tests cover blocked-key sending, override parsing, and minigame transport-key generation.
 
@@ -88,11 +91,12 @@ Drew-side work completed:
 - In Drew's Helper, keep `Hide Locked Teleports` enabled.
 - Open the Grouping/minigame teleport UI and confirm Drew has scanned `Nightmare Zone` as locked while at least one other useful minigame teleport is available.
 - Request the same route that previously selected Nightmare Zone.
+- If using right-click/shift-click/manual map routing, wait one game tick after setting the destination; Drew should observe the internal target and replay it through the current blocked-key policy.
 - Watch 10-15 seconds.
 
 Expected with `Hide Locked Teleports` on: Drew's Shortest Path no longer selects `Nightmare Zone Minigame Teleport`, the overlay reflects the recalculated route, and it does not bounce every ~2 seconds between old and corrected routes. Other available minigame teleports should still be allowed.
 
-Expected after turning `Hide Locked Teleports` off: Drew keeps the saved scan result, stops sending `teleportation_minigames:nightmare_zone` as a blocked key, and refreshes the active route so Nightmare Zone can be used again if the solver prefers it.
+Expected after turning `Hide Locked Teleports` off: Drew keeps the saved scan result, stops sending `teleportation_minigames:nightmare_zone` as a blocked key, refreshes the active route so Nightmare Zone can be used again if the solver prefers it, and highlights the magic tab/minigame teleport flow for the allowed route.
 
 ## Priority 2: Quest Helper Resume
 

@@ -57,3 +57,12 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - Hid the internal Drew's Shortest Path engine and removed the ConfigManager-backed `ShortestPathConfig` provider so the copied Shortest Path settings panel does not leak into the player-facing config UI.
 - Added manual route target persistence: Drew's Helper now syncs the internal engine's active target and clears saved target/snapshot state when the route is cleared.
 - Corrected the `Hide Locked Teleports` route policy after live testing: scanned minigame locks are cached continuously, but blocked minigame transport keys are only sent while the toggle is enabled. Config changes now replay the saved/current target, the internal route engine refreshes active paths on config-only messages, and minigame hints prefer the first available route transport instead of stale locked candidates.
+- Removed the event-bus dependency from Drew-origin route refreshes/reroutes: Drew now calls the internal route engine directly with the current config override and blocked transport keys, while keeping `shortestpath/path` for external Quest Helper requests and `shortestpath/transports` telemetry.
+- Fixed the manual-route telemetry/policy gap: the hidden internal route config now defaults `postTransports=true`, and newly observed manual right-click/shift-click route targets are immediately replayed through Drew's current config plus blocked minigame keys.
+
+## 2026-08-07
+
+- Fixed the `Hide Locked Teleports` ON refresh path after live testing: Drew now treats route config/blocked-key changes as a dirty active route policy even when the manual target did not change, clears stale HUD telemetry, and replays the current target through the internal route engine.
+- Moved Drew's main HUD route list to the same availability contract as locked-route policy: locked minigame steps are hidden from the primary route list while filtering is enabled, but remain visible under `Locked Routes`.
+- Restored minigame UI guidance for allowed routes: the highlighter now follows the first available minigame transport step directly, highlights the magic tab/spell before the minigame UI opens, and treats cached locked destinations as green/usable when `Hide Locked Teleports` is off.
+- Tightened `ShortestPathBridge.buildConfigOverride` so blocked transport keys are not emitted when `Hide Locked Teleports` is off, even if a caller accidentally passes a stale blocked-key collection.

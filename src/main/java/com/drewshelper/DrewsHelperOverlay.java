@@ -3,7 +3,6 @@ package com.drewshelper;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -54,7 +53,7 @@ final class DrewsHelperOverlay extends OverlayPanel
             .build());
 
         RouteTransportSnapshot snapshot = routeTransportState.getSnapshot();
-        List<RouteTransport> transports = instructionTransports(snapshot);
+        List<RouteTransport> transports = teleportAvailabilityService.getRouteDisplayTransports(snapshot, config);
         if (snapshot.isEmpty())
         {
             panelComponent.getChildren().add(LineComponent.builder()
@@ -88,20 +87,6 @@ final class DrewsHelperOverlay extends OverlayPanel
         addLockedRoutesLine(snapshot);
 
         return super.render(graphics);
-    }
-
-    private List<RouteTransport> instructionTransports(RouteTransportSnapshot snapshot)
-    {
-        List<RouteTransport> transports = new ArrayList<>();
-        for (RouteTransport transport : snapshot.getTransports())
-        {
-            if (transport.hasInstruction())
-            {
-                transports.add(transport);
-            }
-        }
-
-        return transports;
     }
 
     private void addMinigameScanLine()
