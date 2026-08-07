@@ -26,6 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import lombok.Getter;
 import net.runelite.api.Client;
@@ -145,15 +146,15 @@ public class ShortestPathPlugin extends Plugin
 	@Inject
 	private OverlayManager overlayManager;
 	@Inject
-	private PathTileOverlay pathOverlay;
+	private Provider<PathTileOverlay> pathOverlayProvider;
 	@Inject
-	private PathMinimapOverlay pathMinimapOverlay;
+	private Provider<PathMinimapOverlay> pathMinimapOverlayProvider;
 	@Inject
-	private PathMapOverlay pathMapOverlay;
+	private Provider<PathMapOverlay> pathMapOverlayProvider;
 	@Inject
-	private PathMapTooltipOverlay pathMapTooltipOverlay;
+	private Provider<PathMapTooltipOverlay> pathMapTooltipOverlayProvider;
 	@Inject
-	private DebugOverlayPanel debugOverlayPanel;
+	private Provider<DebugOverlayPanel> debugOverlayPanelProvider;
 	@Inject
 	private SpriteManager spriteManager;
 	@Inject
@@ -168,6 +169,11 @@ public class ShortestPathPlugin extends Plugin
 	private BufferedImage minimapSpriteFixed;
 	private BufferedImage minimapSpriteResizeable;
 	private Rectangle minimapRectangle = new Rectangle();
+	private PathTileOverlay pathOverlay;
+	private PathMinimapOverlay pathMinimapOverlay;
+	private PathMapOverlay pathMapOverlay;
+	private PathMapTooltipOverlay pathMapTooltipOverlay;
+	private DebugOverlayPanel debugOverlayPanel;
 	private GameState lastGameState = null;
 	private GameState lastLastGameState = null;
 	private ExecutorService pathfindingExecutor = Executors.newSingleThreadExecutor();
@@ -342,6 +348,7 @@ public class ShortestPathPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		ensureOverlays();
 		cacheConfigValues();
 
 		pathfinderConfig = new PathfinderConfig(client, config);
@@ -366,6 +373,20 @@ public class ShortestPathPlugin extends Plugin
 	public void startDrewsHelperFeature()
 	{
 		startUp();
+	}
+
+	private void ensureOverlays()
+	{
+		if (pathOverlay != null)
+		{
+			return;
+		}
+
+		pathOverlay = pathOverlayProvider.get();
+		pathMinimapOverlay = pathMinimapOverlayProvider.get();
+		pathMapOverlay = pathMapOverlayProvider.get();
+		pathMapTooltipOverlay = pathMapTooltipOverlayProvider.get();
+		debugOverlayPanel = debugOverlayPanelProvider.get();
 	}
 
 	@Override
@@ -403,7 +424,7 @@ public class ShortestPathPlugin extends Plugin
 
 			if (pathfindingExecutor == null)
 			{
-			ThreadFactory shortestPathNaming = new ThreadFactoryBuilder().setNameFormat("drew-path-%d").build();
+				ThreadFactory shortestPathNaming = new ThreadFactoryBuilder().setNameFormat("drew-path-%d").build();
 				pathfindingExecutor = Executors.newSingleThreadExecutor(shortestPathNaming);
 			}
 		}

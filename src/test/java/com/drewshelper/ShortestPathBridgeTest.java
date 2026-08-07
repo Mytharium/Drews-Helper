@@ -58,7 +58,11 @@ public class ShortestPathBridgeTest
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig() {});
 
         assertEquals(true, overrides.get("postTransports"));
-        assertFalse(overrides.containsKey("useTeleportationMinigames"));
+        assertEquals(true, overrides.get("useTransports"));
+        assertEquals(true, overrides.get("useBoats"));
+        assertEquals(true, overrides.get("useCharterShips"));
+        assertEquals(true, overrides.get("useTeleportationMinigames"));
+        assertEquals("Inventory (perm)", overrides.get("useTeleportationItems"));
         assertEquals(false, overrides.get("usePoh"));
         assertEquals("None", overrides.get("pohJewelleryBoxTier"));
         assertEquals(false, overrides.get("useFairyRings"));
@@ -66,7 +70,7 @@ public class ShortestPathBridgeTest
     }
 
     @Test
-    public void omitsAvailabilityOverridesWhenFilteringDisabled()
+    public void keepsManualTransportOverridesWhenFilteringDisabled()
     {
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
         {
@@ -78,10 +82,11 @@ public class ShortestPathBridgeTest
         });
 
         assertEquals(true, overrides.get("postTransports"));
-        assertFalse(overrides.containsKey("useTeleportationMinigames"));
-        assertFalse(overrides.containsKey("usePoh"));
-        assertFalse(overrides.containsKey("useFairyRings"));
-        assertFalse(overrides.containsKey("useSpiritTrees"));
+        assertEquals(true, overrides.get("useTeleportationMinigames"));
+        assertEquals(false, overrides.get("usePoh"));
+        assertEquals(false, overrides.get("useFairyRings"));
+        assertEquals(true, overrides.get("useSpiritTrees"));
+        assertFalse(overrides.containsKey("blockedTransportKeys"));
     }
 
     @Test
@@ -104,6 +109,79 @@ public class ShortestPathBridgeTest
 
         assertEquals(false, overrides.get("useSpiritTrees"));
         assertEquals(true, overrides.get("useFairyRings"));
+    }
+
+    @Test
+    public void sendsDrewTransportationMenuTogglesToShortestPath()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean gatesAndPassagesUnlocked()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean charterShipsUnlocked()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean hotAirBalloonsUnlocked()
+            {
+                return true;
+            }
+
+            @Override
+            public boolean quetzalsUnlocked()
+            {
+                return false;
+            }
+        });
+
+        assertEquals(false, overrides.get("useTransports"));
+        assertEquals(false, overrides.get("useCharterShips"));
+        assertEquals(true, overrides.get("useHotAirBalloons"));
+        assertEquals(false, overrides.get("useQuetzals"));
+    }
+
+    @Test
+    public void sendsAdvancedTransportationMenuTogglesToShortestPath()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean teleportationSpellsUnlocked()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean minigameTeleportsUnlocked()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean pohFairyRingUnlocked()
+            {
+                return true;
+            }
+
+            @Override
+            public boolean pohObeliskUnlocked()
+            {
+                return true;
+            }
+        });
+
+        assertEquals(false, overrides.get("useTeleportationSpells"));
+        assertEquals(false, overrides.get("useTeleportationMinigames"));
+        assertEquals(true, overrides.get("usePoh"));
+        assertEquals(true, overrides.get("usePohFairyRing"));
+        assertEquals(true, overrides.get("usePohObelisk"));
     }
 
     @Test

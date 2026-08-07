@@ -10,12 +10,14 @@ Phases:
 1. Collapse the architecture: remove the separate visible path plugin seam, load only `Drew's Helper`, and start the vendored route engine internally.
 2. Own the core route feature: route target state, world-map right-click destination, shift-right-click tile destination, clear route control, and route drawing on map/minimap/ground/HUD.
 3. Integrate locked teleport state: feed Drew's Teleport Options and scanned minigame statuses into the solver, block exact keys such as `teleportation_minigames:nightmare_zone`, and surface unreachable/blocked-route warnings.
-4. Merge config parity: keep teleport controls in Teleport Options, add missing route-specific controls under Routing Options, and phase out the inherited `ShortestPathConfig` panel/default dependency.
+4. Merge config parity: keep guidance controls in Teleport Options, expose Drew-owned transport unlocks under Transportation / Advanced Transportation, add remaining route-specific controls under Routing Options, and phase out the inherited `ShortestPathConfig` panel/default dependency.
 5. Improve beyond stock Shortest Path: prefer known unlocked routes, explain rejected transports, support route quality modes, add quest-prep routes, use cooldown-aware rerouting, and show clearer route reasoning in the HUD.
 6. Live validation: test without Plugin Hub Shortest Path installed, verify manual routes, Quest Helper routes, locked Nightmare Zone exclusion, other minigame teleport availability, and no route bouncing.
 
 Current phase:
-- Phase 1 is complete and build-verified. `Drew's Helper` is the only visible plugin target, and `DrewsHelperPlugin` owns the internal route-engine lifecycle.
+- Phase 1 is complete, build-verified, and dev-launch probe verified. `Drew's Helper` is the only visible plugin target, and `DrewsHelperPlugin` owns the internal route-engine lifecycle.
+- The missing-plugin-list issue was a Guice construction cycle in the internal route overlays; `shortestpath.ShortestPathPlugin` now lazy-creates those overlays through providers after the route engine itself is constructed.
+- Part of Phase 4 was pulled forward by Myth's UI direction: player-facing transport unlocks now belong to Drew's own `Transportation` and `Advanced Transportation` sections, not the copied Shortest Path `Settings` bucket.
 - Next coding phase is Phase 2: expose the core route controls through Drew's Helper and validate map/minimap/ground/HUD drawing from the single-plugin runtime.
 
 ## Priority 1: Live-Test Drew's Shortest Path Exact Rerouting
@@ -27,7 +29,10 @@ Current implementation status:
 - Drew's Shortest Path is vendored directly into `Drews Helper` under `src/main/java/shortestpath/**` with resources under `src/main/resources/**`.
 - `gradlew.bat run` loads only visible plugin `Drew's Helper`; `DrewsHelperPlugin` starts the vendored route engine internally.
 - Drew's Shortest Path keeps the `shortestpath/path` and `shortestpath/transports` plugin-message namespace for Quest Helper / Drew Helper compatibility.
-- Drew's Shortest Path still uses internal config group `drewpath` for inherited defaults until Phase 4 merges those options into `DrewsHelperConfig`.
+- Drew's Shortest Path still uses internal config group `drewpath` for remaining inherited display/debug/threshold defaults until Phase 4 finishes merging them into `DrewsHelperConfig`.
+- Drew's Helper now owns the transportation unlock menu shape:
+  - `Transportation`: gates/passages, agility/grapple shortcuts, boats, canoes, charter ships, passenger ships, gliders, balloons, carpets, mushtrees, minecarts, and quetzals.
+  - `Advanced Transportation`: spirit trees, fairy rings, teleport items, levers, portals, spells, home teleports, minigame teleports, wilderness/seasonal transports, and POH unlocks.
 - Drew's Shortest Path consumes `config.blockedTransportKeys` directly and filters matching transports before path edges are built.
 - The old active Plugin Hub `shortest-path_*.jar` was moved out of `.runelite\plugins` and backed up under `.runelite\plugins-c2-backups`.
 - The broad stock-jar fallback (`useTeleportationMinigames=false` after exact keys fail) is retired for normal routing. Exact filtering should work or be debugged directly.
@@ -68,7 +73,8 @@ Drew-side work completed:
 ## Test Path
 
 - Fully close normal RuneLite.
-- From `C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper`, run `gradlew.bat run`.
+- From `C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper`, run `run-drews-helper-dev.bat` or `gradlew.bat run`.
+- Do not use the normal RuneLite shortcut for this test. The normal launcher cannot see Drew's local source plugin.
 - Confirm only `Drew's Helper` is enabled from this project; there should be no separate `Drew Path` plugin entry.
 - Confirm Plugin Hub Shortest Path is not enabled and no active `shortest-path_*.jar` is in `C:\Users\drews\.runelite\plugins`.
 - In Drew's Helper, keep `Hide Locked Teleports` enabled.

@@ -64,6 +64,18 @@ public interface ShortestPathConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "useTransports",
+		name = "Use transports",
+		description = "Whether to include generic transports such as gates, doors, tunnels and local passages",
+		position = 0,
+		section = sectionSettings
+	)
+	default boolean useTransports()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "useBoats",
 		name = "Use boats",
 		description = "Whether to include small boats in the path<br>" +

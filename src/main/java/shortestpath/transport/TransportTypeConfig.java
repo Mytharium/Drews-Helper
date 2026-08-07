@@ -35,9 +35,8 @@ import shortestpath.TeleportationItem;
  * via {@code useTeleportationItems} config. The per-transport filtering is
  * handled
  * in {@code PathfinderConfig.checkTeleportationItemRules()}.</li>
- * <li>{@link TransportType#TRANSPORT} has no enabledGetter because it's the
- * base transport
- * type and is always enabled.</li>
+ * <li>{@link TransportType#TRANSPORT} covers generic pass-through routes like
+ * gates and local passages.</li>
  * </ul>
  */
 @Slf4j

@@ -299,16 +299,9 @@ public class DrewsHelperPlugin extends Plugin
 
     private void applyShortestPathRequestPolicy(PluginMessage event, OptionalInt target)
     {
-        if (!config.filterUnavailableTeleports())
-        {
-            return;
-        }
-
-        Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
-        if (blockedTransportKeys.isEmpty())
-        {
-            return;
-        }
+        Set<String> blockedTransportKeys = config.filterUnavailableTeleports()
+            ? teleportAvailabilityService.getBlockedTransportKeys(config)
+            : Collections.emptySet();
 
         shortestPathBridge.addConfigOverrideToPathRequest(
             event,

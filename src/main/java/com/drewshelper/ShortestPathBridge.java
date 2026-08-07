@@ -16,6 +16,7 @@ import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.PluginMessage;
+import shortestpath.TeleportationItem;
 
 @Singleton
 final class ShortestPathBridge
@@ -28,13 +29,36 @@ final class ShortestPathBridge
     private static final String CONFIG_KEY = "config";
     private static final String DREWS_HELPER_REQUEST_KEY = "drewsHelperRequest";
     private static final String POST_TRANSPORTS_KEY = "postTransports";
+    private static final String USE_TRANSPORTS_KEY = "useTransports";
+    private static final String USE_AGILITY_SHORTCUTS_KEY = "useAgilityShortcuts";
+    private static final String USE_GRAPPLE_SHORTCUTS_KEY = "useGrappleShortcuts";
+    private static final String USE_BOATS_KEY = "useBoats";
+    private static final String USE_CANOES_KEY = "useCanoes";
+    private static final String USE_CHARTER_SHIPS_KEY = "useCharterShips";
+    private static final String USE_SHIPS_KEY = "useShips";
+    private static final String USE_GNOME_GLIDERS_KEY = "useGnomeGliders";
+    private static final String USE_HOT_AIR_BALLOONS_KEY = "useHotAirBalloons";
+    private static final String USE_MAGIC_CARPETS_KEY = "useMagicCarpets";
+    private static final String USE_MAGIC_MUSHTREES_KEY = "useMagicMushtrees";
+    private static final String USE_MINECARTS_KEY = "useMinecarts";
+    private static final String USE_QUETZALS_KEY = "useQuetzals";
     private static final String USE_POH_KEY = "usePoh";
+    private static final String USE_POH_FAIRY_RING_KEY = "usePohFairyRing";
+    private static final String USE_POH_SPIRIT_TREE_KEY = "usePohSpiritTree";
     private static final String USE_POH_MOUNTED_ITEMS_KEY = "usePohMountedItems";
     private static final String USE_POH_PORTALS_KEY = "useTeleportationPortalsPoh";
+    private static final String USE_POH_OBELISK_KEY = "usePohObelisk";
     private static final String POH_JEWELLERY_BOX_TIER_KEY = "pohJewelleryBoxTier";
     private static final String USE_FAIRY_RINGS_KEY = "useFairyRings";
     private static final String USE_SPIRIT_TREES_KEY = "useSpiritTrees";
+    private static final String USE_TELEPORTATION_ITEMS_KEY = "useTeleportationItems";
+    private static final String USE_TELEPORTATION_LEVERS_KEY = "useTeleportationLevers";
+    private static final String USE_TELEPORTATION_PORTALS_KEY = "useTeleportationPortals";
+    private static final String USE_TELEPORTATION_SPELLS_KEY = "useTeleportationSpells";
+    private static final String USE_HOME_TELEPORTS_KEY = "useTeleportationSpellsHome";
     private static final String USE_TELEPORTATION_MINIGAMES_KEY = "useTeleportationMinigames";
+    private static final String USE_WILDERNESS_OBELISKS_KEY = "useWildernessObelisks";
+    private static final String USE_SEASONAL_TRANSPORTS_KEY = "useSeasonalTransports";
     private static final String OBJECT_INFO_KEY = "objectInfo";
     private static final String DISPLAY_INFO_KEY = "displayInfo";
 
@@ -137,33 +161,63 @@ final class ShortestPathBridge
         Map<String, Object> configOverride = new HashMap<>();
         configOverride.put(POST_TRANSPORTS_KEY, true);
 
-        if (config == null || !config.filterUnavailableTeleports())
+        if (config == null)
         {
             return configOverride;
         }
+
+        configOverride.put(USE_TRANSPORTS_KEY, config.gatesAndPassagesUnlocked());
+        configOverride.put(USE_AGILITY_SHORTCUTS_KEY, config.agilityShortcutsUnlocked());
+        configOverride.put(USE_GRAPPLE_SHORTCUTS_KEY, config.grappleShortcutsUnlocked());
+        configOverride.put(USE_BOATS_KEY, config.boatsUnlocked());
+        configOverride.put(USE_CANOES_KEY, config.canoesUnlocked());
+        configOverride.put(USE_CHARTER_SHIPS_KEY, config.charterShipsUnlocked());
+        configOverride.put(USE_SHIPS_KEY, config.passengerShipsUnlocked());
+        configOverride.put(USE_GNOME_GLIDERS_KEY, config.gnomeGlidersUnlocked());
+        configOverride.put(USE_HOT_AIR_BALLOONS_KEY, config.hotAirBalloonsUnlocked());
+        configOverride.put(USE_MAGIC_CARPETS_KEY, config.magicCarpetsUnlocked());
+        configOverride.put(USE_MAGIC_MUSHTREES_KEY, config.magicMushtreesUnlocked());
+        configOverride.put(USE_MINECARTS_KEY, config.minecartsUnlocked());
+        configOverride.put(USE_QUETZALS_KEY, config.quetzalsUnlocked());
+        configOverride.put(USE_FAIRY_RINGS_KEY, config.fairyRingsUnlocked());
+        configOverride.put(USE_SPIRIT_TREES_KEY, config.spiritTreesUnlocked());
+
+        TeleportationItem teleportationItems = config.teleportationItemsUnlocked() == null
+            ? TeleportationItem.NONE
+            : config.teleportationItemsUnlocked();
+        configOverride.put(USE_TELEPORTATION_ITEMS_KEY, teleportationItems.toString());
+        configOverride.put(USE_TELEPORTATION_LEVERS_KEY, config.teleportationLeversUnlocked());
+        configOverride.put(USE_TELEPORTATION_PORTALS_KEY, config.teleportationPortalsUnlocked());
+        configOverride.put(USE_TELEPORTATION_SPELLS_KEY, config.teleportationSpellsUnlocked());
+        configOverride.put(USE_HOME_TELEPORTS_KEY, config.homeTeleportsUnlocked());
+        configOverride.put(
+            USE_TELEPORTATION_MINIGAMES_KEY,
+            config.minigameTeleportsUnlocked() && !disableMinigameTeleports);
+        configOverride.put(USE_WILDERNESS_OBELISKS_KEY, config.wildernessObelisksUnlocked());
+        configOverride.put(USE_SEASONAL_TRANSPORTS_KEY, config.seasonalTransportsUnlocked());
 
         JewelleryBoxTier jewelleryBoxTier = config.pohJewelryBoxTier() == null
             ? JewelleryBoxTier.NONE
             : config.pohJewelryBoxTier();
 
-        boolean useOwnedPoh = config.pohMountedGloryUnlocked()
+        boolean useOwnedPoh = config.pohFairyRingUnlocked()
+            || config.pohSpiritTreeUnlocked()
+            || config.pohMountedGloryUnlocked()
             || config.pohPortalChamberUnlocked()
             || config.pohPortalNexusUnlocked()
-            || jewelleryBoxTier != JewelleryBoxTier.NONE;
+            || jewelleryBoxTier != JewelleryBoxTier.NONE
+            || config.pohObeliskUnlocked();
 
         configOverride.put(USE_POH_KEY, useOwnedPoh);
+        configOverride.put(USE_POH_FAIRY_RING_KEY, config.pohFairyRingUnlocked());
+        configOverride.put(USE_POH_SPIRIT_TREE_KEY, config.pohSpiritTreeUnlocked());
         configOverride.put(USE_POH_MOUNTED_ITEMS_KEY, config.pohMountedGloryUnlocked());
         configOverride.put(USE_POH_PORTALS_KEY, config.pohPortalChamberUnlocked() || config.pohPortalNexusUnlocked());
+        configOverride.put(USE_POH_OBELISK_KEY, config.pohObeliskUnlocked());
         configOverride.put(POH_JEWELLERY_BOX_TIER_KEY, jewelleryBoxTier.toString());
-        configOverride.put(USE_FAIRY_RINGS_KEY, config.fairyRingsUnlocked());
-        configOverride.put(USE_SPIRIT_TREES_KEY, config.spiritTreesUnlocked());
-        if (disableMinigameTeleports)
-        {
-            configOverride.put(USE_TELEPORTATION_MINIGAMES_KEY, false);
-        }
 
         List<String> normalizedBlockedKeys = normalizedBlockedTransportKeys(blockedTransportKeys);
-        if (!normalizedBlockedKeys.isEmpty())
+        if (config.filterUnavailableTeleports() && !normalizedBlockedKeys.isEmpty())
         {
             configOverride.put(ShortestPathTransportKey.BLOCKED_TRANSPORT_KEYS_CONFIG, normalizedBlockedKeys);
         }

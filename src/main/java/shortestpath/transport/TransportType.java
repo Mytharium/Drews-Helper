@@ -9,7 +9,7 @@ import shortestpath.ShortestPathConfig;
 @Getter
 public enum TransportType
 {
-	TRANSPORT("/transports/transports.tsv", null, null, null, null),
+	TRANSPORT("/transports/transports.tsv", "useTransports", ShortestPathConfig::useTransports, null, null),
 	AGILITY_SHORTCUT("/transports/agility_shortcuts.tsv", "useAgilityShortcuts", ShortestPathConfig::useAgilityShortcuts, "costAgilityShortcuts", ShortestPathConfig::costAgilityShortcuts)
 		{
 			@Override
