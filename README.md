@@ -1,19 +1,15 @@
 # Drew's Helper
 
-Drew's Helper is a RuneLite external plugin for route and teleport assistance.
+Drew's Helper is currently a UI-only RuneLite external plugin shell.
 
-This build establishes the plugin shell, Plugin Hub metadata, local RuneLite launcher, feature toggles, and the first runtime route bridge. Route ownership will be implemented inside this plugin so it can replace the stock Shortest Path overlay instead of competing with it.
+The route engine, Shortest Path bridge, transport resources, minigame scanner, teleport highlighter, route diagnostics, and saved route state were removed on 2026-08-07 per Myth's reset instruction. The live mod now preserves only the visible plugin entry, config/buttons surface, and in-client overlay panel.
 
 ## Current Features
 
 - RuneLite external-plugin scaffold
 - Local dev launcher: `gradlew.bat run`
-- Routing options for Drew's Shortest Path, Chain Quests, and Quest Preparation sources
-- Teleport options for highlighting, locked-teleport filtering, cooldown rerouting, hosted POH fallback, manual unlocks, minigame/grouping teleport scanning, and jewellery box tier selection
-- Shortest Path transport-feed bridge with config overrides for early in-game route telemetry
-- Drew's Helper overlay showing the current route step, full numbered transport list, minigame teleport unlock count, and numbered locked routes
-- Minigame/grouping teleport UI scanner/highlighter for the magic tab/spell, matching destination row, current Grouping selection, and teleport button
-- Session restore for the last route transport feed, Quest Helper/Shortest Path target messages, and scanned locked/unlocked minigame teleport statuses after plugin toggle, logout, or client restart
+- Drew's Helper config sections/buttons/dropdowns
+- Drew's Helper overlay panel
 
 ## Build
 
@@ -27,45 +23,13 @@ gradlew.bat clean test build
 gradlew.bat run
 ```
 
-## Test Route Feed Overlay
+## Test UI Shell
 
-1. Launch the dev client with `gradlew.bat run`.
+1. Launch the dev client with `run-drews-helper-dev.bat` or `gradlew.bat run`.
 2. Enable Drew's Helper.
-3. Enable Shortest Path in the same client.
-4. Set a Shortest Path destination that uses a transport or teleport.
-5. Watch the Drew's Helper overlay for `Current Route Step X/Y` and the full numbered transport list.
-
-If the overlay stays on `Current Route Step 0/0`, Shortest Path has not produced a transport-bearing route yet.
-
-## Test Minigame Teleport Detection
-
-1. Open Drew's Helper settings.
-2. Leave `Hide Locked Teleports` checked.
-3. Set a Shortest Path destination that recommends a minigame teleport.
-4. Open the magic tab. Drew's Helper should highlight the minigame teleport spell.
-5. Open the minigame/grouping teleport interface. Drew's Helper scans destination rows that are currently visible in the scroll window and refreshes its cached locked/unlocked statuses.
-6. Watch the overlay for `Minigame Teleports: <unlocked>/18 Unlocked`.
-7. If the recommended destination is not the current Grouping selection, open the dropdown so Drew's Helper can scan/highlight the matching destination.
-8. If the recommended destination is the current Grouping selection, Drew's Helper highlights the destination and the Teleport button.
-9. If the recommended destination is detected as locked, Drew's Helper marks it as locked/hidden locally and highlights the matching row in warning color while the interface is open.
-
-Unknown minigame destinations are not treated as locked. Drew's Helper stores scanned locked/unlocked minigames after plugin toggle, logout, or client restart, then refreshes those statuses whenever the minigame interface exposes the row again. Highlight boxes are clipped to the minigame window and deduped to the destination row, so text children and offscreen scrolled rows are not highlighted separately.
-
-After scanning at least one row, RuneLite's active profile should contain a single-line `drewshelper.minigameTeleportStatuses` value. That key is Drew's Helper's persistent locked/unlocked minigame cache.
-
-## Test Session Restore
-
-1. Set a Shortest Path destination that produces route transports.
-2. Confirm Drew's Helper shows `Current Route Step X/Y`.
-3. Toggle Drew's Helper off, then back on.
-4. The overlay should restore the previous route immediately, then refresh it from Shortest Path within the next few ticks.
-5. Log out and back in with the same client open. Drew's Helper should request a fresh feed immediately after login instead of waiting for the normal refresh interval.
-6. For Quest Helper routes, Drew's Helper captures the `shortestpath/path` target message and replays that target after login so the Shortest Path marker/path is set again.
-
-Manual Shortest Path map-click targets are internal to Shortest Path and are not published in its transport feed. Until Shortest Path publishes those targets, Drew's Helper can only replay a best-effort target from the last saved transport destination for manual routes.
+3. Confirm the plugin config buttons/dropdowns are visible.
+4. Confirm the Drew's Helper overlay panel appears when the preserved UI toggles allow it.
 
 ## C2 Guide Notes
 
-Development notes and tomorrow's route-reroute plan are in `docs/C2_Guides`.
-
-Publishing notes are in `docs/PUBLISHING.md`.
+Development notes are in `docs/C2_Guides`.

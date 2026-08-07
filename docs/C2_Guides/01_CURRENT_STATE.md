@@ -2,6 +2,20 @@
 
 Last updated: 2026-08-07.
 
+## Current Runtime Reset
+
+As of the 2026-08-07 UI-only reset, Drew's Helper is intentionally reduced to the visible plugin UI shell and config buttons only.
+
+Runtime shape now:
+- `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
+- `DrewsHelperConfig` keeps the player-facing settings/buttons surface.
+- `DrewsHelperOverlay` keeps the in-client overlay panel.
+- `JewelleryBoxTier` and `PortalNexusTier` remain only because the config UI dropdowns need those enum values.
+- The vendored `shortestpath` route engine, pathfinder, map/minimap/tile overlays, transport resources, minigame scanner, teleport highlighter, route telemetry bridge, route diagnostics, saved route state, and route behavior tests have been removed.
+- `run-drews-helper-dev.bat` launches the plain Gradle dev client again; the route-diagnostic tee/collector tools are no longer part of the project.
+
+Everything below this note is historical context from the removed route-engine attempt unless a future guide entry explicitly revives it.
+
 ## Working
 
 - Drew's Helper launches as a RuneLite external plugin through `gradlew.bat run`.
@@ -9,7 +23,7 @@ Last updated: 2026-08-07.
 - Drew's Shortest Path is vendored under `src/main/java/shortestpath/**` with resources under `src/main/resources/**`; `DrewsHelperPlugin` starts it internally and it no longer depends on the Plugin Hub Shortest Path jar being installed.
 - The internal route engine lazy-creates its map/minimap/tile/debug overlays after plugin construction to avoid a Guice dependency cycle when loaded as a Drew's Helper feature.
 - The internal route engine is hidden and uses `DrewShortestPathInternalConfig` runtime defaults instead of `ConfigManager.getConfig(ShortestPathConfig.class)`, so the copied Shortest Path `Settings` / `Transport Thresholds` panel should not be player-facing.
-- The overlay receives Drew's Shortest Path transport telemetry through the retained `shortestpath/transports` protocol.
+- The overlay receives Drew's Shortest Path transport telemetry through a direct internal engine listener; the retained `shortestpath/transports` protocol is still posted for compatibility.
 - The overlay no longer uses the narrow right-column `Next` display for route text.
 - Quest Helper route targets sent through `shortestpath/path` are captured and replayed after login/startup.
 - Drew passes whole-category unlock settings for spirit trees, fairy rings, and owned POH features into the internal route engine, so those supported categories can trigger real path recalculation.
@@ -29,6 +43,11 @@ Last updated: 2026-08-07.
 - Manual `Unlocked: ...` and `Use: ...` transport settings are sent to the internal route engine. Baseline transport networks are sent as enabled without frontend toggles. Scanned locked minigames become blocked transport keys only while `Hide Locked Teleports` is enabled; the scanner still remembers lock state when the toggle is off.
 - Route config changes mark the active route policy dirty, clear stale HUD telemetry, and replay the saved/current route target directly into the internal route engine with Drew's current config override. The internal route engine still refreshes its active path when it receives a config-only external `shortestpath/path` message, but Drew-origin refreshes no longer depend on event-bus delivery order.
 - Manual right-click/shift-click targets are not just saved now: when Drew observes a changed internal route target during gameplay, it immediately replays that target through Drew's current config and locked-minigame policy. The hidden internal route config defaults `postTransports=true` so manual internal routes still publish HUD telemetry.
+- Route telemetry publication is tied to the exact completed `Pathfinder` instance. Stale/cancelled pathfinder completions are ignored, and duplicate same-signature route refreshes are suppressed while a request is pending so the refresh burst does not cancel the path before the HUD/highlighter snapshot posts.
+- Runemoro `shortest-path` comparison corrected the route ownership model: the internal route engine must apply Drew's current config override before every `restartPathfinding()` rebuild, including manual right-click/shift-click routes, instead of first building an internal route and asking Drew to replay it afterward. Drew's HUD/highlighter may also pull the current completed engine path snapshot when no request is pending.
+- Drew's route-policy override now explicitly keeps the original Shortest Path visual contract enabled: `drawMap=true`, `drawMinimap=true`, `drawTiles=true`, `showTransportInfo=true`, and `postTransports=true`. Cancelled/non-done pathfinder instances must not publish telemetry.
+- Route diagnostics are now opt-in through Drew's Helper config item `Route Diagnostics`. When enabled, the plugin writes `DREW_ROUTE_DIAG` lines to RuneLite's `client.log` covering Drew policy, active target, config override, blocked keys, pathfinder lifecycle, map/tile overlay render skips, transport telemetry, HUD snapshot state, and first route/minigame steps. Use `tools\collect-route-diagnostics.ps1` after a failed test to extract only those lines.
+- The first captured dev diagnostic run on 2026-08-07 produced only startup lines through `LOGIN_SCREEN`: no route request, pathfinder submit, map/tile render, HUD snapshot, config-toggle, or menu-click events. Diagnostics now also cover game-state changes, game ticks, route menu-entry injection, route-menu clicks, selected packed target, and duplicate menu-entry skips so the next run can prove whether the original Shortest Path input path fires.
 - Drew's HUD and minigame highlighter use the same availability rule: while `Hide Locked Teleports` is enabled, locked minigame transports are hidden from the main route step list and the highlighter follows the first available minigame step. When the toggle is off, cached locked minigames are treated as usable/highlightable.
 - Compared against the OSRS wiki Transportation page on 2026-08-06: outstanding categories needing a Myth decision are wilderness obelisks, POH fairy ring, POH spirit tree, POH wilderness obelisk, and exact subtype filtering for teleport items/tablets/scrolls/capes.
 - Drew's `PluginMessage` subscriber runs at high priority and merges active locked-teleport policy into incoming external `shortestpath/path` requests before the internal route engine consumes them, including config-only path refreshes with no target. Drew-owned refreshes bypass that bus and call the internal engine directly.
@@ -70,6 +89,7 @@ Active source:
 - Internal route engine: `src/main/java/shortestpath/**`
 - Vendored resources: `src/main/resources/**`
 - Dev launcher: `src/test/java/com/drewshelper/DrewsHelperPluginTest.java`
+- Dev console logs: `run-drews-helper-dev.bat` tees Gradle/RuneLite STDOUT into `logs\drews-helper-dev-*.log`; route diagnostics are collected from the newest captured dev log.
 
 Plugin identity:
 - Visible RuneLite plugin name: `Drew's Helper`

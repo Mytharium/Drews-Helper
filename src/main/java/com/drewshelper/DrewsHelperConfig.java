@@ -102,6 +102,12 @@ public interface DrewsHelperConfig extends Config
         return true;
     }
 
+    @ConfigItem(keyName = "routeDiagnosticsEnabled", name = "Route Diagnostics", description = "Write compact Drew route diagnostic lines to the RuneLite client log.", section = routingOptions, position = 6)
+    default boolean routeDiagnosticsEnabled()
+    {
+        return false;
+    }
+
     @ConfigItem(keyName = "useAgilityShortcuts", name = "Unlocked: Agility Shortcuts", description = "Allow agility shortcuts when your skill and quest requirements are met.", section = transportationOptions, position = 0)
     default boolean agilityShortcutsUnlocked()
     {

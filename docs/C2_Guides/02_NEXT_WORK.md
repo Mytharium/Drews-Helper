@@ -40,6 +40,11 @@ Current implementation status:
 - Locked minigames are scanner-filtered by exact `blockedTransportKeys` while `Hide Locked Teleports` is enabled, even though Minigame Teleports are a base-on category. Turning that toggle off keeps the scan cache but stops sending blocked keys so the base solver can use those routes again.
 - Config changes now mark the route policy dirty, clear stale HUD telemetry, and replay the saved/current target directly into the internal engine with Drew's current override. Targetless external `shortestpath/path` messages still refresh the internal engine's current path, but Drew-origin toggle refreshes do not rely on plugin-message subscriber ordering.
 - Manual right-click/shift-click route targets are now immediately re-requested through Drew's override when observed, and the hidden internal config defaults `postTransports=true` so Drew's HUD receives transport telemetry even for manual routes created inside the internal engine.
+- Drew's HUD/highlighter now receive transport snapshots through a direct internal listener from the route engine; legacy `shortestpath/transports` telemetry is still posted for compatibility. Stale/cancelled pathfinder completions are ignored, and duplicate pending route signatures are not restarted during refresh bursts.
+- After comparing against Runemoro `shortest-path`, Drew's current policy is now installed inside the internal route engine before every pathfinder rebuild. Manual route creation, config refresh, and Quest Helper requests all rebuild under the same Drew override map instead of relying on a replay-after-the-fact correction.
+- Drew's policy override must preserve the upstream visual layer. Every Drew override now forces `drawMap`, `drawMinimap`, `drawTiles`, `showTransportInfo`, and `postTransports` on so a stale hidden Shortest Path display setting cannot blank the map/tiles/HUD while the solver still owns the route.
+- Cancelled or otherwise non-done pathfinder instances are not valid telemetry sources. If route rendering disappears after a policy refresh, check for a cancelled completion or stale hidden display config before adding another replay loop.
+- `blockedTransportKeys` is emitted explicitly on every Drew override. With `Hide Locked Teleports` on it carries exact locked keys such as `teleportation_minigames:nightmare_zone`; with the toggle off it carries an empty list so stale blocked keys cannot survive in the static engine override map.
 - Drew's HUD hides unavailable route transports from the main route step list while `Hide Locked Teleports` is enabled, but still shows them under `Locked Routes`.
 - Minigame hint overlays now prefer the first available minigame route transport, so a locked Nightmare Zone hint should not remain active when an available minigame step such as Pest Control exists. When `Hide Locked Teleports` is off, cached locked minigames are still highlightable because the route policy is allowing them.
 - Wiki comparison open decisions: whether to expose wilderness obelisks, POH fairy ring, POH spirit tree, and POH wilderness obelisk in Advanced/Other; and whether to add exact transport-item subtype filtering beyond the internal broad `useTeleportationItems` mode.
@@ -88,11 +93,21 @@ Drew-side work completed:
 - Do not use the normal RuneLite shortcut for this test. The normal launcher cannot see Drew's local source plugin.
 - Confirm only `Drew's Helper` is enabled from this project; there should be no separate `Drew Path` plugin entry.
 - Confirm Plugin Hub Shortest Path is not enabled and no active `shortest-path_*.jar` is in `C:\Users\drews\.runelite\plugins`.
+- Turn on Drew's Helper `Route Diagnostics` before setting the route. In the dev launcher path, `run-drews-helper-dev.bat` captures Gradle/RuneLite console output into `logs\drews-helper-dev-*.log`; the collector reads the newest captured dev log automatically.
 - In Drew's Helper, keep `Hide Locked Teleports` enabled.
 - Open the Grouping/minigame teleport UI and confirm Drew has scanned `Nightmare Zone` as locked while at least one other useful minigame teleport is available.
 - Request the same route that previously selected Nightmare Zone.
 - If using right-click/shift-click/manual map routing, wait one game tick after setting the destination; Drew should observe the internal target and replay it through the current blocked-key policy.
 - Watch 10-15 seconds.
+- If the map route still does not draw, run:
+
+```powershell
+.\tools\collect-route-diagnostics.ps1 -TailLines 8000
+```
+
+Attach or paste the generated `route-diagnostics-*.log`. The key lines to inspect first are `engine.gameState`, `drew.gameState`, `engine.tick`, `engine.menu.add`, `engine.menu.click`, `engine.target.set`, `engine.restart.apply`, `engine.pathfinder.submit`, `engine.telemetry.publish`, `map.render`, `tile.render`, `drew.snapshot.accept`, and `drew.currentPathSnapshot.empty`.
+
+If the output only contains `engine.start`, `drew.engine.start`, `drew.requestFeed.skip reason=gameState LOGIN_SCREEN`, and `drew.start`, the repro did not reach the route input path in the captured dev session. Re-run from the updated batch file, log fully into game, set the route from the map/tile menu, then collect again.
 
 Expected with `Hide Locked Teleports` on: Drew's Shortest Path no longer selects `Nightmare Zone Minigame Teleport`, the overlay reflects the recalculated route, and it does not bounce every ~2 seconds between old and corrected routes. Other available minigame teleports should still be allowed.
 
@@ -103,3 +118,15 @@ Expected after turning `Hide Locked Teleports` off: Drew keeps the saved scan re
 Current route-target replay works for Quest Helper paths because Quest Helper sends `shortestpath/path` with a target. Full quest resume still needs a Quest Helper bridge that can restore or reopen the active quest helper task itself.
 
 Do not fake Quest Helper clicks until a clean API/message path is identified.
+## 2026-08-07 UI-Only Reset
+
+Myth ordered the mod reduced to the UI element and UI buttons only. Current next work should treat the old route engine, minigame scanner, highlighter, diagnostics, and path resources as removed, not broken.
+
+Next work is UI-only:
+- Launch `run-drews-helper-dev.bat`.
+- Confirm the RuneLite plugin list shows only `Drew's Helper`.
+- Confirm the overlay panel appears when the preserved UI toggles allow it.
+- Confirm the config buttons/dropdowns are still visible.
+- Do not debug or restore route drawing, shortest path telemetry, minigame teleport scanning, tab highlighting, or route diagnostics unless Myth explicitly asks to rebuild those systems from scratch.
+
+Everything below this reset note is historical context from the removed route-engine attempt.
