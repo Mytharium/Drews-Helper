@@ -4,18 +4,21 @@ Last updated: 2026-08-07.
 
 ## Current Runtime Reset
 
-As of the 2026-08-07 UI-only reset plus Myth's waypoint follow-up, Drew's Helper is intentionally reduced to the visible plugin UI/config shell plus five Drew-owned world-map waypoints.
+As of the 2026-08-07 UI-only reset plus Myth's waypoint/route follow-ups, Drew's Helper is the visible plugin UI/config shell, five Drew-owned world-map waypoints, and a Drew-owned route graph built from walking collision plus selected baseline transport edges.
 
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.
 - `DrewsHelperPlugin` owns five persistent world-map waypoint slots, world-map right-click menu entries, and `WorldMapPoint` marker registration.
-- `DrewsHelperOverlay` keeps the in-client overlay panel and reports placed waypoint count/coordinates.
+- `DrewsHelperPlugin` owns route worker lifecycle, committed route progress, and the active immutable `DrewsHelperRouteSnapshot`.
+- `com.drewshelper.routing/**` owns collision loading, baseline/Wilderness transport graph loading, and the A* route solver.
+- `com.drewshelper.routing.ui/**` owns world-map, minimap, and in-scene route rendering from that one snapshot.
+- `DrewsHelperOverlay` keeps the in-client overlay panel and reports route status, route steps, placed waypoint count, and coordinates.
 - `JewelleryBoxTier` and `PortalNexusTier` remain only because the config UI dropdowns need those enum values.
-- The vendored `shortestpath` route engine, pathfinder, map/minimap/tile overlays, transport resources, minigame scanner, teleport highlighter, route telemetry bridge, route diagnostics, saved route state, and route behavior tests have been removed.
+- The vendored `shortestpath` route engine, pathfinder, old map/minimap/tile overlays, old transport resources, minigame scanner, teleport highlighter, route telemetry bridge, route diagnostics, saved route state, and old route behavior tests have been removed.
 - `run-drews-helper-dev.bat` launches the plain Gradle dev client again; the route-diagnostic tee/collector tools are no longer part of the project.
 
-Everything below this note is historical context from the removed route-engine attempt unless a future guide entry explicitly revives it. The active exception is the waypoint marker surface, which is newly rebuilt without restoring the old route engine.
+Everything below this note is historical context from the removed route-engine attempt unless a future guide entry explicitly revives it. The active exceptions are the waypoint marker surface and route-guidance sections rebuilt without restoring the old route engine.
 
 ## Active Reference Analysis
 
@@ -141,7 +144,9 @@ The config surface has a separate `Settings` section directly below `Other Trans
 - Waypoint #4: Magenta/Purple `#CC79A7`
 - Waypoint #5: Orange `#E69F00`
 
-The waypoint values color the matching Drew waypoint marker on the world map. `Path Colour` colors the Drew walking route overlays.
+The waypoint values color the matching Drew waypoint marker on the world map. `Path Colour` colors the Drew route overlays.
+
+`Other Transportation` now includes one active route toggle below `Use: Other Items`: `Use: Wilderness Transports`. It controls both Wilderness levers and Wilderness obelisks. Ordinary click/pay/default transport edges are built into the graph and do not have individual frontend toggles.
 
 ## 2026-08-07 Waypoint Placement
 
@@ -154,25 +159,28 @@ Drew's Helper now provides the first non-route rebuild surface after the reset:
 - If at least one waypoint exists, the world-map menu also offers `Clear -> All Waypoints`.
 - The overlay displays `Waypoints X/5` and the coordinates of each placed waypoint.
 
-This is now the input surface for Drew walking route guidance. Fast travel, transport scoring, Quest Helper integration, minigame scanning, and teleport highlighter behavior remain removed.
+This is now the input surface for Drew route guidance. Quest Helper integration, minigame scanning, teleport highlighter behavior, route diagnostics, and the old vendored route stack remain removed.
 
-## 2026-08-07 Walking Route Guidance
+## 2026-08-07 Route Guidance
 
-Myth explicitly asked to rebuild route guidance from placed waypoints, walking only:
+Myth explicitly asked to rebuild route guidance from placed waypoints, then add baseline click/pay physical transports:
 - The old `src/main/java/shortestpath/**` package remains absent.
 - Drew's new route owner is `com.drewshelper.routing/**`.
 - `DrewsHelperPlugin` reads the player location and ordered non-empty waypoint slots, then calculates player -> waypoint #1 -> waypoint #2 and onward.
 - Empty waypoint slots are skipped, preserving ordered route intent without forcing all five slots to exist.
-- The first solver uses A* over Runemoro's `collision-map.zip` walking collision data and includes no transports, teleports, plugin messages, minigame scanning, Quest Helper targets, or teleport UI highlighter.
+- The solver uses A* over Runemoro's `collision-map.zip` walking collision data plus Drew's `drewshelper-transports.tsv` transport graph.
+- Baseline click/pay/default transport edges are always available in the route graph. This includes selected maintained Shortest Path rows for click objects/gates/gangplanks, ordinary ships/ferries/boats, charter ships, magic carpets, and minecarts after filtering out rows with explicit skill/quest requirements.
+- Wilderness levers and Wilderness obelisks are the only transport family in this pass behind a visible setting: `Other Transportation` -> `Use: Wilderness Transports`, default OFF.
+- Teleports, Quest Helper targets, minigame scanning, teleport UI highlighter, and route diagnostics remain removed.
 - Route work runs on a single background worker; waypoint/player changes cancel stale work through a request id before publishing one immutable `DrewsHelperRouteSnapshot`.
 - `DrewsHelperRouteMapOverlay`, `DrewsHelperRouteMinimapOverlay`, and `DrewsHelperRouteTileOverlay` all render that same route snapshot using `DrewsHelperConfig.pathColor()`.
 - The walking solver keeps shortest distance as the first priority, then orders equal-cost choices toward the waypoint with Myth's observed primary-axis forward/cardinal preference before diagonal cleanup when one axis is longer. Do not reintroduce the older target-line penalty; it looked prettier but could disagree with how the player actually walks after clicking the endpoint.
 - `DrewsHelperRouteTileOverlay` draws placed waypoint endpoint badges on in-scene tiles using the same numbered circle icon style as the waypoint map/minimap marker, using each waypoint's configured marker colour over the shared path colour.
 - `DrewsHelperRouteMinimapOverlay` also draws nearby placed waypoint endpoint icons on top of the route squares.
-- The Drew overlay now reports route status and walking distance in tiles.
-- `THIRD_PARTY_NOTICES.md` records the BSD 2-Clause notice for the copied Runemoro collision-map resource.
+- The Drew overlay now reports route status and route steps. Transport jumps count as one graph step, so this is no longer labelled as pure walking distance.
+- `THIRD_PARTY_NOTICES.md` records the BSD 2-Clause notice for the copied Runemoro collision-map resource and generated Skretzo transport-derived resource.
 
 Known first-pass limits:
-- Plane changes are not routed yet because ladders/stairs/transports are intentionally excluded.
-- There is no partial path display; if an exact walking segment cannot be found, the overlay reports no walking path for that segment.
+- Transport-step labels are not rendered yet; a non-adjacent path edge currently appears as a jump in the shared route path.
+- There is no partial path display; if an exact segment cannot be found, the overlay reports no route for that segment.
 - The route is committed after calculation. Exact on-route player movement trims every leading route tile before the player's current tile, so walk and run speed both leave the current tile highlighted. Nearby movement variance within 10 tiles of the committed route preserves the route without recalculating. A new background route is submitted only when waypoints/config change or the player is more than 10 tiles away from the committed route.

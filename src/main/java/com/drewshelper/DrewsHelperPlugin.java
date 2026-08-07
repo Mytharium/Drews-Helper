@@ -4,6 +4,7 @@ import com.google.inject.Provides;
 import com.drewshelper.routing.DrewsHelperCollisionMap;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
 import com.drewshelper.routing.DrewsHelperRouteStatus;
+import com.drewshelper.routing.DrewsHelperTransportGraph;
 import com.drewshelper.routing.DrewsHelperWalkingRouteEngine;
 import com.drewshelper.routing.ui.DrewsHelperRouteMapOverlay;
 import com.drewshelper.routing.ui.DrewsHelperRouteMinimapOverlay;
@@ -42,8 +43,8 @@ import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 @Slf4j
 @PluginDescriptor(
     name = "Drew's Helper",
-    description = "Waypoint placement and walking route guidance.",
-    tags = {"ui", "helper", "waypoint", "route"}
+    description = "Waypoint placement and route guidance.",
+    tags = {"ui", "helper", "waypoint", "route", "transport"}
 )
 public class DrewsHelperPlugin extends Plugin
 {
@@ -93,7 +94,9 @@ public class DrewsHelperPlugin extends Plugin
     private Point lastMenuOpenedPoint;
     private ExecutorService routeExecutor;
     private Future<?> routeFuture;
+    private DrewsHelperCollisionMap collisionMap;
     private DrewsHelperWalkingRouteEngine routeEngine;
+    private boolean routeEngineUsesWildernessTransports;
     private volatile DrewsHelperRouteSnapshot routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
     private int routeRequestId;
     private boolean routeDirty = true;
@@ -104,7 +107,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         routeExecutor = Executors.newSingleThreadExecutor(r ->
         {
-            Thread thread = new Thread(r, "drews-helper-walking-route");
+            Thread thread = new Thread(r, "drews-helper-route");
             thread.setDaemon(true);
             return thread;
         });
@@ -202,7 +205,8 @@ public class DrewsHelperPlugin extends Plugin
             refreshWaypointMarkers();
         }
 
-        if ("pathingReplacementEnabled".equals(event.getKey()))
+        if ("pathingReplacementEnabled".equals(event.getKey())
+            || "useWildernessTransports".equals(event.getKey()))
         {
             markRouteDirty();
         }
@@ -327,13 +331,14 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         WorldPoint start = localPlayer.getWorldLocation();
-        String signature = routeSignature(start, destinations);
+        boolean useWildernessTransports = config().wildernessTransportsEnabled();
+        String signature = routeSignature(start, destinations, useWildernessTransports);
         if (!routeDirty && signature.equals(lastRouteSignature))
         {
             return;
         }
 
-        submitRoute(start, destinations, signature);
+        submitRoute(start, destinations, signature, useWildernessTransports);
     }
 
     private void advanceCommittedRouteIfNeeded()
@@ -380,7 +385,12 @@ public class DrewsHelperPlugin extends Plugin
         return destinations;
     }
 
-    private void submitRoute(WorldPoint start, List<WorldPoint> destinations, String signature)
+    private void submitRoute(
+        WorldPoint start,
+        List<WorldPoint> destinations,
+        String signature,
+        boolean useWildernessTransports
+    )
     {
         if (routeExecutor == null)
         {
@@ -399,7 +409,7 @@ public class DrewsHelperPlugin extends Plugin
             DrewsHelperRouteSnapshot calculatedSnapshot;
             try
             {
-                calculatedSnapshot = routeEngine().solve(start, routeDestinations);
+                calculatedSnapshot = routeEngine(useWildernessTransports).solve(start, routeDestinations);
             }
             catch (InterruptedException ex)
             {
@@ -408,7 +418,7 @@ public class DrewsHelperPlugin extends Plugin
             }
             catch (RuntimeException | IOException ex)
             {
-                log.warn("Failed to calculate Drew's walking route", ex);
+                log.warn("Failed to calculate Drew's route", ex);
                 calculatedSnapshot = DrewsHelperRouteSnapshot.error(routeDestinations, ex.getMessage());
             }
 
@@ -424,11 +434,20 @@ public class DrewsHelperPlugin extends Plugin
         });
     }
 
-    private synchronized DrewsHelperWalkingRouteEngine routeEngine() throws IOException
+    private synchronized DrewsHelperWalkingRouteEngine routeEngine(boolean useWildernessTransports) throws IOException
     {
-        if (routeEngine == null)
+        if (collisionMap == null)
         {
-            routeEngine = new DrewsHelperWalkingRouteEngine(DrewsHelperCollisionMap.loadDefault());
+            collisionMap = DrewsHelperCollisionMap.loadDefault();
+        }
+
+        if (routeEngine == null || routeEngineUsesWildernessTransports != useWildernessTransports)
+        {
+            routeEngine = new DrewsHelperWalkingRouteEngine(
+                collisionMap,
+                DrewsHelperTransportGraph.loadDefault(useWildernessTransports)
+            );
+            routeEngineUsesWildernessTransports = useWildernessTransports;
         }
         return routeEngine;
     }
@@ -443,9 +462,14 @@ public class DrewsHelperPlugin extends Plugin
         }
     }
 
-    private static String routeSignature(WorldPoint start, List<WorldPoint> destinations)
+    private static String routeSignature(
+        WorldPoint start,
+        List<WorldPoint> destinations,
+        boolean useWildernessTransports
+    )
     {
         StringBuilder signature = new StringBuilder();
+        signature.append(useWildernessTransports ? "wilderness=1|" : "wilderness=0|");
         appendPoint(signature, start);
         for (WorldPoint destination : destinations)
         {

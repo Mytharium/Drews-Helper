@@ -23,10 +23,17 @@ public final class DrewsHelperWalkingRouteEngine
     };
 
     private final DrewsHelperMovementMap movementMap;
+    private final DrewsHelperTransportGraph transportGraph;
 
     public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap)
     {
+        this(movementMap, DrewsHelperTransportGraph.empty());
+    }
+
+    public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap, DrewsHelperTransportGraph transportGraph)
+    {
         this.movementMap = movementMap;
+        this.transportGraph = transportGraph == null ? DrewsHelperTransportGraph.empty() : transportGraph;
     }
 
     public DrewsHelperRouteSnapshot solve(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
@@ -51,7 +58,7 @@ public final class DrewsHelperWalkingRouteEngine
             List<WorldPoint> segment = solveSegment(segmentStart, target);
             if (segment == null)
             {
-                String message = "No walking path to waypoint #" + (index + 1);
+                String message = "No route to waypoint #" + (index + 1);
                 return DrewsHelperRouteSnapshot.noPath(route, destinations, message, walkingDistance);
             }
 
@@ -73,7 +80,7 @@ public final class DrewsHelperWalkingRouteEngine
 
     private List<WorldPoint> solveSegment(WorldPoint start, WorldPoint target) throws InterruptedException
     {
-        if (start.getPlane() != target.getPlane())
+        if (start.getPlane() != target.getPlane() && transportGraph.isEmpty())
         {
             return null;
         }
@@ -150,6 +157,11 @@ public final class DrewsHelperWalkingRouteEngine
                 addNeighbor(node, move, context, open, bestNodes);
             }
         }
+
+        for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(node.point))
+        {
+            addTransportNeighbor(node, edge, context, open, bestNodes);
+        }
     }
 
     private void addNeighbor(
@@ -165,6 +177,34 @@ public final class DrewsHelperWalkingRouteEngine
             node.point.getY() + move.y,
             node.point.getPlane()
         );
+        addNeighbor(node, neighbor, move, context, open, bestNodes);
+    }
+
+    private void addTransportNeighbor(
+        SearchNode node,
+        DrewsHelperTransportEdge edge,
+        SearchContext context,
+        PriorityQueue<SearchNode> open,
+        Map<WorldPoint, SearchNode> bestNodes
+    )
+    {
+        WorldPoint neighbor = edge.getDestination();
+        Move direction = new Move(
+            Integer.compare(neighbor.getX(), node.point.getX()),
+            Integer.compare(neighbor.getY(), node.point.getY())
+        );
+        addNeighbor(node, neighbor, direction, context, open, bestNodes);
+    }
+
+    private void addNeighbor(
+        SearchNode node,
+        WorldPoint neighbor,
+        Move move,
+        SearchContext context,
+        PriorityQueue<SearchNode> open,
+        Map<WorldPoint, SearchNode> bestNodes
+    )
+    {
         int distance = node.distance + 1;
         int remaining = heuristic(neighbor, context.target);
         int preferencePenalty = node.preferencePenalty + movePreferencePenalty(node.point, move, context.target);
@@ -196,11 +236,6 @@ public final class DrewsHelperWalkingRouteEngine
 
     private static int heuristic(WorldPoint point, WorldPoint target)
     {
-        if (point.getPlane() != target.getPlane())
-        {
-            return Integer.MAX_VALUE / 4;
-        }
-
         return Math.max(Math.abs(point.getX() - target.getX()), Math.abs(point.getY() - target.getY()));
     }
 

@@ -62,7 +62,7 @@ final class DrewsHelperOverlay extends OverlayPanel
         if (route.getStatus() == DrewsHelperRouteStatus.READY)
         {
             panelComponent.getChildren().add(LineComponent.builder()
-                .left("Walking Distance")
+                .left("Route Steps")
                 .right(route.getWalkingDistance() + " tiles")
                 .rightColor(config.pathColor())
                 .build());

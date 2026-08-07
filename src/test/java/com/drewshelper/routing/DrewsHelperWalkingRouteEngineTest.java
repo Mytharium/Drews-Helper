@@ -1,11 +1,13 @@
 package com.drewshelper.routing;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -40,6 +42,40 @@ public class DrewsHelperWalkingRouteEngineTest
 
         assertEquals(DrewsHelperRouteStatus.NO_PATH, route.getStatus());
         assertTrue(route.getPath().isEmpty());
+    }
+
+    @Test
+    public void usesTransportEdgeWhenItShortensRoute() throws Exception
+    {
+        WorldPoint source = new WorldPoint(0, 0, 0);
+        WorldPoint destination = new WorldPoint(100, 100, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(source, destination, DrewsHelperTransportCategory.BASELINE, "Test ship")
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solve(source, Collections.singletonList(destination));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertEquals(1, route.getWalkingDistance());
+        assertEquals(Arrays.asList(source, destination), route.getPath());
+    }
+
+    @Test
+    public void transportEdgeCanChangePlanes() throws Exception
+    {
+        WorldPoint source = new WorldPoint(10, 10, 0);
+        WorldPoint destination = new WorldPoint(10, 10, 1);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(source, destination, DrewsHelperTransportCategory.BASELINE, "Test ladder")
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solve(source, Collections.singletonList(destination));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertEquals(1, route.getWalkingDistance());
+        assertEquals(Arrays.asList(source, destination), route.getPath());
     }
 
     @Test
@@ -106,6 +142,36 @@ public class DrewsHelperWalkingRouteEngineTest
     public void loadsDefaultCollisionResource() throws Exception
     {
         assertNotNull(DrewsHelperCollisionMap.loadDefault());
+    }
+
+    @Test
+    public void loadsBaselineTransportResourceAndFiltersWildernessToggle() throws Exception
+    {
+        WorldPoint ardougneLever = new WorldPoint(2561, 3311, 0);
+        WorldPoint wildernessLeverDestination = new WorldPoint(3154, 3924, 0);
+        WorldPoint portSarim = new WorldPoint(3029, 3217, 0);
+        WorldPoint musaPoint = new WorldPoint(2956, 3146, 0);
+
+        DrewsHelperTransportGraph baseline = DrewsHelperTransportGraph.loadDefault(false);
+        DrewsHelperTransportGraph withWilderness = DrewsHelperTransportGraph.loadDefault(true);
+
+        assertTrue(baseline.getEdgeCount() > 5_000);
+        assertTrue(hasEdge(baseline, portSarim, musaPoint));
+        assertFalse(hasEdge(baseline, ardougneLever, wildernessLeverDestination));
+        assertTrue(hasEdge(withWilderness, ardougneLever, wildernessLeverDestination));
+        assertTrue(withWilderness.getEdgeCount() > baseline.getEdgeCount());
+    }
+
+    private static boolean hasEdge(DrewsHelperTransportGraph graph, WorldPoint source, WorldPoint destination)
+    {
+        for (DrewsHelperTransportEdge edge : graph.edgesFrom(source))
+        {
+            if (destination.equals(edge.getDestination()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final class OpenMovementMap implements DrewsHelperMovementMap

@@ -8,6 +8,7 @@ import net.runelite.client.config.ConfigSection;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 public class DrewsHelperConfigTest
@@ -40,6 +41,35 @@ public class DrewsHelperConfigTest
         assertEquals(new Color(0x009E73), config.waypoint3PathColor());
         assertEquals(new Color(0xCC79A7), config.waypoint4PathColor());
         assertEquals(new Color(0xE69F00), config.waypoint5PathColor());
+    }
+
+    @Test
+    public void wildernessTransportsSitsBelowOtherItemsAndDefaultsOff() throws Exception
+    {
+        DrewsHelperConfig config = new DrewsHelperConfig() {};
+        Method method = DrewsHelperConfig.class.getMethod("wildernessTransportsEnabled");
+        ConfigItem item = method.getAnnotation(ConfigItem.class);
+
+        assertNotNull(item);
+        assertEquals("useWildernessTransports", item.keyName());
+        assertEquals("Use: Wilderness Transports", item.name());
+        assertEquals("otherTransportationOptions", item.section());
+        assertEquals(12, item.position());
+        assertFalse(config.wildernessTransportsEnabled());
+    }
+
+    @Test
+    public void routeDiagnosticsConfigItemIsRemoved() throws Exception
+    {
+        for (Method method : DrewsHelperConfig.class.getMethods())
+        {
+            ConfigItem item = method.getAnnotation(ConfigItem.class);
+            if (item != null)
+            {
+                assertFalse("Route Diagnostics".equals(item.name()));
+                assertFalse("routeDiagnosticsEnabled".equals(item.keyName()));
+            }
+        }
     }
 
     @Test

@@ -17,8 +17,8 @@ public class DrewsHelperPluginDescriptorTest
 
         assertNotNull(descriptor);
         assertEquals("Drew's Helper", descriptor.name());
-        assertEquals("Waypoint placement and walking route guidance.", descriptor.description());
-        assertArrayEquals(new String[] {"ui", "helper", "waypoint", "route"}, descriptor.tags());
+        assertEquals("Waypoint placement and route guidance.", descriptor.description());
+        assertArrayEquals(new String[] {"ui", "helper", "waypoint", "route", "transport"}, descriptor.tags());
         assertFalse(descriptor.hidden());
     }
 }

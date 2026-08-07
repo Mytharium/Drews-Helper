@@ -73,7 +73,7 @@ public final class DrewsHelperRouteSnapshot
             DrewsHelperRouteStatus.CALCULATING,
             Collections.emptyList(),
             destinations,
-            "Calculating walking route",
+            "Calculating route",
             0
         );
     }
@@ -84,7 +84,7 @@ public final class DrewsHelperRouteSnapshot
             DrewsHelperRouteStatus.READY,
             path,
             destinations,
-            "Walking route ready",
+            "Route ready",
             walkingDistance
         );
     }

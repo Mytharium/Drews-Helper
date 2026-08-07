@@ -11,7 +11,7 @@ public interface DrewsHelperConfig extends Config
 {
     @ConfigSection(
         name = "Routing Options",
-        description = "Route destination and pathing preferences.",
+        description = "Core route overlay and destination behaviour.",
         position = 0,
         closedByDefault = false
     )
@@ -19,7 +19,7 @@ public interface DrewsHelperConfig extends Config
 
     @ConfigSection(
         name = "Teleport Options",
-        description = "Teleport availability and guidance preferences.",
+        description = "Teleport guidance settings reserved for future route features.",
         position = 1,
         closedByDefault = false
     )
@@ -27,7 +27,7 @@ public interface DrewsHelperConfig extends Config
 
     @ConfigSection(
         name = "Basic Transportation",
-        description = "Travel networks and shortcuts that depend on account progress or route preference.",
+        description = "Unlock-based travel networks. Ordinary click/pay transports are built into routing.",
         position = 2,
         closedByDefault = true
     )
@@ -35,7 +35,7 @@ public interface DrewsHelperConfig extends Config
 
     @ConfigSection(
         name = "Advanced Transportation",
-        description = "Account unlocks and player-owned house routing.",
+        description = "Account unlocks and player-owned house travel settings.",
         position = 3,
         closedByDefault = true
     )
@@ -43,7 +43,7 @@ public interface DrewsHelperConfig extends Config
 
     @ConfigSection(
         name = "Other Transportation",
-        description = "Teleport item families Drew may use when they are available.",
+        description = "Teleport item families and dangerous Wilderness transport preference.",
         position = 4,
         closedByDefault = true
     )
@@ -57,115 +57,109 @@ public interface DrewsHelperConfig extends Config
     )
     String waypointSettings = "waypointSettings";
 
-    @ConfigItem(keyName = "pathingReplacementEnabled", name = "Drew's Shortest Path", description = "Own route decisions instead of stock Shortest Path, including nearby exits before global teleports.", section = routingOptions, position = 0)
+    @ConfigItem(keyName = "pathingReplacementEnabled", name = "Drew's Shortest Path", description = "Enable Drew's waypoint route overlay and path calculation.", section = routingOptions, position = 0)
     default boolean pathingReplacementEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "chainQuests", name = "Chain Quests", description = "Start the next Quest Helper quest when the current helper completes.", section = routingOptions, position = 1)
+    @ConfigItem(keyName = "chainQuests", name = "Chain Quests", description = "Reserved for starting the next Quest Helper quest after the current helper completes.", section = routingOptions, position = 1)
     default boolean chainQuests()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "questPrepRouting", name = "Quest Preparation", description = "Plan and route to quest preparation destinations before quest locations when Quest Helper needs items.", section = routingOptions, position = 2)
+    @ConfigItem(keyName = "questPrepRouting", name = "Quest Preparation", description = "Reserved for routing to preparation stops before Quest Helper destinations.", section = routingOptions, position = 2)
     default boolean questPrepRouting()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "questPreparationBank", name = "Use: Bank", description = "Include banks as quest preparation destinations when required items are banked.", section = routingOptions, position = 3)
+    @ConfigItem(keyName = "questPreparationBank", name = "Use: Bank", description = "Reserved for using banks as quest preparation stops when required items are banked.", section = routingOptions, position = 3)
     default boolean questPreparationBank()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "questPreparationGeneralStores", name = "Use: General Stores", description = "Include general stores as quest preparation destinations when they stock required items.", section = routingOptions, position = 4)
+    @ConfigItem(keyName = "questPreparationGeneralStores", name = "Use: General Stores", description = "Reserved for using general stores as quest preparation stops.", section = routingOptions, position = 4)
     default boolean questPreparationGeneralStores()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "questPreparationGrandExchange", name = "Use: Grand Exchange", description = "Include the Grand Exchange as a quest preparation destination for tradeable required items.", section = routingOptions, position = 5)
+    @ConfigItem(keyName = "questPreparationGrandExchange", name = "Use: Grand Exchange", description = "Reserved for using the Grand Exchange as a quest preparation stop.", section = routingOptions, position = 5)
     default boolean questPreparationGrandExchange()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "teleportAssistEnabled", name = "Teleport Highlighter", description = "Highlight the selected route teleport UI.", section = teleportOptions, position = 0)
+    @ConfigItem(keyName = "teleportAssistEnabled", name = "Teleport Highlighter", description = "Reserved for highlighting the selected teleport UI when teleport routing is rebuilt.", section = teleportOptions, position = 0)
     default boolean teleportAssistEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "filterUnavailableTeleports", name = "Hide Locked Teleports", description = "Show locked teleport warnings in Drew's overlay.", section = teleportOptions, position = 1)
+    @ConfigItem(keyName = "filterUnavailableTeleports", name = "Hide Locked Teleports", description = "Reserved for hiding known locked teleports once teleport availability scanning is rebuilt.", section = teleportOptions, position = 1)
     default boolean filterUnavailableTeleports()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "cooldownAwareReroute", name = "Cooldown Reroute", description = "Recalculate when a teleport is cooling down.", section = teleportOptions, position = 2)
+    @ConfigItem(keyName = "cooldownAwareReroute", name = "Cooldown Reroute", description = "Reserved for rerouting around teleport cooldowns once teleport routing is rebuilt.", section = teleportOptions, position = 2)
     default boolean cooldownAwareReroute()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "routeDiagnosticsEnabled", name = "Route Diagnostics", description = "Write compact Drew route diagnostic lines to the RuneLite client log.", section = routingOptions, position = 6)
-    default boolean routeDiagnosticsEnabled()
-    {
-        return false;
-    }
-
-    @ConfigItem(keyName = "useAgilityShortcuts", name = "Unlocked: Agility Shortcuts", description = "Allow agility shortcuts when your skill and quest requirements are met.", section = transportationOptions, position = 0)
+    @ConfigItem(keyName = "useAgilityShortcuts", name = "Unlocked: Agility Shortcuts", description = "Allow agility shortcuts once your skill and quest requirements are met.", section = transportationOptions, position = 0)
     default boolean agilityShortcutsUnlocked()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useCanoes", name = "Unlocked: Canoes", description = "Allow canoe routes.", section = transportationOptions, position = 1)
+    @ConfigItem(keyName = "useCanoes", name = "Unlocked: Canoes", description = "Allow canoe routes when you have the axe and Woodcutting level needed.", section = transportationOptions, position = 1)
     default boolean canoesUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useQuetzals", name = "Unlocked: Quetzals", description = "Allow quetzal and quetzal whistle routes.", section = transportationOptions, position = 2)
+    @ConfigItem(keyName = "useQuetzals", name = "Unlocked: Quetzals", description = "Allow quetzal and quetzal whistle routes once your account has them unlocked.", section = transportationOptions, position = 2)
     default boolean quetzalsUnlocked()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useGnomeGliders", name = "Unlocked: Gnome Gliders", description = "Allow gnome glider routes.", section = transportationOptions, position = 3)
+    @ConfigItem(keyName = "useGnomeGliders", name = "Unlocked: Gnome Gliders", description = "Allow gnome glider routes once your account has them unlocked.", section = transportationOptions, position = 3)
     default boolean gnomeGlidersUnlocked()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useGrappleShortcuts", name = "Unlocked: Grapple Shortcuts", description = "Allow crossbow grapple shortcuts when your agility, ranged, and strength requirements are met.", section = transportationOptions, position = 4)
+    @ConfigItem(keyName = "useGrappleShortcuts", name = "Unlocked: Grapple Shortcuts", description = "Allow grapple shortcuts once your Agility, Ranged, and Strength requirements are met.", section = transportationOptions, position = 4)
     default boolean grappleShortcutsUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useMagicMushtrees", name = "Unlocked: Magic Mushtrees", description = "Allow Fossil Island magic mushtree routes.", section = transportationOptions, position = 5)
+    @ConfigItem(keyName = "useMagicMushtrees", name = "Unlocked: Magic Mushtrees", description = "Allow Fossil Island magic mushtree routes once your account has them unlocked.", section = transportationOptions, position = 5)
     default boolean magicMushtreesUnlocked()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useHotAirBalloons", name = "Unlocked: Hot-Air Balloons", description = "Allow hot-air balloon routes.", section = transportationOptions, position = 6)
+    @ConfigItem(keyName = "useHotAirBalloons", name = "Unlocked: Hot-Air Balloons", description = "Allow hot-air balloon routes once your account has them unlocked.", section = transportationOptions, position = 6)
     default boolean hotAirBalloonsUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "spiritTreesUnlocked", name = "Unlocked: Spirit Trees", description = "Allow spirit tree routes.", section = advancedTransportationOptions, position = 0)
+    @ConfigItem(keyName = "spiritTreesUnlocked", name = "Unlocked: Spirit Trees", description = "Allow spirit tree routes once your account has them unlocked.", section = advancedTransportationOptions, position = 0)
     default boolean spiritTreesUnlocked()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "fairyRingsUnlocked", name = "Unlocked: Fairy Rings", description = "Allow fairy ring routes.", section = advancedTransportationOptions, position = 1)
+    @ConfigItem(keyName = "fairyRingsUnlocked", name = "Unlocked: Fairy Rings", description = "Allow fairy ring routes once your account has them unlocked.", section = advancedTransportationOptions, position = 1)
     default boolean fairyRingsUnlocked()
     {
         return false;
@@ -195,79 +189,85 @@ public interface DrewsHelperConfig extends Config
         return JewelleryBoxTier.NONE;
     }
 
-    @ConfigItem(keyName = "useStandardTablets", name = "Use: Standard Tablets", description = "Allow standard spellbook teleport tablets when they are available.", section = otherTransportationOptions, position = 0)
+    @ConfigItem(keyName = "useStandardTablets", name = "Use: Standard Tablets", description = "Reserved for standard spellbook teleport tablets once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 0)
     default boolean standardTabletsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useAncientTablets", name = "Use: Ancient Tablets", description = "Allow Ancient Magicks teleport tablets when they are available.", section = otherTransportationOptions, position = 1)
+    @ConfigItem(keyName = "useAncientTablets", name = "Use: Ancient Tablets", description = "Reserved for Ancient Magicks teleport tablets once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 1)
     default boolean ancientTabletsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useLunarTablets", name = "Use: Lunar Tablets", description = "Allow Lunar spellbook teleport tablets when they are available.", section = otherTransportationOptions, position = 2)
+    @ConfigItem(keyName = "useLunarTablets", name = "Use: Lunar Tablets", description = "Reserved for Lunar spellbook teleport tablets once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 2)
     default boolean lunarTabletsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useArceuusTablets", name = "Use: Arceuus Tablets", description = "Allow Arceuus spellbook teleport tablets when they are available.", section = otherTransportationOptions, position = 3)
+    @ConfigItem(keyName = "useArceuusTablets", name = "Use: Arceuus Tablets", description = "Reserved for Arceuus spellbook teleport tablets once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 3)
     default boolean arceuusTabletsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useOtherTablets", name = "Use: Other Tablets", description = "Allow other teleport tablet families when they are available.", section = otherTransportationOptions, position = 4)
+    @ConfigItem(keyName = "useOtherTablets", name = "Use: Other Tablets", description = "Reserved for other teleport tablet families once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 4)
     default boolean otherTabletsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useOneUseItems", name = "Use: 1-Use Items", description = "Allow single-use teleport items when they are available.", section = otherTransportationOptions, position = 5)
+    @ConfigItem(keyName = "useOneUseItems", name = "Use: 1-Use Items", description = "Reserved for single-use teleport items once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 5)
     default boolean oneUseItemsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useTeleportScrolls", name = "Use: Teleport Scrolls", description = "Allow teleport scrolls when they are available.", section = otherTransportationOptions, position = 6)
+    @ConfigItem(keyName = "useTeleportScrolls", name = "Use: Teleport Scrolls", description = "Reserved for teleport scrolls once item teleport routing is rebuilt.", section = otherTransportationOptions, position = 6)
     default boolean teleportScrollsEnabled()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useAchievementDiaryItems", name = "Use: Achievement Diary Items", description = "Allow achievement diary reward teleports when they are available.", section = otherTransportationOptions, position = 7)
+    @ConfigItem(keyName = "useAchievementDiaryItems", name = "Use: Achievement Diary Items", description = "Allow achievement diary reward teleports once your account has them unlocked.", section = otherTransportationOptions, position = 7)
     default boolean achievementDiaryItemsEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useCombatAchievementItems", name = "Use: Combat Achievement Items", description = "Allow combat achievement reward teleports when they are available.", section = otherTransportationOptions, position = 8)
+    @ConfigItem(keyName = "useCombatAchievementItems", name = "Use: Combat Achievement Items", description = "Allow combat achievement reward teleports once your account has them unlocked.", section = otherTransportationOptions, position = 8)
     default boolean combatAchievementItemsEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useSkillCapes", name = "Use: Skill Capes", description = "Allow skill cape teleports when they are available.", section = otherTransportationOptions, position = 9)
+    @ConfigItem(keyName = "useSkillCapes", name = "Use: Skill Capes", description = "Allow skill cape teleports once your account has them unlocked.", section = otherTransportationOptions, position = 9)
     default boolean skillCapesEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useQuestRelatedItems", name = "Use: Quest Related Items", description = "Allow quest reward item teleports when they are available.", section = otherTransportationOptions, position = 10)
+    @ConfigItem(keyName = "useQuestRelatedItems", name = "Use: Quest Related Items", description = "Allow quest reward item teleports once your account has them unlocked.", section = otherTransportationOptions, position = 10)
     default boolean questRelatedItemsEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "useOtherItems", name = "Use: Other Items", description = "Allow other teleport item routes when they are available.", section = otherTransportationOptions, position = 11)
+    @ConfigItem(keyName = "useOtherItems", name = "Use: Other Items", description = "Allow other item-based transport routes once item routing is rebuilt.", section = otherTransportationOptions, position = 11)
     default boolean otherItemsEnabled()
     {
         return true;
     }
 
-    @ConfigItem(keyName = "pathColor", name = "Path Colour", description = "Colour used for Drew's walking route overlay. Default: Burgundy (#800020).", section = waypointSettings, position = 0)
+    @ConfigItem(keyName = "useWildernessTransports", name = "Use: Wilderness Transports", description = "Allow dangerous Wilderness lever and obelisk route edges.", section = otherTransportationOptions, position = 12)
+    default boolean wildernessTransportsEnabled()
+    {
+        return false;
+    }
+
+    @ConfigItem(keyName = "pathColor", name = "Path Colour", description = "Colour used for Drew's route overlay. Default: Burgundy (#800020).", section = waypointSettings, position = 0)
     default Color pathColor()
     {
         return new Color(0x800020);
@@ -315,7 +315,7 @@ public interface DrewsHelperConfig extends Config
 
     default boolean teleportationLeversUnlocked()
     {
-        return true;
+        return wildernessTransportsEnabled();
     }
 
     default boolean teleportationPortalsUnlocked()
@@ -340,7 +340,7 @@ public interface DrewsHelperConfig extends Config
 
     default boolean wildernessObelisksUnlocked()
     {
-        return false;
+        return wildernessTransportsEnabled();
     }
 
     default boolean seasonalTransportsUnlocked()

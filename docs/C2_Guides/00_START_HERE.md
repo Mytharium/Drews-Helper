@@ -21,22 +21,23 @@ gradlew.bat run
 
 ## Current Runtime Shape
 
-As of the 2026-08-07 reset, waypoint follow-up, and walking-route follow-up, Drew's Helper is a Drew-owned waypoint and walking-route plugin. It does not restore the old vendored `shortestpath` package.
+As of the 2026-08-07 reset and route follow-ups, Drew's Helper is a Drew-owned waypoint and route-guidance plugin. It does not restore the old vendored `shortestpath` package.
 
 Runtime shape:
 - `gradlew.bat run` loads only `com.drewshelper.DrewsHelperPlugin` as the visible RuneLite plugin.
 - `DrewsHelperPlugin` registers/removes the Drew's Helper overlay, route overlays, and five persistent world-map waypoint markers.
-- `com.drewshelper.routing/**` owns the Drew walking-only route snapshot, collision-map loader, and A* solver.
+- `com.drewshelper.routing/**` owns the Drew route snapshot, collision-map loader, baseline transport graph, Wilderness transport filter, and A* solver.
 - `com.drewshelper.routing.ui/**` renders that one route snapshot on the world map, minimap, and in-scene base tiles.
 - `DrewsHelperConfig` owns the preserved player-facing config buttons/dropdowns.
-- `DrewsHelperOverlay` owns the preserved in-client overlay panel, waypoint status display, route status, and walking distance.
+- `DrewsHelperOverlay` owns the preserved in-client overlay panel, waypoint status display, route status, and route-step count.
 - `JewelleryBoxTier` and `PortalNexusTier` remain only because config dropdowns need them.
-- `src/main/resources/collision-map.zip` is present again as a third-party walking collision data resource from Runemoro's BSD-licensed `shortest-path`; license notes live in `THIRD_PARTY_NOTICES.md`.
+- `src/main/resources/collision-map.zip` is present again as a third-party walking collision data resource from Runemoro's BSD-licensed `shortest-path`.
+- `src/main/resources/drewshelper-transports.tsv` is a Drew-generated baseline/Wilderness transport edge file from selected Skretzo `shortest-path` transport TSVs; license notes live in `THIRD_PARTY_NOTICES.md`.
 
 Removed systems:
 - Vendored `src/main/java/shortestpath/**` route engine.
 - Shortest Path pathfinder, plugin-message bridge, and transport telemetry.
-- Fast travel/teleport/transport resources and route logic.
+- Old vendored fast travel/teleport/transport resources and route logic.
 - Minigame teleport scanner/cache, teleport highlighter, route snapshots, session route persistence, and route diagnostics.
 - Route behavior tests and diagnostic tools.
 
@@ -52,4 +53,4 @@ Use that note before designing any new route engine. The current rule is: learn 
 
 ## Resume Rule
 
-Start tomorrow's work in `02_NEXT_WORK.md`. The active route feature is walking-only guidance from the player through placed waypoints. Do not restore Shortest Path telemetry, fast travel, minigame teleport scanning, tab highlighting, or route diagnostics unless Myth explicitly asks to rebuild those systems from the Drew-owned route model.
+Start tomorrow's work in `02_NEXT_WORK.md`. The active route feature is Drew-owned waypoint guidance with baseline click/pay physical transports built into the graph and one `Use: Wilderness Transports` toggle for Wilderness levers/obelisks. Do not restore Shortest Path telemetry, fast travel, minigame teleport scanning, tab highlighting, or route diagnostics unless Myth explicitly asks to rebuild those systems from the Drew-owned route model.
