@@ -78,16 +78,18 @@ final class TeleportHighlightOverlay extends Overlay
     private Optional<RouteTransport> getHighlightTransport()
     {
         RouteTransportSnapshot snapshot = routeTransportState.getSnapshot();
-        Optional<RouteTransport> next = snapshot.getNextTransport();
-        if (next.isPresent() && teleportAvailabilityService.isMinigameTeleport(next.get()))
-        {
-            return next;
-        }
-
         Optional<RouteTransport> available = teleportAvailabilityService.getFirstAvailable(snapshot, config);
         if (available.isPresent() && teleportAvailabilityService.isMinigameTeleport(available.get()))
         {
             return available;
+        }
+
+        Optional<RouteTransport> next = snapshot.getNextTransport();
+        if (next.isPresent()
+            && teleportAvailabilityService.isAvailable(next.get(), config)
+            && teleportAvailabilityService.isMinigameTeleport(next.get()))
+        {
+            return next;
         }
 
         return Optional.empty();

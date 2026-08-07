@@ -59,6 +59,23 @@ public class TeleportAvailabilityServiceTest
     }
 
     @Test
+    public void filteringDisabledTreatsScannedLockedMinigameAsAvailable()
+    {
+        RouteTransport locked = new RouteTransport("", "Nightmare Zone Minigame Teleport");
+
+        minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
+
+        assertTrue(service.isAvailable(locked, new DrewsHelperConfig()
+        {
+            @Override
+            public boolean filterUnavailableTeleports()
+            {
+                return false;
+            }
+        }));
+    }
+
+    @Test
     public void convertsLockedMinigamesToBlockedTransportKeys()
     {
         minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
@@ -69,7 +86,7 @@ public class TeleportAvailabilityServiceTest
     }
 
     @Test
-    public void doesNotBlockTransportKeysWhenFilteringDisabled()
+    public void doesNotSendBlockedTransportKeysWhenFilteringDisabled()
     {
         minigameTeleportUnlockState.record("Nightmare Zone", MinigameTeleportStatus.LOCKED);
 

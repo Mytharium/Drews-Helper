@@ -61,12 +61,20 @@ public class ShortestPathBridgeTest
         assertEquals(true, overrides.get("useTransports"));
         assertEquals(true, overrides.get("useBoats"));
         assertEquals(true, overrides.get("useCharterShips"));
+        assertEquals(true, overrides.get("useShips"));
+        assertEquals(true, overrides.get("useMagicCarpets"));
+        assertEquals(true, overrides.get("useMinecarts"));
+        assertEquals(true, overrides.get("useTeleportationLevers"));
+        assertEquals(true, overrides.get("useTeleportationPortals"));
+        assertEquals(true, overrides.get("useTeleportationSpells"));
+        assertEquals(true, overrides.get("useTeleportationSpellsHome"));
         assertEquals(true, overrides.get("useTeleportationMinigames"));
         assertEquals("Inventory (perm)", overrides.get("useTeleportationItems"));
         assertEquals(false, overrides.get("usePoh"));
         assertEquals("None", overrides.get("pohJewelleryBoxTier"));
         assertEquals(false, overrides.get("useFairyRings"));
         assertEquals(true, overrides.get("useSpiritTrees"));
+        assertEquals(false, overrides.get("useWildernessObelisks"));
     }
 
     @Test
@@ -112,22 +120,10 @@ public class ShortestPathBridgeTest
     }
 
     @Test
-    public void sendsDrewTransportationMenuTogglesToShortestPath()
+    public void keepsBaselineTransportsEnabledWithoutFrontendToggles()
     {
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
         {
-            @Override
-            public boolean gatesAndPassagesUnlocked()
-            {
-                return false;
-            }
-
-            @Override
-            public boolean charterShipsUnlocked()
-            {
-                return false;
-            }
-
             @Override
             public boolean hotAirBalloonsUnlocked()
             {
@@ -141,8 +137,34 @@ public class ShortestPathBridgeTest
             }
         });
 
-        assertEquals(false, overrides.get("useTransports"));
-        assertEquals(false, overrides.get("useCharterShips"));
+        assertEquals(true, overrides.get("useTransports"));
+        assertEquals(true, overrides.get("useBoats"));
+        assertEquals(true, overrides.get("useCharterShips"));
+        assertEquals(true, overrides.get("useShips"));
+        assertEquals(true, overrides.get("useMagicCarpets"));
+        assertEquals(true, overrides.get("useMinecarts"));
+        assertEquals(true, overrides.get("useHotAirBalloons"));
+        assertEquals(false, overrides.get("useQuetzals"));
+    }
+
+    @Test
+    public void sendsDrewTransportationMenuTogglesToShortestPath()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean hotAirBalloonsUnlocked()
+            {
+                return true;
+            }
+
+            @Override
+            public boolean quetzalsUnlocked()
+            {
+                return false;
+            }
+        });
+
         assertEquals(true, overrides.get("useHotAirBalloons"));
         assertEquals(false, overrides.get("useQuetzals"));
     }
@@ -153,35 +175,81 @@ public class ShortestPathBridgeTest
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
         {
             @Override
-            public boolean teleportationSpellsUnlocked()
-            {
-                return false;
-            }
-
-            @Override
-            public boolean minigameTeleportsUnlocked()
-            {
-                return false;
-            }
-
-            @Override
-            public boolean pohFairyRingUnlocked()
+            public boolean pohMountedGloryUnlocked()
             {
                 return true;
             }
 
             @Override
-            public boolean pohObeliskUnlocked()
+            public boolean pohPortalChamberUnlocked()
+            {
+                return true;
+            }
+
+            @Override
+            public PortalNexusTier pohPortalNexusTier()
+            {
+                return PortalNexusTier.GILDED;
+            }
+        });
+
+        assertEquals(true, overrides.get("useTeleportationSpells"));
+        assertEquals(true, overrides.get("useTeleportationMinigames"));
+        assertEquals(true, overrides.get("usePoh"));
+        assertEquals(true, overrides.get("usePohMountedItems"));
+        assertEquals(true, overrides.get("useTeleportationPortalsPoh"));
+        assertEquals(false, overrides.get("usePohFairyRing"));
+        assertEquals(false, overrides.get("usePohObelisk"));
+    }
+
+    @Test
+    public void sendsOtherTransportationMenuTogglesToShortestPath()
+    {
+        Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean standardTabletsEnabled()
             {
                 return true;
             }
         });
 
-        assertEquals(false, overrides.get("useTeleportationSpells"));
-        assertEquals(false, overrides.get("useTeleportationMinigames"));
-        assertEquals(true, overrides.get("usePoh"));
-        assertEquals(true, overrides.get("usePohFairyRing"));
-        assertEquals(true, overrides.get("usePohObelisk"));
+        assertEquals("Inventory", overrides.get("useTeleportationItems"));
+
+        overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
+        {
+            @Override
+            public boolean achievementDiaryItemsEnabled()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean combatAchievementItemsEnabled()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean skillCapesEnabled()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean questRelatedItemsEnabled()
+            {
+                return false;
+            }
+
+            @Override
+            public boolean otherItemsEnabled()
+            {
+                return false;
+            }
+        });
+
+        assertEquals("None", overrides.get("useTeleportationItems"));
     }
 
     @Test
@@ -254,7 +322,7 @@ public class ShortestPathBridgeTest
     }
 
     @Test
-    public void omitsBlockedTransportKeysWhenFilteringDisabled()
+    public void keepsBlockedTransportKeysWhenFilteringDisabled()
     {
         Map<String, Object> overrides = ShortestPathBridge.buildConfigOverride(new DrewsHelperConfig()
         {
@@ -265,7 +333,7 @@ public class ShortestPathBridgeTest
             }
         }, Arrays.asList("teleportation_minigames:nightmare_zone"));
 
-        assertFalse(overrides.containsKey("blockedTransportKeys"));
+        assertEquals(Arrays.asList("teleportation_minigames:nightmare_zone"), overrides.get("blockedTransportKeys"));
     }
 
     @Test

@@ -20,7 +20,6 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
-import shortestpath.ShortestPathConfig;
 import shortestpath.ShortestPathPlugin;
 
 @Slf4j
@@ -75,6 +74,8 @@ public class DrewsHelperPlugin extends Plugin
     private int routeRefreshBurstTicks;
     private boolean replaySavedTargetDuringBurst;
     private boolean drewShortestPathStarted;
+    private boolean observedActiveShortestPathTarget;
+    private OptionalInt lastSyncedShortestPathTarget = OptionalInt.empty();
     private String lastExactLockedRouteRerouteSignature;
 
     @Override
@@ -83,6 +84,8 @@ public class DrewsHelperPlugin extends Plugin
         startDrewsShortestPathFeature();
         gameTicks = 0;
         routeRefreshBurstTicks = 0;
+        observedActiveShortestPathTarget = false;
+        lastSyncedShortestPathTarget = sessionState.loadShortestPathTarget();
         clearLockedRouteRerouteState();
         routeTransportState.update(sessionState.loadRouteSnapshot());
         minigameTeleportUnlockState.restore(sessionState.loadMinigameStatuses());
@@ -97,6 +100,7 @@ public class DrewsHelperPlugin extends Plugin
     @Override
     protected void shutDown()
     {
+        syncActiveShortestPathTarget();
         sessionState.saveRouteSnapshot(routeTransportState.getSnapshot());
         sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
         overlayManager.remove(teleportHighlightOverlay);
@@ -162,6 +166,7 @@ public class DrewsHelperPlugin extends Plugin
     public void onGameTick(GameTick tick)
     {
         gameTicks++;
+        syncActiveShortestPathTarget();
         if (minigameTeleportUnlockState.scanVisibleInterface(client))
         {
             sessionState.saveMinigameStatuses(minigameTeleportUnlockState.snapshotStatuses());
@@ -209,7 +214,7 @@ public class DrewsHelperPlugin extends Plugin
         if ("drewshelper".equals(event.getGroup()))
         {
             clearLockedRouteRerouteState();
-            scheduleRouteRefreshBurst(false);
+            scheduleRouteRefreshBurst(true);
         }
     }
 
@@ -256,9 +261,7 @@ public class DrewsHelperPlugin extends Plugin
 
     private void requestLockedRouteReroute(RouteTransportSnapshot snapshot)
     {
-        if (client.getGameState() != GameState.LOGGED_IN
-            || !config.filterUnavailableTeleports()
-            || !teleportAvailabilityService.getFirstUnavailable(snapshot, config).isPresent())
+        if (client.getGameState() != GameState.LOGGED_IN)
         {
             return;
         }
@@ -295,13 +298,51 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         sessionState.saveShortestPathTarget(pathTarget.getAsInt());
+        lastSyncedShortestPathTarget = pathTarget;
+        observedActiveShortestPathTarget = true;
+    }
+
+    private void syncActiveShortestPathTarget()
+    {
+        if (!drewShortestPathStarted)
+        {
+            return;
+        }
+
+        OptionalInt activeTarget = drewShortestPath.getPrimaryTargetPacked();
+        if (activeTarget.isPresent())
+        {
+            if (!activeTarget.equals(lastSyncedShortestPathTarget))
+            {
+                clearLockedRouteRerouteState();
+                sessionState.saveShortestPathTarget(activeTarget.getAsInt());
+            }
+
+            lastSyncedShortestPathTarget = activeTarget;
+            observedActiveShortestPathTarget = true;
+            return;
+        }
+
+        if (!observedActiveShortestPathTarget)
+        {
+            return;
+        }
+
+        if (lastSyncedShortestPathTarget.isPresent())
+        {
+            clearLockedRouteRerouteState();
+            sessionState.clearShortestPathTarget();
+            sessionState.clearRouteSnapshot();
+            routeTransportState.clear();
+        }
+
+        lastSyncedShortestPathTarget = OptionalInt.empty();
+        observedActiveShortestPathTarget = false;
     }
 
     private void applyShortestPathRequestPolicy(PluginMessage event, OptionalInt target)
     {
-        Set<String> blockedTransportKeys = config.filterUnavailableTeleports()
-            ? teleportAvailabilityService.getBlockedTransportKeys(config)
-            : Collections.emptySet();
+        Set<String> blockedTransportKeys = teleportAvailabilityService.getBlockedTransportKeys(config);
 
         shortestPathBridge.addConfigOverrideToPathRequest(
             event,
@@ -346,12 +387,11 @@ public class DrewsHelperPlugin extends Plugin
             + ", teleportAssist=" + config.teleportAssistEnabled()
             + ", filterUnavailableTeleports=" + config.filterUnavailableTeleports()
             + ", cooldownAwareReroute=" + config.cooldownAwareReroute()
-            + ", hostedPohTeleports=" + config.hostedPohTeleports()
             + ", spiritTreesUnlocked=" + config.spiritTreesUnlocked()
             + ", fairyRingsUnlocked=" + config.fairyRingsUnlocked()
             + ", pohMountedGloryUnlocked=" + config.pohMountedGloryUnlocked()
             + ", pohPortalChamberUnlocked=" + config.pohPortalChamberUnlocked()
-            + ", pohPortalNexusUnlocked=" + config.pohPortalNexusUnlocked()
+            + ", pohPortalNexusTier=" + config.pohPortalNexusTier()
             + ", pohJewelryBoxTier=" + config.pohJewelryBoxTier()
             + ", questPrepRouting=" + config.questPrepRouting()
             + ", questPreparationBank=" + config.questPreparationBank()
@@ -364,11 +404,5 @@ public class DrewsHelperPlugin extends Plugin
     DrewsHelperConfig provideConfig(ConfigManager configManager)
     {
         return configManager.getConfig(DrewsHelperConfig.class);
-    }
-
-    @Provides
-    ShortestPathConfig provideShortestPathConfig(ConfigManager configManager)
-    {
-        return configManager.getConfig(ShortestPathConfig.class);
     }
 }

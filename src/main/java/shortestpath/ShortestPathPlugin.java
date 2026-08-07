@@ -2,7 +2,6 @@ package shortestpath;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import com.google.inject.Provides;
 import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.Rectangle;
@@ -19,6 +18,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -54,7 +54,6 @@ import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.worldmap.WorldMap;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -80,7 +79,7 @@ import shortestpath.transport.Transport;
 import shortestpath.transport.TransportType;
 
 @SuppressWarnings("SameParameterValue")
-@PluginDescriptor(name = "Drew Path", description = "Draws Drew-owned paths with locked-teleport filtering<br>"
+@PluginDescriptor(name = "Drew's Shortest Path Engine", hidden = true, description = "Internal Drew's Helper route engine<br>"
 	+
 	"Right click on the world map or shift right click a tile to use", tags = {"pathfinder", "map", "waypoint",
 	"navigation"})
@@ -140,7 +139,7 @@ public class ShortestPathPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 	@Inject
-	private ShortestPathConfig config;
+	private DrewShortestPathInternalConfig config;
 	@Inject
 	private EventBus eventBus;
 	@Inject
@@ -339,12 +338,6 @@ public class ShortestPathPlugin extends Plugin
 		return defaultValue;
 	}
 
-	@Provides
-	public ShortestPathConfig provideConfig(ConfigManager configManager)
-	{
-		return configManager.getConfig(ShortestPathConfig.class);
-	}
-
 	@Override
 	protected void startUp()
 	{
@@ -451,6 +444,19 @@ public class ShortestPathPlugin extends Plugin
 	public void restartPathfinding(int start, Set<Integer> ends)
 	{
 		restartPathfinding(start, ends, true);
+	}
+
+	public OptionalInt getPrimaryTargetPacked()
+	{
+		synchronized (pathfinderMutex)
+		{
+			if (pathfinder == null || pathfinder.getTargets().isEmpty())
+			{
+				return OptionalInt.empty();
+			}
+
+			return OptionalInt.of(pathfinder.getTargets().iterator().next());
+		}
 	}
 
 	public boolean isNearPath(int location)
@@ -600,7 +606,8 @@ public class ShortestPathPlugin extends Plugin
 
 			@SuppressWarnings("unchecked")
 			Map<String, Object> configOverride = (objConfigOverride instanceof Map<?, ?>) ? ((Map<String, Object>) objConfigOverride) : null;
-			if (configOverride != null && !configOverride.isEmpty())
+			boolean configChanged = configOverride != null && !configOverride.isEmpty();
+			if (configChanged)
 			{
 				ShortestPathPlugin.configOverride.clear();
 				for (String key : configOverride.keySet())
@@ -612,6 +619,10 @@ public class ShortestPathPlugin extends Plugin
 
 			if (objStart == null && objTarget == null)
 			{
+				if (configChanged && pathfinder != null)
+				{
+					restartPathfinding(pathfinder.getStart(), pathfinder.getTargets());
+				}
 				return;
 			}
 

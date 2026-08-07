@@ -41,10 +41,16 @@ final class DrewsHelperSessionState
     {
         if (snapshot == null || snapshot.isEmpty())
         {
+            clearRouteSnapshot();
             return;
         }
 
         configManager.setConfiguration(CONFIG_GROUP, LAST_ROUTE_KEY, encodeRouteSnapshot(snapshot));
+    }
+
+    void clearRouteSnapshot()
+    {
+        configManager.unsetConfiguration(CONFIG_GROUP, LAST_ROUTE_KEY);
     }
 
     OptionalInt loadShortestPathTarget()
@@ -56,10 +62,16 @@ final class DrewsHelperSessionState
     {
         if (packedTarget == -1)
         {
+            clearShortestPathTarget();
             return;
         }
 
         configManager.setConfiguration(CONFIG_GROUP, LAST_SHORTEST_PATH_TARGET_KEY, encodeShortestPathTarget(packedTarget));
+    }
+
+    void clearShortestPathTarget()
+    {
+        configManager.unsetConfiguration(CONFIG_GROUP, LAST_SHORTEST_PATH_TARGET_KEY);
     }
 
     Map<String, MinigameTeleportStatus> loadMinigameStatuses()

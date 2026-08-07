@@ -27,7 +27,7 @@ Runtime shape:
 - `gradlew.bat run` loads only `com.drewshelper.DrewsHelperPlugin` as the visible RuneLite plugin.
 - `DrewsHelperPlugin` starts the vendored `shortestpath.ShortestPathPlugin` internally as Drew's Shortest Path route engine.
 - The `shortestpath` plugin-message namespace is intentionally retained for Quest Helper / Drew Helper compatibility.
-- The internal route engine still uses config group `drewpath` for its inherited defaults until those options are merged into Drew's Helper config.
+- The internal route engine uses a hidden runtime-default config object. Do not expose the copied Shortest Path `drewpath` settings panel; player-facing settings live in `DrewsHelperConfig`.
 - There should be no active `shortest-path_*.jar` in `C:\Users\drews\.runelite\plugins`.
 - Old Shortest Path jars are backed up under `C:\Users\drews\.runelite\plugins-c2-backups`.
 
@@ -35,7 +35,7 @@ Owned Drew systems:
 - `src/main/java/shortestpath/**` owns the internal route engine, map/minimap/tile overlays, transport data, and the `blockedTransportKeys` solver hook.
 - `ShortestPathBridge` sends `shortestpath/path` requests, captures Quest Helper target messages, and parses posted transport lists.
 - `RouteTransportState` stores the latest route transport snapshot in memory.
-- `DrewsHelperSessionState` persists route snapshots, Shortest Path targets, and minigame locked/unlocked statuses in RuneLite config.
+- `DrewsHelperSessionState` persists route snapshots, Shortest Path targets, and minigame locked/unlocked statuses in RuneLite config. `DrewsHelperPlugin` must sync manual targets from the internal route engine because right-click/shift-click routes do not arrive as external `shortestpath/path` messages.
 - `MinigameTeleportUnlockState` scans the Grouping/minigame UI and caches per-destination `AVAILABLE` / `LOCKED` results.
 - `TeleportAvailabilityService` is the single owner for deciding whether a posted transport is currently usable by Drew's rules.
 - `DrewsHelperOverlay` renders the route list, minigame unlock count, and locked-route list.

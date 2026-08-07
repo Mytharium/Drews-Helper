@@ -8,11 +8,12 @@ Last updated: 2026-08-06.
 - `gradlew.bat run` now loads one visible RuneLite plugin: `Drew's Helper`; a dev-launch probe confirmed `DrewsHelperPlugin` loads and starts.
 - Drew's Shortest Path is vendored under `src/main/java/shortestpath/**` with resources under `src/main/resources/**`; `DrewsHelperPlugin` starts it internally and it no longer depends on the Plugin Hub Shortest Path jar being installed.
 - The internal route engine lazy-creates its map/minimap/tile/debug overlays after plugin construction to avoid a Guice dependency cycle when loaded as a Drew's Helper feature.
+- The internal route engine is hidden and uses `DrewShortestPathInternalConfig` runtime defaults instead of `ConfigManager.getConfig(ShortestPathConfig.class)`, so the copied Shortest Path `Settings` / `Transport Thresholds` panel should not be player-facing.
 - The overlay receives Drew's Shortest Path transport telemetry through the retained `shortestpath/transports` protocol.
 - The overlay no longer uses the narrow right-column `Next` display for route text.
 - Quest Helper route targets sent through `shortestpath/path` are captured and replayed after login/startup.
-- Drew passes whole-category unlock settings for spirit trees, fairy rings, and owned POH features into the internal route engine when `Hide Locked Teleports` is enabled, so those supported categories can trigger real path recalculation.
-- The last route snapshot is restored locally after plugin toggle, logout, world hop, or client restart.
+- Drew passes whole-category unlock settings for spirit trees, fairy rings, and owned POH features into the internal route engine, so those supported categories can trigger real path recalculation.
+- The last route snapshot and the real route target are restored after plugin toggle, logout, world hop, or client restart. Manual right-click/shift-click targets are synced from the internal route engine; Quest Helper targets are still captured from `shortestpath/path` messages.
 - The minigame/grouping teleport UI scanner works against the real Grouping UI and walks all RuneLite widget child arrays.
 - Minigame destination highlighting is clipped to visible widget bounds, so scrolled-off entries should not leave boxes stuck at the top/bottom of the panel.
 - The highlighter draws one outer row box for a minigame destination instead of also boxing the text child.
@@ -21,9 +22,14 @@ Last updated: 2026-08-06.
 - Drew converts scanned locked minigames into stable transport keys such as `teleportation_minigames:nightmare_zone`, sends them as `config.blockedTransportKeys`, and replays a real captured route target once when posted telemetry still contains a locked route.
 - Drew's Shortest Path consumes `config.blockedTransportKeys` directly and filters matching transports before path edges are built.
 - Drew's Helper now owns the player-facing transport config split:
-  - `Transportation`: normal pass-through/paid/local travel networks such as gates, agility shortcuts, boats, charter ships, passenger ships, gliders, balloons, carpets, mushtrees, minecarts, and quetzals.
-  - `Advanced Transportation`: account-unlock and teleport systems such as spirit trees, fairy rings, teleport items, levers, portals, spells, minigames, wilderness/seasonal transports, and POH features.
-- Manual `Unlocked: ...` transport toggles are sent to the internal route engine even when `Hide Locked Teleports` is disabled. `Hide Locked Teleports` only controls scanned unavailable-destination filtering such as locked minigame keys.
+  - Base Drew's Shortest Path transports: gates/passages, boats, ordinary ships/ferries, charter ships, magic carpets, minecarts, home teleports, teleport levers, fixed teleport portals, spellbook teleports, and minigame teleports are enabled internally while Drew's Shortest Path is running, so they are not shown as player unlocks.
+  - `Basic Transportation`: account-progress or preference-based travel networks in this order: agility shortcuts, canoes, quetzals, gnome gliders, grapple shortcuts, magic mushtrees, and hot-air balloons.
+  - `Advanced Transportation`: spirit trees, fairy rings, mounted glory, portal chamber, portal nexus tier, and jewelry box tier.
+  - `Other Transportation`: standard/ancient/lunar/Arceuus/other tablets, 1-use items, teleport scrolls, achievement diary items, combat achievement items, skill capes, quest related items, and other items.
+- Manual `Unlocked: ...` and `Use: ...` transport settings are sent to the internal route engine. Baseline transport networks are sent as enabled without frontend toggles. Scanned locked minigames become blocked transport keys only while `Hide Locked Teleports` is enabled; the scanner still remembers lock state when the toggle is off.
+- Route config changes replay the saved/current route target instead of sending only targetless config. The internal route engine also refreshes its active path when it receives a config-only `shortestpath/path` message, so toggles such as `Hide Locked Teleports` can change the current route immediately.
+- Drew's minigame highlighter prefers the first available route transport instead of the first raw transport, preventing locked minigame hints from staying active when the HUD has already advanced to an allowed route step.
+- Compared against the OSRS wiki Transportation page on 2026-08-06: outstanding categories needing a Myth decision are wilderness obelisks, POH fairy ring, POH spirit tree, POH wilderness obelisk, and exact subtype filtering for teleport items/tablets/scrolls/capes.
 - Drew's `PluginMessage` subscriber now runs at high priority and merges active locked-teleport policy into incoming `shortestpath/path` requests before the internal route engine consumes them, including config-only path refreshes with no target.
 - The old broad stock-jar fallback (`useTeleportationMinigames=false` after exact reroute fails) is no longer part of the normal route loop. Exact keys are the expected behavior.
 - If Drew has not captured a real `shortestpath/path` target, it sends config-only route requests and lets Shortest Path reuse its own current target set. Drew must not treat a transport destination from `shortestpath/transports` as the final route target.
@@ -67,7 +73,7 @@ Active source:
 
 Plugin identity:
 - Visible RuneLite plugin name: `Drew's Helper`
-- Internal route-engine config group: `drewpath` for remaining inherited display/debug/threshold defaults; player-facing transportation unlocks now live in `DrewsHelperConfig`
+- Internal route-engine config: hidden runtime defaults through `DrewShortestPathInternalConfig`; player-facing settings live in `DrewsHelperConfig`
 - Compatibility message namespace: `shortestpath`
 
 There should be no active Plugin Hub Shortest Path jar in:
@@ -86,6 +92,6 @@ Expected exact key shape: `teleportation_minigames:nightmare_zone`.
 
 ## Known Limitations
 
-Drew's Shortest Path is integrated and build-verified, but the in-game route behavior still needs live testing. Expected behavior: when `Nightmare Zone Minigame Teleport` is scanned as locked, the route engine should exclude only `teleportation_minigames:nightmare_zone` and still allow other valid minigame teleports.
+Drew's Shortest Path is integrated and build-verified, but the in-game route behavior still needs live testing. Expected behavior: when `Nightmare Zone Minigame Teleport` is scanned as locked and `Hide Locked Teleports` is enabled, the route engine should exclude only `teleportation_minigames:nightmare_zone` and still allow other valid minigame teleports. Turning `Hide Locked Teleports` off should keep the scan cache but stop sending blocked minigame keys.
 
 If every minigame teleport disappears from the route, treat that as evidence that an old fallback path or stale Plugin Hub plugin is active. The normal Drew-owned route loop is exact-key only now.

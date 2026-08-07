@@ -61,6 +61,7 @@ final class ShortestPathBridge
     private static final String USE_SEASONAL_TRANSPORTS_KEY = "useSeasonalTransports";
     private static final String OBJECT_INFO_KEY = "objectInfo";
     private static final String DISPLAY_INFO_KEY = "displayInfo";
+    private static final boolean BASELINE_TRANSPORT_ENABLED = true;
 
     private final Client client;
     private final EventBus eventBus;
@@ -166,45 +167,43 @@ final class ShortestPathBridge
             return configOverride;
         }
 
-        configOverride.put(USE_TRANSPORTS_KEY, config.gatesAndPassagesUnlocked());
+        configOverride.put(USE_TRANSPORTS_KEY, BASELINE_TRANSPORT_ENABLED);
         configOverride.put(USE_AGILITY_SHORTCUTS_KEY, config.agilityShortcutsUnlocked());
         configOverride.put(USE_GRAPPLE_SHORTCUTS_KEY, config.grappleShortcutsUnlocked());
-        configOverride.put(USE_BOATS_KEY, config.boatsUnlocked());
+        configOverride.put(USE_BOATS_KEY, BASELINE_TRANSPORT_ENABLED);
         configOverride.put(USE_CANOES_KEY, config.canoesUnlocked());
-        configOverride.put(USE_CHARTER_SHIPS_KEY, config.charterShipsUnlocked());
-        configOverride.put(USE_SHIPS_KEY, config.passengerShipsUnlocked());
+        configOverride.put(USE_CHARTER_SHIPS_KEY, BASELINE_TRANSPORT_ENABLED);
+        configOverride.put(USE_SHIPS_KEY, BASELINE_TRANSPORT_ENABLED);
         configOverride.put(USE_GNOME_GLIDERS_KEY, config.gnomeGlidersUnlocked());
         configOverride.put(USE_HOT_AIR_BALLOONS_KEY, config.hotAirBalloonsUnlocked());
-        configOverride.put(USE_MAGIC_CARPETS_KEY, config.magicCarpetsUnlocked());
+        configOverride.put(USE_MAGIC_CARPETS_KEY, BASELINE_TRANSPORT_ENABLED);
         configOverride.put(USE_MAGIC_MUSHTREES_KEY, config.magicMushtreesUnlocked());
-        configOverride.put(USE_MINECARTS_KEY, config.minecartsUnlocked());
+        configOverride.put(USE_MINECARTS_KEY, BASELINE_TRANSPORT_ENABLED);
         configOverride.put(USE_QUETZALS_KEY, config.quetzalsUnlocked());
         configOverride.put(USE_FAIRY_RINGS_KEY, config.fairyRingsUnlocked());
         configOverride.put(USE_SPIRIT_TREES_KEY, config.spiritTreesUnlocked());
 
-        TeleportationItem teleportationItems = config.teleportationItemsUnlocked() == null
-            ? TeleportationItem.NONE
-            : config.teleportationItemsUnlocked();
-        configOverride.put(USE_TELEPORTATION_ITEMS_KEY, teleportationItems.toString());
-        configOverride.put(USE_TELEPORTATION_LEVERS_KEY, config.teleportationLeversUnlocked());
-        configOverride.put(USE_TELEPORTATION_PORTALS_KEY, config.teleportationPortalsUnlocked());
-        configOverride.put(USE_TELEPORTATION_SPELLS_KEY, config.teleportationSpellsUnlocked());
-        configOverride.put(USE_HOME_TELEPORTS_KEY, config.homeTeleportsUnlocked());
-        configOverride.put(
-            USE_TELEPORTATION_MINIGAMES_KEY,
-            config.minigameTeleportsUnlocked() && !disableMinigameTeleports);
+        configOverride.put(USE_TELEPORTATION_ITEMS_KEY, teleportationItemMode(config).toString());
+        configOverride.put(USE_TELEPORTATION_LEVERS_KEY, BASELINE_TRANSPORT_ENABLED);
+        configOverride.put(USE_TELEPORTATION_PORTALS_KEY, BASELINE_TRANSPORT_ENABLED);
+        configOverride.put(USE_TELEPORTATION_SPELLS_KEY, BASELINE_TRANSPORT_ENABLED);
+        configOverride.put(USE_HOME_TELEPORTS_KEY, BASELINE_TRANSPORT_ENABLED);
+        configOverride.put(USE_TELEPORTATION_MINIGAMES_KEY, !disableMinigameTeleports);
         configOverride.put(USE_WILDERNESS_OBELISKS_KEY, config.wildernessObelisksUnlocked());
-        configOverride.put(USE_SEASONAL_TRANSPORTS_KEY, config.seasonalTransportsUnlocked());
+        configOverride.put(USE_SEASONAL_TRANSPORTS_KEY, false);
 
         JewelleryBoxTier jewelleryBoxTier = config.pohJewelryBoxTier() == null
             ? JewelleryBoxTier.NONE
             : config.pohJewelryBoxTier();
+        PortalNexusTier portalNexusTier = config.pohPortalNexusTier() == null
+            ? PortalNexusTier.NONE
+            : config.pohPortalNexusTier();
 
         boolean useOwnedPoh = config.pohFairyRingUnlocked()
             || config.pohSpiritTreeUnlocked()
             || config.pohMountedGloryUnlocked()
             || config.pohPortalChamberUnlocked()
-            || config.pohPortalNexusUnlocked()
+            || portalNexusTier != PortalNexusTier.NONE
             || jewelleryBoxTier != JewelleryBoxTier.NONE
             || config.pohObeliskUnlocked();
 
@@ -212,17 +211,44 @@ final class ShortestPathBridge
         configOverride.put(USE_POH_FAIRY_RING_KEY, config.pohFairyRingUnlocked());
         configOverride.put(USE_POH_SPIRIT_TREE_KEY, config.pohSpiritTreeUnlocked());
         configOverride.put(USE_POH_MOUNTED_ITEMS_KEY, config.pohMountedGloryUnlocked());
-        configOverride.put(USE_POH_PORTALS_KEY, config.pohPortalChamberUnlocked() || config.pohPortalNexusUnlocked());
+        configOverride.put(USE_POH_PORTALS_KEY, config.pohPortalChamberUnlocked() || portalNexusTier != PortalNexusTier.NONE);
         configOverride.put(USE_POH_OBELISK_KEY, config.pohObeliskUnlocked());
         configOverride.put(POH_JEWELLERY_BOX_TIER_KEY, jewelleryBoxTier.toString());
 
         List<String> normalizedBlockedKeys = normalizedBlockedTransportKeys(blockedTransportKeys);
-        if (config.filterUnavailableTeleports() && !normalizedBlockedKeys.isEmpty())
+        if (!normalizedBlockedKeys.isEmpty())
         {
             configOverride.put(ShortestPathTransportKey.BLOCKED_TRANSPORT_KEYS_CONFIG, normalizedBlockedKeys);
         }
 
         return configOverride;
+    }
+
+    private static TeleportationItem teleportationItemMode(DrewsHelperConfig config)
+    {
+        boolean useConsumables = config.standardTabletsEnabled()
+            || config.ancientTabletsEnabled()
+            || config.lunarTabletsEnabled()
+            || config.arceuusTabletsEnabled()
+            || config.otherTabletsEnabled()
+            || config.oneUseItemsEnabled()
+            || config.teleportScrollsEnabled();
+
+        boolean useNonConsumables = config.achievementDiaryItemsEnabled()
+            || config.combatAchievementItemsEnabled()
+            || config.skillCapesEnabled()
+            || config.questRelatedItemsEnabled()
+            || config.otherItemsEnabled();
+
+        if (useConsumables)
+        {
+            return TeleportationItem.INVENTORY;
+        }
+        if (useNonConsumables)
+        {
+            return TeleportationItem.INVENTORY_NON_CONSUMABLE;
+        }
+        return TeleportationItem.NONE;
     }
 
     static boolean addConfigOverrideToPathRequest(
