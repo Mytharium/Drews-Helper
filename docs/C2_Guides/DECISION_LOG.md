@@ -391,3 +391,15 @@ Drew may extend the existing Path 1 target-aware override with that single tail 
 - Decision: Drew may log a second shadow route, `shapeShadow={...}`, solved without target-aware local walking overrides and with segment line-shape tie ranking, but it must not affect the visible route yet.
 - Evidence: Myth's D-0050 control run showed Path 1 and Path 3 still need the existing local overrides (`overridesMatter=true winner=visible`), while the random five-waypoint chain exposed a legal equal-length fork where segment shape metrics favored the live client branch over the displayed branch.
 - Constraint: `shapeShadow` is not sufficient evidence for promotion by itself. A first route-level probe showed line-shape ranking can overcorrect earlier than the client. Future promotion needs repeated live samples where `shapeShadow` beats or ties visible movement on controls and random chains without introducing new early divergence.
+
+### D-0052 - Divergence diagnostics report merge-back before route promotion
+- Date: 2026-08-08
+- Decision: `DREW_ROUTE_BENCH` divergence output should report whether actual movement rejoins the displayed path after the first divergent tile. The merge-back record includes expected index, actual index, step delta, and the merge tile.
+- Evidence: Myth's ordered five-waypoint chain after D-0051 had `first=match`, then a segment fork where the displayed route chose `(2977,3251,0)` and the client chose `(2977,3252,0)`. The live movement rejoined the displayed route shortly afterward, while edge validation alone classified the first actual edge as longer.
+- Constraint: Merge-back is diagnostic-only. Do not change visible route selection, remove Path 1 / Path 3 target-aware overrides, promote `shapeShadow`, or add a new local override from one merge-back sample. Repeated clean samples should decide whether a divergence is a stable client step-order preference, a collision-resource disagreement, or input/click noise.
+
+### D-0053 - Same-time merge-back is benign diagnostic evidence
+- Date: 2026-08-08
+- Decision: A divergence with `mergeBack stepDelta=0` is classified as `sameTimePermutation benign=true` and should be scored as a low-penalty diagnostic fit, not as hard route drift.
+- Evidence: Myth's post-D-0052 rerun repeated the `(2976,3252,0)` fork. The displayed route chose `(2977,3251,0)`, the client chose `(2977,3252,0)`, and both paths rejoined at `(2979,3250,0)` on the same movement index. The old single-edge `longer=true` readout overstated the problem because it ignored that immediate rejoin.
+- Constraint: This is still diagnostic-only. Visible route selection, local Path 1 / Path 3 overrides, `shapeShadow` solving, waypoint behavior, and capture lifecycle stay unchanged. Promotion requires repeated clean samples and a separate explicit route-ranker change.

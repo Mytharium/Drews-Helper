@@ -112,6 +112,7 @@ public class DrewsHelperRouteBenchmarkTest
 
         assertEquals(
             "idx=2 prevDir=E predicted=(2,0,0) actual=(1,1,0) "
+                + "mergeBack={none} classification=noMergeDrift benign=false "
                 + "predictedWindow=[0:(0,0,0) -> 1:(1,0,0) -> 2:(2,0,0)] "
                 + "actualWindow=[0:(0,0,0) -> 1:(1,0,0) -> 2:(1,1,0)]",
             DrewsHelperRouteBenchmark.formatDivergence(
@@ -128,6 +129,65 @@ public class DrewsHelperRouteBenchmarkTest
                 false
             )
         );
+    }
+
+    @Test
+    public void formatsMergeBackAfterLocalStepPermutation()
+    {
+        String diagnostic = DrewsHelperRouteBenchmark.formatDivergence(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0),
+                new WorldPoint(3, 0, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 1, 0),
+                new WorldPoint(3, 1, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            true
+        );
+
+        assertTrue(diagnostic.contains("idx=2"));
+        assertTrue(diagnostic.contains("mergeBack={expectedIdx=4 actualIdx=4 stepDelta=0 point=(4,0,0)}"));
+        assertTrue(diagnostic.contains("classification=sameTimePermutation benign=true"));
+    }
+
+    @Test
+    public void sameTimePermutationBeatsNonBenignMergeInDiagnosticWinner()
+    {
+        String diagnostic = DrewsHelperRouteBenchmark.formatShadowRouteDiagnostic(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 1, 0),
+                new WorldPoint(3, 1, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(0, 1, 0),
+                new WorldPoint(1, 1, 0),
+                new WorldPoint(2, 1, 0),
+                new WorldPoint(3, 1, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0),
+                new WorldPoint(3, 0, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            true
+        );
+
+        assertTrue(diagnostic.contains("fit={visible=sameTimePermutation shadow=earlyMerge}"));
+        assertTrue(diagnostic.contains("winner=visible"));
     }
 
     @Test

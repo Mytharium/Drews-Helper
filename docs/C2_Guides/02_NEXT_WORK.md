@@ -236,3 +236,24 @@ Next route work:
   - `shapeShadow={...}`: no-overrides diagnostic route using segment line-shape tie ranking.
   - `shape={...}`: displayed route versus actual client movement.
 - Early D-0051 unit evidence says the full-route line-shape ranker can overcorrect before a live fork, so treat `shapeShadow` as telemetry only. Promote nothing until repeated live samples show `shapeShadow` wins without creating new early divergence.
+
+### Next live route check after D-0052
+- Restart the Drew's Helper dev client after the D-0052 build.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Clear all, place five nearby random waypoints, and walk the full chain in waypoint order.
+- If a divergence appears, read `mergeBack={...}` first:
+  - `stepDelta=0` means the client chose a local step permutation and rejoined the displayed route on schedule.
+  - positive `stepDelta` means the actual route lagged behind the displayed route before rejoining.
+  - `none` means the client did not rejoin the displayed route inside the captured path window.
+- Do not promote `shapeShadow` or add local overrides from a single merge-back sample. Use repeated clean samples to decide whether the issue is a general step-order preference, a collision-resource disagreement, or input/click noise.
+
+### Next live route check after D-0053
+- Restart the Drew's Helper dev client after the D-0053 build.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Clear all, place five nearby random waypoints, and walk the full chain in waypoint order.
+- The key fields are now:
+  - `divergence={... classification=sameTimePermutation benign=true ...}` for harmless same-time local step permutations.
+  - `fit={visible=... shadow=...}` inside `shadow={...}`.
+  - `fit={visible=... shapeShadow=...}` inside `shapeShadow={...}`.
+- If the chain reports only `sameTimePermutation benign=true` divergences and the displayed route still reaches the final waypoint on schedule, collect two or three more nearby five-waypoint chains before promoting any route-ranker behavior.
+- Do not remove Path 1 / Path 3 overrides or promote `shapeShadow` until controls still pass and repeated random chains show the merge-aware winner does not regress visible movement.

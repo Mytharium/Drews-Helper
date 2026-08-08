@@ -151,10 +151,14 @@ public final class DrewsHelperRouteBenchmark
             return "none";
         }
 
+        DivergenceFit fit = divergenceFit(expectedPath, actualPath, actualComplete);
         return "idx=" + divergenceIndex
             + " prevDir=" + formatPreviousDirection(actualPath, divergenceIndex)
             + " predicted=" + formatPoint(pointAt(expectedPath, divergenceIndex))
             + " actual=" + formatPoint(pointAt(actualPath, divergenceIndex))
+            + " mergeBack={" + fit.mergeBackSummary() + "}"
+            + " classification=" + fit.getClassification()
+            + " benign=" + fit.isBenign()
             + " predictedWindow=" + formatPathWindow(expectedPath, divergenceIndex)
             + " actualWindow=" + formatPathWindow(actualPath, divergenceIndex);
     }
@@ -367,7 +371,6 @@ public final class DrewsHelperRouteBenchmark
             return "status=not-found";
         }
 
-        Report visibleReport = compare(visible, actual);
         Report shadowReport = compare(shadow, actual);
         boolean overridesMatter = !visible.equals(shadow);
         return "status=ready"
@@ -375,7 +378,9 @@ public final class DrewsHelperRouteBenchmark
             + " route={" + shadowReport.summary() + "}"
             + " visibleVsShadow={" + formatDivergence(visible, shadow, true) + "}"
             + " shadowVsActual={" + formatDivergence(shadow, actual, true) + "}"
-            + " winner=" + shadowWinner(visibleReport, shadowReport);
+            + " fit={visible=" + divergenceFit(visible, actual, true).getClassification()
+            + " shadow=" + divergenceFit(shadow, actual, true).getClassification() + "}"
+            + " winner=" + shadowWinner(visible, shadow, actual);
     }
 
     public static String formatShapeShadowRouteDiagnostic(
@@ -398,7 +403,6 @@ public final class DrewsHelperRouteBenchmark
             return "status=not-found";
         }
 
-        Report visibleReport = compare(visible, actual);
         Report shapeShadowReport = compare(shapeShadow, actual);
         boolean differsFromVisible = !visible.equals(shapeShadow);
         return "status=ready"
@@ -406,7 +410,9 @@ public final class DrewsHelperRouteBenchmark
             + " route={" + shapeShadowReport.summary() + "}"
             + " visibleVsShapeShadow={" + formatDivergence(visible, shapeShadow, true) + "}"
             + " shapeShadowVsActual={" + formatDivergence(shapeShadow, actual, true) + "}"
-            + " winner=" + shapeShadowWinner(visibleReport, shapeShadowReport);
+            + " fit={visible=" + divergenceFit(visible, actual, true).getClassification()
+            + " shapeShadow=" + divergenceFit(shapeShadow, actual, true).getClassification() + "}"
+            + " winner=" + shapeShadowWinner(visible, shapeShadow, actual);
     }
 
     public static WorldPoint pointAt(List<WorldPoint> path, int index)
@@ -417,6 +423,63 @@ public final class DrewsHelperRouteBenchmark
         }
 
         return path.get(index);
+    }
+
+    private static DivergenceFit divergenceFit(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete
+    )
+    {
+        int divergenceIndex = firstDivergenceIndex(expectedPath, actualPath, actualComplete);
+        if (divergenceIndex < 0)
+        {
+            return DivergenceFit.exact();
+        }
+
+        MergeBack mergeBack = findMergeBack(expectedPath, actualPath, divergenceIndex);
+        if (!mergeBack.isFound())
+        {
+            return DivergenceFit.noMergeDrift();
+        }
+
+        if (mergeBack.getStepDelta() == 0)
+        {
+            return DivergenceFit.sameTimePermutation(mergeBack);
+        }
+
+        if (mergeBack.getStepDelta() < 0)
+        {
+            return DivergenceFit.earlyMerge(mergeBack);
+        }
+
+        return DivergenceFit.laggingMerge(mergeBack);
+    }
+
+    private static MergeBack findMergeBack(List<WorldPoint> expectedPath, List<WorldPoint> actualPath, int divergenceIndex)
+    {
+        List<WorldPoint> expected = expectedPath == null ? Collections.emptyList() : expectedPath;
+        List<WorldPoint> actual = actualPath == null ? Collections.emptyList() : actualPath;
+        if (divergenceIndex < 0 || expected.isEmpty() || actual.isEmpty())
+        {
+            return MergeBack.none();
+        }
+
+        for (int actualIndex = divergenceIndex + 1; actualIndex < actual.size(); actualIndex++)
+        {
+            WorldPoint actualPoint = actual.get(actualIndex);
+            for (int expectedIndex = divergenceIndex + 1; expectedIndex < expected.size(); expectedIndex++)
+            {
+                if (!actualPoint.equals(expected.get(expectedIndex)))
+                {
+                    continue;
+                }
+
+                return new MergeBack(expectedIndex, actualIndex, actualPoint);
+            }
+        }
+
+        return MergeBack.none();
     }
 
     private static int comparedMovementTicks(List<WorldPoint> actual, int limit)
@@ -558,10 +621,14 @@ public final class DrewsHelperRouteBenchmark
         return "tie";
     }
 
-    private static String shadowWinner(Report visibleReport, Report shadowReport)
+    private static String shadowWinner(
+        List<WorldPoint> visiblePath,
+        List<WorldPoint> shadowPath,
+        List<WorldPoint> actualPath
+    )
     {
-        int visibleScore = routeFitScore(visibleReport);
-        int shadowScore = routeFitScore(shadowReport);
+        int visibleScore = routeFitScore(visiblePath, actualPath, true);
+        int shadowScore = routeFitScore(shadowPath, actualPath, true);
         if (visibleScore < shadowScore)
         {
             return "visible";
@@ -575,10 +642,14 @@ public final class DrewsHelperRouteBenchmark
         return "tie";
     }
 
-    private static String shapeShadowWinner(Report visibleReport, Report shapeShadowReport)
+    private static String shapeShadowWinner(
+        List<WorldPoint> visiblePath,
+        List<WorldPoint> shapeShadowPath,
+        List<WorldPoint> actualPath
+    )
     {
-        int visibleScore = routeFitScore(visibleReport);
-        int shapeShadowScore = routeFitScore(shapeShadowReport);
+        int visibleScore = routeFitScore(visiblePath, actualPath, true);
+        int shapeShadowScore = routeFitScore(shapeShadowPath, actualPath, true);
         if (visibleScore < shapeShadowScore)
         {
             return "visible";
@@ -592,12 +663,18 @@ public final class DrewsHelperRouteBenchmark
         return "tie";
     }
 
-    private static int routeFitScore(Report report)
+    private static int routeFitScore(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete
+    )
     {
+        Report report = compare(expectedPath, actualPath);
+        DivergenceFit fit = divergenceFit(expectedPath, actualPath, actualComplete);
         int lengthDelta = Math.abs(report.getActualPathLength() - report.getExpectedPathLength());
         int firstTenMisses = report.getFirstTenCompared() - report.getFirstTenMatches();
         int turnDelta = Math.abs(report.getActualTurnCount() - report.getExpectedTurnCount());
-        return (report.isFullTileSequenceMatches() ? 0 : 1_000_000)
+        return fit.getSequencePenalty()
             + report.getMaxLateralDeviation() * 1_000
             + lengthDelta * 100
             + firstTenMisses * 10
@@ -750,6 +827,119 @@ public final class DrewsHelperRouteBenchmark
         private static ShapeStats unavailable()
         {
             return new ShapeStats(0, 0, 0, 0, false);
+        }
+    }
+
+    private static final class MergeBack
+    {
+        private final boolean found;
+        private final int expectedIndex;
+        private final int actualIndex;
+        private final WorldPoint point;
+
+        private MergeBack(int expectedIndex, int actualIndex, WorldPoint point)
+        {
+            this.found = true;
+            this.expectedIndex = expectedIndex;
+            this.actualIndex = actualIndex;
+            this.point = point;
+        }
+
+        private MergeBack()
+        {
+            this.found = false;
+            this.expectedIndex = -1;
+            this.actualIndex = -1;
+            this.point = null;
+        }
+
+        private static MergeBack none()
+        {
+            return new MergeBack();
+        }
+
+        private boolean isFound()
+        {
+            return found;
+        }
+
+        private int getStepDelta()
+        {
+            return actualIndex - expectedIndex;
+        }
+
+        private String summary()
+        {
+            if (!found)
+            {
+                return "none";
+            }
+
+            return "expectedIdx=" + expectedIndex
+                + " actualIdx=" + actualIndex
+                + " stepDelta=" + getStepDelta()
+                + " point=" + formatPoint(point);
+        }
+    }
+
+    private static final class DivergenceFit
+    {
+        private final String classification;
+        private final boolean benign;
+        private final int sequencePenalty;
+        private final MergeBack mergeBack;
+
+        private DivergenceFit(String classification, boolean benign, int sequencePenalty, MergeBack mergeBack)
+        {
+            this.classification = classification;
+            this.benign = benign;
+            this.sequencePenalty = sequencePenalty;
+            this.mergeBack = mergeBack;
+        }
+
+        private static DivergenceFit exact()
+        {
+            return new DivergenceFit("exact", true, 0, MergeBack.none());
+        }
+
+        private static DivergenceFit sameTimePermutation(MergeBack mergeBack)
+        {
+            return new DivergenceFit("sameTimePermutation", true, 100, mergeBack);
+        }
+
+        private static DivergenceFit earlyMerge(MergeBack mergeBack)
+        {
+            return new DivergenceFit("earlyMerge", false, 50_000, mergeBack);
+        }
+
+        private static DivergenceFit laggingMerge(MergeBack mergeBack)
+        {
+            return new DivergenceFit("laggingMerge", false, 100_000, mergeBack);
+        }
+
+        private static DivergenceFit noMergeDrift()
+        {
+            return new DivergenceFit("noMergeDrift", false, 1_000_000, MergeBack.none());
+        }
+
+        private String getClassification()
+        {
+            return classification;
+        }
+
+        private boolean isBenign()
+        {
+            return benign;
+        }
+
+        private int getSequencePenalty()
+        {
+            return sequencePenalty;
+        }
+
+        private String mergeBackSummary()
+        {
+            return mergeBack.summary();
         }
     }
 

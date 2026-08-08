@@ -132,3 +132,17 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - The five-waypoint random chain produced one legal equal-length segment fork from `(2996,3288,0)` where the displayed route chose `(2997,3287,0)` and the client chose `(2995,3287,0)`. Segment shape scoring favored the actual client path.
 - Added `DrewsHelperWalkingRouteEngine.solveWithShapeRankingWithoutLocalWalkingOverrides(...)` and a completed-report `shapeShadow={...}` diagnostic so future samples can compare the visible route, the no-override baseline, and a no-override segment-shape-ranked route.
 - Kept `shapeShadow` diagnostic-only. The first unit probe showed full-route line-shape ranking can overcorrect before the observed fork, so it is not ready for visible route promotion.
+
+
+## 2026-08-08 - D-0052 merge-back divergence diagnostics
+- Checked Myth's post-D-0051 five-waypoint ordered chain. The same-square double-click did not restart capture, but the completed chain produced a local segment divergence where the client walked `(2977,3252,0)` instead of displayed `(2977,3251,0)` and then merged back onto the displayed route shortly afterward.
+- Added `mergeBack={...}` to `DREW_ROUTE_BENCH` divergence formatting so local step-order permutations can be separated from routes that truly stay off the displayed path.
+- Added benchmark formatter coverage for a divergent path that rejoins the expected path with `stepDelta=0`.
+- This remains diagnostic-only; no visible route ranking, local walking override, waypoint, or capture behavior changed.
+
+## 2026-08-08 - D-0053 merge-aware diagnostic scoring
+- Checked Myth's post-D-0052 rerun and confirmed the same fork rejoined on schedule with `mergeBack stepDelta=0`.
+- Added divergence classification fields: `classification=<...>` and `benign=<...>`, with `sameTimePermutation` marking local step-order swaps that merge back at the same index.
+- Updated `shadow` and `shapeShadow` winner scoring to use merge-aware route-fit penalties, so same-time permutations are not treated like hard no-merge drift.
+- Added benchmark formatter coverage for merge-aware diagnostic winner behavior.
+- This remains diagnostic-only; visible route selection did not change.

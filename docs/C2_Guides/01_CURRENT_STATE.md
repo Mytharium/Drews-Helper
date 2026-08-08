@@ -215,3 +215,15 @@ Known first-pass limits:
 - Use `shadow={status=ready overridesMatter=true ... winner=visible}` as evidence that the current local override still explains live movement better than the override-free baseline.
 - Use `shadow={status=ready overridesMatter=true ... winner=shadow}` or repeated `winner=tie` on the old Path 1 / Path 3 control routes as evidence that the general route ranker may be ready to replace the local overrides.
 - This is diagnostic-only. The visible route still uses the active solver and the target-aware local overrides from D-0044 through D-0046.
+
+### 2026-08-08 01:45 UTC - D-0052 merge-back route diagnostics
+- Myth's latest five-waypoint ordered chain stayed on one benchmark capture even after a same-square double-click. The completed sample diverged on the segment toward `(2983,3246,0)` from `(2976,3252,0)`: Drew displayed `(2977,3251,0)` while the client walked `(2977,3252,0)`.
+- The live path merged back onto the displayed path two tiles later, so this class of sample needs explicit merge-back reporting before it is used for shape-ranker promotion or local override decisions.
+- `DREW_ROUTE_BENCH` divergence strings now include `mergeBack={...}` with expected index, actual index, step delta, and merge tile when the actual path rejoins the displayed route after a divergence.
+- This is diagnostic-only. Visible route behavior, `shadow`, `shapeShadow`, local walking overrides, waypoint ordering, and capture lifecycle are unchanged.
+
+### 2026-08-08 01:57 UTC - D-0053 merge-aware diagnostic scoring
+- Myth's post-D-0052 rerun confirmed the same local fork class with `mergeBack={expectedIdx=41 actualIdx=41 stepDelta=0 point=(2979,3250,0)}`. The first observed edge still reported `longer=true`, but the full movement rejoined the displayed route on schedule.
+- `DREW_ROUTE_BENCH` divergence strings now include `classification=<...>` and `benign=<...>`. `classification=sameTimePermutation benign=true` means the client took a different local tile order but rejoined the displayed route at the same movement index.
+- `shadow={...}` and `shapeShadow={...}` now include `fit={...}` and use merge-aware route-fit scoring for their `winner`. Exact matches still win, no-merge drift still loses hard, and same-time permutations are scored as low-penalty diagnostics instead of hard route failures.
+- This remains diagnostic-only. The visible route, local Path 1 / Path 3 overrides, `shapeShadow` route solving, waypoint ordering, and benchmark capture lifecycle are unchanged.
