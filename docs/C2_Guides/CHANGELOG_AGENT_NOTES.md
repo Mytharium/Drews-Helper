@@ -97,3 +97,38 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - Removed the temporary BFS route solver mode and `Route Solver` config dropdown after Myth's live tests showed BFS was slower and did not match client movement better. `Benchmark Movement` remains as a single-route overlay-vs-client trace for `DREW_ROUTE_BENCH`, and next route work should validate collision-map/live-client edge disagreements before adding local overrides.
 - Added collision-edge validator logging to `DREW_ROUTE_BENCH`: when actual movement diverges from the displayed route, Drew now logs `edgeValidation` with observed-edge legality, graph continuation distance/delta, whether the continuation is longer, session repeat count, and an `overrideCandidate` flag. This is diagnostic only; no collision override is applied yet.
 - Added target-aware local walking overrides for Myth's repeated Path 1 and Path 3 live-client branches. The overrides participate in Drew's existing legal-step ordering and reverse-distance final path ranking, so they affect only the confirmed target/fork windows and do not globally replace Runemoro collision data.
+
+- Added the next Path 1 target-aware tail preference after Myth's exact `(2932,3214,0)` run: the route now prefers `(2935,3218,0) -> (2934,3217,0)` for that target, while keeping Path 3's confirmed fixed override unchanged.
+
+### 2026-08-07 - D-0046 Path 1 final-tail override
+- Added the next observed Path 1 final-tail override for target (2932,3214,0).
+- Route tests now assert the full final live-observed tail: (2934,3217,0) -> (2933,3216,0) -> (2932,3215,0) -> (2932,3214,0).
+- Verified focused route-engine tests and full Gradle build after upload to MythPC.
+
+### 2026-08-07 - D-0047 benchmark pending-start and shape diagnostics
+- Added pending-start benchmark capture so off-route pre-start/return movement is ignored instead of poisoning the next sample as `idx=0`.
+- Added `shape={...}` diagnostics to `DREW_ROUTE_BENCH` reports for completed target samples.
+- Added focused tests for stale-start discard, delayed capture start, and route-shape diagnostic formatting.
+
+
+## 2026-08-07 - D-0048 route overlay continuity after event jumps
+- After Myth's random-event test, preserve the previous route path while a fresh route recalculates so waypoint markers do not remain without connector tiles during transient recalculation.
+- Added snapshot coverage for calculating snapshots carrying a previous path.
+
+## 2026-08-07 - D-0049 segment-aware chained benchmark diagnostics
+- Checked Myth's post-D-0048 route collection. Point 3 completed clean, but Point 1 and Point 2 were not separate completed benchmark samples because all three control waypoints were active at once.
+- The five-waypoint random chain completed and exposed a benchmark diagnostic bug: `edgeValidation` and `shape` were judging an early first-leg fork against the final waypoint target.
+- Updated `DREW_ROUTE_BENCH` capture so multi-waypoint routes map the first divergence to the active segment waypoint before logging candidates, edge validation, and shape diagnostics.
+- Added focused capture coverage for a two-waypoint chain where a first-segment divergence must log the first waypoint as `target` and the route endpoint as `finalTarget`.
+
+## 2026-08-07 - D-0050 no-override shadow route diagnostics
+- Added `DrewsHelperWalkingRouteEngine.solveWithoutLocalWalkingOverrides(...)` so benchmark diagnostics can compute the current route without the Path 1 / Path 3 target-aware local overrides.
+- Added `shadow={...}` to completed `DREW_ROUTE_BENCH` reports. It compares the no-override shadow route against actual movement and reports whether the local overrides changed the visible route plus which route fit live movement better.
+- Added formatter and route-engine tests for the shadow diagnostic, including the loaded collision-resource Path 1 / Path 3 baseline branches.
+- This remains diagnostic-only; the visible route still uses the active local overrides.
+
+## 2026-08-07 - D-0051 shape-shadow route diagnostics
+- Checked Myth's D-0050 live run. Point 1, Point 2, and the corrected Point 3 control all completed cleanly; Path 1 and Path 3 still reported `overridesMatter=true winner=visible`, while Point 2 was a no-override tie.
+- The five-waypoint random chain produced one legal equal-length segment fork from `(2996,3288,0)` where the displayed route chose `(2997,3287,0)` and the client chose `(2995,3287,0)`. Segment shape scoring favored the actual client path.
+- Added `DrewsHelperWalkingRouteEngine.solveWithShapeRankingWithoutLocalWalkingOverrides(...)` and a completed-report `shapeShadow={...}` diagnostic so future samples can compare the visible route, the no-override baseline, and a no-override segment-shape-ranked route.
+- Kept `shapeShadow` diagnostic-only. The first unit probe showed full-route line-shape ranking can overcorrect before the observed fork, so it is not ready for visible route promotion.

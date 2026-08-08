@@ -54,3 +54,7 @@ Use that note before designing any new route engine. The current rule is: learn 
 ## Resume Rule
 
 Start tomorrow's work in `02_NEXT_WORK.md`. The active route feature is Drew-owned waypoint guidance with baseline click/pay physical transports built into the graph and one `Use: Wilderness Transports` toggle for Wilderness levers/obelisks. Do not restore Shortest Path telemetry, fast travel, minigame teleport scanning, tab highlighting, or route diagnostics unless Myth explicitly asks to rebuild those systems from the Drew-owned route model.
+
+## Current Route Diagnostics
+
+As of D-0051, visible routing still uses the target-aware Path 1 / Path 3 local walking overrides from D-0044 through D-0046. Benchmark reports now include both `shadow={...}` for the no-override baseline and `shapeShadow={...}` for a diagnostic-only no-override route that uses segment line-shape tie ranking. Do not promote `shapeShadow` into the visible route until live samples show it matches the client across the fixed controls and random chains.

@@ -89,6 +89,24 @@ public class DrewsHelperRouteSnapshotTest
     }
 
     @Test
+    public void calculatingSnapshotCanCarryPreviousPathForOverlayContinuity()
+    {
+        DrewsHelperRouteSnapshot snapshot = DrewsHelperRouteSnapshot.calculating(
+            Arrays.asList(new WorldPoint(200, 200, 0)),
+            Arrays.asList(
+                new WorldPoint(100, 100, 0),
+                new WorldPoint(101, 101, 0)
+            )
+        );
+
+        assertEquals(DrewsHelperRouteStatus.CALCULATING, snapshot.getStatus());
+        assertTrue(snapshot.hasPath());
+        assertEquals(new WorldPoint(100, 100, 0), snapshot.getPath().get(0));
+        assertEquals(new WorldPoint(101, 101, 0), snapshot.getPath().get(1));
+        assertEquals(new WorldPoint(200, 200, 0), snapshot.getDestinations().get(0));
+    }
+
+    @Test
     public void doesNotTreatNormalWalkingStepsAsTransportJumps()
     {
         WorldPoint point = new WorldPoint(100, 100, 0);

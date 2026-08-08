@@ -345,3 +345,49 @@ Myth repeated the Path 1 and Path 3 tests after the collision-edge validator was
 Drew may now carry target-aware local walking overrides for those two confirmed route windows only. The Path 1 override is keyed to target `(2932,3214,0)` and starts at fork `(2939,3223,0) -> (2939,3222,0)` with the observed southwest continuation window. The Path 3 override is keyed to target `(2970,3229,0)` and starts at fork `(2966,3231,0) -> (2967,3231,0)` with the full observed northeast finish. These overrides participate in the existing legal-step list and reverse-distance final ranking, so the displayed route can choose the live branch while normal unrelated targets still use the base collision map and client-style ordering.
 
 Do not convert this into a broad "trust live movement" system. Add future local overrides only after clean repeated `DREW_ROUTE_BENCH` samples identify exact target/fork keys, and prefer replacing/updating the collision resource if the same map-region disagreement becomes widespread.
+
+## D-0045: Path 1 Tail Preference Extends The Existing Target-Aware Override
+
+Date: 2026-08-07
+
+After the first Path 1 target-aware override build, Myth reran the exact `(2932,3214,0)` target. The old fork at `(2939,3223,0)` was fixed, but the live client made one later equal-length tail choice from `(2935,3218,0)` to `(2934,3217,0)` while Drew still highlighted `(2935,3217,0)`. `edgeValidation` reported `legal=true`, `delta=0`, and `longer=false`, so this is a route-shape tie preference, not a collision disagreement.
+
+Drew may extend the existing Path 1 target-aware override with that single tail preference. Keep it scoped to target `(2932,3214,0)` and do not treat it as evidence for a broader collision-map override.
+
+### D-0046 - Path 1 final-tail overrides stay target-aware
+- Date: 2026-08-07
+- Decision: The final Path 1 tail mismatch is handled as another target-aware local walking override, not as a global collision or solver-order change.
+- Evidence: Myth's post-D-0045 run reached (2932,3214,0) with lenDelta=0, maxDev=1, and divergence from (2934,3217,0) where the client chose (2933,3216,0).
+- Constraint: Override applies only toward target (2932,3214,0). One-tile-different targets such as (2932,3215,0) must not inherit the preference.
+- Follow-up: Myth should rerun Path 1 once. Expected result is divergence={none} and maxDev=0.
+
+### D-0047 - Benchmark capture must sync to route start before shape collection
+- Date: 2026-08-07
+- Decision: `Benchmark Movement` must wait for the player to reach the displayed route start, or one of the first few displayed route tiles, before recording actual movement. Off-route pre-start movement should be ignored as `reason=stale-start`, not logged as a route divergence.
+- Evidence: During Path 1/Path 3 override testing, return legs repeatedly poisoned the next outbound sample as `idx=0` stale-target noise even when the active route patch was loaded and correct.
+- Decision: Add diagnostic-only route-shape scoring to completed `DREW_ROUTE_BENCH` reports before changing path selection. Shape diagnostics may compare displayed versus actual movement by line-error, diagonal/cardinal distribution, and turn count, but they must not influence route selection until Path 1, Path 2, Path 3, and additional random nearby routes confirm the scoring matches live client behavior.
+- Constraint: Keep the D-0044 through D-0046 target-aware overrides active while collecting shape data. Do not delete them or promote the shape ranker into the solver until the diagnostic evidence is broad enough.
+
+### D-0048 - Route recalculation preserves last visible path
+- Date: 2026-08-07
+- Decision: When Drew submits a fresh route calculation, the CALCULATING snapshot should retain the previous path for overlay continuity instead of clearing the connector tiles immediately.
+- Evidence: Myth's random-event test kept waypoint markers visible but lost the highlighted tiles between waypoints after a Pillory Guard event and location jump.
+- Constraint: This is overlay continuity only. The preserved path is replaced by the new route once calculation publishes, and it must not change walking solver output or benchmark scoring.
+
+### D-0049 - Chained benchmark diagnostics use the active waypoint segment
+- Date: 2026-08-07
+- Decision: In multi-waypoint routes, `DREW_ROUTE_BENCH` candidate traces, edge validation, and route-shape diagnostics should judge the first divergence against the waypoint segment being walked, not blindly against the final route endpoint.
+- Evidence: Myth's five-waypoint random chain completed with an early first-leg divergence, but the old `edgeValidation` target was the fifth waypoint. That made continuation distance and shape scoring misleading even though the displayed route and actual movement were otherwise useful.
+- Constraint: This is diagnostic-only. Route solving, local walking overrides, waypoint ordering, overlay rendering, and benchmark capture lifecycle stay unchanged. Single-target benchmark reports keep their existing whole-route shape output.
+
+### D-0050 - Shadow route diagnostics compare against no-override baseline
+- Date: 2026-08-07
+- Decision: Before removing the Path 1 / Path 3 target-aware local overrides, Drew must log a shadow route solved with those local overrides disabled. The shadow result is diagnostic-only and must not alter the displayed route.
+- Evidence: Myth's clean control and five-waypoint random-chain samples showed the current route now matches live movement, but because the local overrides were active, those samples could not prove whether the general route ranker would have selected the same branches on its own.
+- Constraint: `shadow={...}` may be used to judge whether overrides still matter, but not to change route selection automatically. Removing or replacing local overrides requires clean repeated control data where the no-override shadow route is equal or better for Path 1 and Path 3, plus no regression on nearby random chains.
+
+### D-0051 - Shape-shadow ranker remains diagnostic-only
+- Date: 2026-08-07
+- Decision: Drew may log a second shadow route, `shapeShadow={...}`, solved without target-aware local walking overrides and with segment line-shape tie ranking, but it must not affect the visible route yet.
+- Evidence: Myth's D-0050 control run showed Path 1 and Path 3 still need the existing local overrides (`overridesMatter=true winner=visible`), while the random five-waypoint chain exposed a legal equal-length fork where segment shape metrics favored the live client branch over the displayed branch.
+- Constraint: `shapeShadow` is not sufficient evidence for promotion by itself. A first route-level probe showed line-shape ranking can overcorrect earlier than the client. Future promotion needs repeated live samples where `shapeShadow` beats or ties visible movement on controls and random chains without introducing new early divergence.

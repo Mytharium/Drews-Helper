@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -66,6 +67,9 @@ public class DrewsHelperPlugin extends Plugin
     private static final String WAYPOINT_POSITION_KEY_SUFFIX = "Position";
     private static final String WAYPOINT_COLOR_KEY_SUFFIX = "PathColor";
     private static final int OBSERVED_EDGE_OVERRIDE_REPEAT_THRESHOLD = 2;
+    private static final int ROUTE_BENCHMARK_START_SYNC_TILE_LIMIT = 3;
+    private static final int ROUTE_BENCHMARK_PENDING_START_TICK_LIMIT = 10;
+    private static final int ROUTE_BENCHMARK_PENDING_START_MOVE_LIMIT = 3;
 
     @Inject
     private Client client;
@@ -424,7 +428,8 @@ public class DrewsHelperPlugin extends Plugin
         cancelRouteFuture();
         int requestId = ++routeRequestId;
         List<WorldPoint> routeDestinations = new ArrayList<>(destinations);
-        routeSnapshot = DrewsHelperRouteSnapshot.calculating(routeDestinations);
+        DrewsHelperRouteSnapshot previousSnapshot = routeSnapshot;
+        routeSnapshot = DrewsHelperRouteSnapshot.calculating(routeDestinations, previousSnapshot.getPath());
         clearRouteBenchmark();
         lastRouteSignature = signature;
         routeDirty = false;
@@ -537,6 +542,7 @@ public class DrewsHelperPlugin extends Plugin
 
         routeBenchmarkCapture = new RouteBenchmarkCapture(
             snapshot.getPath(),
+            snapshot.getDestinations(),
             routeEngine,
             routeBenchmarkObservedEdgeCounts
         );
@@ -688,19 +694,41 @@ public class DrewsHelperPlugin extends Plugin
         }
     }
 
-    private static final class RouteBenchmarkCapture
+    static final class RouteBenchmarkCapture
     {
         private final List<WorldPoint> primaryPath;
         private final DrewsHelperWalkingRouteEngine routeEngine;
         private final Map<String, Integer> observedEdgeCounts;
+        private final WorldPoint start;
         private final WorldPoint target;
+        private final List<RouteBenchmarkSegment> segments;
         private final int maxMovementTicks;
         private final List<WorldPoint> actualPath = new ArrayList<>();
+        private WorldPoint pendingLastPoint;
+        private int pendingTicks;
+        private int pendingMoves;
         private String observedEdgeKey;
         private int observedEdgeRepeatCount;
 
-        private RouteBenchmarkCapture(
+        RouteBenchmarkCapture(
             List<WorldPoint> primaryPath,
+            DrewsHelperWalkingRouteEngine routeEngine,
+            Map<String, Integer> observedEdgeCounts
+        )
+        {
+            this(
+                primaryPath,
+                primaryPath == null || primaryPath.isEmpty()
+                    ? Collections.emptyList()
+                    : Collections.singletonList(primaryPath.get(primaryPath.size() - 1)),
+                routeEngine,
+                observedEdgeCounts
+            );
+        }
+
+        RouteBenchmarkCapture(
+            List<WorldPoint> primaryPath,
+            List<WorldPoint> destinations,
             DrewsHelperWalkingRouteEngine routeEngine,
             Map<String, Integer> observedEdgeCounts
         )
@@ -708,7 +736,9 @@ public class DrewsHelperPlugin extends Plugin
             this.primaryPath = new ArrayList<>(primaryPath);
             this.routeEngine = routeEngine;
             this.observedEdgeCounts = observedEdgeCounts;
+            this.start = primaryPath.get(0);
             this.target = primaryPath.get(primaryPath.size() - 1);
+            this.segments = buildSegments(this.primaryPath, destinations);
             this.maxMovementTicks = Math.max(
                 50,
                 DrewsHelperRouteBenchmark.pathDistance(primaryPath) + 25
@@ -717,17 +747,20 @@ public class DrewsHelperPlugin extends Plugin
 
         private String startTraceLine()
         {
-            return "trace start=" + DrewsHelperRouteBenchmark.formatPoint(primaryPath.get(0))
+            return "trace capture=pendingStart start=" + DrewsHelperRouteBenchmark.formatPoint(start)
                 + " target=" + DrewsHelperRouteBenchmark.formatPoint(target)
+                + " destinations=" + DrewsHelperRouteBenchmark.formatPathPrefix(
+                    segmentTargets(),
+                    MAX_WAYPOINTS
+                )
                 + " expectedPath10=" + DrewsHelperRouteBenchmark.formatPathPrefix(primaryPath);
         }
 
-        private RouteBenchmarkUpdate record(WorldPoint point)
+        RouteBenchmarkUpdate record(WorldPoint point)
         {
             if (actualPath.isEmpty())
             {
-                actualPath.add(point);
-                return null;
+                return recordPendingStart(point);
             }
 
             if (actualPath.get(actualPath.size() - 1).equals(point))
@@ -760,8 +793,54 @@ public class DrewsHelperPlugin extends Plugin
                 DrewsHelperRouteBenchmark.formatPathPrefix(actualPath),
                 DrewsHelperRouteBenchmark.formatDivergence(primaryPath, actualPath, reachedTarget || movementLimitReached),
                 candidateTrace(primaryPath, reachedTarget || movementLimitReached),
-                edgeValidationTrace(primaryPath, reachedTarget || movementLimitReached)
+                edgeValidationTrace(primaryPath, reachedTarget || movementLimitReached),
+                shapeTrace(primaryPath, reachedTarget),
+                shadowTrace(reachedTarget || movementLimitReached),
+                shapeShadowTrace(reachedTarget || movementLimitReached)
             );
+        }
+
+        private RouteBenchmarkUpdate recordPendingStart(WorldPoint point)
+        {
+            if (point == null)
+            {
+                return null;
+            }
+
+            int routeIndex = routePathIndex(primaryPath, point);
+            if (routeIndex >= 0 && routeIndex <= ROUTE_BENCHMARK_START_SYNC_TILE_LIMIT)
+            {
+                actualPath.addAll(primaryPath.subList(0, routeIndex + 1));
+                return null;
+            }
+
+            pendingTicks++;
+            if (pendingLastPoint == null)
+            {
+                pendingLastPoint = point;
+            }
+            else if (!pendingLastPoint.equals(point))
+            {
+                pendingMoves++;
+                pendingLastPoint = point;
+            }
+
+            int startDistance = tileDistance(point, start);
+            if (pendingTicks >= ROUTE_BENCHMARK_PENDING_START_TICK_LIMIT
+                || pendingMoves >= ROUTE_BENCHMARK_PENDING_START_MOVE_LIMIT
+                || startDistance > COMMITTED_ROUTE_RECALCULATE_DISTANCE)
+            {
+                return RouteBenchmarkUpdate.ignored(
+                    pendingTicks,
+                    "stale-start",
+                    "expectedStart=" + DrewsHelperRouteBenchmark.formatPoint(start)
+                        + " current=" + DrewsHelperRouteBenchmark.formatPoint(point)
+                        + " distance=" + startDistance
+                        + " pendingMoves=" + pendingMoves
+                );
+            }
+
+            return null;
         }
 
         private String candidateTrace(List<WorldPoint> predictedPath, boolean actualComplete)
@@ -779,15 +858,18 @@ public class DrewsHelperPlugin extends Plugin
             WorldPoint from = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex - 1);
             WorldPoint predicted = DrewsHelperRouteBenchmark.pointAt(predictedPath, divergenceIndex);
             WorldPoint actual = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex);
+            RouteBenchmarkSegment segment = segmentForPathIndex(divergenceIndex);
+            WorldPoint segmentTarget = segment.getTarget();
             if (from == null)
             {
                 return "none";
             }
 
             return "from=" + DrewsHelperRouteBenchmark.formatPoint(from)
-                + " target=" + DrewsHelperRouteBenchmark.formatPoint(target)
+                + " target=" + DrewsHelperRouteBenchmark.formatPoint(segmentTarget)
+                + finalTargetTrace(segmentTarget)
                 + " candidates=" + DrewsHelperRouteBenchmark.formatMoveCandidates(
-                    routeEngine.moveCandidates(from, target),
+                    routeEngine.moveCandidates(from, segmentTarget),
                     predicted,
                     actual
                 );
@@ -807,12 +889,14 @@ public class DrewsHelperPlugin extends Plugin
 
             WorldPoint from = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex - 1);
             WorldPoint actual = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex);
+            RouteBenchmarkSegment segment = segmentForPathIndex(divergenceIndex);
+            WorldPoint segmentTarget = segment.getTarget();
             if (from == null || actual == null)
             {
                 return "none";
             }
 
-            String key = edgeKey(from, actual, target);
+            String key = edgeKey(from, actual, segmentTarget);
             if (observedEdgeKey == null || !observedEdgeKey.equals(key))
             {
                 observedEdgeKey = key;
@@ -823,14 +907,171 @@ public class DrewsHelperPlugin extends Plugin
                 routeEngine.validateObservedEdge(
                     from,
                     actual,
-                    target,
-                    Math.max(0, predictedPath.size() - divergenceIndex)
+                    segmentTarget,
+                    segment.expectedRemainingFromFork(divergenceIndex)
                 );
             return DrewsHelperRouteBenchmark.formatObservedEdgeDiagnostic(
                 diagnostic,
                 observedEdgeRepeatCount,
                 OBSERVED_EDGE_OVERRIDE_REPEAT_THRESHOLD
             );
+        }
+
+        private String shapeTrace(List<WorldPoint> predictedPath, boolean reachedTarget)
+        {
+            if (!reachedTarget)
+            {
+                return "pending";
+            }
+
+            if (segments.size() <= 1)
+            {
+                return DrewsHelperRouteBenchmark.formatShapeDiagnostic(predictedPath, actualPath, true);
+            }
+
+            int divergenceIndex = DrewsHelperRouteBenchmark.firstDivergenceIndex(predictedPath, actualPath, true);
+            if (divergenceIndex < 0)
+            {
+                return "scope=segments count=" + segments.size() + " status=match winner=tie";
+            }
+
+            RouteBenchmarkSegment segment = segmentForPathIndex(divergenceIndex);
+            List<WorldPoint> expectedSegment = segment.expectedPath(predictedPath);
+            List<WorldPoint> actualSegment = actualSegmentPath(segment);
+            if (actualSegment.isEmpty())
+            {
+                return "scope=segment"
+                    + " target=" + DrewsHelperRouteBenchmark.formatPoint(segment.getTarget())
+                    + " status=unavailable reason=actual-segment-not-found";
+            }
+
+            return "scope=segment"
+                + " target=" + DrewsHelperRouteBenchmark.formatPoint(segment.getTarget())
+                + finalTargetTrace(segment.getTarget())
+                + " "
+                + DrewsHelperRouteBenchmark.formatShapeDiagnostic(expectedSegment, actualSegment, true);
+        }
+
+        private String shadowTrace(boolean actualComplete)
+        {
+            if (!actualComplete)
+            {
+                return "pending";
+            }
+
+            if (routeEngine == null)
+            {
+                return "status=unavailable reason=no-engine";
+            }
+
+            try
+            {
+                DrewsHelperRouteSnapshot shadowRoute =
+                    routeEngine.solveWithoutLocalWalkingOverrides(start, segmentTargets());
+                if (shadowRoute.getStatus() != DrewsHelperRouteStatus.READY)
+                {
+                    return "status=" + shadowRoute.getStatus()
+                        + " message=" + shadowRoute.getMessage();
+                }
+
+                return DrewsHelperRouteBenchmark.formatShadowRouteDiagnostic(
+                    primaryPath,
+                    shadowRoute.getPath(),
+                    actualPath,
+                    true
+                );
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.currentThread().interrupt();
+                return "status=interrupted";
+            }
+        }
+
+        private String shapeShadowTrace(boolean actualComplete)
+        {
+            if (!actualComplete)
+            {
+                return "pending";
+            }
+
+            if (routeEngine == null)
+            {
+                return "status=unavailable reason=no-engine";
+            }
+
+            try
+            {
+                DrewsHelperRouteSnapshot shapeShadowRoute =
+                    routeEngine.solveWithShapeRankingWithoutLocalWalkingOverrides(start, segmentTargets());
+                if (shapeShadowRoute.getStatus() != DrewsHelperRouteStatus.READY)
+                {
+                    return "status=" + shapeShadowRoute.getStatus()
+                        + " message=" + shapeShadowRoute.getMessage();
+                }
+
+                return DrewsHelperRouteBenchmark.formatShapeShadowRouteDiagnostic(
+                    primaryPath,
+                    shapeShadowRoute.getPath(),
+                    actualPath,
+                    true
+                );
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.currentThread().interrupt();
+                return "status=interrupted";
+            }
+        }
+
+        private List<WorldPoint> actualSegmentPath(RouteBenchmarkSegment segment)
+        {
+            WorldPoint segmentStart = DrewsHelperRouteBenchmark.pointAt(primaryPath, segment.getStartIndex());
+            int actualStartIndex = indexOfPathPoint(actualPath, segmentStart, 0);
+            if (actualStartIndex < 0)
+            {
+                return Collections.emptyList();
+            }
+
+            int actualEndIndex = indexOfPathPoint(actualPath, segment.getTarget(), actualStartIndex);
+            if (actualEndIndex < actualStartIndex)
+            {
+                return Collections.emptyList();
+            }
+
+            return actualPath.subList(actualStartIndex, actualEndIndex + 1);
+        }
+
+        private RouteBenchmarkSegment segmentForPathIndex(int pathIndex)
+        {
+            for (RouteBenchmarkSegment segment : segments)
+            {
+                if (pathIndex <= segment.getEndIndex())
+                {
+                    return segment;
+                }
+            }
+            return segments.get(segments.size() - 1);
+        }
+
+        private List<WorldPoint> segmentTargets()
+        {
+            List<WorldPoint> targets = new ArrayList<>(segments.size());
+            for (RouteBenchmarkSegment segment : segments)
+            {
+                targets.add(segment.getTarget());
+            }
+            return targets;
+        }
+
+        private String finalTargetTrace(WorldPoint segmentTarget)
+        {
+            if (target.equals(segmentTarget))
+            {
+                return "";
+            }
+
+            return " finalTarget=" + DrewsHelperRouteBenchmark.formatPoint(target);
         }
 
         private static String edgeKey(WorldPoint from, WorldPoint actual, WorldPoint target)
@@ -841,9 +1082,117 @@ public class DrewsHelperPlugin extends Plugin
                 + "|target="
                 + DrewsHelperRouteBenchmark.formatPoint(target);
         }
+
+        private static List<RouteBenchmarkSegment> buildSegments(
+            List<WorldPoint> primaryPath,
+            List<WorldPoint> destinations
+        )
+        {
+            if (primaryPath == null || primaryPath.isEmpty())
+            {
+                return Collections.emptyList();
+            }
+
+            List<RouteBenchmarkSegment> routeSegments = new ArrayList<>();
+            List<WorldPoint> orderedDestinations = destinations == null
+                ? Collections.emptyList()
+                : destinations;
+            int segmentStartIndex = 0;
+            for (WorldPoint destination : orderedDestinations)
+            {
+                int endIndex = indexOfPathPoint(primaryPath, destination, segmentStartIndex);
+                if (endIndex < segmentStartIndex)
+                {
+                    continue;
+                }
+
+                routeSegments.add(new RouteBenchmarkSegment(
+                    segmentStartIndex,
+                    endIndex,
+                    destination
+                ));
+                segmentStartIndex = endIndex;
+            }
+
+            int finalIndex = primaryPath.size() - 1;
+            WorldPoint finalTarget = primaryPath.get(finalIndex);
+            if (routeSegments.isEmpty() || routeSegments.get(routeSegments.size() - 1).getEndIndex() < finalIndex)
+            {
+                routeSegments.add(new RouteBenchmarkSegment(
+                    segmentStartIndex,
+                    finalIndex,
+                    finalTarget
+                ));
+            }
+
+            return Collections.unmodifiableList(routeSegments);
+        }
+
+        private static int indexOfPathPoint(List<WorldPoint> path, WorldPoint point, int startIndex)
+        {
+            if (path == null || point == null)
+            {
+                return -1;
+            }
+
+            for (int index = Math.max(0, startIndex); index < path.size(); index++)
+            {
+                if (point.equals(path.get(index)))
+                {
+                    return index;
+                }
+            }
+            return -1;
+        }
     }
 
-    private static final class RouteBenchmarkUpdate
+    private static final class RouteBenchmarkSegment
+    {
+        private final int startIndex;
+        private final int endIndex;
+        private final WorldPoint target;
+
+        private RouteBenchmarkSegment(int startIndex, int endIndex, WorldPoint target)
+        {
+            this.startIndex = startIndex;
+            this.endIndex = endIndex;
+            this.target = target;
+        }
+
+        private int getStartIndex()
+        {
+            return startIndex;
+        }
+
+        private int getEndIndex()
+        {
+            return endIndex;
+        }
+
+        private WorldPoint getTarget()
+        {
+            return target;
+        }
+
+        private int expectedRemainingFromFork(int divergenceIndex)
+        {
+            return Math.max(0, endIndex - divergenceIndex + 1);
+        }
+
+        private List<WorldPoint> expectedPath(List<WorldPoint> routePath)
+        {
+            if (routePath == null || routePath.isEmpty())
+            {
+                return Collections.emptyList();
+            }
+
+            int from = Math.max(0, Math.min(startIndex, routePath.size() - 1));
+            int to = Math.max(from, Math.min(endIndex, routePath.size() - 1));
+            return routePath.subList(from, to + 1);
+        }
+    }
+
+    static final class RouteBenchmarkUpdate
     {
         private final int movementTicks;
         private final boolean complete;
@@ -854,6 +1203,10 @@ public class DrewsHelperPlugin extends Plugin
         private final String divergenceTrace;
         private final String primaryCandidateTrace;
         private final String edgeValidationTrace;
+        private final String shapeTrace;
+        private final String shadowTrace;
+        private final String shapeShadowTrace;
+        private final String ignoredTrace;
 
         private RouteBenchmarkUpdate(
             int movementTicks,
@@ -864,7 +1217,10 @@ public class DrewsHelperPlugin extends Plugin
             String actualPathTrace,
             String divergenceTrace,
             String primaryCandidateTrace,
-            String edgeValidationTrace
+            String edgeValidationTrace,
+            String shapeTrace,
+            String shadowTrace,
+            String shapeShadowTrace
         )
         {
             this.movementTicks = movementTicks;
@@ -876,20 +1232,58 @@ public class DrewsHelperPlugin extends Plugin
             this.divergenceTrace = divergenceTrace;
             this.primaryCandidateTrace = primaryCandidateTrace;
             this.edgeValidationTrace = edgeValidationTrace;
+            this.shapeTrace = shapeTrace;
+            this.shadowTrace = shadowTrace;
+            this.shapeShadowTrace = shapeShadowTrace;
+            this.ignoredTrace = null;
         }
 
-        private boolean isComplete()
+        private RouteBenchmarkUpdate(int movementTicks, String reason, String ignoredTrace)
+        {
+            this.movementTicks = movementTicks;
+            this.complete = true;
+            this.reason = reason;
+            this.primaryReport = null;
+            this.primaryPathTrace = "";
+            this.actualPathTrace = "";
+            this.divergenceTrace = "";
+            this.primaryCandidateTrace = "";
+            this.edgeValidationTrace = "";
+            this.shapeTrace = "";
+            this.shadowTrace = "";
+            this.shapeShadowTrace = "";
+            this.ignoredTrace = ignoredTrace;
+        }
+
+        private static RouteBenchmarkUpdate ignored(int movementTicks, String reason, String ignoredTrace)
+        {
+            return new RouteBenchmarkUpdate(movementTicks, reason, ignoredTrace);
+        }
+
+        boolean isComplete()
         {
             return complete;
         }
 
-        private String overlaySummary()
+        String overlaySummary()
         {
+            if (ignoredTrace != null)
+            {
+                return "Benchmark ignored: " + reason;
+            }
+
             return "Route " + primaryReport.getFirstTenMatches() + "/" + primaryReport.getFirstTenCompared();
         }
 
-        private String logLine()
+        String logLine()
         {
+            if (ignoredTrace != null)
+            {
+                return "ticks=" + movementTicks
+                    + " reason=" + reason
+                    + " ignored={" + ignoredTrace + "}";
+            }
+
             return "ticks=" + movementTicks
                 + " reason=" + reason
                 + " route={" + primaryReport.summary() + "}"
@@ -897,7 +1291,10 @@ public class DrewsHelperPlugin extends Plugin
                 + " actualPath10=" + actualPathTrace
                 + " divergence={" + divergenceTrace + "}"
                 + " candidates={" + primaryCandidateTrace + "}"
-                + " edgeValidation={" + edgeValidationTrace + "}";
+                + " edgeValidation={" + edgeValidationTrace + "}"
+                + " shape={" + shapeTrace + "}"
+                + " shadow={" + shadowTrace + "}"
+                + " shapeShadow={" + shapeShadowTrace + "}";
         }
     }
 

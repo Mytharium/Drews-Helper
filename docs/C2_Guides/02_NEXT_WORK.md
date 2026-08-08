@@ -163,6 +163,76 @@ Next route work:
 - Live-test world-map and in-scene path drawing after setting two or more waypoints.
 - Keep `Routing Options` -> `Benchmark Movement` ON only while testing overlay-vs-client movement. There is no route-solver selector anymore; Drew uses the single A* route solver with client-style final path ranking.
 - For the next benchmark run, use the coordinate trace fields: compare `start`, `target`, `expectedPath10`, `actualPath10`, `divergence`, `candidates`, and `edgeValidation`. The candidate trace shows the exact fork tile, the legal moves in solver order, which tile Drew predicted, and which tile the client actually chose. `edgeValidation` shows whether the actual client edge is legal in Drew's collision graph, the graph continuation distance from that actual tile, whether the continuation is longer than the displayed route from the fork, the session repeat count, and `overrideCandidate`.
-- Target-aware local route overrides are now built for the two repeated live-client branches. Rerun Path 1 toward `(2932,3214,0)` and Path 3 toward `(2970,3229,0)` once each with `Benchmark Movement` ON, Run OFF, ground-click only, and no config changes mid-walk. The expected result is no late divergence at the old fork tiles. If either route still diverges, use `DREW_ROUTE_BENCH` `divergence`, `candidates`, and `edgeValidation` to identify the next edge instead of adding broad collision-map changes.
+- Target-aware local route overrides are now built for the repeated live-client branches. Path 3 toward `(2970,3229,0)` already confirmed `full=true maxDev=0`; rerun Path 1 toward `(2932,3214,0)` once after the tail-preference build with `Benchmark Movement` ON, Run OFF, ground-click only, and no config changes mid-walk. Expected: no divergence at the old fork `(2939,3223,0)` and no late tail divergence from `(2935,3218,0)`. If it still diverges, use `DREW_ROUTE_BENCH` `divergence`, `candidates`, and `edgeValidation` to identify the next edge instead of adding broad collision-map changes.
 - Do not add teleports/fast travel until the walking-only route is stable.
 - Plane changes need a deliberate ladder/stair/transport model before they can work.
+
+### Next live route check after D-0046
+- Restart the Drew's Helper dev client.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Run Path 1 only to exact target (2932,3214,0).
+- No return leg is needed.
+- Expected benchmark result: full=true, maxDev=0, divergence={none}.
+- If another late divergence appears, inspect the new DREW_ROUTE_BENCH edgeValidation line and add only the next repeated target-aware edge.
+
+### Next live route check after D-0047
+- Restart the Drew's Helper dev client.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Run these outbound-only control paths once each:
+  - Path 1: start near (2942,3243,0), target (2932,3214,0).
+  - Path 2: start near (2942,3243,0), target (2955,3206,0).
+  - Path 3: start near (2942,3243,0), target (2970,3229,0).
+- Let the player fully stop before each next click. Return legs are not needed for the control set.
+- Expected for Path 1 and Path 3: `full=true`, `maxDev=0`, `divergence={none}`. Path 2 remains the clean control route.
+- If returning anyway, stale return movement should now log `reason=stale-start ignored={...}` instead of producing a false `idx=0` route failure.
+- After the three controls, gather 5-10 nearby random outbound routes with the same settings. The useful fields are `divergence={...}`, `edgeValidation={...}`, and `shape={... winner=...}`.
+- Do not promote the shape ranker or delete the target-aware overrides until the diagnostic winner agrees with the live client across the controls plus the random-route sample.
+
+### Next live route check after D-0048
+- Restart the Drew's Helper dev client.
+- With Benchmark Movement ON, Run OFF, ground-click only, rerun the three controls from the same start: Point 1 (2932,3214,0), Point 2 (2955,3206,0), Point 3 (2970,3229,0).
+- Then collect 5 nearby random routes, but avoid object/tree clicks and random-event interruptions for the shape-ranker sample.
+- If a random event happens again, confirm the waypoint markers and connector route tiles both recover after the client returns in-game.
+
+### Next live route check after D-0049
+- Restart the Drew's Helper dev client.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- For separate control samples, place and walk one waypoint at a time from the same start:
+  - Point 1: (2932,3214,0).
+  - Point 2: (2955,3206,0).
+  - Point 3: (2970,3229,0).
+- Turn Benchmark Movement OFF while returning/repositioning to the start. Turn it back ON only after the character is fully stopped and the single control waypoint is active.
+- For the random-chain sample, placing five waypoints at once is now acceptable. The D-0049 benchmark log is segment-aware and should show `target=<current segment waypoint>` plus `finalTarget=<last waypoint>` when a divergence happens before the final waypoint.
+- Useful fields are `divergence={...}`, `candidates={... target=... finalTarget=...}`, `edgeValidation={... target=...}`, and `shape={scope=segment ...}`.
+- Do not promote the shape ranker or remove target-aware overrides until segment-aware logs agree with live movement across the controls plus random chains.
+
+### Next live route check after D-0050
+- Restart the Drew's Helper dev client.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Re-run the same separate controls from the shared start:
+  - Point 1: (2932,3214,0).
+  - Point 2: (2955,3206,0).
+  - Point 3: (2970,3229,0).
+- Turn Benchmark Movement OFF while returning/repositioning to the start. Turn it back ON only after stopped and the single control waypoint is active.
+- Then clear all, place five nearby random waypoints, turn Benchmark Movement ON, and walk the full chain.
+- The key new field is `shadow={...}`:
+  - `overridesMatter=false` means the no-override route matched the visible route.
+  - `overridesMatter=true winner=visible` means the current local override still matches live movement better than the no-override baseline.
+  - `overridesMatter=true winner=shadow` means the no-override/general route matched actual movement better and the override should be reconsidered.
+  - `winner=tie` means both visible and no-override routes scored the same against actual movement.
+- Do not remove the Path 1 / Path 3 local overrides until D-0050 shadow data shows the no-override/general route is equal or better on those exact controls and does not regress random chains.
+
+### Next live route check after D-0051
+- Restart the Drew's Helper dev client.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Re-run the same separate controls from the shared start:
+  - Point 1: (2932,3214,0).
+  - Point 2: (2955,3206,0).
+  - Point 3: (2970,3229,0).
+- Turn Benchmark Movement OFF while returning/repositioning to the start. Turn it back ON only after stopped and the single control waypoint is active.
+- Then clear all, place five nearby random waypoints, turn Benchmark Movement ON, and walk the full chain.
+- Compare these fields on completed target reports:
+  - `shadow={...}`: no-overrides baseline using the current client-style ranker.
+  - `shapeShadow={...}`: no-overrides diagnostic route using segment line-shape tie ranking.
+  - `shape={...}`: displayed route versus actual client movement.
+- Early D-0051 unit evidence says the full-route line-shape ranker can overcorrect before a live fork, so treat `shapeShadow` as telemetry only. Promote nothing until repeated live samples show `shapeShadow` wins without creating new early divergence.

@@ -314,6 +314,101 @@ public final class DrewsHelperRouteBenchmark
             .toString();
     }
 
+    public static String formatShapeDiagnostic(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualReachedTarget
+    )
+    {
+        if (!actualReachedTarget)
+        {
+            return "pending";
+        }
+
+        ShapeStats expected = shapeStats(expectedPath);
+        ShapeStats actual = shapeStats(actualPath);
+        if (!expected.available || !actual.available)
+        {
+            return "status=unavailable";
+        }
+
+        int lineErrorDelta = actual.lineError - expected.lineError;
+        return "expected={lineError=" + expected.lineError
+            + " diag=" + expected.diagonalSteps
+            + " card=" + expected.cardinalSteps
+            + " turns=" + expected.turns
+            + "}"
+            + " actual={lineError=" + actual.lineError
+            + " diag=" + actual.diagonalSteps
+            + " card=" + actual.cardinalSteps
+            + " turns=" + actual.turns
+            + "}"
+            + " lineErrorDelta=" + lineErrorDelta
+            + " winner=" + shapeWinner(lineErrorDelta);
+    }
+
+    public static String formatShadowRouteDiagnostic(
+        List<WorldPoint> visiblePath,
+        List<WorldPoint> shadowPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete
+    )
+    {
+        if (!actualComplete)
+        {
+            return "pending";
+        }
+
+        List<WorldPoint> visible = visiblePath == null ? Collections.emptyList() : visiblePath;
+        List<WorldPoint> shadow = shadowPath == null ? Collections.emptyList() : shadowPath;
+        List<WorldPoint> actual = actualPath == null ? Collections.emptyList() : actualPath;
+        if (shadow.isEmpty())
+        {
+            return "status=not-found";
+        }
+
+        Report visibleReport = compare(visible, actual);
+        Report shadowReport = compare(shadow, actual);
+        boolean overridesMatter = !visible.equals(shadow);
+        return "status=ready"
+            + " overridesMatter=" + overridesMatter
+            + " route={" + shadowReport.summary() + "}"
+            + " visibleVsShadow={" + formatDivergence(visible, shadow, true) + "}"
+            + " shadowVsActual={" + formatDivergence(shadow, actual, true) + "}"
+            + " winner=" + shadowWinner(visibleReport, shadowReport);
+    }
+
+    public static String formatShapeShadowRouteDiagnostic(
+        List<WorldPoint> visiblePath,
+        List<WorldPoint> shapeShadowPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete
+    )
+    {
+        if (!actualComplete)
+        {
+            return "pending";
+        }
+
+        List<WorldPoint> visible = visiblePath == null ? Collections.emptyList() : visiblePath;
+        List<WorldPoint> shapeShadow = shapeShadowPath == null ? Collections.emptyList() : shapeShadowPath;
+        List<WorldPoint> actual = actualPath == null ? Collections.emptyList() : actualPath;
+        if (shapeShadow.isEmpty())
+        {
+            return "status=not-found";
+        }
+
+        Report visibleReport = compare(visible, actual);
+        Report shapeShadowReport = compare(shapeShadow, actual);
+        boolean differsFromVisible = !visible.equals(shapeShadow);
+        return "status=ready"
+            + " differsFromVisible=" + differsFromVisible
+            + " route={" + shapeShadowReport.summary() + "}"
+            + " visibleVsShapeShadow={" + formatDivergence(visible, shapeShadow, true) + "}"
+            + " shapeShadowVsActual={" + formatDivergence(shapeShadow, actual, true) + "}"
+            + " winner=" + shapeShadowWinner(visibleReport, shapeShadowReport);
+    }
+
     public static WorldPoint pointAt(List<WorldPoint> path, int index)
     {
         if (path == null || index < 0 || index >= path.size())
@@ -397,6 +492,116 @@ public final class DrewsHelperRouteBenchmark
             }
         }
         return maxDeviation;
+    }
+
+    private static ShapeStats shapeStats(List<WorldPoint> path)
+    {
+        List<WorldPoint> points = path == null ? Collections.emptyList() : path;
+        if (points.size() < 2)
+        {
+            return ShapeStats.unavailable();
+        }
+
+        WorldPoint start = points.get(0);
+        WorldPoint target = points.get(points.size() - 1);
+        int totalX = target.getX() - start.getX();
+        int totalY = target.getY() - start.getY();
+        int majorAxis = Math.max(Math.abs(totalX), Math.abs(totalY));
+        int lineError = 0;
+        int diagonalSteps = 0;
+        int cardinalSteps = 0;
+
+        for (int index = 0; index < points.size(); index++)
+        {
+            WorldPoint point = points.get(index);
+            int relativeX = point.getX() - start.getX();
+            int relativeY = point.getY() - start.getY();
+            if (majorAxis > 0)
+            {
+                int cross = Math.abs(relativeX * totalY - relativeY * totalX);
+                lineError += cross / majorAxis;
+            }
+
+            if (index == 0)
+            {
+                continue;
+            }
+
+            WorldPoint previous = points.get(index - 1);
+            int stepX = Math.abs(point.getX() - previous.getX());
+            int stepY = Math.abs(point.getY() - previous.getY());
+            if (stepX != 0 && stepY != 0)
+            {
+                diagonalSteps++;
+            }
+            else if (stepX != 0 || stepY != 0)
+            {
+                cardinalSteps++;
+            }
+        }
+
+        return new ShapeStats(lineError, diagonalSteps, cardinalSteps, turnCount(points), true);
+    }
+
+    private static String shapeWinner(int lineErrorDelta)
+    {
+        if (lineErrorDelta < 0)
+        {
+            return "actual";
+        }
+
+        if (lineErrorDelta > 0)
+        {
+            return "expected";
+        }
+
+        return "tie";
+    }
+
+    private static String shadowWinner(Report visibleReport, Report shadowReport)
+    {
+        int visibleScore = routeFitScore(visibleReport);
+        int shadowScore = routeFitScore(shadowReport);
+        if (visibleScore < shadowScore)
+        {
+            return "visible";
+        }
+
+        if (shadowScore < visibleScore)
+        {
+            return "shadow";
+        }
+
+        return "tie";
+    }
+
+    private static String shapeShadowWinner(Report visibleReport, Report shapeShadowReport)
+    {
+        int visibleScore = routeFitScore(visibleReport);
+        int shapeShadowScore = routeFitScore(shapeShadowReport);
+        if (visibleScore < shapeShadowScore)
+        {
+            return "visible";
+        }
+
+        if (shapeShadowScore < visibleScore)
+        {
+            return "shapeShadow";
+        }
+
+        return "tie";
+    }
+
+    private static int routeFitScore(Report report)
+    {
+        int lengthDelta = Math.abs(report.getActualPathLength() - report.getExpectedPathLength());
+        int firstTenMisses = report.getFirstTenCompared() - report.getFirstTenMatches();
+        int turnDelta = Math.abs(report.getActualTurnCount() - report.getExpectedTurnCount());
+        return (report.isFullTileSequenceMatches() ? 0 : 1_000_000)
+            + report.getMaxLateralDeviation() * 1_000
+            + lengthDelta * 100
+            + firstTenMisses * 10
+            + turnDelta;
     }
 
     private static int tileDistance(WorldPoint first, WorldPoint second)
@@ -522,6 +727,29 @@ public final class DrewsHelperRouteBenchmark
                 + " lenDelta=" + (actualPathLength - expectedPathLength)
                 + " maxDev=" + maxLateralDeviation
                 + " turnDelta=" + (actualTurnCount - expectedTurnCount);
+        }
+    }
+
+    private static final class ShapeStats
+    {
+        private final int lineError;
+        private final int diagonalSteps;
+        private final int cardinalSteps;
+        private final int turns;
+        private final boolean available;
+
+        private ShapeStats(int lineError, int diagonalSteps, int cardinalSteps, int turns, boolean available)
+        {
+            this.lineError = lineError;
+            this.diagonalSteps = diagonalSteps;
+            this.cardinalSteps = cardinalSteps;
+            this.turns = turns;
+            this.available = available;
+        }
+
+        private static ShapeStats unavailable()
+        {
+            return new ShapeStats(0, 0, 0, 0, false);
         }
     }
 

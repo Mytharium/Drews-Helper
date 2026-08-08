@@ -234,6 +234,10 @@ public class DrewsHelperWalkingRouteEngineTest
         assertEquals(new WorldPoint(2937, 3220, 0), path1.getPath().get(23));
         assertEquals(new WorldPoint(2936, 3219, 0), path1.getPath().get(24));
         assertEquals(new WorldPoint(2935, 3218, 0), path1.getPath().get(25));
+        assertEquals(new WorldPoint(2934, 3217, 0), path1.getPath().get(26));
+        assertEquals(new WorldPoint(2933, 3216, 0), path1.getPath().get(27));
+        assertEquals(new WorldPoint(2932, 3215, 0), path1.getPath().get(28));
+        assertEquals(new WorldPoint(2932, 3214, 0), path1.getPath().get(29));
 
         DrewsHelperRouteSnapshot path3 = engine.solve(
             new WorldPoint(2942, 3243, 0),
@@ -247,6 +251,71 @@ public class DrewsHelperWalkingRouteEngineTest
         assertEquals(new WorldPoint(2968, 3230, 0), path3.getPath().get(27));
         assertEquals(new WorldPoint(2969, 3229, 0), path3.getPath().get(28));
         assertEquals(new WorldPoint(2970, 3229, 0), path3.getPath().get(29));
+    }
+
+    @Test
+    public void exposesShadowRouteWithoutTargetAwareLocalOverrides() throws Exception
+    {
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(
+            DrewsHelperCollisionMap.loadDefault(),
+            DrewsHelperTransportGraph.loadDefault(false)
+        );
+
+        WorldPoint start = new WorldPoint(2942, 3243, 0);
+        WorldPoint path1Target = new WorldPoint(2932, 3214, 0);
+        DrewsHelperRouteSnapshot visiblePath1 = engine.solve(start, Collections.singletonList(path1Target));
+        DrewsHelperRouteSnapshot shadowPath1 =
+            engine.solveWithoutLocalWalkingOverrides(start, Collections.singletonList(path1Target));
+
+        assertEquals(DrewsHelperRouteStatus.READY, shadowPath1.getStatus());
+        assertEquals(visiblePath1.getWalkingDistance(), shadowPath1.getWalkingDistance());
+        assertFalse(visiblePath1.getPath().equals(shadowPath1.getPath()));
+        assertEquals(new WorldPoint(2939, 3223, 0), shadowPath1.getPath().get(20));
+        assertEquals(new WorldPoint(2938, 3222, 0), shadowPath1.getPath().get(21));
+
+        WorldPoint path3Target = new WorldPoint(2970, 3229, 0);
+        DrewsHelperRouteSnapshot visiblePath3 = engine.solve(start, Collections.singletonList(path3Target));
+        DrewsHelperRouteSnapshot shadowPath3 =
+            engine.solveWithoutLocalWalkingOverrides(start, Collections.singletonList(path3Target));
+
+        assertEquals(DrewsHelperRouteStatus.READY, shadowPath3.getStatus());
+        assertEquals(visiblePath3.getWalkingDistance(), shadowPath3.getWalkingDistance());
+        assertFalse(visiblePath3.getPath().equals(shadowPath3.getPath()));
+        assertEquals(new WorldPoint(2966, 3231, 0), shadowPath3.getPath().get(25));
+        assertEquals(new WorldPoint(2967, 3230, 0), shadowPath3.getPath().get(26));
+    }
+
+    @Test
+    public void shapeRankingShadowExposesDistinctSameLengthRandomChainRoute() throws Exception
+    {
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(
+            DrewsHelperCollisionMap.loadDefault(),
+            DrewsHelperTransportGraph.loadDefault(false)
+        );
+
+        WorldPoint start = new WorldPoint(2942, 3243, 0);
+        List<WorldPoint> targets = Arrays.asList(
+            new WorldPoint(2966, 3270, 0),
+            new WorldPoint(2960, 3287, 0),
+            new WorldPoint(2990, 3304, 0),
+            new WorldPoint(2999, 3268, 0),
+            new WorldPoint(3003, 3234, 0)
+        );
+
+        DrewsHelperRouteSnapshot visibleRoute = engine.solve(start, targets);
+        DrewsHelperRouteSnapshot shapeShadowRoute =
+            engine.solveWithShapeRankingWithoutLocalWalkingOverrides(start, targets);
+
+        assertEquals(DrewsHelperRouteStatus.READY, visibleRoute.getStatus());
+        assertEquals(DrewsHelperRouteStatus.READY, shapeShadowRoute.getStatus());
+        assertEquals(visibleRoute.getWalkingDistance(), shapeShadowRoute.getWalkingDistance());
+        assertFalse(visibleRoute.getPath().equals(shapeShadowRoute.getPath()));
+        assertEquals(new WorldPoint(2996, 3288, 0), visibleRoute.getPath().get(104));
+        assertEquals(new WorldPoint(2997, 3287, 0), visibleRoute.getPath().get(105));
+        assertEquals(
+            new WorldPoint(2994, 3287, 0),
+            shapeShadowRoute.getPath().get(105)
+        );
     }
 
     @Test
@@ -267,6 +336,33 @@ public class DrewsHelperWalkingRouteEngineTest
         );
         assertEquals(new WorldPoint(2939, 3222, 0), normal.get(0).getDestination());
         assertFalse(normal.get(0).getPreferencePenalty() < 0);
+
+        List<DrewsHelperWalkingRouteEngine.MoveCandidate> tail = engine.moveCandidates(
+            new WorldPoint(2935, 3218, 0),
+            new WorldPoint(2932, 3214, 0)
+        );
+        assertEquals(new WorldPoint(2934, 3217, 0), tail.get(0).getDestination());
+        assertTrue(tail.get(0).getPreferencePenalty() < 0);
+
+        List<DrewsHelperWalkingRouteEngine.MoveCandidate> tailNormal = engine.moveCandidates(
+            new WorldPoint(2935, 3218, 0),
+            new WorldPoint(2932, 3215, 0)
+        );
+        assertEquals(new WorldPoint(2934, 3217, 0), tailNormal.get(0).getDestination());
+        assertFalse(tailNormal.get(0).getPreferencePenalty() < 0);
+
+        List<DrewsHelperWalkingRouteEngine.MoveCandidate> finalTail = engine.moveCandidates(
+            new WorldPoint(2934, 3217, 0),
+            new WorldPoint(2932, 3214, 0)
+        );
+        assertEquals(new WorldPoint(2933, 3216, 0), finalTail.get(0).getDestination());
+        assertTrue(finalTail.get(0).getPreferencePenalty() < 0);
+
+        List<DrewsHelperWalkingRouteEngine.MoveCandidate> finalTailNormal = engine.moveCandidates(
+            new WorldPoint(2934, 3217, 0),
+            new WorldPoint(2932, 3215, 0)
+        );
+        assertFalse(finalTailNormal.get(0).getPreferencePenalty() < 0);
     }
 
     @Test

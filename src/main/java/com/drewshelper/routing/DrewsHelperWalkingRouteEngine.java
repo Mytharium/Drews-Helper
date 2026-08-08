@@ -76,6 +76,76 @@ public final class DrewsHelperWalkingRouteEngine
         );
     }
 
+    public DrewsHelperRouteSnapshot solveWithoutLocalWalkingOverrides(
+        WorldPoint start,
+        List<WorldPoint> destinations
+    ) throws InterruptedException
+    {
+        if (start == null)
+        {
+            return DrewsHelperRouteSnapshot.noPlayer();
+        }
+
+        if (destinations.isEmpty())
+        {
+            return DrewsHelperRouteSnapshot.noWaypoints();
+        }
+
+        RouteComputation primary = solveRoute(start, destinations, false);
+
+        if (!primary.isRouteFound())
+        {
+            return DrewsHelperRouteSnapshot.noPath(
+                primary.path,
+                destinations,
+                primary.message,
+                primary.walkingDistance
+            );
+        }
+
+        return DrewsHelperRouteSnapshot.ready(
+            primary.path,
+            destinations,
+            primary.walkingDistance,
+            primary.metrics
+        );
+    }
+
+    public DrewsHelperRouteSnapshot solveWithShapeRankingWithoutLocalWalkingOverrides(
+        WorldPoint start,
+        List<WorldPoint> destinations
+    ) throws InterruptedException
+    {
+        if (start == null)
+        {
+            return DrewsHelperRouteSnapshot.noPlayer();
+        }
+
+        if (destinations.isEmpty())
+        {
+            return DrewsHelperRouteSnapshot.noWaypoints();
+        }
+
+        RouteComputation primary = solveRoute(start, destinations, false, RouteRankingMode.SHAPE);
+
+        if (!primary.isRouteFound())
+        {
+            return DrewsHelperRouteSnapshot.noPath(
+                primary.path,
+                destinations,
+                primary.message,
+                primary.walkingDistance
+            );
+        }
+
+        return DrewsHelperRouteSnapshot.ready(
+            primary.path,
+            destinations,
+            primary.walkingDistance,
+            primary.metrics
+        );
+    }
+
     public List<MoveCandidate> moveCandidates(WorldPoint from, WorldPoint target)
     {
         if (from == null || target == null)
@@ -173,6 +243,25 @@ public final class DrewsHelperWalkingRouteEngine
 
     private RouteComputation solveRoute(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
     {
+        return solveRoute(start, destinations, true, RouteRankingMode.CLIENT);
+    }
+
+    private RouteComputation solveRoute(
+        WorldPoint start,
+        List<WorldPoint> destinations,
+        boolean localWalkingOverridesEnabled
+    ) throws InterruptedException
+    {
+        return solveRoute(start, destinations, localWalkingOverridesEnabled, RouteRankingMode.CLIENT);
+    }
+
+    private RouteComputation solveRoute(
+        WorldPoint start,
+        List<WorldPoint> destinations,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
+    ) throws InterruptedException
+    {
         long startedAt = System.nanoTime();
         List<WorldPoint> route = new ArrayList<>();
         WorldPoint segmentStart = start;
@@ -182,7 +271,7 @@ public final class DrewsHelperWalkingRouteEngine
         for (int index = 0; index < destinations.size(); index++)
         {
             WorldPoint target = destinations.get(index);
-            SearchResult segment = solveSegmentAStar(segmentStart, target);
+            SearchResult segment = solveSegmentAStar(segmentStart, target, localWalkingOverridesEnabled, rankingMode);
             expandedNodes += segment.expandedNodes;
             if (!segment.isFound())
             {
@@ -223,6 +312,25 @@ public final class DrewsHelperWalkingRouteEngine
     }
 
     private SearchResult solveSegmentAStar(WorldPoint start, WorldPoint target) throws InterruptedException
+    {
+        return solveSegmentAStar(start, target, true, RouteRankingMode.CLIENT);
+    }
+
+    private SearchResult solveSegmentAStar(
+        WorldPoint start,
+        WorldPoint target,
+        boolean localWalkingOverridesEnabled
+    ) throws InterruptedException
+    {
+        return solveSegmentAStar(start, target, localWalkingOverridesEnabled, RouteRankingMode.CLIENT);
+    }
+
+    private SearchResult solveSegmentAStar(
+        WorldPoint start,
+        WorldPoint target,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
+    ) throws InterruptedException
     {
         if (start.getPlane() != target.getPlane() && transportGraph.isEmpty())
         {
@@ -302,13 +410,13 @@ public final class DrewsHelperWalkingRouteEngine
                 return SearchResult.notFound(expanded);
             }
 
-            addNeighbors(node, context, open, bestNodes);
+            addNeighbors(node, context, open, bestNodes, localWalkingOverridesEnabled);
         }
 
         if (bestTarget != null)
         {
             SearchResult result = SearchResult.found(bestTarget.path(), expanded);
-            return preferClientStyleShortestPath(start, target, result);
+            return preferClientStyleShortestPath(start, target, result, localWalkingOverridesEnabled, rankingMode);
         }
 
         return SearchResult.notFound(expanded);
@@ -318,10 +426,11 @@ public final class DrewsHelperWalkingRouteEngine
         SearchNode node,
         SearchContext context,
         PriorityQueue<SearchNode> open,
-        Map<WorldPoint, SearchNode> bestNodes
+        Map<WorldPoint, SearchNode> bestNodes,
+        boolean localWalkingOverridesEnabled
     )
     {
-        for (RouteStep step : legalSteps(node.point, context.target))
+        for (RouteStep step : legalSteps(node.point, context.target, localWalkingOverridesEnabled))
         {
             addNeighbor(node, step, context, open, bestNodes);
         }
@@ -330,7 +439,9 @@ public final class DrewsHelperWalkingRouteEngine
     private SearchResult preferClientStyleShortestPath(
         WorldPoint start,
         WorldPoint target,
-        SearchResult initialResult
+        SearchResult initialResult,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
     )
     {
         if (!initialResult.isFound() || initialResult.path.size() - 1 > MAX_A_STAR_TIE_REFINEMENT_DISTANCE)
@@ -341,7 +452,8 @@ public final class DrewsHelperWalkingRouteEngine
         ReverseDistanceResult distances = reverseDistancesToTarget(
             target,
             initialResult.path.size() - 1,
-            SearchBounds.aroundPath(initialResult.path)
+            SearchBounds.aroundPath(initialResult.path),
+            localWalkingOverridesEnabled
         );
         Integer startDistance = distances.distances.get(start);
         if (startDistance == null || startDistance != initialResult.path.size() - 1)
@@ -355,14 +467,29 @@ public final class DrewsHelperWalkingRouteEngine
         int remainingDistance = startDistance;
         while (remainingDistance > 0)
         {
-            WorldPoint next = null;
-            for (RouteStep step : legalSteps(current, target))
+            RouteStep next = null;
+            for (RouteStep step : legalSteps(current, target, localWalkingOverridesEnabled))
             {
                 Integer stepDistance = distances.distances.get(step.destination);
                 if (stepDistance != null && stepDistance == remainingDistance - 1)
                 {
-                    next = step.destination;
-                    break;
+                    if (next == null || isBetterShortestStep(
+                        rankedPath,
+                        current,
+                        step,
+                        next,
+                        start,
+                        target,
+                        rankingMode
+                    ))
+                    {
+                        next = step;
+                    }
+
+                    if (rankingMode == RouteRankingMode.CLIENT)
+                    {
+                        break;
+                    }
                 }
             }
 
@@ -371,8 +498,8 @@ public final class DrewsHelperWalkingRouteEngine
                 return initialResult.withAdditionalExpanded(distances.expandedNodes);
             }
 
-            rankedPath.add(next);
-            current = next;
+            rankedPath.add(next.destination);
+            current = next.destination;
             remainingDistance--;
         }
 
@@ -384,10 +511,88 @@ public final class DrewsHelperWalkingRouteEngine
         return SearchResult.found(rankedPath, initialResult.expandedNodes + distances.expandedNodes);
     }
 
+    private static boolean isBetterShortestStep(
+        List<WorldPoint> rankedPath,
+        WorldPoint current,
+        RouteStep candidate,
+        RouteStep incumbent,
+        WorldPoint segmentStart,
+        WorldPoint target,
+        RouteRankingMode rankingMode
+    )
+    {
+        if (rankingMode != RouteRankingMode.SHAPE)
+        {
+            return false;
+        }
+
+        int candidateScore = shapeStepScore(rankedPath, current, candidate, segmentStart, target);
+        int incumbentScore = shapeStepScore(rankedPath, current, incumbent, segmentStart, target);
+        if (candidateScore != incumbentScore)
+        {
+            return candidateScore < incumbentScore;
+        }
+
+        if (candidate.preferencePenalty != incumbent.preferencePenalty)
+        {
+            return candidate.preferencePenalty < incumbent.preferencePenalty;
+        }
+
+        return candidate.order < incumbent.order;
+    }
+
+    private static int shapeStepScore(
+        List<WorldPoint> rankedPath,
+        WorldPoint current,
+        RouteStep step,
+        WorldPoint segmentStart,
+        WorldPoint target
+    )
+    {
+        int lineError = shapeLineError(segmentStart, target, step.destination);
+        int turnPenalty = stepCreatesTurn(rankedPath, current, step) ? 1 : 0;
+        int reversePenalty = stepMovesAwayFromTarget(current, step.destination, target) ? 1 : 0;
+        return lineError * 10 + reversePenalty * 10 + turnPenalty * 2 + step.preferencePenalty;
+    }
+
+    private static int shapeLineError(WorldPoint start, WorldPoint target, WorldPoint point)
+    {
+        int totalX = target.getX() - start.getX();
+        int totalY = target.getY() - start.getY();
+        int majorAxis = Math.max(Math.abs(totalX), Math.abs(totalY));
+        if (majorAxis == 0)
+        {
+            return 0;
+        }
+
+        int relativeX = point.getX() - start.getX();
+        int relativeY = point.getY() - start.getY();
+        return Math.abs(relativeX * totalY - relativeY * totalX) / majorAxis;
+    }
+
+    private static boolean stepCreatesTurn(List<WorldPoint> rankedPath, WorldPoint current, RouteStep step)
+    {
+        if (rankedPath.size() < 2)
+        {
+            return false;
+        }
+
+        WorldPoint previous = rankedPath.get(rankedPath.size() - 2);
+        int previousX = Integer.compare(current.getX() - previous.getX(), 0);
+        int previousY = Integer.compare(current.getY() - previous.getY(), 0);
+        return previousX != step.move.x || previousY != step.move.y;
+    }
+
+    private static boolean stepMovesAwayFromTarget(WorldPoint current, WorldPoint next, WorldPoint target)
+    {
+        return heuristic(next, target) > heuristic(current, target);
+    }
+
     private ReverseDistanceResult reverseDistancesToTarget(
         WorldPoint target,
         int maxDistance,
-        SearchBounds bounds
+        SearchBounds bounds,
+        boolean localWalkingOverridesEnabled
     )
     {
         Queue<WorldPoint> open = new ArrayDeque<>();
@@ -411,7 +616,15 @@ public final class DrewsHelperWalkingRouteEngine
                 break;
             }
 
-            addReverseWalkingPredecessors(target, point, distance, bounds, open, distances);
+            addReverseWalkingPredecessors(
+                target,
+                point,
+                distance,
+                bounds,
+                open,
+                distances,
+                localWalkingOverridesEnabled
+            );
             addReverseTransportPredecessors(point, distance, bounds, open, distances);
         }
 
@@ -424,7 +637,8 @@ public final class DrewsHelperWalkingRouteEngine
         int distance,
         SearchBounds bounds,
         Queue<WorldPoint> open,
-        Map<WorldPoint, Integer> distances
+        Map<WorldPoint, Integer> distances,
+        boolean localWalkingOverridesEnabled
     )
     {
         int x = point.getX();
@@ -445,7 +659,10 @@ public final class DrewsHelperWalkingRouteEngine
             }
         }
 
-        addReverseLocalOverridePredecessors(target, point, distance, bounds, open, distances);
+        if (localWalkingOverridesEnabled)
+        {
+            addReverseLocalOverridePredecessors(target, point, distance, bounds, open, distances);
+        }
     }
 
     private void addReverseLocalOverridePredecessors(
@@ -545,13 +762,20 @@ public final class DrewsHelperWalkingRouteEngine
 
     private List<RouteStep> legalSteps(WorldPoint from, WorldPoint target)
     {
+        return legalSteps(from, target, true);
+    }
+
+    private List<RouteStep> legalSteps(WorldPoint from, WorldPoint target, boolean localWalkingOverridesEnabled)
+    {
         List<RouteStep> steps = new ArrayList<>();
         int x = from.getX();
         int y = from.getY();
         int plane = from.getPlane();
         int order = 1;
 
-        for (LocalWalkingOverride override : matchingLocalWalkingOverrides(from, target))
+        for (LocalWalkingOverride override : localWalkingOverridesEnabled
+            ? matchingLocalWalkingOverrides(from, target)
+            : Collections.<LocalWalkingOverride>emptyList())
         {
             Move move = move(
                 override.destination.getX() - from.getX(),
@@ -854,6 +1078,10 @@ public final class DrewsHelperWalkingRouteEngine
         addLocalOverride(overrides, path1Target, new WorldPoint(2938, 3221, 0), new WorldPoint(2937, 3220, 0));
         addLocalOverride(overrides, path1Target, new WorldPoint(2937, 3220, 0), new WorldPoint(2936, 3219, 0));
         addLocalOverride(overrides, path1Target, new WorldPoint(2936, 3219, 0), new WorldPoint(2935, 3218, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3218, 0), new WorldPoint(2934, 3217, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2934, 3217, 0), new WorldPoint(2933, 3216, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2933, 3216, 0), new WorldPoint(2932, 3215, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2932, 3215, 0), path1Target);
         addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3218, 0), new WorldPoint(2935, 3217, 0));
         addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3217, 0), new WorldPoint(2934, 3216, 0));
         addLocalOverride(overrides, path1Target, new WorldPoint(2934, 3216, 0), new WorldPoint(2933, 3215, 0));
@@ -905,6 +1133,12 @@ public final class DrewsHelperWalkingRouteEngine
             }
         }
         return false;
+    }
+
+    private enum RouteRankingMode
+    {
+        CLIENT,
+        SHAPE
     }
 
     private static final class RouteComputation

@@ -188,4 +188,30 @@ Known first-pass limits:
 - Transport-step labels are not rendered yet; dotted connectors show where a transport goes, but they do not yet show text such as "Charter ship" or "Minecart".
 - There is no partial path display; if an exact segment cannot be found, the overlay reports no route for that segment.
 - The route is committed after calculation. Exact on-route player movement trims every leading route tile before the player's current tile, so walk and run speed both leave the current tile highlighted. Nearby movement variance within 10 tiles of the committed route preserves the route without recalculating. A new background route is submitted only when waypoints/config change or the player is more than 10 tiles away from the committed route.
-- Myth's repeated clean Path 1 / Path 3 samples proved two target-specific live-client branches that Drew's static collision graph ranked one step longer. The route engine now has scoped local walking overrides for those target paths: Path 1 toward `(2932,3214,0)` prefers the observed southwest branch through `(2939,3222,0) -> (2938,3221,0)`, and Path 3 toward `(2970,3229,0)` prefers the observed northeast branch through `(2967,3231,0) -> (2968,3230,0)`. These are target-aware route-shape overrides only; they do not replace the collision map globally.
+- Myth's repeated clean Path 1 / Path 3 samples proved target-specific live-client branches that Drew's static collision graph or equal-length route ranking did not choose. The route engine now has scoped local walking overrides for those target paths: Path 1 toward `(2932,3214,0)` prefers the observed southwest branch through `(2939,3222,0) -> (2938,3221,0)` and the final equal-length tail `(2935,3218,0) -> (2934,3217,0)`; Path 3 toward `(2970,3229,0)` prefers the observed northeast branch through `(2967,3231,0) -> (2968,3230,0)`. These are target-aware route-shape overrides only; they do not replace the collision map globally.
+
+### 2026-08-07 21:05 UTC - Path 1 final-tail override added
+- Myth reran Path 1 to (2932,3214,0) after D-0045.
+- The old (2935,3218,0) -> (2934,3217,0) tail preference worked, but live movement diverged one step later.
+- Added a target-aware final-tail sequence for (2934,3217,0) -> (2933,3216,0) -> (2932,3215,0) -> (2932,3214,0).
+- This remains local to target (2932,3214,0) and does not modify global collision data.
+
+### 2026-08-07 21:28 UTC - Benchmark capture lifecycle and shape diagnostics
+- Myth confirmed Path 1 toward (2932,3214,0) and Path 3 toward (2970,3229,0) now match the live client exactly with no divergence.
+- `Benchmark Movement` capture now starts in a pending-start state. It waits until the player reaches the displayed route start, or one of the first few route tiles, before recording actual movement.
+- Off-route pre-start movement is discarded as `reason=stale-start ignored={...}` instead of being reported as a false `idx=0` divergence.
+- `DREW_ROUTE_BENCH` reports now include `shape={...}` diagnostics for completed target samples. The shape diagnostic compares expected route shape against actual client movement using line-error, diagonal/cardinal step distribution, turn count, and a diagnostic-only `winner`.
+- The shape diagnostic is not used for route selection yet. The current route selection still uses A* plus client-style final ranking and the target-aware local overrides from D-0044 through D-0046.
+
+### 2026-08-07 22:20 UTC - Multi-waypoint benchmark diagnostics are segment-aware
+- Myth's five-waypoint random chain completed, but the old diagnostic treated the final waypoint as the `edgeValidation` target for a fork that happened on the first leg.
+- `DREW_ROUTE_BENCH` now maps a divergence index to the active waypoint segment before logging `candidates`, `edgeValidation`, and multi-waypoint `shape`.
+- Chained route reports now show the current segment target plus `finalTarget` when those differ. This keeps local edge validation and shape scoring meaningful for waypoint chains.
+- This is diagnostic-only. It does not change route solving, waypoint behavior, local overrides, or overlay rendering.
+
+### 2026-08-07 22:45 UTC - No-override shadow route diagnostics
+- Myth's clean Path 1, Path 2, Path 3, and five-waypoint random-chain sample all matched the current displayed route, which proved the active solver plus local overrides are stable but did not prove the local overrides can be removed.
+- `DREW_ROUTE_BENCH` reports now include `shadow={...}` on completed samples. The shadow route is solved with target-aware local walking overrides disabled, then compared against the actual movement.
+- Use `shadow={status=ready overridesMatter=true ... winner=visible}` as evidence that the current local override still explains live movement better than the override-free baseline.
+- Use `shadow={status=ready overridesMatter=true ... winner=shadow}` or repeated `winner=tie` on the old Path 1 / Path 3 control routes as evidence that the general route ranker may be ready to replace the local overrides.
+- This is diagnostic-only. The visible route still uses the active solver and the target-aware local overrides from D-0044 through D-0046.

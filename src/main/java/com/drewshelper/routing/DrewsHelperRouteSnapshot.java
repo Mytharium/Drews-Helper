@@ -92,9 +92,14 @@ public final class DrewsHelperRouteSnapshot
 
     public static DrewsHelperRouteSnapshot calculating(List<WorldPoint> destinations)
     {
+        return calculating(destinations, Collections.emptyList());
+    }
+
+    public static DrewsHelperRouteSnapshot calculating(List<WorldPoint> destinations, List<WorldPoint> previousPath)
+    {
         return new DrewsHelperRouteSnapshot(
             DrewsHelperRouteStatus.CALCULATING,
-            Collections.emptyList(),
+            previousPath == null ? Collections.emptyList() : previousPath,
             destinations,
             "Calculating route",
             0

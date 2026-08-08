@@ -149,4 +149,129 @@ public class DrewsHelperRouteBenchmarkTest
         );
         assertEquals("[]", DrewsHelperRouteBenchmark.formatPathWindow(null, 3));
     }
+
+    @Test
+    public void formatsShapeDiagnosticsOnlyForCompletedRoutes()
+    {
+        assertEquals(
+            "pending",
+            DrewsHelperRouteBenchmark.formatShapeDiagnostic(
+                Arrays.asList(
+                    new WorldPoint(0, 0, 0),
+                    new WorldPoint(1, 1, 0)
+                ),
+                Arrays.asList(
+                    new WorldPoint(0, 0, 0)
+                ),
+                false
+            )
+        );
+
+        String diagnostic = DrewsHelperRouteBenchmark.formatShapeDiagnostic(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(0, 1, 0),
+                new WorldPoint(0, 2, 0),
+                new WorldPoint(1, 3, 0),
+                new WorldPoint(2, 4, 0),
+                new WorldPoint(3, 5, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(0, 1, 0),
+                new WorldPoint(1, 2, 0),
+                new WorldPoint(1, 3, 0),
+                new WorldPoint(2, 4, 0),
+                new WorldPoint(3, 5, 0)
+            ),
+            true
+        );
+
+        assertTrue(diagnostic.contains("expected={lineError="));
+        assertTrue(diagnostic.contains("actual={lineError="));
+        assertTrue(diagnostic.contains("diag=3"));
+        assertTrue(diagnostic.contains("card=2"));
+        assertTrue(diagnostic.contains("winner=actual"));
+    }
+
+    @Test
+    public void formatsShadowRouteDiagnosticsAgainstActualMovement()
+    {
+        assertEquals(
+            "pending",
+            DrewsHelperRouteBenchmark.formatShadowRouteDiagnostic(
+                Arrays.asList(new WorldPoint(0, 0, 0), new WorldPoint(1, 0, 0)),
+                Arrays.asList(new WorldPoint(0, 0, 0), new WorldPoint(0, 1, 0)),
+                Arrays.asList(new WorldPoint(0, 0, 0)),
+                false
+            )
+        );
+
+        String diagnostic = DrewsHelperRouteBenchmark.formatShadowRouteDiagnostic(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(0, 1, 0),
+                new WorldPoint(1, 1, 0),
+                new WorldPoint(2, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0)
+            ),
+            true
+        );
+
+        assertTrue(diagnostic.contains("status=ready"));
+        assertTrue(diagnostic.contains("overridesMatter=true"));
+        assertTrue(diagnostic.contains("visibleVsShadow={idx=1"));
+        assertTrue(diagnostic.contains("shadowVsActual={idx=1"));
+        assertTrue(diagnostic.contains("winner=visible"));
+    }
+
+    @Test
+    public void formatsShapeShadowRouteDiagnosticsAgainstActualMovement()
+    {
+        assertEquals(
+            "pending",
+            DrewsHelperRouteBenchmark.formatShapeShadowRouteDiagnostic(
+                Arrays.asList(new WorldPoint(0, 0, 0), new WorldPoint(1, 0, 0)),
+                Arrays.asList(new WorldPoint(0, 0, 0), new WorldPoint(0, 1, 0)),
+                Arrays.asList(new WorldPoint(0, 0, 0)),
+                false
+            )
+        );
+
+        String diagnostic = DrewsHelperRouteBenchmark.formatShapeShadowRouteDiagnostic(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(0, 1, 0),
+                new WorldPoint(1, 1, 0),
+                new WorldPoint(2, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(0, 1, 0),
+                new WorldPoint(1, 1, 0),
+                new WorldPoint(2, 0, 0)
+            ),
+            true
+        );
+
+        assertTrue(diagnostic.contains("status=ready"));
+        assertTrue(diagnostic.contains("differsFromVisible=true"));
+        assertTrue(diagnostic.contains("visibleVsShapeShadow={idx=1"));
+        assertTrue(diagnostic.contains("shapeShadowVsActual={none"));
+        assertTrue(diagnostic.contains("winner=shapeShadow"));
+    }
 }
