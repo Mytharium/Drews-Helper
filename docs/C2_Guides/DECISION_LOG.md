@@ -312,6 +312,36 @@ Date: 2026-08-07
 
 Supersedes the implementation mechanism in `D-0040` while keeping its intent. Continuing A* after the first target hit was not enough because equal-length alternatives could be lost before the final target comparison. Drew's walking solver should now separate shortest-distance discovery from route-shape selection on short route segments: first find the shortest segment length, then compute bounded reverse distances from the target and reconstruct an exact-shortest path by the same legal client-style candidate order used in benchmark diagnostics.
 
-This keeps shortest route length as the hard contract while making displayed equal-length forks deterministic. A* remains the default; BFS remains a benchmark mode and shares the same final path-ranking pass so benchmark differences are search cost and graph coverage, not inconsistent tie code.
+This keeps shortest route length as the hard contract while making displayed equal-length forks deterministic. A* remained the default during the short BFS experiment. D-0042 later retired BFS as a benchmark mode after live samples showed it was slower and did not match client movement better.
 
 Myth's post-`D-0040` Path 1 and Path 3 tests revealed a different issue: the live client walked continuations that the static collision graph does not rank as equally short. Specifically, `(2939,3222,0) -> (2938,3221,0)` toward `(2932,3214,0)` and `(2967,3231,0) -> (2968,3230,0)` toward `(2970,3229,0)` are legal live steps, but Drew's graph continuation from those tiles is longer than the client path. Treat those samples as collision-map/live-client disagreement until a collision override or updated collision resource is validated; do not keep tuning A* versus BFS for them.
+
+## D-0042: Retire BFS Test Mode And Keep One Visible Route Solver
+
+Date: 2026-08-07
+
+Supersedes D-0039. Myth's live benchmark samples showed BFS did not match client movement better than the Drew A* solver and cost substantially more node expansion. The route UI should no longer expose a `Route Solver` dropdown, and Drew's route engine should not carry BFS as an alternate strategy for normal waypoint guidance.
+
+The live route contract is now one Drew-owned solver: A* over Runemoro walking collision plus Drew's transport graph, followed by the bounded client-style final path ranking from D-0041. `Benchmark Movement` stays as an opt-in diagnostics toggle, but it compares the displayed route against actual player movement only. It must not solve or report an alternate BFS path.
+
+The next useful improvement is collision validation, not another solver-mode comparison. For repeated live divergences, log the observed client edge, whether Drew's collision graph allows that single edge, whether the continuation remains shortest, and whether repeated observations justify a local collision override.
+
+## D-0043: Collision Edge Validation Logs Before Overrides
+
+Date: 2026-08-07
+
+Myth's repeated Path 1 and Path 3 samples showed stable late-route divergence after A*/BFS and tie-order work were already ruled out. Drew should not apply collision overrides blindly from one observed walk. The next step is diagnostic validation: while `Benchmark Movement` is enabled, `DREW_ROUTE_BENCH` logs `edgeValidation` at the first real divergence.
+
+`edgeValidation` must report the actual live edge from the fork tile, whether Drew's collision graph treats that edge as legal walking/transport movement, the shortest graph continuation from the actual tile to the target, the delta versus the displayed route's remaining distance from the fork, and a session-local repeat count keyed by `from -> actual -> target`. A repeated illegal edge or repeated longer continuation can be marked `overrideCandidate=true`, but no route override is applied by this decision.
+
+Future local collision overrides should require clean repeated samples with Run OFF, ground-click-only movement, no stale `idx=0` target captures, and matching observed edge keys. Do not add permanent collision overrides from stale return legs, object clicks, run-speed samples, or one-off route variance.
+
+## D-0044: Local Walking Overrides Are Target-Aware And Evidence-Scoped
+
+Date: 2026-08-07
+
+Myth repeated the Path 1 and Path 3 tests after the collision-edge validator was built. Even though restarting the dev client reset the session-local repeat counter, the live logs repeated the same clean divergence evidence across sessions: Drew's graph treated the observed cardinal branch as legal but one step longer, while the OSRS client reached the target in the same total number of movement ticks.
+
+Drew may now carry target-aware local walking overrides for those two confirmed route windows only. The Path 1 override is keyed to target `(2932,3214,0)` and starts at fork `(2939,3223,0) -> (2939,3222,0)` with the observed southwest continuation window. The Path 3 override is keyed to target `(2970,3229,0)` and starts at fork `(2966,3231,0) -> (2967,3231,0)` with the full observed northeast finish. These overrides participate in the existing legal-step list and reverse-distance final ranking, so the displayed route can choose the live branch while normal unrelated targets still use the base collision map and client-style ordering.
+
+Do not convert this into a broad "trust live movement" system. Add future local overrides only after clean repeated `DREW_ROUTE_BENCH` samples identify exact target/fork keys, and prefer replacing/updating the collision resource if the same map-region disagreement becomes widespread.

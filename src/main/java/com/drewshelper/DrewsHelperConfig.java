@@ -1,6 +1,4 @@
 package com.drewshelper;
-
-import com.drewshelper.routing.DrewsHelperRouteSolverMode;
 import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -94,13 +92,7 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
-    @ConfigItem(keyName = "routeSolverMode", name = "Route Solver", description = "Select the route solver used for the visible waypoint path.", section = routingOptions, position = 6)
-    default DrewsHelperRouteSolverMode routeSolverMode()
-    {
-        return DrewsHelperRouteSolverMode.A_STAR;
-    }
-
-    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Benchmark Movement", description = "Also solve with the other solver and log DREW_ROUTE_BENCH movement comparisons while you walk the route.", section = routingOptions, position = 7)
+    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Benchmark Movement", description = "Log DREW_ROUTE_BENCH overlay-vs-client movement comparisons while you walk the route.", section = routingOptions, position = 6)
     default boolean routeBenchmarkEnabled()
     {
         return false;

@@ -16,6 +16,8 @@ public final class DrewsHelperWalkingRouteEngine
     private static final int MAX_A_STAR_TIE_REFINEMENT_DISTANCE = 256;
     private static final int MAX_A_STAR_TIE_REFINEMENT_EXTRA_EXPANDED = 10_000;
     private static final int MAX_CLIENT_PATH_RANKING_EXPANDED = 100_000;
+    private static final int MAX_OBSERVED_EDGE_VALIDATION_DISTANCE = 256;
+    private static final int LOCAL_OVERRIDE_PREFERENCE_PENALTY = -1_000;
     private static final Move[] MOVES = {
         new Move(-1, 0),
         new Move(1, 0),
@@ -26,6 +28,7 @@ public final class DrewsHelperWalkingRouteEngine
         new Move(-1, 1),
         new Move(1, 1)
     };
+    private static final List<LocalWalkingOverride> LOCAL_WALKING_OVERRIDES = localWalkingOverrides();
 
     private final DrewsHelperMovementMap movementMap;
     private final DrewsHelperTransportGraph transportGraph;
@@ -43,16 +46,6 @@ public final class DrewsHelperWalkingRouteEngine
 
     public DrewsHelperRouteSnapshot solve(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
     {
-        return solve(start, destinations, DrewsHelperRouteSolverMode.A_STAR, false);
-    }
-
-    public DrewsHelperRouteSnapshot solve(
-        WorldPoint start,
-        List<WorldPoint> destinations,
-        DrewsHelperRouteSolverMode solverMode,
-        boolean benchmarkAgainstOtherSolver
-    ) throws InterruptedException
-    {
         if (start == null)
         {
             return DrewsHelperRouteSnapshot.noPlayer();
@@ -63,13 +56,7 @@ public final class DrewsHelperWalkingRouteEngine
             return DrewsHelperRouteSnapshot.noWaypoints();
         }
 
-        DrewsHelperRouteSolverMode selectedSolver = solverMode == null
-            ? DrewsHelperRouteSolverMode.A_STAR
-            : solverMode;
-        RouteComputation primary = solveRoute(start, destinations, selectedSolver);
-        RouteComputation benchmark = benchmarkAgainstOtherSolver
-            ? solveRoute(start, destinations, selectedSolver.opposite())
-            : RouteComputation.notRun(selectedSolver.opposite());
+        RouteComputation primary = solveRoute(start, destinations);
 
         if (!primary.isRouteFound())
         {
@@ -85,10 +72,7 @@ public final class DrewsHelperWalkingRouteEngine
             primary.path,
             destinations,
             primary.walkingDistance,
-            selectedSolver,
-            primary.metrics,
-            benchmark.path,
-            benchmark.metrics
+            primary.metrics
         );
     }
 
@@ -117,11 +101,77 @@ public final class DrewsHelperWalkingRouteEngine
         return candidates;
     }
 
-    private RouteComputation solveRoute(
-        WorldPoint start,
-        List<WorldPoint> destinations,
-        DrewsHelperRouteSolverMode solverMode
-    ) throws InterruptedException
+    public ObservedEdgeDiagnostic validateObservedEdge(
+        WorldPoint from,
+        WorldPoint observed,
+        WorldPoint target,
+        int expectedRemainingFromFork
+    )
+    {
+        if (from == null || observed == null || target == null)
+        {
+            return ObservedEdgeDiagnostic.unavailable(from, observed, target, "missing-point");
+        }
+
+        EdgeLegality edge = edgeLegality(from, observed, target);
+        int expectedRemaining = Math.max(0, expectedRemainingFromFork);
+        if (expectedRemaining > MAX_OBSERVED_EDGE_VALIDATION_DISTANCE)
+        {
+            return ObservedEdgeDiagnostic.withoutContinuation(
+                from,
+                observed,
+                target,
+                edge.legal,
+                edge.type,
+                expectedRemaining,
+                "route-too-long"
+            );
+        }
+
+        try
+        {
+            SearchResult continuation = solveSegmentAStar(observed, target);
+            if (!continuation.isFound())
+            {
+                return ObservedEdgeDiagnostic.withoutContinuation(
+                    from,
+                    observed,
+                    target,
+                    edge.legal,
+                    edge.type,
+                    expectedRemaining,
+                    "not-found",
+                    continuation.expandedNodes
+                );
+            }
+
+            return ObservedEdgeDiagnostic.withContinuation(
+                from,
+                observed,
+                target,
+                edge.legal,
+                edge.type,
+                expectedRemaining,
+                Math.max(0, continuation.path.size() - 1),
+                continuation.expandedNodes
+            );
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
+            return ObservedEdgeDiagnostic.withoutContinuation(
+                from,
+                observed,
+                target,
+                edge.legal,
+                edge.type,
+                expectedRemaining,
+                "interrupted"
+            );
+        }
+    }
+
+    private RouteComputation solveRoute(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
     {
         long startedAt = System.nanoTime();
         List<WorldPoint> route = new ArrayList<>();
@@ -132,7 +182,7 @@ public final class DrewsHelperWalkingRouteEngine
         for (int index = 0; index < destinations.size(); index++)
         {
             WorldPoint target = destinations.get(index);
-            SearchResult segment = solveSegment(segmentStart, target, solverMode);
+            SearchResult segment = solveSegmentAStar(segmentStart, target);
             expandedNodes += segment.expandedNodes;
             if (!segment.isFound())
             {
@@ -142,7 +192,6 @@ public final class DrewsHelperWalkingRouteEngine
                     walkingDistance,
                     message,
                     DrewsHelperRouteSearchMetrics.notFound(
-                        solverMode,
                         System.nanoTime() - startedAt,
                         expandedNodes
                     )
@@ -166,26 +215,11 @@ public final class DrewsHelperWalkingRouteEngine
             route,
             walkingDistance,
             DrewsHelperRouteSearchMetrics.completed(
-                solverMode,
                 System.nanoTime() - startedAt,
                 expandedNodes,
                 route
             )
         );
-    }
-
-    private SearchResult solveSegment(
-        WorldPoint start,
-        WorldPoint target,
-        DrewsHelperRouteSolverMode solverMode
-    ) throws InterruptedException
-    {
-        if (solverMode == DrewsHelperRouteSolverMode.BFS)
-        {
-            return solveSegmentBfs(start, target);
-        }
-
-        return solveSegmentAStar(start, target);
     }
 
     private SearchResult solveSegmentAStar(WorldPoint start, WorldPoint target) throws InterruptedException
@@ -280,85 +314,6 @@ public final class DrewsHelperWalkingRouteEngine
         return SearchResult.notFound(expanded);
     }
 
-    private SearchResult solveSegmentBfs(WorldPoint start, WorldPoint target) throws InterruptedException
-    {
-        if (start.getPlane() != target.getPlane() && transportGraph.isEmpty())
-        {
-            return SearchResult.notFound(0);
-        }
-
-        if (start.equals(target))
-        {
-            return SearchResult.found(Collections.singletonList(start), 0);
-        }
-
-        SearchBounds[] bounds = transportGraph.isEmpty()
-            ? SearchBounds.walkingOnlyBounds(start, target)
-            : new SearchBounds[] { SearchBounds.unbounded() };
-        int totalExpanded = 0;
-        for (SearchBounds bound : bounds)
-        {
-            SearchResult result = solveSegmentBfs(start, target, bound, totalExpanded);
-            totalExpanded = result.expandedNodes;
-            if (result.isFound() || totalExpanded > MAX_EXPANDED_NODES_PER_SEGMENT)
-            {
-                return result;
-            }
-        }
-
-        return SearchResult.notFound(totalExpanded);
-    }
-
-    private SearchResult solveSegmentBfs(
-        WorldPoint start,
-        WorldPoint target,
-        SearchBounds bounds,
-        int alreadyExpanded
-    ) throws InterruptedException
-    {
-        Queue<SearchNode> open = new ArrayDeque<>();
-        Map<WorldPoint, SearchNode> visited = new HashMap<>();
-        SearchContext context = new SearchContext(target);
-        SearchNode startNode = new SearchNode(
-            start,
-            null,
-            0,
-            0,
-            0,
-            0,
-            0,
-            context.nextSequence()
-        );
-        open.add(startNode);
-        visited.put(start, startNode);
-        int expanded = alreadyExpanded;
-
-        while (!open.isEmpty())
-        {
-            if (Thread.currentThread().isInterrupted())
-            {
-                throw new InterruptedException("Walking route calculation cancelled");
-            }
-
-            SearchNode node = open.remove();
-            if (node.point.equals(target))
-            {
-                SearchResult result = SearchResult.found(node.path(), expanded);
-                return preferClientStyleShortestPath(start, target, result);
-            }
-
-            expanded++;
-            if (expanded > MAX_EXPANDED_NODES_PER_SEGMENT)
-            {
-                return SearchResult.notFound(expanded);
-            }
-
-            addBfsNeighbors(node, context, bounds, open, visited);
-        }
-
-        return SearchResult.notFound(expanded);
-    }
-
     private void addNeighbors(
         SearchNode node,
         SearchContext context,
@@ -366,21 +321,9 @@ public final class DrewsHelperWalkingRouteEngine
         Map<WorldPoint, SearchNode> bestNodes
     )
     {
-        int x = node.point.getX();
-        int y = node.point.getY();
-        int plane = node.point.getPlane();
-
-        for (Move move : orderedMoves(node.point, context.target))
+        for (RouteStep step : legalSteps(node.point, context.target))
         {
-            if (canMove(x, y, plane, move))
-            {
-                addNeighbor(node, move, context, open, bestNodes);
-            }
-        }
-
-        for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(node.point))
-        {
-            addTransportNeighbor(node, edge, context, open, bestNodes);
+            addNeighbor(node, step, context, open, bestNodes);
         }
     }
 
@@ -468,7 +411,7 @@ public final class DrewsHelperWalkingRouteEngine
                 break;
             }
 
-            addReverseWalkingPredecessors(point, distance, bounds, open, distances);
+            addReverseWalkingPredecessors(target, point, distance, bounds, open, distances);
             addReverseTransportPredecessors(point, distance, bounds, open, distances);
         }
 
@@ -476,6 +419,7 @@ public final class DrewsHelperWalkingRouteEngine
     }
 
     private void addReverseWalkingPredecessors(
+        WorldPoint target,
         WorldPoint point,
         int distance,
         SearchBounds bounds,
@@ -500,6 +444,32 @@ public final class DrewsHelperWalkingRouteEngine
                 open.add(predecessor);
             }
         }
+
+        addReverseLocalOverridePredecessors(target, point, distance, bounds, open, distances);
+    }
+
+    private void addReverseLocalOverridePredecessors(
+        WorldPoint target,
+        WorldPoint point,
+        int distance,
+        SearchBounds bounds,
+        Queue<WorldPoint> open,
+        Map<WorldPoint, Integer> distances
+    )
+    {
+        for (LocalWalkingOverride override : LOCAL_WALKING_OVERRIDES)
+        {
+            WorldPoint predecessor = override.from;
+            if (!override.matches(predecessor, point, target)
+                || !bounds.contains(predecessor)
+                || distances.containsKey(predecessor))
+            {
+                continue;
+            }
+
+            distances.put(predecessor, distance + 1);
+            open.add(predecessor);
+        }
     }
 
     private void addReverseTransportPredecessors(
@@ -523,110 +493,22 @@ public final class DrewsHelperWalkingRouteEngine
         }
     }
 
-    private void addBfsNeighbors(
-        SearchNode node,
-        SearchContext context,
-        SearchBounds bounds,
-        Queue<SearchNode> open,
-        Map<WorldPoint, SearchNode> visited
-    )
-    {
-        int x = node.point.getX();
-        int y = node.point.getY();
-        int plane = node.point.getPlane();
-
-        for (Move move : orderedMoves(node.point, context.target))
-        {
-            if (canMove(x, y, plane, move))
-            {
-                WorldPoint neighbor = new WorldPoint(x + move.x, y + move.y, plane);
-                if (bounds.contains(neighbor))
-                {
-                    addBfsNeighbor(node, neighbor, move, context, open, visited);
-                }
-            }
-        }
-
-        for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(node.point))
-        {
-            WorldPoint neighbor = edge.getDestination();
-            Move direction = new Move(
-                Integer.compare(neighbor.getX(), node.point.getX()),
-                Integer.compare(neighbor.getY(), node.point.getY())
-            );
-            addBfsNeighbor(node, neighbor, direction, context, open, visited);
-        }
-    }
-
-    private void addBfsNeighbor(
-        SearchNode node,
-        WorldPoint neighbor,
-        Move move,
-        SearchContext context,
-        Queue<SearchNode> open,
-        Map<WorldPoint, SearchNode> visited
-    )
-    {
-        if (visited.containsKey(neighbor))
-        {
-            return;
-        }
-
-        int turns = node.previous == null || (node.directionX == move.x && node.directionY == move.y)
-            ? node.turns
-            : node.turns + 1;
-        SearchNode next = new SearchNode(
-            neighbor,
-            node,
-            node.distance + 1,
-            node.distance + 1,
-            0,
-            0,
-            turns,
-            context.nextSequence(),
-            move.x,
-            move.y
-        );
-        visited.put(neighbor, next);
-        open.add(next);
-    }
-
     private void addNeighbor(
         SearchNode node,
-        Move move,
+        RouteStep step,
         SearchContext context,
         PriorityQueue<SearchNode> open,
         Map<WorldPoint, SearchNode> bestNodes
     )
     {
-        WorldPoint neighbor = new WorldPoint(
-            node.point.getX() + move.x,
-            node.point.getY() + move.y,
-            node.point.getPlane()
-        );
-        addNeighbor(node, neighbor, move, context, open, bestNodes);
-    }
-
-    private void addTransportNeighbor(
-        SearchNode node,
-        DrewsHelperTransportEdge edge,
-        SearchContext context,
-        PriorityQueue<SearchNode> open,
-        Map<WorldPoint, SearchNode> bestNodes
-    )
-    {
-        WorldPoint neighbor = edge.getDestination();
-        Move direction = new Move(
-            Integer.compare(neighbor.getX(), node.point.getX()),
-            Integer.compare(neighbor.getY(), node.point.getY())
-        );
-        addNeighbor(node, neighbor, direction, context, open, bestNodes);
+        addNeighbor(node, step.destination, step.move, step.preferencePenalty, context, open, bestNodes);
     }
 
     private void addNeighbor(
         SearchNode node,
         WorldPoint neighbor,
         Move move,
+        int stepPreferencePenalty,
         SearchContext context,
         PriorityQueue<SearchNode> open,
         Map<WorldPoint, SearchNode> bestNodes
@@ -634,7 +516,7 @@ public final class DrewsHelperWalkingRouteEngine
     {
         int distance = node.distance + 1;
         int remaining = heuristic(neighbor, context.target);
-        int preferencePenalty = node.preferencePenalty + movePreferencePenalty(node.point, move, context.target);
+        int preferencePenalty = node.preferencePenalty + stepPreferencePenalty;
         int turns = node.previous == null || (node.directionX == move.x && node.directionY == move.y)
             ? node.turns
             : node.turns + 1;
@@ -669,13 +551,39 @@ public final class DrewsHelperWalkingRouteEngine
         int plane = from.getPlane();
         int order = 1;
 
+        for (LocalWalkingOverride override : matchingLocalWalkingOverrides(from, target))
+        {
+            Move move = move(
+                override.destination.getX() - from.getX(),
+                override.destination.getY() - from.getY()
+            );
+            if (move == null)
+            {
+                continue;
+            }
+
+            steps.add(new RouteStep(
+                order++,
+                override.destination,
+                move,
+                false,
+                LOCAL_OVERRIDE_PREFERENCE_PENALTY
+            ));
+        }
+
         for (Move move : orderedMoves(from, target))
         {
             if (canMove(x, y, plane, move))
             {
+                WorldPoint destination = new WorldPoint(x + move.x, y + move.y, plane);
+                if (containsStepDestination(steps, destination))
+                {
+                    continue;
+                }
+
                 steps.add(new RouteStep(
                     order++,
-                    new WorldPoint(x + move.x, y + move.y, plane),
+                    destination,
                     move,
                     false,
                     movePreferencePenalty(from, move, target)
@@ -686,6 +594,11 @@ public final class DrewsHelperWalkingRouteEngine
         for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(from))
         {
             WorldPoint destination = edge.getDestination();
+            if (containsStepDestination(steps, destination))
+            {
+                continue;
+            }
+
             Move direction = new Move(
                 Integer.compare(destination.getX(), from.getX()),
                 Integer.compare(destination.getY(), from.getY())
@@ -694,6 +607,18 @@ public final class DrewsHelperWalkingRouteEngine
         }
 
         return steps;
+    }
+
+    private static boolean containsStepDestination(List<RouteStep> steps, WorldPoint destination)
+    {
+        for (RouteStep step : steps)
+        {
+            if (step.destination.equals(destination))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int heuristic(WorldPoint point, WorldPoint target)
@@ -808,6 +733,52 @@ public final class DrewsHelperWalkingRouteEngine
         return false;
     }
 
+    private EdgeLegality edgeLegality(WorldPoint from, WorldPoint to, WorldPoint target)
+    {
+        for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(from))
+        {
+            if (to.equals(edge.getDestination()))
+            {
+                return new EdgeLegality(true, "transport");
+            }
+        }
+
+        if (isLocalWalkingOverride(from, to, target))
+        {
+            int dx = to.getX() - from.getX();
+            int dy = to.getY() - from.getY();
+            return new EdgeLegality(true, dx != 0 && dy != 0 ? "local-override-diagonal" : "local-override-cardinal");
+        }
+
+        if (from.getPlane() != to.getPlane())
+        {
+            return new EdgeLegality(false, "plane-change");
+        }
+
+        int dx = to.getX() - from.getX();
+        int dy = to.getY() - from.getY();
+        if (dx == 0 && dy == 0)
+        {
+            return new EdgeLegality(true, "stationary");
+        }
+
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1)
+        {
+            return new EdgeLegality(false, "non-adjacent");
+        }
+
+        Move move = move(dx, dy);
+        if (move == null)
+        {
+            return new EdgeLegality(false, "unknown");
+        }
+
+        return new EdgeLegality(
+            canMove(from.getX(), from.getY(), from.getPlane(), move),
+            move.x != 0 && move.y != 0 ? "diagonal" : "cardinal"
+        );
+    }
+
     private static List<Move> orderedMoves(WorldPoint point, WorldPoint target)
     {
         int xDirection = Integer.compare(target.getX(), point.getX());
@@ -874,6 +845,68 @@ public final class DrewsHelperWalkingRouteEngine
         return null;
     }
 
+    private static List<LocalWalkingOverride> localWalkingOverrides()
+    {
+        List<LocalWalkingOverride> overrides = new ArrayList<>();
+        WorldPoint path1Target = new WorldPoint(2932, 3214, 0);
+        addLocalOverride(overrides, path1Target, new WorldPoint(2939, 3223, 0), new WorldPoint(2939, 3222, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2939, 3222, 0), new WorldPoint(2938, 3221, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2938, 3221, 0), new WorldPoint(2937, 3220, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2937, 3220, 0), new WorldPoint(2936, 3219, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2936, 3219, 0), new WorldPoint(2935, 3218, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3218, 0), new WorldPoint(2935, 3217, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3217, 0), new WorldPoint(2934, 3216, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2934, 3216, 0), new WorldPoint(2933, 3215, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2933, 3215, 0), path1Target);
+
+        WorldPoint path3Target = new WorldPoint(2970, 3229, 0);
+        addLocalOverride(overrides, path3Target, new WorldPoint(2966, 3231, 0), new WorldPoint(2967, 3231, 0));
+        addLocalOverride(overrides, path3Target, new WorldPoint(2967, 3231, 0), new WorldPoint(2968, 3230, 0));
+        addLocalOverride(overrides, path3Target, new WorldPoint(2968, 3230, 0), new WorldPoint(2969, 3229, 0));
+        addLocalOverride(overrides, path3Target, new WorldPoint(2969, 3229, 0), path3Target);
+        return Collections.unmodifiableList(overrides);
+    }
+
+    private static void addLocalOverride(
+        List<LocalWalkingOverride> overrides,
+        WorldPoint target,
+        WorldPoint from,
+        WorldPoint destination
+    )
+    {
+        overrides.add(new LocalWalkingOverride(target, from, destination));
+    }
+
+    private static List<LocalWalkingOverride> matchingLocalWalkingOverrides(WorldPoint from, WorldPoint target)
+    {
+        if (from == null || target == null || LOCAL_WALKING_OVERRIDES.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+
+        List<LocalWalkingOverride> matches = new ArrayList<>();
+        for (LocalWalkingOverride override : LOCAL_WALKING_OVERRIDES)
+        {
+            if (override.matchesFromAndTarget(from, target))
+            {
+                matches.add(override);
+            }
+        }
+        return matches;
+    }
+
+    private static boolean isLocalWalkingOverride(WorldPoint from, WorldPoint destination, WorldPoint target)
+    {
+        for (LocalWalkingOverride override : matchingLocalWalkingOverrides(from, target))
+        {
+            if (override.destination.equals(destination))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static final class RouteComputation
     {
         private final List<WorldPoint> path;
@@ -911,16 +944,6 @@ public final class DrewsHelperWalkingRouteEngine
         )
         {
             return new RouteComputation(partialPath, walkingDistance, message, metrics);
-        }
-
-        private static RouteComputation notRun(DrewsHelperRouteSolverMode solverMode)
-        {
-            return new RouteComputation(
-                Collections.emptyList(),
-                0,
-                "Benchmark disabled",
-                DrewsHelperRouteSearchMetrics.empty(solverMode)
-            );
         }
 
         private boolean isRouteFound()
@@ -963,8 +986,6 @@ public final class DrewsHelperWalkingRouteEngine
 
     private static final class SearchBounds
     {
-        private static final int[] WALKING_ONLY_MARGINS = { 64, 128, 256, 512, Integer.MAX_VALUE };
-
         private final int minX;
         private final int maxX;
         private final int minY;
@@ -1008,25 +1029,6 @@ public final class DrewsHelperWalkingRouteEngine
             return new SearchBounds(minX - margin, maxX + margin, minY - margin, maxY + margin, false);
         }
 
-        private static SearchBounds[] walkingOnlyBounds(WorldPoint start, WorldPoint target)
-        {
-            SearchBounds[] bounds = new SearchBounds[WALKING_ONLY_MARGINS.length];
-            for (int index = 0; index < WALKING_ONLY_MARGINS.length; index++)
-            {
-                int margin = WALKING_ONLY_MARGINS[index];
-                bounds[index] = margin == Integer.MAX_VALUE
-                    ? unbounded()
-                    : new SearchBounds(
-                        Math.min(start.getX(), target.getX()) - margin,
-                        Math.max(start.getX(), target.getX()) + margin,
-                        Math.min(start.getY(), target.getY()) - margin,
-                        Math.max(start.getY(), target.getY()) + margin,
-                        false
-                    );
-            }
-            return bounds;
-        }
-
         private boolean contains(WorldPoint point)
         {
             return unbounded
@@ -1065,6 +1067,30 @@ public final class DrewsHelperWalkingRouteEngine
         }
     }
 
+    private static final class LocalWalkingOverride
+    {
+        private final WorldPoint target;
+        private final WorldPoint from;
+        private final WorldPoint destination;
+
+        private LocalWalkingOverride(WorldPoint target, WorldPoint from, WorldPoint destination)
+        {
+            this.target = target;
+            this.from = from;
+            this.destination = destination;
+        }
+
+        private boolean matchesFromAndTarget(WorldPoint from, WorldPoint target)
+        {
+            return this.from.equals(from) && this.target.equals(target);
+        }
+
+        private boolean matches(WorldPoint from, WorldPoint destination, WorldPoint target)
+        {
+            return matchesFromAndTarget(from, target) && this.destination.equals(destination);
+        }
+    }
+
     private static final class RouteStep
     {
         private final int order;
@@ -1092,6 +1118,18 @@ public final class DrewsHelperWalkingRouteEngine
         {
             this.distances = distances;
             this.expandedNodes = expandedNodes;
+        }
+    }
+
+    private static final class EdgeLegality
+    {
+        private final boolean legal;
+        private final String type;
+
+        private EdgeLegality(boolean legal, String type)
+        {
+            this.legal = legal;
+            this.type = type;
         }
     }
 
@@ -1172,6 +1210,218 @@ public final class DrewsHelperWalkingRouteEngine
             }
 
             return "cardinal";
+        }
+    }
+
+    public static final class ObservedEdgeDiagnostic
+    {
+        private final WorldPoint from;
+        private final WorldPoint observed;
+        private final WorldPoint target;
+        private final boolean available;
+        private final boolean edgeLegal;
+        private final String edgeType;
+        private final int expectedRemainingFromFork;
+        private final boolean continuationFound;
+        private final int continuationDistance;
+        private final int totalRemainingFromFork;
+        private final int continuationDelta;
+        private final int expandedNodes;
+        private final String reason;
+
+        private ObservedEdgeDiagnostic(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean available,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            boolean continuationFound,
+            int continuationDistance,
+            int expandedNodes,
+            String reason
+        )
+        {
+            this.from = from;
+            this.observed = observed;
+            this.target = target;
+            this.available = available;
+            this.edgeLegal = edgeLegal;
+            this.edgeType = edgeType;
+            this.expectedRemainingFromFork = expectedRemainingFromFork;
+            this.continuationFound = continuationFound;
+            this.continuationDistance = continuationDistance;
+            this.totalRemainingFromFork = continuationFound ? continuationDistance + 1 : -1;
+            this.continuationDelta = continuationFound ? totalRemainingFromFork - expectedRemainingFromFork : 0;
+            this.expandedNodes = expandedNodes;
+            this.reason = reason;
+        }
+
+        private static ObservedEdgeDiagnostic unavailable(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            String reason
+        )
+        {
+            return new ObservedEdgeDiagnostic(
+                from,
+                observed,
+                target,
+                false,
+                false,
+                "unknown",
+                0,
+                false,
+                -1,
+                0,
+                reason
+            );
+        }
+
+        private static ObservedEdgeDiagnostic withoutContinuation(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            String reason
+        )
+        {
+            return withoutContinuation(
+                from,
+                observed,
+                target,
+                edgeLegal,
+                edgeType,
+                expectedRemainingFromFork,
+                reason,
+                0
+            );
+        }
+
+        private static ObservedEdgeDiagnostic withoutContinuation(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            String reason,
+            int expandedNodes
+        )
+        {
+            return new ObservedEdgeDiagnostic(
+                from,
+                observed,
+                target,
+                true,
+                edgeLegal,
+                edgeType,
+                expectedRemainingFromFork,
+                false,
+                -1,
+                expandedNodes,
+                reason
+            );
+        }
+
+        private static ObservedEdgeDiagnostic withContinuation(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            int continuationDistance,
+            int expandedNodes
+        )
+        {
+            return new ObservedEdgeDiagnostic(
+                from,
+                observed,
+                target,
+                true,
+                edgeLegal,
+                edgeType,
+                expectedRemainingFromFork,
+                true,
+                continuationDistance,
+                expandedNodes,
+                "found"
+            );
+        }
+
+        public WorldPoint getFrom()
+        {
+            return from;
+        }
+
+        public WorldPoint getObserved()
+        {
+            return observed;
+        }
+
+        public WorldPoint getTarget()
+        {
+            return target;
+        }
+
+        public boolean isAvailable()
+        {
+            return available;
+        }
+
+        public boolean isEdgeLegal()
+        {
+            return edgeLegal;
+        }
+
+        public String getEdgeType()
+        {
+            return edgeType;
+        }
+
+        public int getExpectedRemainingFromFork()
+        {
+            return expectedRemainingFromFork;
+        }
+
+        public boolean isContinuationFound()
+        {
+            return continuationFound;
+        }
+
+        public int getContinuationDistance()
+        {
+            return continuationDistance;
+        }
+
+        public int getTotalRemainingFromFork()
+        {
+            return totalRemainingFromFork;
+        }
+
+        public int getContinuationDelta()
+        {
+            return continuationDelta;
+        }
+
+        public boolean isContinuationLonger()
+        {
+            return continuationFound && continuationDelta > 0;
+        }
+
+        public int getExpandedNodes()
+        {
+            return expandedNodes;
+        }
+
+        public String getReason()
+        {
+            return reason;
         }
     }
 

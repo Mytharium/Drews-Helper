@@ -37,8 +37,6 @@ public final class DrewsHelperRouteSnapshot
     private final String message;
     private final int walkingDistance;
     private final DrewsHelperRouteSearchMetrics primaryMetrics;
-    private final List<WorldPoint> benchmarkPath;
-    private final DrewsHelperRouteSearchMetrics benchmarkMetrics;
 
     private DrewsHelperRouteSnapshot(
         DrewsHelperRouteStatus status,
@@ -54,9 +52,7 @@ public final class DrewsHelperRouteSnapshot
             destinations,
             message,
             walkingDistance,
-            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.A_STAR),
-            Collections.emptyList(),
-            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.BFS)
+            DrewsHelperRouteSearchMetrics.empty()
         );
     }
 
@@ -66,9 +62,7 @@ public final class DrewsHelperRouteSnapshot
         List<WorldPoint> destinations,
         String message,
         int walkingDistance,
-        DrewsHelperRouteSearchMetrics primaryMetrics,
-        List<WorldPoint> benchmarkPath,
-        DrewsHelperRouteSearchMetrics benchmarkMetrics
+        DrewsHelperRouteSearchMetrics primaryMetrics
     )
     {
         this.status = status;
@@ -77,13 +71,8 @@ public final class DrewsHelperRouteSnapshot
         this.message = message;
         this.walkingDistance = walkingDistance;
         this.primaryMetrics = primaryMetrics == null
-            ? DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.A_STAR)
+            ? DrewsHelperRouteSearchMetrics.empty()
             : primaryMetrics;
-        this.benchmarkPath = Collections.unmodifiableList(new ArrayList<>(
-            benchmarkPath == null ? Collections.emptyList() : benchmarkPath));
-        this.benchmarkMetrics = benchmarkMetrics == null
-            ? DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.BFS)
-            : benchmarkMetrics;
     }
 
     public static DrewsHelperRouteSnapshot disabled()
@@ -118,10 +107,7 @@ public final class DrewsHelperRouteSnapshot
             path,
             destinations,
             walkingDistance,
-            DrewsHelperRouteSolverMode.A_STAR,
-            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.A_STAR),
-            Collections.emptyList(),
-            DrewsHelperRouteSearchMetrics.empty(DrewsHelperRouteSolverMode.BFS)
+            DrewsHelperRouteSearchMetrics.empty()
         );
     }
 
@@ -129,10 +115,7 @@ public final class DrewsHelperRouteSnapshot
         List<WorldPoint> path,
         List<WorldPoint> destinations,
         int walkingDistance,
-        DrewsHelperRouteSolverMode solverMode,
-        DrewsHelperRouteSearchMetrics primaryMetrics,
-        List<WorldPoint> benchmarkPath,
-        DrewsHelperRouteSearchMetrics benchmarkMetrics
+        DrewsHelperRouteSearchMetrics primaryMetrics
     )
     {
         return new DrewsHelperRouteSnapshot(
@@ -141,11 +124,7 @@ public final class DrewsHelperRouteSnapshot
             destinations,
             "Route ready",
             walkingDistance,
-            primaryMetrics == null
-                ? DrewsHelperRouteSearchMetrics.empty(solverMode)
-                : primaryMetrics,
-            benchmarkPath,
-            benchmarkMetrics
+            primaryMetrics
         );
     }
 
@@ -220,9 +199,7 @@ public final class DrewsHelperRouteSnapshot
             destinations,
             message,
             Math.max(0, walkingDistance - consumedTileCount),
-            primaryMetrics,
-            benchmarkPath,
-            benchmarkMetrics
+            primaryMetrics
         );
     }
 
@@ -234,21 +211,6 @@ public final class DrewsHelperRouteSnapshot
     public DrewsHelperRouteSearchMetrics getPrimaryMetrics()
     {
         return primaryMetrics;
-    }
-
-    public List<WorldPoint> getBenchmarkPath()
-    {
-        return benchmarkPath;
-    }
-
-    public DrewsHelperRouteSearchMetrics getBenchmarkMetrics()
-    {
-        return benchmarkMetrics;
-    }
-
-    public boolean hasBenchmarkPath()
-    {
-        return !benchmarkPath.isEmpty() && benchmarkMetrics.isRouteFound();
     }
 
     public static boolean isTransportJump(WorldPoint from, WorldPoint to)

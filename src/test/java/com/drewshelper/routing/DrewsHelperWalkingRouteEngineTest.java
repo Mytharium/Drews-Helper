@@ -214,43 +214,76 @@ public class DrewsHelperWalkingRouteEngineTest
     }
 
     @Test
-    public void bfsSolverModeProducesLayerAccurateRoute() throws Exception
+    public void appliesTargetAwareLocalOverridesForRepeatedLiveForks() throws Exception
     {
-        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap());
-
-        DrewsHelperRouteSnapshot route = engine.solve(
-            new WorldPoint(0, 0, 0),
-            Arrays.asList(new WorldPoint(0, 4, 0)),
-            DrewsHelperRouteSolverMode.BFS,
-            false
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(
+            DrewsHelperCollisionMap.loadDefault(),
+            DrewsHelperTransportGraph.loadDefault(false)
         );
 
-        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
-        assertEquals(DrewsHelperRouteSolverMode.BFS, route.getPrimaryMetrics().getSolverMode());
-        assertEquals(4, route.getWalkingDistance());
-        assertEquals(new WorldPoint(0, 1, 0), route.getPath().get(1));
-        assertTrue(route.getPrimaryMetrics().getExpandedNodes() > 0);
+        DrewsHelperRouteSnapshot path1 = engine.solve(
+            new WorldPoint(2942, 3243, 0),
+            Collections.singletonList(new WorldPoint(2932, 3214, 0))
+        );
+
+        assertEquals(DrewsHelperRouteStatus.READY, path1.getStatus());
+        assertEquals(29, path1.getWalkingDistance());
+        assertEquals(new WorldPoint(2939, 3223, 0), path1.getPath().get(20));
+        assertEquals(new WorldPoint(2939, 3222, 0), path1.getPath().get(21));
+        assertEquals(new WorldPoint(2938, 3221, 0), path1.getPath().get(22));
+        assertEquals(new WorldPoint(2937, 3220, 0), path1.getPath().get(23));
+        assertEquals(new WorldPoint(2936, 3219, 0), path1.getPath().get(24));
+        assertEquals(new WorldPoint(2935, 3218, 0), path1.getPath().get(25));
+
+        DrewsHelperRouteSnapshot path3 = engine.solve(
+            new WorldPoint(2942, 3243, 0),
+            Collections.singletonList(new WorldPoint(2970, 3229, 0))
+        );
+
+        assertEquals(DrewsHelperRouteStatus.READY, path3.getStatus());
+        assertEquals(29, path3.getWalkingDistance());
+        assertEquals(new WorldPoint(2966, 3231, 0), path3.getPath().get(25));
+        assertEquals(new WorldPoint(2967, 3231, 0), path3.getPath().get(26));
+        assertEquals(new WorldPoint(2968, 3230, 0), path3.getPath().get(27));
+        assertEquals(new WorldPoint(2969, 3229, 0), path3.getPath().get(28));
+        assertEquals(new WorldPoint(2970, 3229, 0), path3.getPath().get(29));
     }
 
     @Test
-    public void benchmarkModeKeepsAlternateSolverPathAndMetrics() throws Exception
+    public void localOverridesRemainTargetAware()
+    {
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap());
+
+        List<DrewsHelperWalkingRouteEngine.MoveCandidate> overridden = engine.moveCandidates(
+            new WorldPoint(2939, 3223, 0),
+            new WorldPoint(2932, 3214, 0)
+        );
+        assertEquals(new WorldPoint(2939, 3222, 0), overridden.get(0).getDestination());
+        assertTrue(overridden.get(0).getPreferencePenalty() < 0);
+
+        List<DrewsHelperWalkingRouteEngine.MoveCandidate> normal = engine.moveCandidates(
+            new WorldPoint(2939, 3223, 0),
+            new WorldPoint(2932, 3215, 0)
+        );
+        assertEquals(new WorldPoint(2939, 3222, 0), normal.get(0).getDestination());
+        assertFalse(normal.get(0).getPreferencePenalty() < 0);
+    }
+
+    @Test
+    public void singleSolverRouteExposesSearchMetrics() throws Exception
     {
         DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap());
 
         DrewsHelperRouteSnapshot route = engine.solve(
             new WorldPoint(0, 0, 0),
-            Arrays.asList(new WorldPoint(3, 8, 0)),
-            DrewsHelperRouteSolverMode.A_STAR,
-            true
+            Arrays.asList(new WorldPoint(3, 8, 0))
         );
 
         assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
-        assertEquals(DrewsHelperRouteSolverMode.A_STAR, route.getPrimaryMetrics().getSolverMode());
-        assertEquals(DrewsHelperRouteSolverMode.BFS, route.getBenchmarkMetrics().getSolverMode());
-        assertTrue(route.hasBenchmarkPath());
-        assertEquals(route.getPath().get(0), route.getBenchmarkPath().get(0));
-        assertEquals(route.getPath().get(route.getPath().size() - 1), route.getBenchmarkPath().get(route.getBenchmarkPath().size() - 1));
-        assertTrue(route.getBenchmarkMetrics().getExpandedNodes() > 0);
+        assertEquals(8, route.getWalkingDistance());
+        assertEquals(8, route.getPrimaryMetrics().getRouteStepCount());
+        assertTrue(route.getPrimaryMetrics().isRouteFound());
+        assertTrue(route.getPrimaryMetrics().getExpandedNodes() > 0);
     }
 
     @Test
@@ -291,6 +324,58 @@ public class DrewsHelperWalkingRouteEngineTest
 
         assertTrue(trace.contains("(1,1,0) diagonal dist=4 pref=2 predicted"));
         assertTrue(trace.contains("(1,0,0) cardinal dist=5 pref=1 actual"));
+    }
+
+    @Test
+    public void validatesObservedEdgeContinuationCost()
+    {
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap());
+
+        DrewsHelperWalkingRouteEngine.ObservedEdgeDiagnostic diagnostic = engine.validateObservedEdge(
+            new WorldPoint(0, 0, 0),
+            new WorldPoint(0, 1, 0),
+            new WorldPoint(2, 0, 0),
+            2
+        );
+
+        assertTrue(diagnostic.isAvailable());
+        assertTrue(diagnostic.isEdgeLegal());
+        assertEquals("cardinal", diagnostic.getEdgeType());
+        assertTrue(diagnostic.isContinuationFound());
+        assertEquals(2, diagnostic.getContinuationDistance());
+        assertEquals(3, diagnostic.getTotalRemainingFromFork());
+        assertEquals(1, diagnostic.getContinuationDelta());
+        assertTrue(diagnostic.isContinuationLonger());
+
+        String trace = DrewsHelperRouteBenchmark.formatObservedEdgeDiagnostic(diagnostic, 2, 2);
+        assertTrue(trace.contains("legal=true type=cardinal"));
+        assertTrue(trace.contains("delta=1 longer=true"));
+        assertTrue(trace.contains("repeat=2 overrideCandidate=true"));
+    }
+
+    @Test
+    public void validatesIllegalObservedEdgeForOverrideLogging()
+    {
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new EdgeMovementMap());
+
+        DrewsHelperWalkingRouteEngine.ObservedEdgeDiagnostic diagnostic = engine.validateObservedEdge(
+            new WorldPoint(0, 0, 0),
+            new WorldPoint(1, 0, 0),
+            new WorldPoint(1, 0, 0),
+            1
+        );
+
+        assertTrue(diagnostic.isAvailable());
+        assertFalse(diagnostic.isEdgeLegal());
+        assertEquals("cardinal", diagnostic.getEdgeType());
+        assertTrue(diagnostic.isContinuationFound());
+        assertEquals(0, diagnostic.getContinuationDistance());
+        assertEquals(1, diagnostic.getTotalRemainingFromFork());
+        assertEquals(0, diagnostic.getContinuationDelta());
+
+        String trace = DrewsHelperRouteBenchmark.formatObservedEdgeDiagnostic(diagnostic, 2, 2);
+        assertTrue(trace.contains("legal=false type=cardinal"));
+        assertTrue(trace.contains("repeat=2 overrideCandidate=true"));
     }
 
     @Test

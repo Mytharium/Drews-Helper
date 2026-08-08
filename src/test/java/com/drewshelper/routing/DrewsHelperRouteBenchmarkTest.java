@@ -14,7 +14,6 @@ public class DrewsHelperRouteBenchmarkTest
     public void comparesFirstStepPrefixLengthDeviationAndTurns()
     {
         DrewsHelperRouteBenchmark.Report report = DrewsHelperRouteBenchmark.compare(
-            DrewsHelperRouteSolverMode.BFS,
             Arrays.asList(
                 new WorldPoint(0, 0, 0),
                 new WorldPoint(1, 0, 0),
@@ -29,7 +28,6 @@ public class DrewsHelperRouteBenchmarkTest
             )
         );
 
-        assertEquals(DrewsHelperRouteSolverMode.BFS, report.getSolverMode());
         assertTrue(report.isFirstStepDirectionMatches());
         assertEquals(1, report.getFirstFiveMatches());
         assertEquals(3, report.getFirstFiveCompared());

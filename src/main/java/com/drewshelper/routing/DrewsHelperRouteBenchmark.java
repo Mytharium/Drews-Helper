@@ -13,16 +13,11 @@ public final class DrewsHelperRouteBenchmark
     {
     }
 
-    public static Report compare(
-        DrewsHelperRouteSolverMode solverMode,
-        List<WorldPoint> expectedPath,
-        List<WorldPoint> actualPath
-    )
+    public static Report compare(List<WorldPoint> expectedPath, List<WorldPoint> actualPath)
     {
         List<WorldPoint> expected = expectedPath == null ? Collections.emptyList() : expectedPath;
         List<WorldPoint> actual = actualPath == null ? Collections.emptyList() : actualPath;
         return new Report(
-            solverMode,
             firstStepDirectionMatches(expected, actual),
             prefixMatches(expected, actual, 5),
             comparedMovementTicks(actual, 5),
@@ -259,6 +254,66 @@ public final class DrewsHelperRouteBenchmark
         return builder.append(']').toString();
     }
 
+    public static String formatObservedEdgeDiagnostic(
+        DrewsHelperWalkingRouteEngine.ObservedEdgeDiagnostic diagnostic,
+        int repeatCount,
+        int overrideCandidateRepeatThreshold
+    )
+    {
+        if (diagnostic == null)
+        {
+            return "none";
+        }
+
+        int normalizedRepeatCount = Math.max(0, repeatCount);
+        int threshold = Math.max(1, overrideCandidateRepeatThreshold);
+        if (!diagnostic.isAvailable())
+        {
+            return "status=unavailable"
+                + " reason=" + diagnostic.getReason()
+                + " repeat=" + normalizedRepeatCount
+                + " overrideCandidate=false";
+        }
+
+        boolean overrideCandidate = normalizedRepeatCount >= threshold
+            && (!diagnostic.isEdgeLegal() || diagnostic.isContinuationLonger());
+        StringBuilder builder = new StringBuilder();
+        builder.append("from=")
+            .append(formatPoint(diagnostic.getFrom()))
+            .append(" actual=")
+            .append(formatPoint(diagnostic.getObserved()))
+            .append(" target=")
+            .append(formatPoint(diagnostic.getTarget()))
+            .append(" legal=")
+            .append(diagnostic.isEdgeLegal())
+            .append(" type=")
+            .append(diagnostic.getEdgeType())
+            .append(" continuation=")
+            .append(diagnostic.getReason());
+
+        if (diagnostic.isContinuationFound())
+        {
+            builder.append(" continuationDist=")
+                .append(diagnostic.getContinuationDistance())
+                .append(" totalFromFork=")
+                .append(diagnostic.getTotalRemainingFromFork())
+                .append(" expectedFromFork=")
+                .append(diagnostic.getExpectedRemainingFromFork())
+                .append(" delta=")
+                .append(diagnostic.getContinuationDelta())
+                .append(" longer=")
+                .append(diagnostic.isContinuationLonger());
+        }
+
+        return builder.append(" expanded=")
+            .append(diagnostic.getExpandedNodes())
+            .append(" repeat=")
+            .append(normalizedRepeatCount)
+            .append(" overrideCandidate=")
+            .append(overrideCandidate)
+            .toString();
+    }
+
     public static WorldPoint pointAt(List<WorldPoint> path, int index)
     {
         if (path == null || index < 0 || index >= path.size())
@@ -364,7 +419,6 @@ public final class DrewsHelperRouteBenchmark
 
     public static final class Report
     {
-        private final DrewsHelperRouteSolverMode solverMode;
         private final boolean firstStepDirectionMatches;
         private final int firstFiveMatches;
         private final int firstFiveCompared;
@@ -378,7 +432,6 @@ public final class DrewsHelperRouteBenchmark
         private final int actualTurnCount;
 
         private Report(
-            DrewsHelperRouteSolverMode solverMode,
             boolean firstStepDirectionMatches,
             int firstFiveMatches,
             int firstFiveCompared,
@@ -392,7 +445,6 @@ public final class DrewsHelperRouteBenchmark
             int actualTurnCount
         )
         {
-            this.solverMode = solverMode == null ? DrewsHelperRouteSolverMode.A_STAR : solverMode;
             this.firstStepDirectionMatches = firstStepDirectionMatches;
             this.firstFiveMatches = firstFiveMatches;
             this.firstFiveCompared = firstFiveCompared;
@@ -404,11 +456,6 @@ public final class DrewsHelperRouteBenchmark
             this.maxLateralDeviation = maxLateralDeviation;
             this.expectedTurnCount = expectedTurnCount;
             this.actualTurnCount = actualTurnCount;
-        }
-
-        public DrewsHelperRouteSolverMode getSolverMode()
-        {
-            return solverMode;
         }
 
         public boolean isFirstStepDirectionMatches()
@@ -468,8 +515,7 @@ public final class DrewsHelperRouteBenchmark
 
         public String summary()
         {
-            return solverMode
-                + " first=" + (firstStepDirectionMatches ? "match" : "miss")
+            return "first=" + (firstStepDirectionMatches ? "match" : "miss")
                 + " 5=" + firstFiveMatches + "/" + firstFiveCompared
                 + " 10=" + firstTenMatches + "/" + firstTenCompared
                 + " full=" + fullTileSequenceMatches

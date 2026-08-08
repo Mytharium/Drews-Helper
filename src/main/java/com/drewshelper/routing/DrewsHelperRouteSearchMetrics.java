@@ -5,7 +5,6 @@ import net.runelite.api.coords.WorldPoint;
 
 public final class DrewsHelperRouteSearchMetrics
 {
-    private final DrewsHelperRouteSolverMode solverMode;
     private final boolean routeFound;
     private final long solveTimeNanos;
     private final int expandedNodes;
@@ -13,7 +12,6 @@ public final class DrewsHelperRouteSearchMetrics
     private final int turnCount;
 
     private DrewsHelperRouteSearchMetrics(
-        DrewsHelperRouteSolverMode solverMode,
         boolean routeFound,
         long solveTimeNanos,
         int expandedNodes,
@@ -21,7 +19,6 @@ public final class DrewsHelperRouteSearchMetrics
         int turnCount
     )
     {
-        this.solverMode = solverMode == null ? DrewsHelperRouteSolverMode.A_STAR : solverMode;
         this.routeFound = routeFound;
         this.solveTimeNanos = Math.max(0L, solveTimeNanos);
         this.expandedNodes = Math.max(0, expandedNodes);
@@ -29,20 +26,18 @@ public final class DrewsHelperRouteSearchMetrics
         this.turnCount = Math.max(0, turnCount);
     }
 
-    public static DrewsHelperRouteSearchMetrics empty(DrewsHelperRouteSolverMode solverMode)
+    public static DrewsHelperRouteSearchMetrics empty()
     {
-        return new DrewsHelperRouteSearchMetrics(solverMode, false, 0L, 0, 0, 0);
+        return new DrewsHelperRouteSearchMetrics(false, 0L, 0, 0, 0);
     }
 
     public static DrewsHelperRouteSearchMetrics completed(
-        DrewsHelperRouteSolverMode solverMode,
         long solveTimeNanos,
         int expandedNodes,
         List<WorldPoint> path
     )
     {
         return new DrewsHelperRouteSearchMetrics(
-            solverMode,
             true,
             solveTimeNanos,
             expandedNodes,
@@ -52,17 +47,11 @@ public final class DrewsHelperRouteSearchMetrics
     }
 
     public static DrewsHelperRouteSearchMetrics notFound(
-        DrewsHelperRouteSolverMode solverMode,
         long solveTimeNanos,
         int expandedNodes
     )
     {
-        return new DrewsHelperRouteSearchMetrics(solverMode, false, solveTimeNanos, expandedNodes, 0, 0);
-    }
-
-    public DrewsHelperRouteSolverMode getSolverMode()
-    {
-        return solverMode;
+        return new DrewsHelperRouteSearchMetrics(false, solveTimeNanos, expandedNodes, 0, 0);
     }
 
     public boolean isRouteFound()
