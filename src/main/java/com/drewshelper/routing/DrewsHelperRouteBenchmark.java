@@ -159,8 +159,25 @@ public final class DrewsHelperRouteBenchmark
             + " mergeBack={" + fit.mergeBackSummary() + "}"
             + " classification=" + fit.getClassification()
             + " benign=" + fit.isBenign()
+            + " additionalDivergences={" + formatAdditionalDivergences(expectedPath, actualPath, actualComplete, fit) + "}"
             + " predictedWindow=" + formatPathWindow(expectedPath, divergenceIndex)
             + " actualWindow=" + formatPathWindow(actualPath, divergenceIndex);
+    }
+
+    public static int additionalDivergenceIndexAfterFirstMerge(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete
+    )
+    {
+        int divergenceIndex = firstDivergenceIndex(expectedPath, actualPath, actualComplete);
+        if (divergenceIndex < 0)
+        {
+            return -1;
+        }
+
+        DivergenceFit firstFit = divergenceFitAt(expectedPath, actualPath, divergenceIndex);
+        return additionalDivergenceIndexAfterMerge(expectedPath, actualPath, actualComplete, firstFit);
     }
 
     public static String formatPathWindow(List<WorldPoint> path, int centerIndex)
@@ -437,6 +454,15 @@ public final class DrewsHelperRouteBenchmark
             return DivergenceFit.exact();
         }
 
+        return divergenceFitAt(expectedPath, actualPath, divergenceIndex);
+    }
+
+    private static DivergenceFit divergenceFitAt(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        int divergenceIndex
+    )
+    {
         MergeBack mergeBack = findMergeBack(expectedPath, actualPath, divergenceIndex);
         if (!mergeBack.isFound())
         {
@@ -480,6 +506,84 @@ public final class DrewsHelperRouteBenchmark
         }
 
         return MergeBack.none();
+    }
+
+    private static String formatAdditionalDivergences(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete,
+        DivergenceFit firstFit
+    )
+    {
+        if (!firstFit.hasMergeBack())
+        {
+            return "not-scanned";
+        }
+
+        int nextDivergence = additionalDivergenceIndexAfterMerge(
+            expectedPath,
+            actualPath,
+            actualComplete,
+            firstFit
+        );
+        if (nextDivergence < 0)
+        {
+            return "none";
+        }
+
+        DivergenceFit nextFit = divergenceFitAt(expectedPath, actualPath, nextDivergence);
+        return "idx=" + nextDivergence
+            + " predicted=" + formatPoint(pointAt(expectedPath, nextDivergence))
+            + " actual=" + formatPoint(pointAt(actualPath, nextDivergence))
+            + " mergeBack={" + nextFit.mergeBackSummary() + "}"
+            + " classification=" + nextFit.getClassification()
+            + " benign=" + nextFit.isBenign();
+    }
+
+    private static int additionalDivergenceIndexAfterMerge(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete,
+        DivergenceFit firstFit
+    )
+    {
+        if (!firstFit.hasMergeBack())
+        {
+            return -1;
+        }
+
+        int restartIndex = Math.min(
+            firstFit.getMergeBackExpectedIndex(),
+            firstFit.getMergeBackActualIndex()
+        ) + 1;
+        return nextDivergenceIndex(expectedPath, actualPath, actualComplete, restartIndex);
+    }
+
+    private static int nextDivergenceIndex(
+        List<WorldPoint> expectedPath,
+        List<WorldPoint> actualPath,
+        boolean actualComplete,
+        int startIndex
+    )
+    {
+        List<WorldPoint> expected = expectedPath == null ? Collections.emptyList() : expectedPath;
+        List<WorldPoint> actual = actualPath == null ? Collections.emptyList() : actualPath;
+        int start = Math.max(0, startIndex);
+        int compared = Math.min(expected.size(), actual.size());
+        for (int index = start; index < compared; index++)
+        {
+            if (!expected.get(index).equals(actual.get(index)))
+            {
+                return index;
+            }
+        }
+
+        if (actualComplete && expected.size() != actual.size() && compared >= start)
+        {
+            return compared;
+        }
+
+        return -1;
     }
 
     private static int comparedMovementTicks(List<WorldPoint> actual, int limit)
@@ -868,6 +972,16 @@ public final class DrewsHelperRouteBenchmark
             return actualIndex - expectedIndex;
         }
 
+        private int getExpectedIndex()
+        {
+            return expectedIndex;
+        }
+
+        private int getActualIndex()
+        {
+            return actualIndex;
+        }
+
         private String summary()
         {
             if (!found)
@@ -935,6 +1049,21 @@ public final class DrewsHelperRouteBenchmark
         private int getSequencePenalty()
         {
             return sequencePenalty;
+        }
+
+        private boolean hasMergeBack()
+        {
+            return mergeBack.isFound();
+        }
+
+        private int getMergeBackExpectedIndex()
+        {
+            return mergeBack.getExpectedIndex();
+        }
+
+        private int getMergeBackActualIndex()
+        {
+            return mergeBack.getActualIndex();
         }
 
         private String mergeBackSummary()

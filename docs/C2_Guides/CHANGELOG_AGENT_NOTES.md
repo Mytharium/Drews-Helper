@@ -146,3 +146,27 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - Updated `shadow` and `shapeShadow` winner scoring to use merge-aware route-fit penalties, so same-time permutations are not treated like hard no-merge drift.
 - Added benchmark formatter coverage for merge-aware diagnostic winner behavior.
 - This remains diagnostic-only; visible route selection did not change.
+
+## 2026-08-08 - D-0054 post-merge divergence summary
+- Checked Myth's D-0053 five-waypoint chain and confirmed the waypoint 2 -> 3 mismatch was the same benign merge-back class, but the completed route still reported `full=false lenDelta=-1`.
+- Added `additionalDivergences={...}` inside `divergence={...}` so the benchmark report can expose the next mismatch or length-only difference after a benign merge-back.
+- Added benchmark formatter coverage for a path that merges back cleanly and then ends with a length difference.
+- This remains diagnostic-only; visible route selection, local overrides, `shapeShadow`, waypoint behavior, and capture lifecycle did not change.
+
+### D-0055 - Additional divergence detail for post-merge forks
+- Date: 2026-08-08
+- Added `additionalDivergenceDetail={...}` to completed benchmark reports so a later post-merge mismatch gets segment-aware candidate and edge-validation diagnostics.
+- The visible route, local Path 1 / Path 3 overrides, `shadow`, and `shapeShadow` behavior remain unchanged.
+- Focused benchmark/capture tests and full package build passed after the change.
+
+### D-0056 - Fork-rank telemetry for post-merge candidate selection
+- Date: 2026-08-08
+- Checked Myth's repeated D-0055 five-waypoint chain. The later `idx=52` fork repeated, and the actual client edge was legal with `delta=0` and `longer=false`.
+- Added `forkRank={...}` inside `additionalDivergenceDetail={...}` for completed benchmark reports. It validates and ranks all legal neighboring candidates at the later fork, marking predicted and actual ranks.
+- This is telemetry only. Visible route selection, local Path 1 / Path 3 overrides, `shadow`, `shapeShadow`, waypoint behavior, and capture lifecycle remain unchanged.
+
+### D-0057 - Route diagnostics closeout
+- Date: 2026-08-08
+- Checked Myth's final Point 1 / Point 2 / Point 3 control rerun after the D-0056 random-chain samples. All three visible routes completed with `full=true`, `lenDelta=0`, `maxDev=0`, and `divergence={none}`.
+- The old same-chain fork where `actualRank=1` was promising but did not generalize across new random chains; usable random-chain misses were mostly `sameTimePermutation benign=true`, and the contaminated short-click run is not promotion evidence.
+- No code behavior changed for this closeout. Updated the guide state so future work starts from "route behavior unchanged, diagnostics available" instead of another required rerun.

@@ -142,6 +142,83 @@ public class DrewsHelperPluginBenchmarkCaptureTest
         assertTrue(finalUpdate.logLine().contains("shapeShadow={status="));
     }
 
+    @Test
+    public void reportsAdditionalDivergenceCandidateAndEdgeDetails() throws Exception
+    {
+        WorldPoint firstWaypoint = point(2958, 3235);
+        WorldPoint finalWaypoint = point(2960, 3235);
+        List<WorldPoint> expectedRoute = Arrays.asList(
+            point(2942, 3243),
+            point(2943, 3243),
+            point(2944, 3243),
+            point(2945, 3244),
+            point(2946, 3244),
+            point(2947, 3244),
+            point(2948, 3244),
+            point(2949, 3243),
+            point(2950, 3242),
+            point(2951, 3242),
+            point(2952, 3241),
+            point(2953, 3240),
+            point(2954, 3239),
+            point(2955, 3238),
+            point(2956, 3237),
+            point(2957, 3236),
+            firstWaypoint,
+            point(2959, 3235),
+            finalWaypoint
+        );
+        DrewsHelperPlugin.RouteBenchmarkCapture capture = new DrewsHelperPlugin.RouteBenchmarkCapture(
+            expectedRoute,
+            Arrays.asList(firstWaypoint, finalWaypoint),
+            new DrewsHelperWalkingRouteEngine(DrewsHelperCollisionMap.loadDefault()),
+            new HashMap<>()
+        );
+
+        List<WorldPoint> actualRoute = Arrays.asList(
+            point(2942, 3243),
+            point(2943, 3243),
+            point(2944, 3244),
+            point(2945, 3244),
+            point(2946, 3244),
+            point(2947, 3244),
+            point(2948, 3244),
+            point(2949, 3243),
+            point(2950, 3242),
+            point(2951, 3242),
+            point(2952, 3242),
+            point(2953, 3241),
+            point(2954, 3240),
+            point(2955, 3239),
+            point(2956, 3238),
+            point(2957, 3237),
+            point(2958, 3236),
+            firstWaypoint,
+            point(2959, 3235),
+            finalWaypoint
+        );
+
+        DrewsHelperPlugin.RouteBenchmarkUpdate finalUpdate = null;
+        for (WorldPoint point : actualRoute)
+        {
+            DrewsHelperPlugin.RouteBenchmarkUpdate update = capture.record(point);
+            if (update != null && update.isComplete())
+            {
+                finalUpdate = update;
+            }
+        }
+
+        assertNotNull(finalUpdate);
+        assertTrue(finalUpdate.logLine().contains("divergence={idx=2"));
+        assertTrue(finalUpdate.logLine().contains("additionalDivergences={idx=10"));
+        assertTrue(finalUpdate.logLine().contains("additionalDivergenceDetail={idx=10"));
+        assertTrue(finalUpdate.logLine().contains("candidates={from=(2951,3242,0) target=(2958,3235,0) finalTarget=(2960,3235,0)"));
+        assertTrue(finalUpdate.logLine().contains("edgeValidation={from=(2951,3242,0) actual=(2952,3242,0) target=(2958,3235,0)"));
+        assertTrue(finalUpdate.logLine().contains("forkRank={from=(2951,3242,0) target=(2958,3235,0) finalTarget=(2960,3235,0)"));
+        assertTrue(finalUpdate.logLine().contains("predictedRank="));
+        assertTrue(finalUpdate.logLine().contains("actualRank="));
+    }
+
     private static WorldPoint point(int x, int y)
     {
         return new WorldPoint(x, y, 0);

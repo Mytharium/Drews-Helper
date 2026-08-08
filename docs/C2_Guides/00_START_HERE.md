@@ -1,6 +1,6 @@
 # Drew's Helper C2 Guides
 
-Last updated: 2026-08-07.
+Last updated: 2026-08-08.
 
 ## Project
 
@@ -57,4 +57,4 @@ Start tomorrow's work in `02_NEXT_WORK.md`. The active route feature is Drew-own
 
 ## Current Route Diagnostics
 
-As of D-0051, visible routing still uses the target-aware Path 1 / Path 3 local walking overrides from D-0044 through D-0046. Benchmark reports now include both `shadow={...}` for the no-override baseline and `shapeShadow={...}` for a diagnostic-only no-override route that uses segment line-shape tie ranking. Do not promote `shapeShadow` into the visible route until live samples show it matches the client across the fixed controls and random chains.
+As of D-0057, the current route-diagnostics phase is closed. Visible routing still uses the target-aware Path 1 / Path 3 local walking overrides from D-0044 through D-0046, and the latest Point 1 / Point 2 / Point 3 controls all passed with `full=true`, `lenDelta=0`, `maxDev=0`, and `divergence={none}`. Benchmark reports keep `shadow={...}`, `shapeShadow={...}`, `classification=<...>` / `benign=<...>`, `additionalDivergences={...}`, and `additionalDivergenceDetail={idx=... candidates={...} edgeValidation={...} forkRank={...}}` as telemetry. The repeated same-chain `actualRank=1` signal did not generalize across new random chains, so do not promote `shapeShadow`, add broad local ranking, or remove the overrides from this evidence.

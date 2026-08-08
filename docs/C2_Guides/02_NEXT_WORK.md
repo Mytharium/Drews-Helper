@@ -1,6 +1,6 @@
 # Next Work
 
-Last updated: 2026-08-07.
+Last updated: 2026-08-08.
 
 ## Drew's Shortest Path Build Plan
 
@@ -257,3 +257,38 @@ Next route work:
   - `fit={visible=... shapeShadow=...}` inside `shapeShadow={...}`.
 - If the chain reports only `sameTimePermutation benign=true` divergences and the displayed route still reaches the final waypoint on schedule, collect two or three more nearby five-waypoint chains before promoting any route-ranker behavior.
 - Do not remove Path 1 / Path 3 overrides or promote `shapeShadow` until controls still pass and repeated random chains show the merge-aware winner does not regress visible movement.
+
+### Next live route check after D-0054
+- Restart the Drew's Helper dev client after the D-0054 build.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Clear all, place five nearby random waypoints, and walk the full chain in waypoint order.
+- The key field is now `additionalDivergences={...}` inside every non-`none` `divergence={...}` block.
+- If the first divergence is `classification=sameTimePermutation benign=true` and `additionalDivergences={none}`, treat that route as a harmless local step-order permutation.
+- If `additionalDivergences` reports another `idx=...` or length-only `actual=(null)` / `predicted=(null)` case, inspect that later fork before changing route ranking. This is especially important when the completed route still has `full=false` or non-zero `lenDelta`.
+- Do not promote `shapeShadow`, add a local override, or remove the Path 1 / Path 3 overrides until the post-merge mismatch is understood.
+
+### Next live route check after D-0055
+- Restart the Drew's Helper dev client after the D-0055 build.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- Clear all, place five nearby random waypoints, and walk the full chain in waypoint order.
+- If the first divergence is benign but `additionalDivergences` reports a later `idx=...`, read `additionalDivergenceDetail={...}` for that later fork:
+  - `candidates={...}` should show the second fork's predicted and actual tiles against the active segment target.
+  - `edgeValidation={...}` should show whether the later actual edge is legal, whether continuation is longer, and whether it repeats enough to become an override candidate.
+- Do not promote `shapeShadow`, add a local override, or remove Path 1 / Path 3 overrides until repeated clean chains classify the later fork consistently.
+
+### Next live route check after D-0056
+- Restart the Drew's Helper dev client after the D-0056 build.
+- Keep Benchmark Movement ON, Run OFF, ground-click only.
+- First, rerun the same five-waypoint chain that repeated the `idx=52` fork if it is still available or easy to recreate.
+- Then collect two or three new nearby five-waypoint chains in waypoint order.
+- The key field is now `forkRank={...}` inside `additionalDivergenceDetail={...}` on completed target reports:
+  - `best=actual` or `actualRank=1` means the local candidate ranking would have preferred the client branch.
+  - `best=predicted` or `predictedRank=1` means the displayed branch still wins the local ranker.
+  - `best=candidate` means a third legal neighboring tile looks better than both displayed and actual, so do not promote the rule without more evidence.
+- Treat this as telemetry only. Do not change visible route selection, add local overrides, or remove Path 1 / Path 3 overrides until repeated clean chains and the fixed controls agree.
+
+### Route diagnostic closeout after D-0057
+- Current phase is complete. Myth reran the fixed Point 1 / Point 2 / Point 3 controls after the random-chain samples, and all three visible routes completed cleanly with `full=true`, `lenDelta=0`, `maxDev=0`, and `divergence={none}`.
+- Leave visible routing unchanged. Keep the Path 1 / Path 3 target-aware overrides, keep `shapeShadow` and `forkRank` as telemetry only, and do not promote a broad local ranker from the current evidence.
+- Keep `Benchmark Movement` OFF during normal use. Turn it on only for deliberate route diagnostics.
+- If a future route visibly disagrees with the client, collect a fresh completed `DREW_ROUTE_BENCH` report and judge `classification`, `additionalDivergences`, `additionalDivergenceDetail`, and `forkRank` before making another routing change.

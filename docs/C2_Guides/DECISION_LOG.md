@@ -403,3 +403,39 @@ Drew may extend the existing Path 1 target-aware override with that single tail 
 - Decision: A divergence with `mergeBack stepDelta=0` is classified as `sameTimePermutation benign=true` and should be scored as a low-penalty diagnostic fit, not as hard route drift.
 - Evidence: Myth's post-D-0052 rerun repeated the `(2976,3252,0)` fork. The displayed route chose `(2977,3251,0)`, the client chose `(2977,3252,0)`, and both paths rejoined at `(2979,3250,0)` on the same movement index. The old single-edge `longer=true` readout overstated the problem because it ignored that immediate rejoin.
 - Constraint: This is still diagnostic-only. Visible route selection, local Path 1 / Path 3 overrides, `shapeShadow` solving, waypoint behavior, and capture lifecycle stay unchanged. Promotion requires repeated clean samples and a separate explicit route-ranker change.
+
+### D-0054 - Post-merge differences must be visible before ranking changes
+- Date: 2026-08-08
+- Decision: `DREW_ROUTE_BENCH` divergence output should report `additionalDivergences={...}` after the first merge-back when the route still does not fully match. A benign first fork is not enough evidence to promote or change route ranking if the completed route still has `full=false` or a non-zero `lenDelta`.
+- Evidence: Myth's D-0053 five-waypoint chain visibly differed between waypoint 2 and waypoint 3. The first logged mismatch was `classification=sameTimePermutation benign=true`, but the route completed with `lenDelta=-1`, meaning the first-divergence-only report could hide a later mismatch or length-only shortcut.
+- Constraint: This is diagnostic-only. Do not promote `shapeShadow`, add a local override, remove Path 1 / Path 3 overrides, or change visible route selection from this sample until the post-merge difference is classified by fresh D-0054 logs.
+
+### D-0055 - Post-merge forks use the existing segment validator
+
+Date: 2026-08-08
+
+Decision: When `additionalDivergences={idx=...}` reports a later mismatch after the first merge-back, Drew should also log `additionalDivergenceDetail={idx=... candidates={...} edgeValidation={...}}`. The detail must reuse the existing segment-aware candidate trace and observed-edge validator instead of creating another route-comparison path.
+
+Evidence: Myth's post-D-0054 five-waypoint chain completed with the first waypoint 2 -> 3 mismatch classified as `sameTimePermutation benign=true`, but the final report still had `full=false lenDelta=-1` and `additionalDivergences={idx=52 ... classification=earlyMerge benign=false}`. The old first-fork `candidates` and `edgeValidation` still described idx 39, so the later shortcut could not be judged from the log.
+
+Constraint: D-0055 is diagnostic-only. Visible route selection, local Path 1 / Path 3 overrides, `shapeShadow` solving, waypoint behavior, and capture lifecycle stay unchanged. Do not add an override or promote a ranker until repeated clean samples classify the later fork consistently.
+
+### D-0056 - Post-merge forks need candidate rank telemetry before promotion
+
+Date: 2026-08-08
+
+Decision: When `additionalDivergenceDetail={idx=...}` reports a later post-merge fork, completed benchmark reports should also include `forkRank={...}`. The rank trace validates every legal neighboring candidate at that fork, reports each candidate's continuation total/delta, and marks `predictedRank` plus `actualRank`.
+
+Evidence: Myth reran the same five-waypoint chain after D-0055. The later fork repeated at `idx=52`: Drew displayed `(2983,3239,0)`, the client walked `(2984,3239,0)`, and edge validation said the client branch was legal, found continuation, `delta=0`, and `longer=false`. That is enough to justify richer rank telemetry, but not enough to change visible routing.
+
+Constraint: D-0056 is diagnostic-only. Visible route selection, local Path 1 / Path 3 overrides, no-override `shadow`, `shapeShadow`, waypoint behavior, and capture lifecycle stay unchanged. Do not promote a local ranker, add broad overrides, or remove existing fixed-control overrides until repeated chains show the same rank outcome and the Point 1 / Point 2 / Point 3 controls still pass.
+
+### D-0057 - Close the current route-diagnostics phase without behavior changes
+
+Date: 2026-08-08
+
+Decision: Close the current diagnostic/ranker investigation with visible route behavior unchanged. Keep the Path 1 / Path 3 target-aware local walking overrides active, keep `shapeShadow` and `forkRank` as telemetry, and do not promote broad local ranking from the current sample set.
+
+Evidence: Myth's final fixed-control rerun after D-0056 completed Point 1, Point 2, and Point 3 with `full=true`, `lenDelta=0`, `maxDev=0`, and `divergence={none}`. New random five-waypoint chains did not repeat the old same-chain `actualRank=1` signal; usable random-chain differences were mostly `sameTimePermutation benign=true`, while the second random-chain run was contaminated by a one-tile-short click on waypoint #4.
+
+Constraint: Future route-ranking changes need fresh explicit evidence from completed benchmark reports. Use the existing diagnostic fields first: `classification`, `additionalDivergences`, `additionalDivergenceDetail`, and `forkRank`.

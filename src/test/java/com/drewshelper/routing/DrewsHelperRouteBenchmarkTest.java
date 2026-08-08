@@ -113,6 +113,7 @@ public class DrewsHelperRouteBenchmarkTest
         assertEquals(
             "idx=2 prevDir=E predicted=(2,0,0) actual=(1,1,0) "
                 + "mergeBack={none} classification=noMergeDrift benign=false "
+                + "additionalDivergences={not-scanned} "
                 + "predictedWindow=[0:(0,0,0) -> 1:(1,0,0) -> 2:(2,0,0)] "
                 + "actualWindow=[0:(0,0,0) -> 1:(1,0,0) -> 2:(1,1,0)]",
             DrewsHelperRouteBenchmark.formatDivergence(
@@ -155,6 +156,61 @@ public class DrewsHelperRouteBenchmarkTest
         assertTrue(diagnostic.contains("idx=2"));
         assertTrue(diagnostic.contains("mergeBack={expectedIdx=4 actualIdx=4 stepDelta=0 point=(4,0,0)}"));
         assertTrue(diagnostic.contains("classification=sameTimePermutation benign=true"));
+        assertTrue(diagnostic.contains("additionalDivergences={none}"));
+    }
+
+    @Test
+    public void reportsLengthDifferenceAfterBenignMergeBack()
+    {
+        String diagnostic = DrewsHelperRouteBenchmark.formatDivergence(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0),
+                new WorldPoint(3, 0, 0),
+                new WorldPoint(4, 0, 0),
+                new WorldPoint(5, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 1, 0),
+                new WorldPoint(3, 0, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            true
+        );
+
+        assertTrue(diagnostic.contains("classification=sameTimePermutation benign=true"));
+        assertTrue(diagnostic.contains(
+            "additionalDivergences={idx=5 predicted=(5,0,0) actual=(null) "
+                + "mergeBack={none} classification=noMergeDrift benign=false}"
+        ));
+    }
+
+    @Test
+    public void exposesAdditionalDivergenceIndexAfterFirstMergeBack()
+    {
+        int additionalIndex = DrewsHelperRouteBenchmark.additionalDivergenceIndexAfterFirstMerge(
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 0, 0),
+                new WorldPoint(3, 0, 0),
+                new WorldPoint(4, 0, 0),
+                new WorldPoint(5, 0, 0)
+            ),
+            Arrays.asList(
+                new WorldPoint(0, 0, 0),
+                new WorldPoint(1, 0, 0),
+                new WorldPoint(2, 1, 0),
+                new WorldPoint(3, 0, 0),
+                new WorldPoint(4, 0, 0)
+            ),
+            true
+        );
+
+        assertEquals(5, additionalIndex);
     }
 
     @Test
