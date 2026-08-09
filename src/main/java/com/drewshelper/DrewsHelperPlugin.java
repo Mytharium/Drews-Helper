@@ -80,6 +80,12 @@ public class DrewsHelperPlugin extends Plugin
 
     /** How far off the drawn path you may stray before the route is re-solved from where you are. */
     private static final int ROUTE_RECALCULATE_OFF_PATH_DISTANCE = 2;
+    /**
+     * The movement benchmark is retired - it existed to prove the overlay's step model matched
+     * the client's, which it now has. The machinery is kept rather than deleted so it can be
+     * turned back on in one line if the walking model is ever changed again.
+     */
+    private static final boolean ROUTE_BENCHMARK_ENABLED = false;
 
     /**
      * How far the player may be from a benchmark's expected start before that capture is
@@ -186,6 +192,7 @@ public class DrewsHelperPlugin extends Plugin
     private int lastStaminaDuration;
     private int lastStaminaDurationTick;
     private int staminaTicksPerUnit;
+    private long lastCooldownEpochMinute = -1;
 
     @Override
     protected void startUp()
@@ -199,6 +206,7 @@ public class DrewsHelperPlugin extends Plugin
         routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
         routeDirty = true;
         lastRouteSignature = "";
+        lastCooldownEpochMinute = -1;
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
             configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
@@ -242,6 +250,7 @@ public class DrewsHelperPlugin extends Plugin
     {
         tickCounter++;
         updateStaminaCalibration();
+        markRouteDirtyOnCooldownMinuteChange();
 
         // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
         // which dirties the route and returns early below - so anything downstream of that
@@ -341,8 +350,6 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         if ("pathingReplacementEnabled".equals(event.getKey())
-            || "routeBenchmarkEnabled".equals(event.getKey())
-            || "etaDebugLogging".equals(event.getKey())
             || isTransportConfigKey(event.getKey()))
         {
             markRouteDirty();
@@ -375,6 +382,12 @@ public class DrewsHelperPlugin extends Plugin
             return null;
         }
         return waypoints[index];
+    }
+
+    /** Exposed so the overlay can resolve which NPC or object a transport hop belongs to. */
+    public DrewsHelperTransportGraph getTransportGraph()
+    {
+        return routeEngine == null ? null : routeEngine.getTransportGraph();
     }
 
     public DrewsHelperRouteSnapshot getRouteSnapshot()
@@ -586,7 +599,7 @@ public class DrewsHelperPlugin extends Plugin
         DrewsHelperTransportPolicy transportPolicy = transportPolicy();
         // onGameTick runs on the client thread, which is the only place account state may be read.
         DrewsHelperPlayerCapability capability = buildCapability();
-        boolean benchmarkMovement = config().routeBenchmarkEnabled();
+        boolean benchmarkMovement = ROUTE_BENCHMARK_ENABLED;
         String signature = routeSignature(start, destinations, transportPolicy, capability, benchmarkMovement);
         if (!routeDirty && signature.equals(lastRouteSignature))
         {
@@ -712,7 +725,8 @@ public class DrewsHelperPlugin extends Plugin
         {
             routeEngine = new DrewsHelperWalkingRouteEngine(
                 collisionMap,
-                DrewsHelperTransportGraph.loadDefault(transportPolicy, capability)
+                DrewsHelperTransportGraph.loadDefault(transportPolicy, capability),
+                !transportPolicy.allowsWilderness()
             );
             routeEngineCacheKey = cacheKey;
         }
@@ -750,7 +764,28 @@ public class DrewsHelperPlugin extends Plugin
             .gracefulRestorePercent(gracefulRestorePercent(worn))
             .autoRunThresholdPercent(client.getVarbitValue(VarbitID.RUNENERGY_AUTOENABLE))
             .staminaTicksRemaining(staminaTicksRemaining())
+            .currentEpochMinute(currentEpochMinute())
             .build();
+    }
+
+    private void markRouteDirtyOnCooldownMinuteChange()
+    {
+        if (client.getGameState() != GameState.LOGGED_IN || getPlacedWaypointCount() == 0)
+        {
+            return;
+        }
+
+        long minute = currentEpochMinute();
+        if (minute != lastCooldownEpochMinute)
+        {
+            lastCooldownEpochMinute = minute;
+            markRouteDirty();
+        }
+    }
+
+    static long currentEpochMinute()
+    {
+        return System.currentTimeMillis() / 60_000L;
     }
 
     /**
@@ -1023,6 +1058,7 @@ public class DrewsHelperPlugin extends Plugin
         return DrewsHelperTransportPolicy.builder()
             .wilderness(config.wildernessTransportsEnabled())
             .magicMushtrees(config.magicMushtreesUnlocked())
+            .plantedSpiritTrees(config.plantedSpiritTreesUnlocked())
             .build();
     }
 
@@ -1153,12 +1189,16 @@ public class DrewsHelperPlugin extends Plugin
         // ETA accuracy logging is independent of the movement benchmark. It is two lines per
         // journey, so it can stay on permanently and catch a forecast that starts drifting,
         // rather than only firing when someone remembered to enable the benchmark first.
-        if (config().etaDebugLogging())
-        {
-            startEtaDebugCapture(snapshot);
-        }
+        startEtaDebugCapture(snapshot);
 
-        if (!config().routeBenchmarkEnabled())
+        // Solve time and expanded-node count were already measured on every solve - they
+        // were just only ever printed from inside the movement benchmark, so retiring that
+        // switched off the one number the performance work needs. One line per solve.
+        log.info("DREW_ROUTE_BENCH solve {} {}",
+            searchMetricsSummary(snapshot.getPrimaryMetrics()),
+            routeEngine == null ? "rank=?" : routeEngine.lastPhaseSummary());
+
+        if (!ROUTE_BENCHMARK_ENABLED)
         {
             return;
         }

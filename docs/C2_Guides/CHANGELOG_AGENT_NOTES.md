@@ -212,3 +212,35 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - On benchmark start, logs the forecast plus every energy-model input and the two derived rates via `DrewsHelperTravelEstimate.describeEnergyModel(...)`. On arrival, logs predicted versus actual ticks with the delta and percentage error.
 - The clock starts on the first tick the player actually moves, so time spent standing at the start does not count against the forecast.
 - The forecast is snapshotted at start. `refreshTravelEstimate` recomputes from the player's current position every tick, so by arrival it reads zero and would be useless as a comparison baseline.
+
+### D-0102 / D-0103 - Teleport routing handoff plan
+- Date: 2026-08-09
+- Docs-only update at Myth's request before pausing for tomorrow.
+- Added a current-state teleport-routing plan covering home teleports, magic-tab spell teleports from carried supplies, bank-aware teleports, minigames, bulk teleport families, cooldown handling, and retirement of dead teleport placeholder toggles.
+- Updated `02_NEXT_WORK.md` so tomorrow's first active handoff is home teleports, not the old reset-era route notes.
+- Appended D-0102 to supersede stale D-0101 Wilderness wording. The shipped rule is the derived bounded Wilderness box with start/waypoint escape hatches.
+- Appended D-0103 to pin the teleport plan: cooldowns are locked state, destination-only rows become `ANYWHERE` edges, Lumbridge home-teleport variants must not dedup away, carried supplies precede bank routing, and bank contents become useful only through a real bank graph step.
+- No code changed and no jar was rebuilt in this pass.
+
+### D-0104 - Home teleports are live originless route edges
+- Date: 2026-08-09
+- Ingested upstream `teleportation_spells_home.tsv` into `drewshelper-transports.tsv`; generated resource now carries 16 `BASELINE` home-teleport rows with source `-1,-1,0`.
+- Added originless-edge support to the Drew-owned route graph/engine: home teleports are offered only at waypoint leg starts, including fresh offers for later legs in a multi-waypoint route.
+- Added cooldown support for `@` var terms. Active cooldowns lock the edge, unknown cooldown vars lock the edge, and ordinary unknown quest/var requirements remain permissive.
+- `DrewsHelperPlugin` stamps capability snapshots with the current epoch minute and marks routes dirty once per minute while waypoints exist, so an expired cooldown can become routable without a manual config change.
+- `DrewsHelperTravelEstimate` now treats originless jumps as real `Actions` rows with upstream label/duration while adjacent walking onto the same destination tile remains walking.
+- Added focused tests for cooldown terms, originless leg-start routing, home resource rows, cooldown graph filtering, and ETA/action labeling. Full Gradle test/build passed.
+
+### D-0105 - Regeneration proof for the home-teleport slice, and a CRLF fix
+
+- Date: 2026-08-09
+- Verification pass over the generator behaviour, plus one corrected defect. No routing or engine logic changed here.
+- Proved row survival with a controlled A/B on the same generator: run A used the full upstream dir, run B withheld `teleportation_spells_home.tsv`. That file was the only variable, and `tools/transport-overrides.tsv` merged identically into both runs because the generator resolves it from `$PSCommandPath`.
+- Result: 12,404 rows with the home file, 12,388 without. Full-row set diff across every non-originless row: 0 lost, 0 changed. Per-category deltas were 0 everywhere except `BASELINE` at +16.
+- Run B produced 0 originless rows, so all 16 `-1,-1,0` rows are attributable solely to the home file, and no other transport family currently reaches the destination-only fallback branch.
+- Lumbridge kept 4 home-teleport variants, all 4 with distinct duration/varbit/varplayer keys.
+- The requirement-aware dedup widening is gated behind `$Source -eq $ORIGINLESS_SOURCE`, so every non-originless row still keys on `category|source|destination|label` exactly as before.
+- Against the last commit: 1,505 rows differ, all by label only - the earlier hub fix appending interactable ids, e.g. `8: Mount Quidamortem` became `8: Mount Quidamortem 28835`. Rows whose `category|source|destination` edge has no match in the live resource: 0. All 4 override rows still present.
+- Fixed a defect from the previous pass: the generated resource had been CRLF-normalized after upload. The generator writes LF and the committed blob is LF, so the file was replaced with the generator's exact output - sha256 `B58A2006...`, 955,471 bytes, LF, no BOM, 12,404 data rows.
+- Rebuilt after the fix: `clean test build` BUILD SUCCESSFUL, 152 tests, 0 failures, 0 errors, 0 skips, jar 1,042,701 bytes.
+- Open item for Myth: `tools/transport-overrides.tsv` is still untracked in git. The generated resource depends on it, so a clone without that file regenerates and silently drops the 4 verified override edges.

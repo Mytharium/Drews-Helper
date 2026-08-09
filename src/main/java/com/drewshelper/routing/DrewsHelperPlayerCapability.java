@@ -8,9 +8,8 @@ import java.util.TreeMap;
 /**
  * An immutable snapshot of the account state that decides which transport edges are usable.
  *
- * <p>Only the things that change while you play are here: real (unboosted) skill levels and
- * the items you are carrying. Quests, discoveries and destination unlocks are attested by the
- * "Unlocked: X" checkboxes instead, so they are deliberately not checked.
+     * <p>Only the things that change while you play are here: real (unboosted) skill levels,
+     * carried/equipped items, quest completion, unlock vars, cooldown vars and run-energy inputs.
  *
  * <p>Built on the client thread by the plugin and handed to the route solver, which runs on a
  * background thread. This type holds plain values only - no client access - so it is safe to
@@ -26,7 +25,7 @@ public final class DrewsHelperPlayerCapability
     public static final DrewsHelperPlayerCapability UNRESTRICTED =
         new DrewsHelperPlayerCapability(true, Collections.emptyMap(), Collections.emptyMap(),
             Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(),
-            0, 10_000, true, false, false, 0, 0, 0);
+            0, 10_000, true, false, false, 0, 0, 0, 0);
 
     /** Graceful's set bonus caps the restoration bonus at 30% (20% from pieces, 10% for the set). */
     public static final int MAX_GRACEFUL_RESTORE_PERCENT = 30;
@@ -54,6 +53,7 @@ public final class DrewsHelperPlayerCapability
     // while a dose is up, so folding it in would rebuild the route constantly - the same
     // reason current energy is kept out.
     private final int staminaTicksRemaining;
+    private final long currentEpochMinute;
 
     private final String signature;
 
@@ -71,7 +71,8 @@ public final class DrewsHelperPlayerCapability
         boolean ringOfEndurance,
         int gracefulRestorePercent,
         int autoRunThresholdPercent,
-        int staminaTicksRemaining
+        int staminaTicksRemaining,
+        long currentEpochMinute
     )
     {
         this.unrestricted = unrestricted;
@@ -89,6 +90,7 @@ public final class DrewsHelperPlayerCapability
             Math.max(0, Math.min(MAX_GRACEFUL_RESTORE_PERCENT, gracefulRestorePercent));
         this.autoRunThresholdPercent = Math.max(0, Math.min(100, autoRunThresholdPercent));
         this.staminaTicksRemaining = Math.max(0, staminaTicksRemaining);
+        this.currentEpochMinute = Math.max(0, currentEpochMinute);
         this.signature = buildSignature();
     }
 
@@ -171,8 +173,7 @@ public final class DrewsHelperPlayerCapability
     }
 
     /**
-     * Whether this account can currently use the edge. Only skills and carried items are
-     * checked; quest and unlock columns are the user's attestation via the checkbox.
+     * Whether this account can currently use the edge.
      */
     boolean satisfies(DrewsHelperTransportEdge edge)
     {
@@ -230,9 +231,11 @@ public final class DrewsHelperPlayerCapability
     /**
      * Varbit and varplayer requirements: ';'-separated terms, all of which must hold.
      *
-     * <p>Four forms appear in the data — {@code id=value}, {@code id&gt;value},
+     * <p>Four normal forms appear in the data — {@code id=value}, {@code id&gt;value},
      * {@code id&lt;value} and {@code id&amp;mask}, the last being a bit test rather than a
-     * comparison. An id we hold no value for is treated as satisfied, same reasoning as quests.
+     * comparison. Home teleport cooldowns add {@code id@minutes}, where the stored value is an
+     * epoch-minute timestamp. An id we hold no value for is treated as satisfied for ordinary
+     * vars, same reasoning as quests; for cooldown terms, unknown means locked.
      */
     boolean meetsVars(String requirement, Map<Integer, Integer> values)
     {
@@ -275,7 +278,7 @@ public final class DrewsHelperPlayerCapability
         Integer actual = values.get(id);
         if (actual == null)
         {
-            return true;
+            return operator != '@';
         }
 
         switch (operator)
@@ -288,6 +291,8 @@ public final class DrewsHelperPlayerCapability
                 return actual < operand;
             case '&':
                 return (actual & operand) != 0;
+            case '@':
+                return currentEpochMinute - actual > operand;
             default:
                 return true;
         }
@@ -298,7 +303,7 @@ public final class DrewsHelperPlayerCapability
         for (int i = 0; i < term.length(); i++)
         {
             char c = term.charAt(i);
-            if (c == '=' || c == '>' || c == '<' || c == '&')
+            if (c == '=' || c == '>' || c == '<' || c == '&' || c == '@')
             {
                 return i;
             }
@@ -466,6 +471,7 @@ public final class DrewsHelperPlayerCapability
         {
             builder.append(entry.getKey()).append(':').append(entry.getValue()).append('.');
         }
+        builder.append('|').append(currentEpochMinute);
         return builder.toString();
     }
 
@@ -512,6 +518,7 @@ public final class DrewsHelperPlayerCapability
         private int gracefulRestorePercent;
         private int autoRunThresholdPercent;
         private int staminaTicksRemaining;
+        private long currentEpochMinute;
 
         public Builder skill(String skillName, int level)
         {
@@ -610,12 +617,20 @@ public final class DrewsHelperPlayerCapability
             return this;
         }
 
+        /** Current UTC epoch minute, used to evaluate teleport cooldown terms like "892@30". */
+        public Builder currentEpochMinute(long value)
+        {
+            this.currentEpochMinute = value;
+            return this;
+        }
+
         public DrewsHelperPlayerCapability build()
         {
             return new DrewsHelperPlayerCapability(false, skillLevels, itemCounts,
                 questsFinished, varbits, varPlayers,
                 weightKg, energyUnits, running, staminaActive, ringOfEndurance,
-                gracefulRestorePercent, autoRunThresholdPercent, staminaTicksRemaining);
+                gracefulRestorePercent, autoRunThresholdPercent, staminaTicksRemaining,
+                currentEpochMinute);
         }
     }
 }

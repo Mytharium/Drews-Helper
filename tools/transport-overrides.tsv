@@ -1,0 +1,37 @@
+# Verified additions to the upstream Skretzo/shortest-path transport data.
+#
+# Columns (tab separated, same as the generated resource):
+#   category	source	destination	label	duration	skills	quests	items	varbits	varplayers
+# Trailing requirement columns may be omitted. Blank means "no requirement".
+#
+# RULES FOR ADDING A ROW HERE
+#   1. Prove the tile is blocked in collision-map.zip. A route that merely looks
+#      wrong is not evidence - decode the region and read the flag.
+#   2. Prove upstream has no row for it. Search the whole bounding box, not the
+#      single tile, and not just for the object type you expect.
+#   3. Add BOTH directions, and every tile of the opening.
+#   4. Record the evidence in the comment above the rows. A future reader must be
+#      able to re-check the claim without redoing the investigation.
+#   5. Never invent a shortcut. Only encode a crossing that exists in game.
+#
+# -----------------------------------------------------------------------------
+# Taverley / Falador wall gate  -  reported 2026-08-09
+#
+# The wall is a one-tile-thick north-south barrier on the EAST edge of x=2935,
+# running y=3448..3455. Decoded from our own collision-map.zip, region 45_53:
+# canMoveEast(2935, y) is false for every y in that span. The archway is the
+# two-tile opening at y=3450 and y=3451 - the tiles north (y=3452+) and south
+# (y=3449-) of it are solid gatehouse, and x=2936 is open eastward at both rows.
+# The only thing stopping passage is the gate object on the 2935->2936 edge.
+#
+# Upstream carries 145 rows whose menu option mentions a Gate, so gates ARE
+# modelled in general - but a search of x 2920-2955, y 3430-3475 returns ZERO
+# rows of any kind. Confirmed in game by Mytharium: upstream's own Shortest Path
+# detours here too, so this is an upstream data gap, not a fault in our reader.
+#
+# Without these rows the router walks around the whole wall, roughly doubling
+# the trip between Taverley and Falador.
+BASELINE	2935,3450,0	2936,3450,0	Open Gate (Taverley wall)	1
+BASELINE	2936,3450,0	2935,3450,0	Open Gate (Taverley wall)	1
+BASELINE	2935,3451,0	2936,3451,0	Open Gate (Taverley wall)	1
+BASELINE	2936,3451,0	2935,3451,0	Open Gate (Taverley wall)	1

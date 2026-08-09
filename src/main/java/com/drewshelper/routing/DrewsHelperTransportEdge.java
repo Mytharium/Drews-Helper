@@ -71,8 +71,8 @@ public final class DrewsHelperTransportEdge
     }
 
     /**
-     * Travel time in game ticks, floored at 1. Not yet used for route costing -
-     * the search still prices every edge at one step.
+     * Travel time in game ticks, floored at 1. The route search converts this
+     * to half-tick cost units so long hops do not price like one footstep.
      */
     public int getDurationTicks()
     {
@@ -103,5 +103,10 @@ public final class DrewsHelperTransportEdge
     public String getVarPlayers()
     {
         return varPlayers;
+    }
+
+    public boolean isOriginless()
+    {
+        return DrewsHelperTransportGraph.ANYWHERE.equals(source);
     }
 }

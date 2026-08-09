@@ -1,10 +1,14 @@
 package com.drewshelper.routing;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import net.runelite.api.coords.WorldPoint;
 
 /**
@@ -17,7 +21,7 @@ import net.runelite.api.coords.WorldPoint;
  * <p>Per game tick, from the wiki:
  * <ul>
  *   <li>running drains {@code floor(floor(60 + 67 * clamp(weight,0,64) / 64) * (1 - agility/300))},
- *       times 0.3 with a stamina potion, or times 0.85 with a charged ring of endurance — the
+ *       times 0.3 with a stamina potion, or times 0.85 with a charged ring of endurance â€” the
  *       two do not stack</li>
  *   <li>any non-running tick restores {@code floor(agility/10) + 15}, raised by the graceful
  *       restoration percentage</li>
@@ -30,24 +34,27 @@ public final class DrewsHelperTravelEstimate
     private static final int MAX_ENERGY = 10_000;
     private static final double SECONDS_PER_TICK = 0.6;
 
-    public static final DrewsHelperTravelEstimate EMPTY =
-        new DrewsHelperTravelEstimate(0, Collections.emptyList(), Collections.emptyMap(), 0);
+    public static final DrewsHelperTravelEstimate EMPTY = new DrewsHelperTravelEstimate(
+        0, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), 0);
 
     private final int totalTicks;
     private final List<Integer> legTicks;
     private final Map<String, Integer> transportsUsed;
+    private final Map<String, Integer> transportTicks;
     private final int walkedTiles;
 
     private DrewsHelperTravelEstimate(
         int totalTicks,
         List<Integer> legTicks,
         Map<String, Integer> transportsUsed,
+        Map<String, Integer> transportTicks,
         int walkedTiles
     )
     {
         this.totalTicks = totalTicks;
         this.legTicks = Collections.unmodifiableList(new ArrayList<>(legTicks));
         this.transportsUsed = Collections.unmodifiableMap(new LinkedHashMap<>(transportsUsed));
+        this.transportTicks = Collections.unmodifiableMap(new LinkedHashMap<>(transportTicks));
         this.walkedTiles = walkedTiles;
     }
 
@@ -66,6 +73,19 @@ public final class DrewsHelperTravelEstimate
     public Map<String, Integer> getTransportsUsed()
     {
         return transportsUsed;
+    }
+
+    /**
+     * Transport label to the tick at which the route ARRIVES at it, in first-use order.
+     *
+     * <p>Deliberately the moment before the hop is paid for, not after: that is when the
+     * player is stood in front of the thing they have to click, which is what a time next to
+     * a step is answering. A transport used twice keeps its first arrival, matching the
+     * numbering, which is also first-use order.
+     */
+    public Map<String, Integer> getTransportTicks()
+    {
+        return transportTicks;
     }
 
     public int getWalkedTiles()
@@ -202,6 +222,7 @@ public final class DrewsHelperTravelEstimate
         int nextLeg = 0;
         List<Integer> legTicks = new ArrayList<>();
         Map<String, Integer> transportsUsed = new LinkedHashMap<>();
+        Map<String, Integer> transportTicks = new LinkedHashMap<>();
 
         int index = 0;
         while (index < path.size() - 1)
@@ -224,10 +245,15 @@ public final class DrewsHelperTravelEstimate
             DrewsHelperTransportEdge edge = findTransport(transportGraph, from, to);
             if (edge != null)
             {
+                String label = displayLabel(edge);
+                // Recorded BEFORE the hop is paid for - this is the tick you arrive at the
+                // transport, which is the time a player wants next to a step.
+                transportTicks.putIfAbsent(label, ticks);
+
                 ticks += edge.getDurationTicks();
                 // Not running for the duration of the hop, so energy comes back.
                 energy = Math.min(MAX_ENERGY, energy + regen * edge.getDurationTicks());
-                transportsUsed.merge(familyLabel(edge), 1, Integer::sum);
+                transportsUsed.merge(label, 1, Integer::sum);
                 index++;
             }
             else if (runEnabled && energy >= drain)
@@ -264,12 +290,56 @@ public final class DrewsHelperTravelEstimate
             legTicks.add(ticks);
         }
 
-        return new DrewsHelperTravelEstimate(ticks, legTicks, transportsUsed, walkedTiles);
+        return new DrewsHelperTravelEstimate(
+            ticks, legTicks, transportsUsed, transportTicks, walkedTiles);
     }
 
     private static boolean reachedLeg(List<WorldPoint> path, int index, WorldPoint legTarget)
     {
         return legTarget != null && index < path.size() && legTarget.equals(path.get(index));
+    }
+
+    /**
+     * The id of the thing the player actually clicks for this hop, or -1.
+     *
+     * <p>Upstream appends it to the label ("Follow Elkoy 4968"), which is the same suffix
+     * displayLabel strips for readability. Nothing in the data says whether a given id is an
+     * NPC or a scene object, and deliberately nothing here tries to decide - the caller looks
+     * for both and highlights whichever exists.
+     */
+    public static int targetId(DrewsHelperTransportGraph graph, WorldPoint from, WorldPoint to)
+    {
+        DrewsHelperTransportEdge edge = findTransport(graph, from, to);
+        if (edge == null)
+        {
+            return -1;
+        }
+        return targetId(edge);
+    }
+
+    static int targetId(DrewsHelperTransportEdge edge)
+    {
+        String label = edge.getLabel();
+        if (label == null)
+        {
+            return -1;
+        }
+
+        java.util.regex.Matcher matcher =
+            java.util.regex.Pattern.compile("(?:^|\\s)(\\d+)$").matcher(label.trim());
+        if (!matcher.find())
+        {
+            return -1;
+        }
+
+        try
+        {
+            return Integer.parseInt(matcher.group(1));
+        }
+        catch (NumberFormatException ex)
+        {
+            return -1;
+        }
     }
 
     private static DrewsHelperTransportEdge findTransport(
@@ -285,7 +355,118 @@ public final class DrewsHelperTravelEstimate
                 return edge;
             }
         }
+        if (isNonAdjacentHop(from, to))
+        {
+            for (DrewsHelperTransportEdge edge : graph.originlessEdges())
+            {
+                if (to.equals(edge.getDestination()))
+                {
+                    return edge;
+                }
+            }
+        }
         return null;
+    }
+
+    private static boolean isNonAdjacentHop(WorldPoint from, WorldPoint to)
+    {
+        return from.getPlane() != to.getPlane()
+            || Math.abs(to.getX() - from.getX()) > 1
+            || Math.abs(to.getY() - from.getY()) > 1;
+    }
+
+    /**
+     * What the player should see on the HUD for this hop.
+     *
+     * <p>The family name alone ("Transport") is why a drawn hop has been mistaken for a routing
+     * failure repeatedly - it tells you something happened but not what, so a straight line
+     * across a maze looks like the router cheating rather than an NPC escort you can actually
+     * use. The upstream label is the real in-game menu text, which is exactly what the player
+     * needs to look for.
+     *
+     * <p>Labels arrive with the object id appended ("Follow Elkoy 4968") and hub destinations
+     * carry a menu index ("1: Tree Gnome Village"). Both are noise on a HUD, so both are
+     * stripped, and the family is prefixed for hub networks where the bare destination name
+     * would not say how you get there.
+     */
+    static String displayLabel(DrewsHelperTransportEdge edge)
+    {
+        String raw = edge.getLabel();
+        String cleaned = raw == null ? "" : raw.trim();
+
+        // Trailing object id: "Follow Elkoy 4968" -> "Follow Elkoy".
+        cleaned = cleaned.replaceAll("\\s+\\d+$", "");
+        // Leading hub menu index, colon or dot: the data carries both "1: Tree Gnome Village"
+        // and "1. House on the Hill". The dot form matters now the HUD numbers its own steps -
+        // left in, it would render as "1. 1. House on the Hill".
+        cleaned = cleaned.replaceAll("^[0-9A-Z][:.]\\s*", "").trim();
+
+        // A label that was nothing but an object id leaves an empty or meaningless cell.
+        if (cleaned.isEmpty() || cleaned.matches("\\d+"))
+        {
+            return familyLabel(edge);
+        }
+
+        cleaned = titleCase(cleaned);
+
+        switch (edge.getCategory())
+        {
+            case SPIRIT_TREE:
+            case PLANTED_SPIRIT_TREE:
+                return "Spirit Tree (" + cleaned + ")";
+            case FAIRY_RING:
+                return "Fairy Ring (" + cleaned + ")";
+            case GNOME_GLIDER:
+                return "Glider (" + cleaned + ")";
+            case HOT_AIR_BALLOON:
+                return "Balloon (" + cleaned + ")";
+            case QUETZAL:
+                return "Quetzal (" + cleaned + ")";
+            case MAGIC_MUSHTREE:
+                return "Mushtree (" + cleaned + ")";
+            case CANOE:
+                return "Canoe (" + cleaned + ")";
+            default:
+                return cleaned;
+        }
+    }
+
+    /**
+     * Words that stay lower case inside a name. Without them "House on the Hill" becomes
+     * "House On The Hill" and "Battlefield of Khazard" becomes "Battlefield Of Khazard",
+     * which is worse than the problem being fixed.
+     */
+    private static final Set<String> MINOR_WORDS = new HashSet<>(Arrays.asList(
+        "a", "an", "and", "at", "by", "de", "for", "from", "in", "of", "on", "or", "the", "to",
+        "with"));
+
+    /**
+     * Capitalises the first letter of each word, leaving the rest of the word alone.
+     *
+     * <p>These are proper nouns - places and objects - but upstream's menu text only
+     * capitalises the verb, so the panel showed "Spirit tree" and "Shantay pass". Only the
+     * FIRST letter is touched: lower-casing the remainder would flatten the fairy ring codes
+     * ("A I Q", "ZANARIS") and anything else that is deliberately upper case.
+     */
+    static String titleCase(String text)
+    {
+        String[] words = text.split(" ", -1);
+        for (int index = 0; index < words.length; index++)
+        {
+            String word = words[index];
+            if (word.isEmpty())
+            {
+                continue;
+            }
+
+            if (index > 0 && MINOR_WORDS.contains(word.toLowerCase(Locale.ROOT)))
+            {
+                continue;
+            }
+
+            words[index] = Character.toUpperCase(word.charAt(0)) + word.substring(1);
+        }
+        return String.join(" ", words);
     }
 
     private static String familyLabel(DrewsHelperTransportEdge edge)

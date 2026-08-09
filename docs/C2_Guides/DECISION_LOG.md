@@ -749,3 +749,419 @@ Evidence: Ours stores each region gzip-compressed inside the zip and pads the pa
 Constraint:
 - **A region absent from the zip is treated as fully impassable**, not fully open - `loadRegion` returns an empty `DrewsHelperFlagMap` when the entry is missing. 1,297 regions present upstream are absent from ours, concentrated in Zeah/Kourend (rx 16-33) and the eastern lands (rx 53-62). Routing into those areas will fail or detour, and this is the first place to look for any "cannot path to Kourend" report.
 - Region lookup is `x / 64, y / 64`; the flag layout is `(plane * w * h + (y-minY) * w + (x-minX)) * flagCount + flag` over a little-endian BitSet, after a 16-byte big-endian header of minX, minY, maxX, maxY. Flag 0 is NORTH, flag 1 is EAST.
+
+### D-0086 - CORRECTION to D-0082: 14 of 25 transport files are consumed, not 8
+
+Date: 2026-08-09
+
+Decision: D-0082 undercounted. The generator's `$FileCategories` consumes **14** upstream files; five of them (boats, charter_ships, ships, magic_carpets, minecarts) all map to `BASELINE`, which is why the category count is 9 while the file count is 14. Inferring the file count from the category count was the error.
+
+Evidence: `$FileCategories` lists transports, boats, charter_ships, ships, magic_carpets, minecarts (BASELINE), teleportation_levers, wilderness_obelisks (WILDERNESS), agility_shortcuts (AGILITY/GRAPPLE), canoes, gnome_gliders, hot_air_balloons, magic_mushtrees, quetzals. BASELINE = 5800 rows against transports.tsv's own 5414 confirms the extra files fold in.
+
+Constraint: After this change the genuinely un-ingested set is **11 files / 1,538 rows**: quetzal_whistle, seasonal_transports, teleportation_boxes, teleportation_items, teleportation_minigames, teleportation_portals, teleportation_portals_poh, teleportation_spells, teleportation_spells_home - plus fairy_rings and spirit_trees, which this session ingested. Never infer the consumed-file list from the category list again; read `$FileCategories`.
+
+### D-0087 - Spirit trees and fairy rings are automatic; only player-grown trees keep a box
+
+Date: 2026-08-09
+
+Decision (Mytharium's ruling): both networks route by default, gated purely by quest state. The existing "Unlocked: Spirit Trees" control becomes "Unlocked: Planted Spirit Trees" and gates only the six player-grown trees. The "Unlocked: Fairy Rings" box is deleted outright.
+
+Implementation:
+- New categories `SPIRIT_TREE` (640 edges) and `FAIRY_RING` (3,024 edges) are in `ALWAYS_ENABLED`; `PLANTED_SPIRIT_TREE` (1,335 edges) is opt-in.
+- **An edge is planted if EITHER end is planted.** Boarding a tree you grew to reach the Grand Exchange is just as impossible as landing at one, so the weaker end decides the category.
+- **Fairytale II - Cure a Queen is injected into every FAIRY_RING edge by the generator** (`$NetworkQuest`). Upstream records the network's base unlock nowhere, so ingesting the file as-is would offer 3,024 edges to an account that cannot use one. Injecting it as data means the existing quest reader enforces it with no new code path.
+- All 14 quest names used by the two networks were verified byte-exact against `Quest.class` in `runelite-api-1.12.35.jar`, including the injected Fairytale II string.
+
+Constraint:
+- **The planted split is read from upstream's own section annotation** (`planted spirit tree|player-owned house`), not a hardcoded list of destination names, so a future upstream planted tree is picked up automatically.
+- **It is opt-in per file via `$PlantedSplitFiles`.** A section comment applies to every row after it, and `fairy_rings.tsv` has two stray comments and no section structure - an unguarded split tagged **594 unrelated rings** as player-built. Never enable the split for a file that is not actually sectioned.
+- **A hub family must be asserted on edge count, never on parse success.** This is the shape that collapsed the wilderness obelisks from 325 to 7 while reporting success. `DrewsHelperSpiritTreeFairyRingTest` asserts floors on all three categories.
+- Known gap, deliberately not enforced: fairy rings also need a Dramen or Lunar staff (waived by the elite Lumbridge & Draynor diary). Upstream does not record it and inventing an item requirement risks silently deleting usable routes, so we stay permissive and offer the route.
+
+### D-0088 - Verified upstream data gaps get an overrides file, never a hand-edit
+
+Date: 2026-08-09
+
+Decision: `tools/transport-overrides.tsv` holds verified additions to upstream's data and is merged by the generator. Hand-editing the generated resource would lose the fix on the next regeneration.
+
+First entry - the Taverley/Falador wall gate, reported by Mytharium as roughly doubling his travel time:
+- The wall is one tile thick on the EAST edge of x=2935, spanning y=3448..3455. Decoded from our own `collision-map.zip` region 45_53: `canMoveEast(2935, y)` is false across that span.
+- The archway is the two-tile opening at **y=3450 and y=3451** - y=3449 and y=3452 are solid gatehouse, and x=2936 is open eastward at both rows. The only barrier is the gate object on the 2935->2936 edge.
+- Upstream ships 145 rows whose menu mentions a Gate, but a search of x 2920-2955, y 3430-3475 returns **zero rows of any kind**. Mytharium confirmed upstream's own Shortest Path detours here too.
+- Fix: 4 rows (2 tiles x 2 directions). BASELINE goes 5,800 -> 5,804.
+
+Constraint: every override row must cite its evidence in the file, prove the tile is blocked in the collision map, prove upstream has no row in the whole bounding box, and add both directions of every tile of the opening. Never invent a crossing that does not exist in game. The rules are written at the top of the overrides file itself.
+
+### D-0089 - A renamed control gets a new config key when its meaning changes
+
+Date: 2026-08-09
+
+Decision: the planted spirit tree box uses key `plantedSpiritTreesUnlocked` (default false) rather than reusing `spiritTreesUnlocked`.
+
+Evidence: Mytharium's profile carried `drewshelper.spiritTreesUnlocked=true`, set when the box meant "may I use spirit trees at all". The new box means "I have grown spirit trees". Reusing the key would have silently claimed six trees he never planted, and RuneLite always prefers a stored value over a changed default.
+
+Constraint: when a control's question changes, change the key. The stale key is harmless; an inherited answer to a different question is not.
+
+### D-0090 - Both logging controls removed; ETA logging is permanently on
+
+Date: 2026-08-09
+
+Decision (Mytharium's call): the "Log Benchmark Movement" and "Log ETA Accuracy" controls are deleted from Settings.
+
+Implementation:
+- **Movement benchmark: retired but not deleted.** It existed to prove the overlay's step model matched the client's own walking, and it has done that. It now sits behind `ROUTE_BENCHMARK_ENABLED = false` in `DrewsHelperPlugin`, so it is one line to revive if the walking model is ever changed again. Deleting `DrewsHelperRouteBenchmark` (1,152 lines) was deliberately NOT done - the cost of keeping it is zero and the cost of rewriting it is not.
+- **ETA accuracy logging: kept, and made unconditional.** Two lines per journey. Its entire purpose is catching a forecast that drifts when nobody is watching, so a control it could be switched off by is a control that would leave it off.
+
+Constraint: a config item removed from the interface leaves its stored value in the RuneLite profile. Harmless here (nothing reads those keys any more), but never re-add a key with the same name and a different meaning - see D-0089.
+
+### D-0091 - Tree Gnome Village routes correctly; the maze is meant to be skipped
+
+Date: 2026-08-09
+
+Decision: no fix required. Reported as "our route can't find its way through the Tree Gnome Village maze"; the data and the collision map both say the router is doing the right thing.
+
+Evidence, from an 8-direction flood fill of our own collision map over x 2440-2600, y 3100-3240:
+- **The village interior is a sealed 357-tile pocket**, bounding box x 2514-2547, y 3158-3175. It contains the TGV spirit tree (2542,3167). Nothing outside it is reachable on foot, and it is reachable from nothing outside.
+- The outer world component around it is 13,319 tiles.
+- **Exactly ONE candidate crossing exists** between the two: (2515,3161) <-> (2515,3160).
+- Upstream ships a transport row for precisely that crossing - `Squeeze-through Loose Railing 2186`, both directions, no requirements - and it IS in our generated data.
+- The maze itself is crossed by `Follow Elkoy 4968`, (2504,3191) <-> (2515,3159), varplayer `111>0` (Tree Gnome Village started), duration 5. Also present in our data.
+- Walking the maze the long way is 205 tiles; Elkoy is 5 ticks. Preferring Elkoy is correct, not a failure.
+
+Constraint:
+- **A dashed straight line across a maze is a transport hop being drawn, not the router giving up.** This is the second time that visual has been read as a bug. The HUD says "Using Transport x3" without naming them, which is what makes it ambiguous.
+- The flood-fill-and-compare-components technique is the right first move for any "it won't route through X" report: it separates a sealed map from a failing solver in one pass. **Use 8 directions** - a cardinal-only fill gives false "sealed" answers wherever a gap needs a diagonal.
+
+### D-0092 - Why route solving is slow: objects and hashing, not the algorithm
+
+Date: 2026-08-09
+
+Decision: recorded as the diagnosis behind any future performance work. The algorithm is not the problem; the representation is.
+
+Evidence - our `DrewsHelperWalkingRouteEngine` hot loop:
+- `PriorityQueue<SearchNode>` - object heap, one allocation per node, comparator dispatch per sift.
+- `Map<WorldPoint, SearchNode> bestNodes` - a `WorldPoint` object hashed and equality-checked on every expansion.
+- `new WorldPoint(...)` allocated *inside* the neighbour loop.
+- Budget `MAX_EXPANDED_NODES_PER_SEGMENT = 2,000,000`.
+
+Upstream `shortestpath/pathfinder/Pathfinder` over the same map:
+- `IntDeque boundary`, `IntMinHeap pending`, `VisitedTiles visited` (bitset), `PrimitiveIntList` neighbours.
+- Coordinates are **packed into a single int** throughout (`WorldPointUtil.packWorldPoint` / `unpackWorldX`), so a node is an `int`, not an object.
+- Zero allocation and zero hashing in the hot loop.
+
+That is the whole gap: they compare and index integers, we allocate two objects and hash a `WorldPoint` on every node expanded. At the hundreds of thousands of nodes a cross-map route touches, that is an order of magnitude, not a few percent.
+
+Constraint:
+- **`preferClientStyleShortestPath` is NOT the main cost.** It runs a second reverse Dijkstra per segment, but bails when the path exceeds `MAX_A_STAR_TIE_REFINEMENT_DISTANCE` (256), so it never fires on the long routes that feel slow. Do not "optimise" it first.
+- The single highest-value change is replacing the `WorldPoint`-keyed map with a primitive int-keyed map over packed coordinates. That is most of the win without touching the search logic.
+
+### D-0093 - CORRECTION to D-0091: the maze IS the intended route, and Elkoy is mispriced
+
+Date: 2026-08-09
+
+Correction: D-0091 concluded "no fix required" and described Tree Gnome Village as a sealed pocket. Both framings were wrong in a way that hid a real defect.
+
+- **"Sealed" was the wrong word.** The village is not sealed - it is *mazed*. The maze is the intended way in for a player who has not unlocked spirit trees, and the loose railing at (2515,3160)<->(2515,3161) is the door at the end of it. Calling the component "sealed" made the maze walk look like an impossibility rather than the designed route, which is exactly why the real fault went unexamined.
+- The 205-tile maze walk is not a fallback. It is what the game expects, and the router does produce it when waypoints force it (confirmed in game: 205 tiles, ETA 1:08, path tracing maze corridors).
+
+Evidence for the real defect, from every transport edge with an endpoint in the village box (x 2514-2547, y 3158-3175):
+- **`Follow Elkoy 4968` is the ONLY non-spirit-tree edge that leaves the village**, `2515,3159 -> 2504,3191`, gated on varplayer `111>0`, **duration 5**.
+- Walking the maze between the same two areas is ~205 tiles, i.e. 100+ ticks even running.
+- 5 ticks versus 100+ means **Elkoy wins every single village<->outside route**, unconditionally. It is not a tie-break; nothing else can ever be chosen.
+
+Constraint:
+- **A transport's duration is a claim about the real world, and an unrealistic one silently deletes every alternative.** Elkoy is an NPC escort - dialogue plus a scripted walk - and cannot plausibly be 3 seconds. Upstream's 5 is the value we inherited, not one anyone measured.
+- **Do not "fix" this by inventing a duration.** The number has to be measured in game the same way the stamina varbit unit was, or the fix just replaces one unverified constant with another.
+- The railing is NOT the teleport, despite reading that way in game. It is a one-tile step that happens to sit immediately before the Elkoy hop, so the dashed Elkoy line appears to start at the railing. This is the third time this session a drawn transport hop has been reported as a routing bug - see the HUD naming note in D-0091.
+
+### D-0094 - CORRECTION to D-0093: Elkoy is priced correctly. There was never a routing defect.
+
+Date: 2026-08-09
+
+Correction: D-0093 concluded that `Follow Elkoy` at duration 5 was "obviously wrong" because an NPC escort "cannot plausibly be 3 seconds". Measured in game by Mytharium: **the escort takes 3 seconds each way.** At 0.6s per tick that is exactly **5 ticks**. Upstream's number is right and mine was the guess.
+
+The gate is also exactly right. Mytharium confirmed Elkoy guides both directions **once Tree Gnome Village has been started** - which is precisely what varplayer `111>0` encodes (started, not completed). Every field on that edge matches the game.
+
+So the Tree Gnome Village report resolves to: **no defect anywhere.** The collision map is right, the transport rows are right, the durations are right, the gate is right, and the router's preference for Elkoy over a 205-tile maze walk is correct.
+
+Constraint - and this is the durable part, because it is the second time in one session:
+- **Twice I reasoned "that number can't be right" about a game mechanic I had no way to verify, and twice the data was right.** First the collision-map size gap (an encoding artefact I nearly reported as data loss), then this. An intuition about how long an in-game action "should" take is not evidence.
+- The rule that keeps working is the one used on the stamina varbit: **when the answer depends on a fact about the game, get it measured rather than reasoned about.** One question to the player settled this in a single round; two rounds of my own analysis had produced a wrong conclusion.
+- Do not "fix" the Elkoy duration. It is correct.
+
+### D-0095 - The real fault was visibility, and it is fixed at the overlay
+
+Date: 2026-08-09
+
+Decision: a transport hop is now named on the HUD and highlighted in the world. This is what the Tree Gnome Village episode actually needed - three rounds were spent on a router that was behaving correctly the entire time.
+
+Implementation:
+- **Naming.** `DrewsHelperTravelEstimate.displayLabel(edge)` replaces the family name ("Transport") with the real in-game menu text. Upstream labels carry a trailing object id ("Follow Elkoy 4968") and hub destinations a menu index ("1: Tree Gnome Village"); both are stripped, and hub networks are prefixed with the network so the destination alone cannot be mistaken for a walk ("Spirit tree: Grand Exchange"). A label that reduces to nothing, or to nothing but digits, falls back to the family so the cell is never empty.
+- **Bounded.** The HUD shows the first 3 distinct names in route order then "+N more" - a long route can touch a dozen distinct shortcuts and the panel is a fixed 320px.
+- **Highlighting.** `DrewsHelperRouteTileOverlay` marks the two tiles either side of every transport jump in cyan with a 2px outline. Cyan deliberately: it is the one strong colour absent from the configurable path/waypoint palette, so a highlight can never be mistaken for a route line the user chose.
+
+Constraint:
+- Detection reuses the existing `DrewsHelperRouteSnapshot.isTransportJump` (non-adjacent consecutive path tiles). No engine change was needed - the edge was already in hand at the point the HUD label is built, in the estimate's own transport loop.
+- **A drawn straight line across terrain is indistinguishable from a router giving up.** That ambiguity cost three rounds here and had been reported twice before. Any future route surface that draws a non-walking movement must say what it is.
+### D-0096 - Every hub transport family had lost the id needed to highlight it
+
+Date: 2026-08-09
+
+Finding: highlighting worked on gates, NPCs and agility shortcuts but never on spirit trees. The cause was not the overlay - it was the generator, and it affected **5,627 edges across eight families**, not just trees.
+
+Counts before the fix:
+
+| Family | with id | without id |
+|---|---|---|
+| Agility / grapple | 572 | 0 |
+| Spirit tree + planted | 0 | 1,975 |
+| Fairy ring | 0 | 3,024 |
+| Glider / balloon / quetzal / canoe / mushtree | 0 | 628 |
+
+Root cause: hub networks store **boarding** rows and **landing** rows separately, and the interactable id only ever appears on the boarding row. The cross-product that builds the edge kept the landing row's label and discarded the boarding row's:
+
+```
+boarding:  Travel Spirit tree 26261      <- the id is here
+landing:   6: Prifddinas                 <- and the cross-product kept this one
+```
+
+So the edge came out labelled `6: Prifddinas` with no trailing id, `targetId` returned -1, and the overlay fell back to marking the tile - which for a spirit tree is a patch of grass beside it. Agility shortcuts were unaffected only because they are direct rows, where the single row carries both.
+
+Implementation: `Get-TrailingId` / `Add-TrailingId` in the generator carry the boarding row's id onto the hop, and the record now also reads the id from the `menuoption menutarget objectid` column so families whose destination name won over the menu option (boats, canoes, balloons) are covered too. Rows 12,334 -> 12,388, because distinct interactables stopped collapsing as duplicates.
+
+Constraint:
+- **In any cross-product over two row shapes, name which side each field must come from.** The label and the id came from opposite rows and nothing in the code said so, which is why one silently won.
+- A test now asserts that **every row in all 8 hub families ends in an id**. A regression here is invisible in game until someone tries to use that family, so it has to fail the build instead.
+
+### D-0097 - Spirit trees are impostor objects; a scene id comparison can never match them
+
+Date: 2026-08-09
+
+Finding: with ids restored, spirit trees still did not highlight while gates and agility shortcuts did.
+
+Root cause: objects whose appearance depends on game state are placed in the scene under a **base id** and swapped at runtime to one of several **impostor ids**. A spirit tree is exactly that kind of object. The transport data records the id the player *clicks* - the impostor - and the overlay was comparing it against the base id sitting in the scene. Those are never equal.
+
+Gates, ladders and agility shortcuts are plain static objects, so their scene id *is* their real id. That is precisely why only trees failed, and why the symptom looked family-specific rather than structural.
+
+Implementation: `matchesObjectId(sceneId, targetId)` in `DrewsHelperRouteTileOverlay` resolves `client.getObjectDefinition(sceneId)` and checks `getImpostorIds()`, then the currently active `getImpostor()` as a fallback. API presence verified against `runelite-api-1.12.35.jar` before writing it. Confirmed fixed in game by Mytharium.
+
+Constraint:
+- **An object id from data is not necessarily the id in the scene.** Any future scene lookup by id must go through the impostor resolution, not `==`.
+- The overlay deliberately still does not try to decide whether a given id is an NPC or an object. Nothing in the data records which, so it looks for both and highlights whichever exists. That call was made in D-0095 and paid off here without needing a change - gliders turned out to carry an NPC id (`Glider Captain Errdo 10467`) while trees carry an object id.
+
+### D-0098 - Route solve time was O(nodes x depth^2), caused by ArrayList.add(0, x)
+
+Date: 2026-08-09
+
+Finding: solve time was strongly superlinear - 1.2 us/node at 1,371 expanded nodes rising to 117 us/node at 82,434, with a worst measured solve of **9,674ms**. Two runs with near-identical node counts (8,956 -> 14.5ms vs 7,724 -> 139ms) differed 10x, proving `expandedNodes` was not what drove the clock.
+
+Root cause, read out of the code rather than inferred:
+
+```java
+private List<Integer> clientMovePreferences(WorldPoint target)
+{
+    List<Integer> preferences = new ArrayList<>(distance);
+    SearchNode node = this;
+    while (node.previous != null)
+    {
+        preferences.add(0, movePreferencePenalty(   // insert at index 0 - shifts the whole array
+            node.previous.point,
+            new Move(node.directionX, node.directionY),
+            target));
+        node = node.previous;
+    }
+    return preferences;
+}
+```
+
+`add(0, x)` shifts the entire backing array on every insert, so building one list is O(depth^2). `compareClientMovePreference` built **two** of them, and it is reached from `isBetterPathToSamePointThan` - called for **every neighbour of every expanded node**. The whole A* was therefore O(nodes x depth^2).
+
+It hid because the comparison short-circuits on unequal distance, so the expensive branch only runs on **ties** - which are near-universal in a uniform-cost grid.
+
+Implementation: the comparison now walks both chains backwards without materialising either sequence. Each node's sequence is its parent's plus one element, so once the chains reach a common ancestor (`a == b`) every earlier element is identical by construction and cannot hold the first difference; and walking backwards visits indices high-to-low, so the last difference seen is the earliest one, which is what lexicographic order wants. Depth is carried as a `steps` field - measuring it by walking would reintroduce the cost being removed. **O(depth^2) -> O(divergence).**
+
+Measured, from Mytharium's own daemon log, same route straddling the relaunch:
+
+```
+BEFORE   expanded=116,043  ->  5,891.53ms   50.8 us/node
+AFTER    expanded=116,282  ->    430.90ms    3.7 us/node
+```
+
+Subsequent solves ran 57-79ms at 56k-71k nodes, about **1.1 us/node** - the same order as the reverse Dijkstra (0.76 us/node) that was used as the control. Worst recorded solve went 9,674ms -> 78.69ms.
+
+Constraint:
+- **Five theories were proposed and disproved before this one**: packed-int representation, a `PriorityQueue.remove(Object)` hotspot (no such call), the ranking pass being uncounted (it is counted), `edgesTo()` being an unindexed scan (it is a proper HashMap index), and general allocation pressure. Every one was killed by measurement or by reading the code.
+- **When per-node cost scales with route length, read the hot path before theorising.** The winning move was finding a same-file control - two loops over the same map differing 200x per node - which localised the cost to one function in a single step. Inference had produced five wrong answers first.
+
+### D-0099 - The heuristic was inadmissible once transports exist, so teleports were pruned
+
+Date: 2026-08-09
+
+Finding: with waypoint #1 on the Grand Exchange and the player stood beside the Battlefield of Khazard spirit tree, the router produced a 517-tile route via the Ardougne docks and a boat, ignoring a one-hop spirit tree. The edge exists and is legal:
+
+```
+SPIRIT_TREE  2555,3259 -> 3185,3508  [4: Grand Exchange 26263]  quests=Tree Gnome Village
+```
+
+Root cause: three constants that are individually reasonable and jointly broken.
+
+| | |
+|---|---|
+| Walking step | `costUnits = 1` per tile |
+| Transport step | `max(1, 2 x durationTicks)` - a spirit tree hop costs **6** |
+| Heuristic | `max(abs(dx), abs(dy))` - straight-line **tiles** |
+
+A spirit tree carries you ~630 tiles for a cost of 6, but the heuristic standing at the tree still charges ~621. That is an over-estimate of roughly 24x, which makes the heuristic **inadmissible**, and the main loop's early break (`node.priority > bestTarget.distance`) then discards the teleport outright as soon as any cheaper-looking route reaches the target. The boat wins because crossing water collapses its heuristic and its f-value plunges; the tree sits beside you with its heuristic unchanged and never competes.
+
+Implementation: one scalar per segment, over `transportGraph.allEdges()` (already policy-filtered at load):
+
+```java
+transportArrivalBound = min over edges e of ( transportCostUnits(e) + heuristic(e.destination, target) )
+priority = distance + Math.min(heuristic(n, target), transportArrivalBound)
+```
+
+Any route either walks the whole way - at least Chebyshev - or uses a transport, and then its **last** hop alone already costs `cost(e) + chebyshev(e.destination, target)`. Minimising over all edges ignores the cost of *reaching* that transport, which only lowers the bound, so it remains valid. It is also consistent, so no node needs re-expanding. `remaining` deliberately keeps the raw Chebyshev value - it is only a tie-break, and capping it there would flatten ordering far from the target.
+
+Measured A/B on identical start tiles, pre-fix engine vs fixed engine:
+
+| Start | pre-fix | fixed |
+|---|---|---|
+| 2570,3245 | 418 steps, 2 hops, 131ms | 86 steps, 1 hop, 34ms |
+| 2575,3250 | 404 steps, 2 hops, 73ms | 72 steps, 1 hop, 25ms |
+| 2580,3255 | 403 steps, 2 hops, 69ms | 78 steps, 1 hop, 37ms |
+| 2600,3260 | 382 steps, 2 hops, 61ms | 88 steps, 1 hop, 31ms |
+
+Constraint:
+- **This was never a Khazard problem.** Every long-range transport was systematically under-used whenever a moderately cheap walking or boat route existed. It surfaced there only because the player happened to be standing next to a tree.
+- **A capped heuristic was predicted to be slower and is measurably faster** - 2x to 4x on these routes. Capping lets a cheap teleport route be found almost immediately instead of grinding out a long walk before the search can terminate. The prediction was wrong in the user's favour and is recorded here so it is not "corrected" back.
+- **The first regression test written for this passed on the broken engine.** It started *on* the spirit tree, which is the one position that can never reproduce the fault: the start node is expanded first unconditionally, so its transport edges are offered before anything can out-compete them on f-value. A regression test must be shown to fail against the unfixed code before it is trusted - the A/B table above is that proof.
+
+### D-0100 - A green build is not evidence that the build ran
+
+Date: 2026-08-09
+
+Finding: a `gradlew test ... | findstr ... | more` pipeline returned exit 0 while reporting nothing, because the exit code came from the last element of the pipeline rather than from Gradle, and `-q` had suppressed the test count. A subsequent run reported `Task :compileJava UP-TO-DATE`, which would also have been consistent with the edit never being compiled.
+
+Constraint:
+- **Capture build output to a file and read it.** Do not pipe it through a filter that can swallow the exit code.
+- **Prove compilation from the artifact, not the report.** The check that settled it was the class file itself: `DrewsHelperWalkingRouteEngine$SearchNode.class` written 03:06:21 against a source written 03:06:11, containing the new `moveOf` and `steps` symbols and no `clientMovePreferences`, with the test results file written 03:06:23 - after both.
+- Gradle does **not** put test stdout into the result XML by default. A diagnostic that needs to report values should write its own file rather than printing.
+
+### D-0101 - The Wilderness toggle gates obelisks and levers only, not routing through the Wilderness
+
+Date: 2026-08-09
+
+Finding: Mytharium reported being routed through the Wilderness with "Use: Wilderness Transports" off. The setting is genuinely off - the key is absent from his profile and `wildernessTransportsEnabled()` defaults to `false` - and the policy is correctly excluding the `WILDERNESS` category. The category simply does not contain what the name suggests.
+
+What `WILDERNESS` actually contains, all 331 rows:
+
+```
+   324  the six obelisk destinations (1: Level 13 ... 6: Level 50)
+     7  Pull Lever
+```
+
+What is **not** in it:
+
+```
+   668  Cross Wilderness Ditch          -> BASELINE
+ 2,060  edges with both ends inside the Wilderness  -> BASELINE
+   598  ... the same, fairy rings
+   211  ... agility shortcuts
+   210  ... planted spirit trees
+    29  ... magic mushtrees
+```
+
+So walking into the Wilderness over the ditch, and every shortcut and fairy ring inside it, are ungated. The toggle is doing exactly what its description says ("Allow dangerous Wilderness lever and obelisk route edges") and nothing more; what the player expects from it is "do not route me through the Wilderness".
+
+This surfaced now, and probably because of D-0099: routes built out of cheap teleports were previously pruned by the inadmissible heuristic, so a fairy-ring chain through the Wilderness would not have been chosen before.
+
+Constraint:
+- **Not yet fixed - the scope change is a decision for Mytharium, not an inference.** Widening the toggle to exclude every edge inside the Wilderness would also make a deliberate waypoint in the Wilderness unroutable, so the sane rule is "avoid unless the start or a destination is inside it".
+- **Do not define the Wilderness boundary from memory.** The 668 ditch-crossing rows give the boundary line empirically; derive it from those rather than from a remembered coordinate.
+
+### D-0102 - Wilderness routing avoidance shipped; D-0101 is superseded
+
+Date: 2026-08-09
+
+Correction to D-0101: the original "not yet fixed" note is stale, and its broad high-y Wilderness count was wrong. `y >= 3522` is not the Wilderness; it includes the northern half of the world, such as Zeah, Rellekka, Etceteria, Piscatoris, and instanced regions. A simple north-of-ditch rule would have excluded thousands of valid non-Wilderness edges.
+
+The implemented boundary is:
+
+```text
+x 2944-3392
+y 3522-3968
+plane 0
+```
+
+That box was derived from the ditch/entry rows and then narrowed after checking a trap: Prifddinas's spirit tree lands at `(3274,6123)`, so an x-band without a y ceiling would falsely classify Prifddinas as Wilderness.
+
+Implementation rule: when `Use: Wilderness Transports` is off, routes refuse transport edges that enter the Wilderness box from outside it. Two escape hatches remain:
+
+- If the route starts inside the Wilderness, it may route out or move around.
+- If a waypoint is inside the Wilderness, the player deliberately asked to go there, so the route may enter.
+
+Constraint:
+- Future Wilderness work must use the same derived bounded box unless live evidence proves it wrong. Do not replace it with `y >= 3522` or a memory-based level line.
+- The toggle now means "avoid routing into the Wilderness unless I deliberately start or place a waypoint there", not only "allow obelisk/lever transports".
+
+### D-0103 - Teleport spells become innate route edges, cooldowns are locked state, banking is a graph step
+
+Date: 2026-08-09
+
+Myth's direction: magic-tab teleport spells, home teleports, and later minigames/items should be innate routing options like canoes or agility shortcuts once the account can actually use them. The old separate "Teleport Options" buttons should not survive as independent route buttons after the supported families are built.
+
+Decisions:
+
+- Start with home teleports as the next code slice. They exercise originless teleport edges, spellbook/unlock vars, and the real cooldown gate without requiring a rune model.
+- Treat cooldown-active teleports as locked. The router ignores them and picks the next shortest route, whether that is walking, another teleport, a spirit tree, a ship, or any other legal transport.
+- Cooldown var syntax is upstream's `@`, for example `892@30`. The stored var value is an epoch-minute timestamp, not a countdown. The check is `(nowMinutes - storedMinutes) > cooldownMinutes`.
+- Unknown cooldown var value means locked. This intentionally differs from ordinary quest/var requirements, where unknown is permissive to avoid silently deleting valid routes from typo-prone metadata.
+- Destination-only teleport rows are originless edges. The generator must emit them immediately with sentinel source `-1,-1,0` (`ANYWHERE`) instead of leaving them in `$destOnly` to be silently dropped.
+- Originless dedup must include requirement fields for these files. Lumbridge Home Teleport has multiple rows that differ by VarPlayers animation state/duration; collapsing them to one row makes the teleport work only in one state.
+- Originless edges must be visible to every lookup path: step generation, edge legality, and travel-estimate/action labeling. Otherwise the route can take a teleport while the HUD reports walking or uses the wrong duration.
+
+Rune/spell plan after home teleports:
+
+- Add spell teleports only after carried-supply gating is wired.
+- Use real Magic level, spellbook/unlock vars, inventory, equipped gear, and rune pouch contents.
+- Expand symbolic rune requirements at generation time into the existing item-requirement grammar. Use upstream's rune/staff/combination-rune table, not OSRS wiki memory typed by hand.
+- Staffs usually matter through equipment, not inventory. Rune pouch contents are vars, not ordinary item counts.
+- Bank contents do not count as castable from anywhere.
+
+Banking decision:
+
+- Bank-aware teleports are allowed later, but only as a real route step. A bank route is not a shortcut around item requirements.
+- RuneLite bank contents are usable only when RuneLite has a known bank cache because the player opened the bank. If the bank cache is unknown, do not invent a bank route.
+- Bank tile data should come from upstream first. Ask Myth for missing coordinates only if upstream lacks a needed bank.
+- The search state becomes `(tile, bankedYet)`. Bank access transitions from not-banked to banked at an honest withdraw cost.
+- Highlight the exact needed runes/staff/items in the bank UI so the withdraw cost can be lower and more consistent.
+- Let A* decide whether banking is worth it. The graph should select `spirit tree -> bank -> withdraw -> teleport -> walk` only when that whole route is shorter than the alternatives.
+
+Operational rule once the bank slice exists:
+
+```text
+If carried supplies can cast it -> use teleport normally.
+If carried supplies cannot cast it but known bank has supplies -> consider route-to-bank + withdraw + teleport.
+If bank is unknown or lacks supplies -> treat teleport as locked.
+If cooldown is active -> treat teleport as locked.
+```
+
+Constraint:
+- Do not copy the old Drew Shortest Path/vendored route stack back into the plugin. Adapt the upstream metadata and proven concepts into the current Drew-owned route engine.
+- Do not ship `teleportation_spells.tsv` before rune/equipment/pouch gating exists; false teleport offers are worse than under-offering.
+
+### D-0105 - Generated resources keep the generator's own bytes, and regeneration is proved by set diff
+
+Date: 2026-08-09.
+
+`src/main/resources/drewshelper-transports.tsv` is generated, never hand-maintained. The generator writes UTF-8, no BOM, LF (`$LF = [string][char]10`), and the committed blob is LF. The post-upload CRLF normalization pass hit it anyway and produced a content-identical but byte-different file.
+
+- Never line-ending-normalize a generated file. That pass exists for hand-edited sources that must match Windows repo style. Generated output matches its generator instead.
+- Regeneration must be byte-idempotent. Regenerating from unchanged inputs must leave the file's sha256 unchanged. A difference is a defect in the writer or in post-processing, not noise to wave through.
+- A CRLF'd copy is the worst kind of wrong here. It reads as a whole-file diff that buries the real change, and it silently reverts on the next regeneration.
+
+Proving a regeneration is safe means an A/B on the same generator, not a row count. Withhold the one new input file, regenerate, and set-diff every pre-existing row. A count is compatible with losing N rows and gaining N others; a full-row set diff is not. Where labels are expected to change, fall back to the `category|source|destination` edge key to separate a relabel from a real loss.
+
+- `tools/transport-overrides.tsv` is an input to the generated resource and is currently untracked. Until it is committed, regeneration on any other checkout silently drops those verified edges.
+
+Cross-reference: `D-0104` in `CHANGELOG_AGENT_NOTES.md` is the build note for the home-teleport ship. Its durable rules live in D-0103.

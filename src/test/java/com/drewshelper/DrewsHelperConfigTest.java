@@ -117,21 +117,17 @@ public class DrewsHelperConfigTest
     @Test
     public void routeBenchmarkControlDefaultsOffAndRouteSolverConfigIsRemoved() throws Exception
     {
-        DrewsHelperConfig config = new DrewsHelperConfig() {};
-        Method benchmarkEnabled = DrewsHelperConfig.class.getMethod("routeBenchmarkEnabled");
-        ConfigItem benchmarkEnabledItem = benchmarkEnabled.getAnnotation(ConfigItem.class);
-
-        assertNotNull(benchmarkEnabledItem);
-        assertEquals("Log Benchmark Movement", benchmarkEnabledItem.name());
-        assertEquals("waypointSettings", benchmarkEnabledItem.section());
-        assertEquals(6, benchmarkEnabledItem.position());
-        assertFalse(config.routeBenchmarkEnabled());
-
         for (Method method : DrewsHelperConfig.class.getMethods())
         {
             ConfigItem item = method.getAnnotation(ConfigItem.class);
             if (item != null)
             {
+                // Both logging controls were removed once they had served their purpose. ETA
+                // logging still runs - it just is not switchable, deliberately.
+                assertFalse("routeBenchmarkEnabled".equals(item.keyName()));
+                assertFalse("Log Benchmark Movement".equals(item.name()));
+                assertFalse("etaDebugLogging".equals(item.keyName()));
+                assertFalse("Log ETA Accuracy".equals(item.name()));
                 assertFalse("routeSolverMode".equals(item.keyName()));
                 assertFalse("Route Solver".equals(item.name()));
             }

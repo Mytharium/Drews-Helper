@@ -1,6 +1,66 @@
 # Next Work
 
-Last updated: 2026-08-08.
+Last updated: 2026-08-09.
+
+## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
+
+Home teleports shipped on 2026-08-09. The next code pass is **magic-tab spell teleports from carried supplies**, then bank-aware teleport routing.
+
+### Completed slice: home teleports
+
+- `teleportation_spells_home.tsv` is ingested into `drewshelper-transports.tsv`.
+- Destination-only rows emit as originless `BASELINE` edges with source `-1,-1,0` (`ANYWHERE`).
+- Originless edges are offered only at each waypoint leg start.
+- `@` cooldown requirements are supported; active or unknown cooldowns lock the teleport.
+- Lumbridge's four home-teleport variants remain distinct through requirement-aware originless dedup.
+- Legal step generation, edge legality, travel-estimate lookup, and `Actions` labels all recognize originless home-teleport jumps.
+- Full test/build passed after implementation.
+
+### Next coding slice: spell teleports from carried supplies
+
+Do not ship `teleportation_spells.tsv` until rune requirements are modeled well enough to avoid false offers.
+
+Required:
+- Real Magic level gate.
+- Spellbook/unlock var gates.
+- Inventory item counts.
+- Equipped staff counts, because staffs are normally worn.
+- Rune-pouch contents from vars.
+- Generator-side expansion of symbolic rune names into the existing item requirement grammar, using upstream's rune/staff/combination-rune table instead of hand-written wiki memory.
+
+Known rule:
+- Bank contents do not count as castable from anywhere. They become usable only after a bank step exists in the route.
+
+### Later slice: bank-aware teleports
+
+Myth wants bank-aware teleport routing when it is actually faster, not a blanket "count the bank" shortcut.
+
+Design:
+- Use bank contents only if RuneLite has a known bank cache from the player opening the bank.
+- If the bank cache is unknown, show no bank route rather than inventing one.
+- Use upstream bank tile data first. Ask Myth for missing bank tile coordinates only if upstream is incomplete.
+- Add bank access as an honest graph/state transition. Search node becomes `(tile, bankedYet)`.
+- Teleports requiring supplies that are only in the bank become legal only after the bank transition.
+- Give the bank transition a fixed withdraw cost, then tune it from live use.
+- Highlight the exact needed runes/staff/items in the bank UI so the fixed withdraw cost can be lower and more realistic.
+- Let A* decide. A bank route wins only if its full cost is shorter than walking, spirit trees, boats, or another available teleport.
+
+Rule after bank support:
+
+```text
+If carried supplies can cast it -> use teleport normally.
+If carried supplies cannot cast it but known bank has supplies -> consider route-to-bank + withdraw + teleport.
+If bank is unknown or lacks supplies -> treat teleport as locked.
+If cooldown is active -> treat teleport as locked.
+```
+
+### Later families
+
+- Minigame teleports: not a submenu tree in the data. Each destination is already its own row. Add after the originless/cooldown machinery works.
+- Teleport items, jewellery boxes, portals, POH portals, tablets, scrolls, capes, and other bulk transport files come after spells/minigames prove the account-gating model.
+- Retire or repurpose the dead Teleport Options / placeholder Other Transportation toggles only after their transport families are innate in the route graph.
+
+Everything below this active handoff is older project/history context. Use it only when it still matches the current Drew-owned route model.
 
 ## Drew's Shortest Path Build Plan
 

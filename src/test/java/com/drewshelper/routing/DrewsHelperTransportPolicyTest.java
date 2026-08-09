@@ -4,6 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import java.util.ArrayList;
+import java.util.List;
+import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 
 public class DrewsHelperTransportPolicyTest
@@ -128,5 +131,70 @@ public class DrewsHelperTransportPolicyTest
         {
             assertTrue("varbit id must be positive, got " + id, id > 0);
         }
+    }
+
+    @Test
+    public void homeTeleportRowsAreOriginlessAndVariantsStayDistinct() throws Exception
+    {
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        List<DrewsHelperTransportEdge> lumbridgeRows =
+            originlessEdgesTo(DrewsHelperTransportGraph.loadDefault(false), lumbridge);
+
+        assertEquals("Lumbridge Home Teleport should keep its four varplayer/duration variants",
+            4, lumbridgeRows.size());
+        for (DrewsHelperTransportEdge edge : lumbridgeRows)
+        {
+            assertEquals(DrewsHelperTransportGraph.ANYWHERE, edge.getSource());
+            assertEquals("Lumbridge Home Teleport", edge.getLabel());
+            assertEquals("4070=0", edge.getVarbits());
+            assertTrue(edge.getVarPlayers().contains("892@30"));
+        }
+    }
+
+    @Test
+    public void homeTeleportCooldownFiltersTheLoadedGraph() throws Exception
+    {
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportPolicy policy = DrewsHelperTransportPolicy.baselineOnly();
+        DrewsHelperPlayerCapability expired = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .varbit(4070, 0)
+            .varPlayer(4560, 0)
+            .varPlayer(892, 969)
+            .build();
+        DrewsHelperPlayerCapability active = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .varbit(4070, 0)
+            .varPlayer(4560, 0)
+            .varPlayer(892, 980)
+            .build();
+        DrewsHelperPlayerCapability unknownCooldown = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .varbit(4070, 0)
+            .varPlayer(4560, 0)
+            .build();
+
+        assertEquals(1, originlessEdgesTo(
+            DrewsHelperTransportGraph.loadDefault(policy, expired), lumbridge).size());
+        assertTrue(originlessEdgesTo(
+            DrewsHelperTransportGraph.loadDefault(policy, active), lumbridge).isEmpty());
+        assertTrue(originlessEdgesTo(
+            DrewsHelperTransportGraph.loadDefault(policy, unknownCooldown), lumbridge).isEmpty());
+    }
+
+    private static List<DrewsHelperTransportEdge> originlessEdgesTo(
+        DrewsHelperTransportGraph graph,
+        WorldPoint destination
+    )
+    {
+        List<DrewsHelperTransportEdge> matches = new ArrayList<>();
+        for (DrewsHelperTransportEdge edge : graph.originlessEdges())
+        {
+            if (destination.equals(edge.getDestination()))
+            {
+                matches.add(edge);
+            }
+        }
+        return matches;
     }
 }

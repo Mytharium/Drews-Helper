@@ -18,18 +18,21 @@ import net.runelite.api.coords.WorldPoint;
 public final class DrewsHelperTransportGraph
 {
     private static final String RESOURCE = "/drewshelper-transports.tsv";
+    static final WorldPoint ANYWHERE = new WorldPoint(-1, -1, 0);
 
     /** Parsed once, then filtered per policy/capability. Immutable once assigned. */
     private static volatile List<DrewsHelperTransportEdge> masterEdges;
 
     private final Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesBySource;
     private final Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesByDestination;
+    private final List<DrewsHelperTransportEdge> originlessEdges;
     private final int edgeCount;
 
     private DrewsHelperTransportGraph(Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesBySource)
     {
         Map<WorldPoint, List<DrewsHelperTransportEdge>> immutableEdges = new HashMap<>();
         Map<WorldPoint, List<DrewsHelperTransportEdge>> incomingEdges = new HashMap<>();
+        List<DrewsHelperTransportEdge> originless = new ArrayList<>();
         int count = 0;
         for (Map.Entry<WorldPoint, List<DrewsHelperTransportEdge>> entry : edgesBySource.entrySet())
         {
@@ -40,11 +43,16 @@ public final class DrewsHelperTransportGraph
             for (DrewsHelperTransportEdge edge : edges)
             {
                 incomingEdges.computeIfAbsent(edge.getDestination(), key -> new ArrayList<>()).add(edge);
+                if (edge.isOriginless())
+                {
+                    originless.add(edge);
+                }
             }
         }
 
         this.edgesBySource = Collections.unmodifiableMap(immutableEdges);
         this.edgesByDestination = immutableEdgeMap(incomingEdges);
+        this.originlessEdges = Collections.unmodifiableList(originless);
         this.edgeCount = count;
     }
 
@@ -301,6 +309,11 @@ public final class DrewsHelperTransportGraph
     public List<DrewsHelperTransportEdge> edgesTo(WorldPoint destination)
     {
         return edgesByDestination.getOrDefault(destination, Collections.emptyList());
+    }
+
+    public List<DrewsHelperTransportEdge> originlessEdges()
+    {
+        return originlessEdges;
     }
 
     public boolean isEmpty()

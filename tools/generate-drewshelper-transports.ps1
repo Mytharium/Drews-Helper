@@ -22,6 +22,7 @@ $ErrorActionPreference = 'Stop'
 
 $TAB = [char]9
 $LF  = [string][char]10
+$ORIGINLESS_SOURCE = '-1,-1,0'
 
 $FileCategories = [ordered]@{
     'transports.tsv'           = 'BASELINE'
@@ -30,6 +31,7 @@ $FileCategories = [ordered]@{
     'ships.tsv'                = 'BASELINE'
     'magic_carpets.tsv'        = 'BASELINE'
     'minecarts.tsv'            = 'BASELINE'
+    'teleportation_spells_home.tsv' = 'BASELINE'
     'teleportation_levers.tsv' = 'WILDERNESS'
     'wilderness_obelisks.tsv'  = 'WILDERNESS'
     'agility_shortcuts.tsv'    = 'AGILITY_SHORTCUT'
@@ -38,7 +40,29 @@ $FileCategories = [ordered]@{
     'hot_air_balloons.tsv'     = 'HOT_AIR_BALLOON'
     'magic_mushtrees.tsv'      = 'MAGIC_MUSHTREE'
     'quetzals.tsv'             = 'QUETZAL'
+    'spirit_trees.tsv'         = 'SPIRIT_TREE'
+    'fairy_rings.tsv'          = 'FAIRY_RING'
 }
+
+# Fairy rings are gated as a network by Fairytale II, and upstream records that
+# nowhere - every ring row would otherwise look free to an account that cannot
+# use a single one. Unioned into the quests field of every FAIRY_RING edge so the
+# existing quest reader enforces it with no new code path.
+$NetworkQuest = @{
+    'FAIRY_RING' = 'Fairytale II - Cure a Queen'
+}
+
+# Spirit trees split in two. The base network is quest gated and detectable; the
+# planted ones are player grown and nothing in the data can prove you have them.
+# Upstream flags its own planted sections in the section comment, so the split is
+# read from that annotation rather than a hardcoded list of destination names.
+$PlantedSectionPattern = 'planted spirit tree|player-owned house'
+
+# ...but ONLY for files that are actually organised into sections. A section
+# comment sets the section for every row after it, so a file with two stray
+# comments and no structure (fairy_rings.tsv has exactly that) would tag
+# everything downstream of the last comment. Opt in per file, never by default.
+$PlantedSplitFiles = @('spirit_trees.tsv')
 
 # Upstream coordinates are space separated ("2220 3155 0").
 # Drew's resource format is comma separated ("2220,3155,0").
@@ -110,6 +134,27 @@ function Merge-ListField {
     return ($parts -join ';')
 }
 
+# The id of the thing the player clicks - an object for a tree or a gate, an NPC for a glider
+# captain. Upstream only ever puts it on the menu-option column, and only on the row where you
+# BOARD. The overlay needs it to outline the real thing instead of the tile, so it is carried
+# through on the label; the HUD strips it again for display.
+function Get-TrailingId {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return '' }
+    $m = [regex]::Match($Text.Trim(), '(?:^|\s)(\d+)$')
+    if (-not $m.Success) { return '' }
+    return $m.Groups[1].Value
+}
+
+# Only appends when the label has no id of its own - never stacks two.
+function Add-TrailingId {
+    param([string]$Label, [string]$Id)
+    if ([string]::IsNullOrWhiteSpace($Id)) { return $Label }
+    if ([string]::IsNullOrWhiteSpace($Label)) { return $Label }
+    if ((Get-TrailingId $Label) -ne '') { return $Label }
+    return $Label + ' ' + $Id
+}
+
 # Defensive: a stray tab in a passthrough field would break the output format.
 function Format-Field {
     param([string]$Value)
@@ -152,6 +197,9 @@ function Add-Edge {
         return
     }
     $key = $Category + '|' + $Source + '|' + $Destination + '|' + $Label
+    if ($Source -eq $ORIGINLESS_SOURCE) {
+        $key += '|' + $Duration + '|' + $Skills + '|' + $Quests + '|' + $Items + '|' + $Varbits + '|' + $VarPlayers
+    }
     if ($script:seen.ContainsKey($key)) {
         $script:dupes++
         return
@@ -185,6 +233,14 @@ foreach ($fileName in $FileCategories.Keys) {
     $originOnly = New-Object System.Collections.ArrayList
     $destOnly   = New-Object System.Collections.ArrayList
 
+    # Section comments carry upstream's own planted/player-built annotation. The
+    # boarding half of the file is annotated and the landing half is not, but both
+    # halves reuse the same section NAMES - so a name seen annotated once stays
+    # planted for the rest of the file.
+    $section        = ''
+    $plantedSection = @{}
+    $splitPlanted   = ($PlantedSplitFiles -contains $fileName)
+
     foreach ($line in (Get-Content -LiteralPath $path)) {
         if ($null -eq $line) { continue }
         $trimmed = $line.Trim()
@@ -199,7 +255,12 @@ foreach ($fileName in $FileCategories.Keys) {
                     $key = $cols[$i].Trim().ToLowerInvariant()
                     if ($key -ne '' -and -not $map.ContainsKey($key)) { $map[$key] = $i }
                 }
+                continue
             }
+
+            $body    = $trimmed.TrimStart('#').Trim()
+            $section = (($body -split '[\t(]')[0]).Trim().ToLowerInvariant()
+            if ($splitPlanted -and $section -ne '' -and $body -match $PlantedSectionPattern) { $plantedSection[$section] = $true }
             continue
         }
 
@@ -224,7 +285,13 @@ foreach ($fileName in $FileCategories.Keys) {
             varplayers = Format-Field (Get-Col $f $map 'varplayers')
             duration   = 1
             label      = Select-Label (Format-Field (Get-Col $f $map 'display info')) (Format-Field (Get-Col $f $map 'menuoption menutarget objectid'))
+            menuId     = Get-TrailingId (Get-Col $f $map 'menuoption menutarget objectid')
+            section    = $section
         }
+
+        # Where "Display info" won (boats, canoes, balloons...) the chosen label is a destination
+        # name and the id sits on the menu option of the same row. Put it back.
+        $rec.label = Add-TrailingId $rec.label $rec.menuId
 
         $parsed = 0
         if ([int]::TryParse((Get-Col $f $map 'duration').Trim(), [ref]$parsed) -and $parsed -gt 1) {
@@ -246,8 +313,11 @@ foreach ($fileName in $FileCategories.Keys) {
             if ($isAgility -and ((Format-SkillMap $rec.skills) -match '(^|;)(Ranged|Strength)=')) {
                 $category = 'GRAPPLE_SHORTCUT'
             }
+            if ($plantedSection.ContainsKey($rec.section)) { $category = 'PLANTED_' + $baseCategory }
             Add-Edge $category $rec.src $rec.dst $rec.label $rec.duration `
-                (Format-SkillMap $rec.skills) $rec.quests $rec.items $rec.varbits $rec.varplayers
+                (Format-SkillMap $rec.skills) `
+                (Merge-ListField $rec.quests $NetworkQuest[$baseCategory]) `
+                $rec.items $rec.varbits $rec.varplayers
         }
         elseif ($hasSrc) { [void]$originOnly.Add($rec) }
         else             { [void]$destOnly.Add($rec) }
@@ -262,16 +332,59 @@ foreach ($fileName in $FileCategories.Keys) {
                 if ($isAgility -and ($mergedSkills -match '(^|;)(Ranged|Strength)=')) {
                     $category = 'GRAPPLE_SHORTCUT'
                 }
+                # An edge is only as usable as its weaker end: boarding a tree you
+                # never grew is just as impossible as landing at one.
+                if ($plantedSection.ContainsKey($o.section) -or $plantedSection.ContainsKey($d.section)) {
+                    $category = 'PLANTED_' + $baseCategory
+                }
+                # A hub landing row is just a destination name - the id of the tree, ring or
+                # glider captain you actually click lives on the BOARDING row. Without this the
+                # overlay can only mark the tile, which for a spirit tree marks empty grass.
                 $dur = [Math]::Max($o.duration, $d.duration)
-                Add-Edge $category $o.src $d.dst $d.label $dur `
+                $hopLabel = Add-TrailingId $d.label $(if ($d.menuId) { $d.menuId } else { $o.menuId })
+                Add-Edge $category $o.src $d.dst $hopLabel $dur `
                     $mergedSkills `
-                    (Merge-ListField $o.quests     $d.quests) `
+                    (Merge-ListField (Merge-ListField $o.quests $d.quests) $NetworkQuest[$baseCategory]) `
                     (Merge-ListField $o.items      $d.items) `
                     (Merge-ListField $o.varbits    $d.varbits) `
                     (Merge-ListField $o.varplayers $d.varplayers)
                 $crossEdges++
             }
         }
+    }
+    elseif ($destOnly.Count -gt 0) {
+        foreach ($d in $destOnly) {
+            Add-Edge $baseCategory $ORIGINLESS_SOURCE $d.dst $d.label $d.duration `
+                (Format-SkillMap $d.skills) `
+                (Merge-ListField $d.quests $NetworkQuest[$baseCategory]) `
+                $d.items $d.varbits $d.varplayers
+        }
+    }
+}
+
+# Upstream's data has real gaps - a gate that exists in game, blocks in the
+# collision map, and has no row anywhere. Hand-editing the generated file would
+# lose the fix on the next regeneration, so verified additions live here and are
+# merged in. Same 10 columns as the output. Every row must cite its evidence.
+$overrideCount = 0
+$overridePath  = Join-Path -Path (Split-Path -Parent $PSCommandPath) -ChildPath 'transport-overrides.tsv'
+if (Test-Path -LiteralPath $overridePath) {
+    foreach ($line in (Get-Content -LiteralPath $overridePath)) {
+        if ($null -eq $line) { continue }
+        $t = $line.Trim()
+        if ($t -eq '' -or $t.StartsWith('#')) { continue }
+        $raw = $line.Split($TAB)
+        if ($raw.Count -lt 5) { throw "Override row needs at least 5 columns: $line" }
+        # Trailing empty requirement columns are optional in the source file.
+        $f = @('') * 10
+        for ($i = 0; $i -lt [Math]::Min($raw.Count, 10); $i++) { $f[$i] = $raw[$i] }
+        $dur = 1
+        [void][int]::TryParse($f[4].Trim(), [ref]$dur)
+        $before = $rows.Count
+        Add-Edge $f[0].Trim() $f[1].Trim() $f[2].Trim() $f[3].Trim() $dur `
+            (Format-Field $f[5]) (Format-Field $f[6]) (Format-Field $f[7]) `
+            (Format-Field $f[8]) (Format-Field $f[9])
+        if ($rows.Count -gt $before) { $overrideCount++ }
     }
 }
 
@@ -299,6 +412,7 @@ $sorted | Group-Object category | Sort-Object Name | ForEach-Object {
 }
 Write-Output ''
 Write-Output ('Cross-product edges built: ' + $crossEdges)
+Write-Output ('Override rows merged:      ' + $overrideCount)
 Write-Output ('Skipped (no coordinates):  ' + $skippedNoCoords)
 Write-Output ('Skipped (malformed coords):' + $skippedMalformed)
 Write-Output ('Skipped (self-loop):       ' + $skippedSelfLoop)

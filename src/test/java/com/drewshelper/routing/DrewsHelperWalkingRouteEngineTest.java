@@ -84,6 +84,45 @@ public class DrewsHelperWalkingRouteEngineTest
     }
 
     @Test
+    public void originlessTransportIsOfferedAtRouteLegStart() throws Exception
+    {
+        WorldPoint start = new WorldPoint(0, 0, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30")
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solve(start, Collections.singletonList(lumbridge));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertEquals(Arrays.asList(start, lumbridge), route.getPath());
+        assertEquals(1, graph.originlessEdges().size());
+        assertTrue(graph.edgesFrom(start).isEmpty());
+    }
+
+    @Test
+    public void originlessTransportIsOfferedAgainAtEachWaypointLegStart() throws Exception
+    {
+        WorldPoint start = new WorldPoint(0, 0, 0);
+        WorldPoint firstWaypoint = new WorldPoint(2, 0, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30")
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solve(start, Arrays.asList(firstWaypoint, lumbridge));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertEquals(start, route.getPath().get(0));
+        assertEquals(firstWaypoint, route.getPath().get(2));
+        assertEquals(lumbridge, route.getPath().get(3));
+    }
+
+    @Test
     public void keepsStraightAxisRouteStraight() throws Exception
     {
         DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap());

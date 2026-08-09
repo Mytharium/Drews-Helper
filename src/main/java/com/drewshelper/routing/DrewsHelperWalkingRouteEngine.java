@@ -32,6 +32,7 @@ public final class DrewsHelperWalkingRouteEngine
 
     private final DrewsHelperMovementMap movementMap;
     private final DrewsHelperTransportGraph transportGraph;
+    private final boolean avoidWilderness;
 
     public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap)
     {
@@ -40,8 +41,18 @@ public final class DrewsHelperWalkingRouteEngine
 
     public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap, DrewsHelperTransportGraph transportGraph)
     {
+        this(movementMap, transportGraph, false);
+    }
+
+    public DrewsHelperWalkingRouteEngine(
+        DrewsHelperMovementMap movementMap,
+        DrewsHelperTransportGraph transportGraph,
+        boolean avoidWilderness
+    )
+    {
         this.movementMap = movementMap;
         this.transportGraph = transportGraph == null ? DrewsHelperTransportGraph.empty() : transportGraph;
+        this.avoidWilderness = avoidWilderness;
     }
 
     public DrewsHelperRouteSnapshot solve(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
@@ -269,6 +280,9 @@ public final class DrewsHelperWalkingRouteEngine
     ) throws InterruptedException
     {
         long startedAt = System.nanoTime();
+        rankNanos = 0;
+        rankExpanded = 0;
+        rankRuns = 0;
         List<WorldPoint> route = new ArrayList<>();
         WorldPoint segmentStart = start;
         int walkingDistance = 0;
@@ -317,6 +331,21 @@ public final class DrewsHelperWalkingRouteEngine
         );
     }
 
+    /**
+     * Per-solve phase split. Four separate theories about where the time goes have now
+     * been wrong, so the search stops being reasoned about and starts being measured:
+     * the A* proper versus the client-style ranking pass that follows it.
+     */
+    private long rankNanos;
+    private int rankExpanded;
+    private int rankRuns;
+
+    /** Phase split of the last solve, for the log line. */
+    public String lastPhaseSummary()
+    {
+        return "rank=" + (rankNanos / 1_000_000) + "ms/" + rankExpanded + "n rankRuns=" + rankRuns;
+    }
+
     private SearchResult solveSegmentAStar(WorldPoint start, WorldPoint target) throws InterruptedException
     {
         return solveSegmentAStar(start, target, true, RouteRankingMode.CLIENT);
@@ -350,13 +379,13 @@ public final class DrewsHelperWalkingRouteEngine
 
         PriorityQueue<SearchNode> open = new PriorityQueue<>();
         Map<WorldPoint, SearchNode> bestNodes = new HashMap<>();
-        SearchContext context = new SearchContext(target);
+        SearchContext context = new SearchContext(start, target, transportArrivalBound(target));
         int startRemaining = heuristic(start, target);
         SearchNode startNode = new SearchNode(
             start,
             null,
             0,
-            startRemaining,
+            Math.min(startRemaining, context.transportArrivalBound),
             startRemaining,
             0,
             0,
@@ -436,7 +465,11 @@ public final class DrewsHelperWalkingRouteEngine
         boolean localWalkingOverridesEnabled
     )
     {
-        for (RouteStep step : legalSteps(node.point, context.target, localWalkingOverridesEnabled))
+        for (RouteStep step : legalSteps(
+            node.point,
+            context.target,
+            localWalkingOverridesEnabled,
+            node.previous == null && node.point.equals(context.segmentStart)))
         {
             addNeighbor(node, step, context, open, bestNodes);
         }
@@ -455,12 +488,17 @@ public final class DrewsHelperWalkingRouteEngine
             return initialResult;
         }
 
+        rankRuns++;
+        long rankStartedAt = System.nanoTime();
         ReverseDistanceResult distances = reverseDistancesToTarget(
+            start,
             target,
             initialResult.path.size() - 1,
             SearchBounds.aroundPath(initialResult.path),
             localWalkingOverridesEnabled
         );
+        rankNanos += System.nanoTime() - rankStartedAt;
+        rankExpanded += distances.expandedNodes;
         Integer startDistance = distances.distances.get(start);
         if (startDistance == null || startDistance != initialResult.path.size() - 1)
         {
@@ -474,7 +512,11 @@ public final class DrewsHelperWalkingRouteEngine
         while (remainingDistance > 0)
         {
             RouteStep next = null;
-            for (RouteStep step : legalSteps(current, target, localWalkingOverridesEnabled))
+            for (RouteStep step : legalSteps(
+                current,
+                target,
+                localWalkingOverridesEnabled,
+                current.equals(start)))
             {
                 Integer stepDistance = distances.distances.get(step.destination);
                 if (stepDistance != null && stepDistance == remainingDistance - 1)
@@ -595,6 +637,7 @@ public final class DrewsHelperWalkingRouteEngine
     }
 
     private ReverseDistanceResult reverseDistancesToTarget(
+        WorldPoint segmentStart,
         WorldPoint target,
         int maxDistance,
         SearchBounds bounds,
@@ -642,7 +685,7 @@ public final class DrewsHelperWalkingRouteEngine
                 distances,
                 localWalkingOverridesEnabled
             );
-            addReverseTransportPredecessors(point, distance, bounds, open, distances);
+            addReverseTransportPredecessors(segmentStart, target, point, distance, bounds, open, distances);
         }
 
         return new ReverseDistanceResult(distances, expanded);
@@ -725,6 +768,8 @@ public final class DrewsHelperWalkingRouteEngine
     }
 
     private void addReverseTransportPredecessors(
+        WorldPoint segmentStart,
+        WorldPoint target,
         WorldPoint point,
         int distance,
         SearchBounds bounds,
@@ -734,6 +779,15 @@ public final class DrewsHelperWalkingRouteEngine
     {
         for (DrewsHelperTransportEdge edge : transportGraph.edgesTo(point))
         {
+            if (edge.isOriginless())
+            {
+                if (originlessTransportAllowed(segmentStart, edge, target))
+                {
+                    relax(segmentStart, distance + transportCostUnits(edge), bounds, open, distances);
+                }
+                continue;
+            }
+
             relax(edge.getSource(), distance + transportCostUnits(edge), bounds, open, distances);
         }
     }
@@ -771,7 +825,7 @@ public final class DrewsHelperWalkingRouteEngine
             neighbor,
             node,
             distance,
-            distance + remaining,
+            distance + Math.min(remaining, context.transportArrivalBound),
             remaining,
             preferencePenalty,
             turns,
@@ -796,6 +850,16 @@ public final class DrewsHelperWalkingRouteEngine
     }
 
     private List<RouteStep> legalSteps(WorldPoint from, WorldPoint target, boolean localWalkingOverridesEnabled)
+    {
+        return legalSteps(from, target, localWalkingOverridesEnabled, false);
+    }
+
+    private List<RouteStep> legalSteps(
+        WorldPoint from,
+        WorldPoint target,
+        boolean localWalkingOverridesEnabled,
+        boolean originlessAllowed
+    )
     {
         List<RouteStep> steps = new ArrayList<>();
         int x = from.getX();
@@ -847,20 +911,48 @@ public final class DrewsHelperWalkingRouteEngine
 
         for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(from))
         {
-            WorldPoint destination = edge.getDestination();
-            if (containsStepDestination(steps, destination))
-            {
-                continue;
-            }
+            order = addTransportStep(steps, order, from, target, edge);
+        }
 
-            Move direction = new Move(
-                Integer.compare(destination.getX(), from.getX()),
-                Integer.compare(destination.getY(), from.getY())
-            );
-            steps.add(new RouteStep(order++, destination, direction, true, 0, transportCostUnits(edge)));
+        if (originlessAllowed)
+        {
+            for (DrewsHelperTransportEdge edge : transportGraph.originlessEdges())
+            {
+                if (originlessTransportAllowed(from, edge, target))
+                {
+                    order = addTransportStep(steps, order, from, target, edge);
+                }
+            }
         }
 
         return steps;
+    }
+
+    private int addTransportStep(
+        List<RouteStep> steps,
+        int order,
+        WorldPoint from,
+        WorldPoint target,
+        DrewsHelperTransportEdge edge
+    )
+    {
+        WorldPoint destination = edge.getDestination();
+        if (containsStepDestination(steps, destination))
+        {
+            return order;
+        }
+
+        if (isWildernessEntryToAvoid(from, destination, target))
+        {
+            return order;
+        }
+
+        Move direction = new Move(
+            Integer.compare(destination.getX(), from.getX()),
+            Integer.compare(destination.getY(), from.getY())
+        );
+        steps.add(new RouteStep(order++, destination, direction, true, 0, transportCostUnits(edge)));
+        return order;
     }
 
     /**
@@ -876,6 +968,65 @@ public final class DrewsHelperWalkingRouteEngine
         return Math.max(1, 2 * edge.getDurationTicks());
     }
 
+    /**
+     * The Wilderness, as a bounding box.
+     *
+     * <p>Every bound here is derived from the shipped transport data, not from memory:
+     * the 668 `Cross Wilderness Ditch` rows span x 2946..3340 on plane 0 and cross
+     * y 3520 -> 3523, which fixes the southern edge and the width; the box is widened to
+     * the enclosing region grid. Two traps were found while deriving it and both are the
+     * reason this is a box rather than a half-plane:
+     *
+     * <ul>
+     *   <li>`y >= 3522` alone is the entire northern half of the world - 7,389 of 12,388
+     *       edges - and would have blocked Zeah, Rellekka, Etceteria and Piscatoris.</li>
+     *   <li>An x-band with no ceiling still catches Prifddinas, whose spirit tree
+     *       destination is (3274, 6123): it lives in a high-y instanced region, not at its
+     *       apparent position. Zanaris (~4500) and the dungeons (~9000+) are the same.</li>
+     * </ul>
+     *
+     * <p>With the ceiling in place the box touches 1,162 edges and contains only genuinely
+     * Wilderness content - the ditch, the six obelisks, the lever, webs, barriers and
+     * Wilderness ladders. No fairy ring and no spirit tree falls inside it.
+     */
+    private static final int WILDERNESS_MIN_X = 2944;
+    private static final int WILDERNESS_MAX_X = 3392;
+    private static final int WILDERNESS_MIN_Y = 3522;
+    private static final int WILDERNESS_MAX_Y = 3968;
+
+    static boolean isInWilderness(WorldPoint point)
+    {
+        return point != null
+            && point.getX() >= WILDERNESS_MIN_X && point.getX() <= WILDERNESS_MAX_X
+            && point.getY() >= WILDERNESS_MIN_Y && point.getY() <= WILDERNESS_MAX_Y;
+    }
+
+    /**
+     * Whether this transport edge would take the player into the Wilderness against their
+     * wishes.
+     *
+     * <p>Two deliberate escape hatches, so switching the preference off can never strand a
+     * route: if the segment TARGET is in the Wilderness the player asked to go there, and if
+     * the player is already standing in it they must be able to move and to leave. Only
+     * crossing IN from outside is refused.
+     */
+    private boolean isWildernessEntryToAvoid(WorldPoint from, WorldPoint destination, WorldPoint target)
+    {
+        return avoidWilderness
+            && isInWilderness(destination)
+            && !isInWilderness(from)
+            && !isInWilderness(target);
+    }
+
+    private boolean originlessTransportAllowed(WorldPoint from, DrewsHelperTransportEdge edge, WorldPoint target)
+    {
+        return edge != null
+            && edge.isOriginless()
+            && from != null
+            && !isInWilderness(from)
+            && !isWildernessEntryToAvoid(from, edge.getDestination(), target);
+    }
+
     private static boolean containsStepDestination(List<RouteStep> steps, WorldPoint destination)
     {
         for (RouteStep step : steps)
@@ -886,6 +1037,47 @@ public final class DrewsHelperWalkingRouteEngine
             }
         }
         return false;
+    }
+
+    /**
+     * Lower bound on what any transport-using route into the target can cost.
+     *
+     * <p>The plain Chebyshev heuristic assumes you walk. That is a valid lower bound
+     * for walking, but a wild OVER-estimate the moment a transport exists: a spirit tree
+     * carries you ~630 tiles for a cost of 6, while the heuristic still charges ~630 for
+     * standing next to it. An over-estimating heuristic is inadmissible, so A* stops being
+     * optimal - and the early break in the main loop then discards the teleport outright
+     * as soon as any cheaper-looking walking or boat route reaches the target. That is why
+     * a Khazard-tree-to-Grand-Exchange route preferred an Ardougne boat across the ocean.
+     *
+     * <p>Any route to the target either walks the whole way - at least Chebyshev - or uses
+     * at least one transport, and then its LAST hop alone already costs
+     * {@code cost(e) + chebyshev(e.destination, target)}. Taking the minimum of that over
+     * every edge ignores the cost of reaching the transport, which only makes the bound
+     * smaller, so it stays valid. Capping the heuristic with it restores admissibility.
+     *
+     * <p>It is also consistent, so no node ever needs re-expanding: capping a consistent
+     * heuristic with a constant preserves consistency, and for a transport edge the cap is
+     * by construction no larger than that edge's own cost plus its destination's estimate.
+     *
+     * <p>The graph is already policy-filtered when it is loaded, so this only ever sees
+     * transports the player can actually use.
+     *
+     * @return the bound, or {@link Integer#MAX_VALUE} when there are no transports at all,
+     *     which leaves the plain heuristic untouched
+     */
+    private int transportArrivalBound(WorldPoint target)
+    {
+        int bound = Integer.MAX_VALUE;
+        for (DrewsHelperTransportEdge edge : transportGraph.allEdges())
+        {
+            int arrival = transportCostUnits(edge) + heuristic(edge.getDestination(), target);
+            if (arrival < bound)
+            {
+                bound = arrival;
+            }
+        }
+        return bound;
     }
 
     private static int heuristic(WorldPoint point, WorldPoint target)
@@ -1010,6 +1202,17 @@ public final class DrewsHelperWalkingRouteEngine
             }
         }
 
+        if (isNonAdjacentHop(from, to))
+        {
+            for (DrewsHelperTransportEdge edge : transportGraph.originlessEdges())
+            {
+                if (to.equals(edge.getDestination()) && originlessTransportAllowed(from, edge, target))
+                {
+                    return new EdgeLegality(true, "transport");
+                }
+            }
+        }
+
         if (isLocalWalkingOverride(from, to, target))
         {
             int dx = to.getX() - from.getX();
@@ -1044,6 +1247,13 @@ public final class DrewsHelperWalkingRouteEngine
             canMove(from.getX(), from.getY(), from.getPlane(), move),
             move.x != 0 && move.y != 0 ? "diagonal" : "cardinal"
         );
+    }
+
+    private static boolean isNonAdjacentHop(WorldPoint from, WorldPoint to)
+    {
+        return from.getPlane() != to.getPlane()
+            || Math.abs(to.getX() - from.getX()) > 1
+            || Math.abs(to.getY() - from.getY()) > 1;
     }
 
     private static List<Move> orderedMoves(WorldPoint point, WorldPoint target)
@@ -1318,12 +1528,20 @@ public final class DrewsHelperWalkingRouteEngine
 
     private static final class SearchContext
     {
+        private final WorldPoint segmentStart;
         private final WorldPoint target;
+        /**
+         * Cap on the heuristic, so it stays a lower bound once transports exist.
+         * See {@link DrewsHelperWalkingRouteEngine#transportArrivalBound}.
+         */
+        private final int transportArrivalBound;
         private long sequence;
 
-        private SearchContext(WorldPoint target)
+        private SearchContext(WorldPoint segmentStart, WorldPoint target, int transportArrivalBound)
         {
+            this.segmentStart = segmentStart;
             this.target = target;
+            this.transportArrivalBound = transportArrivalBound;
         }
 
         private long nextSequence()
@@ -1747,6 +1965,8 @@ public final class DrewsHelperWalkingRouteEngine
         private final long sequence;
         private final int directionX;
         private final int directionY;
+        /** Edges from the root. Carried forward so depth is never re-walked. */
+        private final int steps;
 
         private SearchNode(
             WorldPoint point,
@@ -1785,6 +2005,7 @@ public final class DrewsHelperWalkingRouteEngine
             this.sequence = sequence;
             this.directionX = directionX;
             this.directionY = directionY;
+            this.steps = previous == null ? 0 : previous.steps + 1;
         }
 
         private List<WorldPoint> path()
@@ -1844,36 +2065,84 @@ public final class DrewsHelperWalkingRouteEngine
             return sequence < other.sequence;
         }
 
+        /**
+         * Lexicographic comparison of the two paths' per-step client move preferences,
+         * read from the root forwards - identical in result to the previous
+         * implementation, but without materialising either sequence.
+         *
+         * <p>The old version built a {@code List<Integer>} per node via {@code add(0, ...)},
+         * which shifts the whole backing array on every insert: O(depth^2) to build, two
+         * built per call, and this is called for every neighbour of every expanded node.
+         * That made the whole A* O(nodes x depth^2) and is why a long route took seconds
+         * while the reverse Dijkstra over the same map ran at sub-microsecond per node.
+         *
+         * <p>Two observations make the same answer cheap. Each node's sequence is its
+         * parent's sequence with one element appended, so once two chains reach a common
+         * ancestor every earlier element is identical by construction and cannot hold the
+         * first difference. And walking backwards visits indices high-to-low, so the last
+         * difference seen is the earliest one - which is the one lexicographic order wants.
+         * Cost drops from O(depth^2) to O(divergence), which in a grid search is a handful
+         * of tiles.
+         */
         private int compareClientMovePreference(SearchNode other, WorldPoint target)
         {
-            List<Integer> thisPreferences = clientMovePreferences(target);
-            List<Integer> otherPreferences = other.clientMovePreferences(target);
-            int limit = Math.min(thisPreferences.size(), otherPreferences.size());
-            for (int index = 0; index < limit; index++)
+            if (this == other)
             {
-                int byPreference = Integer.compare(thisPreferences.get(index), otherPreferences.get(index));
+                return 0;
+            }
+
+            SearchNode a = this;
+            SearchNode b = other;
+
+            // The old code compared only up to min(size) and fell back to length after,
+            // so the deeper chain's trailing steps must not take part in the comparison.
+            for (int extra = steps - other.steps; extra > 0; extra--)
+            {
+                a = a.previous;
+            }
+            for (int extra = other.steps - steps; extra > 0; extra--)
+            {
+                b = b.previous;
+            }
+
+            int earliestDifference = 0;
+            while (a != null && b != null && a != b && a.previous != null && b.previous != null)
+            {
+                int byPreference = Integer.compare(
+                    movePreferencePenalty(a.previous.point, moveOf(a.directionX, a.directionY), target),
+                    movePreferencePenalty(b.previous.point, moveOf(b.directionX, b.directionY), target)
+                );
                 if (byPreference != 0)
                 {
-                    return byPreference;
+                    earliestDifference = byPreference;
                 }
+                a = a.previous;
+                b = b.previous;
             }
-            return Integer.compare(thisPreferences.size(), otherPreferences.size());
+
+            if (earliestDifference != 0)
+            {
+                return earliestDifference;
+            }
+
+            return Integer.compare(steps, other.steps);
         }
 
-        private List<Integer> clientMovePreferences(WorldPoint target)
+        /**
+         * A {@link Move} for the given delta without allocating one, since this sits
+         * inside the search's hottest comparison. Falls back to a fresh instance for a
+         * delta outside the eight walking moves so behaviour is unchanged either way.
+         */
+        private static Move moveOf(int x, int y)
         {
-            List<Integer> preferences = new ArrayList<>(distance);
-            SearchNode node = this;
-            while (node.previous != null)
+            for (Move move : MOVES)
             {
-                preferences.add(0, movePreferencePenalty(
-                    node.previous.point,
-                    new Move(node.directionX, node.directionY),
-                    target
-                ));
-                node = node.previous;
+                if (move.x == x && move.y == y)
+                {
+                    return move;
+                }
             }
-            return preferences;
+            return new Move(x, y);
         }
     }
 }

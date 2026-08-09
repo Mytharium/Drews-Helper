@@ -1,0 +1,1901 @@
+package com.drewshelper.routing;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import net.runelite.api.coords.WorldPoint;
+
+public final class DrewsHelperWalkingRouteEngine
+{
+    private static final int MAX_EXPANDED_NODES_PER_SEGMENT = 2_000_000;
+    private static final int MAX_A_STAR_TIE_REFINEMENT_DISTANCE = 256;
+    private static final int MAX_A_STAR_TIE_REFINEMENT_EXTRA_EXPANDED = 10_000;
+    private static final int MAX_CLIENT_PATH_RANKING_EXPANDED = 100_000;
+    private static final int MAX_OBSERVED_EDGE_VALIDATION_DISTANCE = 256;
+    private static final int LOCAL_OVERRIDE_PREFERENCE_PENALTY = -1_000;
+    private static final Move[] MOVES = {
+        new Move(-1, 0),
+        new Move(1, 0),
+        new Move(0, -1),
+        new Move(0, 1),
+        new Move(-1, -1),
+        new Move(1, -1),
+        new Move(-1, 1),
+        new Move(1, 1)
+    };
+    private static final List<LocalWalkingOverride> LOCAL_WALKING_OVERRIDES = localWalkingOverrides();
+
+    private final DrewsHelperMovementMap movementMap;
+    private final DrewsHelperTransportGraph transportGraph;
+
+    public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap)
+    {
+        this(movementMap, DrewsHelperTransportGraph.empty());
+    }
+
+    public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap, DrewsHelperTransportGraph transportGraph)
+    {
+        this.movementMap = movementMap;
+        this.transportGraph = transportGraph == null ? DrewsHelperTransportGraph.empty() : transportGraph;
+    }
+
+    public DrewsHelperRouteSnapshot solve(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
+    {
+        if (start == null)
+        {
+            return DrewsHelperRouteSnapshot.noPlayer();
+        }
+
+        if (destinations.isEmpty())
+        {
+            return DrewsHelperRouteSnapshot.noWaypoints();
+        }
+
+        RouteComputation primary = solveRoute(start, destinations);
+
+        if (!primary.isRouteFound())
+        {
+            return DrewsHelperRouteSnapshot.noPath(
+                primary.path,
+                destinations,
+                primary.message,
+                primary.walkingDistance
+            );
+        }
+
+        return DrewsHelperRouteSnapshot.ready(
+            primary.path,
+            destinations,
+            primary.walkingDistance,
+            primary.metrics
+        );
+    }
+
+    public DrewsHelperRouteSnapshot solveWithoutLocalWalkingOverrides(
+        WorldPoint start,
+        List<WorldPoint> destinations
+    ) throws InterruptedException
+    {
+        if (start == null)
+        {
+            return DrewsHelperRouteSnapshot.noPlayer();
+        }
+
+        if (destinations.isEmpty())
+        {
+            return DrewsHelperRouteSnapshot.noWaypoints();
+        }
+
+        RouteComputation primary = solveRoute(start, destinations, false);
+
+        if (!primary.isRouteFound())
+        {
+            return DrewsHelperRouteSnapshot.noPath(
+                primary.path,
+                destinations,
+                primary.message,
+                primary.walkingDistance
+            );
+        }
+
+        return DrewsHelperRouteSnapshot.ready(
+            primary.path,
+            destinations,
+            primary.walkingDistance,
+            primary.metrics
+        );
+    }
+
+    public DrewsHelperRouteSnapshot solveWithShapeRankingWithoutLocalWalkingOverrides(
+        WorldPoint start,
+        List<WorldPoint> destinations
+    ) throws InterruptedException
+    {
+        if (start == null)
+        {
+            return DrewsHelperRouteSnapshot.noPlayer();
+        }
+
+        if (destinations.isEmpty())
+        {
+            return DrewsHelperRouteSnapshot.noWaypoints();
+        }
+
+        RouteComputation primary = solveRoute(start, destinations, false, RouteRankingMode.SHAPE);
+
+        if (!primary.isRouteFound())
+        {
+            return DrewsHelperRouteSnapshot.noPath(
+                primary.path,
+                destinations,
+                primary.message,
+                primary.walkingDistance
+            );
+        }
+
+        return DrewsHelperRouteSnapshot.ready(
+            primary.path,
+            destinations,
+            primary.walkingDistance,
+            primary.metrics
+        );
+    }
+
+    /** Needed by the travel-time estimator to tell a transport hop from a walked tile. */
+    public DrewsHelperTransportGraph getTransportGraph()
+    {
+        return transportGraph;
+    }
+
+    public List<MoveCandidate> moveCandidates(WorldPoint from, WorldPoint target)
+    {
+        if (from == null || target == null)
+        {
+            return Collections.emptyList();
+        }
+
+        List<RouteStep> steps = legalSteps(from, target);
+        List<MoveCandidate> candidates = new ArrayList<>(steps.size());
+        for (RouteStep step : steps)
+        {
+            candidates.add(new MoveCandidate(
+                step.order,
+                step.destination,
+                step.move.x,
+                step.move.y,
+                step.transport,
+                heuristic(step.destination, target),
+                step.preferencePenalty
+            ));
+        }
+
+        return candidates;
+    }
+
+    public ObservedEdgeDiagnostic validateObservedEdge(
+        WorldPoint from,
+        WorldPoint observed,
+        WorldPoint target,
+        int expectedRemainingFromFork
+    )
+    {
+        if (from == null || observed == null || target == null)
+        {
+            return ObservedEdgeDiagnostic.unavailable(from, observed, target, "missing-point");
+        }
+
+        EdgeLegality edge = edgeLegality(from, observed, target);
+        int expectedRemaining = Math.max(0, expectedRemainingFromFork);
+        if (expectedRemaining > MAX_OBSERVED_EDGE_VALIDATION_DISTANCE)
+        {
+            return ObservedEdgeDiagnostic.withoutContinuation(
+                from,
+                observed,
+                target,
+                edge.legal,
+                edge.type,
+                expectedRemaining,
+                "route-too-long"
+            );
+        }
+
+        try
+        {
+            SearchResult continuation = solveSegmentAStar(observed, target);
+            if (!continuation.isFound())
+            {
+                return ObservedEdgeDiagnostic.withoutContinuation(
+                    from,
+                    observed,
+                    target,
+                    edge.legal,
+                    edge.type,
+                    expectedRemaining,
+                    "not-found",
+                    continuation.expandedNodes
+                );
+            }
+
+            return ObservedEdgeDiagnostic.withContinuation(
+                from,
+                observed,
+                target,
+                edge.legal,
+                edge.type,
+                expectedRemaining,
+                Math.max(0, continuation.path.size() - 1),
+                continuation.expandedNodes
+            );
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
+            return ObservedEdgeDiagnostic.withoutContinuation(
+                from,
+                observed,
+                target,
+                edge.legal,
+                edge.type,
+                expectedRemaining,
+                "interrupted"
+            );
+        }
+    }
+
+    private RouteComputation solveRoute(WorldPoint start, List<WorldPoint> destinations) throws InterruptedException
+    {
+        return solveRoute(start, destinations, true, RouteRankingMode.CLIENT);
+    }
+
+    private RouteComputation solveRoute(
+        WorldPoint start,
+        List<WorldPoint> destinations,
+        boolean localWalkingOverridesEnabled
+    ) throws InterruptedException
+    {
+        return solveRoute(start, destinations, localWalkingOverridesEnabled, RouteRankingMode.CLIENT);
+    }
+
+    private RouteComputation solveRoute(
+        WorldPoint start,
+        List<WorldPoint> destinations,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
+    ) throws InterruptedException
+    {
+        long startedAt = System.nanoTime();
+        rankNanos = 0;
+        rankExpanded = 0;
+        rankRuns = 0;
+        List<WorldPoint> route = new ArrayList<>();
+        WorldPoint segmentStart = start;
+        int walkingDistance = 0;
+        int expandedNodes = 0;
+
+        for (int index = 0; index < destinations.size(); index++)
+        {
+            WorldPoint target = destinations.get(index);
+            SearchResult segment = solveSegmentAStar(segmentStart, target, localWalkingOverridesEnabled, rankingMode);
+            expandedNodes += segment.expandedNodes;
+            if (!segment.isFound())
+            {
+                String message = "No route to waypoint #" + (index + 1);
+                return RouteComputation.notFound(
+                    route,
+                    walkingDistance,
+                    message,
+                    DrewsHelperRouteSearchMetrics.notFound(
+                        System.nanoTime() - startedAt,
+                        expandedNodes
+                    )
+                );
+            }
+
+            if (route.isEmpty())
+            {
+                route.addAll(segment.path);
+            }
+            else if (segment.path.size() > 1)
+            {
+                route.addAll(segment.path.subList(1, segment.path.size()));
+            }
+
+            walkingDistance += Math.max(0, segment.path.size() - 1);
+            segmentStart = target;
+        }
+
+        return RouteComputation.found(
+            route,
+            walkingDistance,
+            DrewsHelperRouteSearchMetrics.completed(
+                System.nanoTime() - startedAt,
+                expandedNodes,
+                route
+            )
+        );
+    }
+
+    /**
+     * Per-solve phase split. Four separate theories about where the time goes have now
+     * been wrong, so the search stops being reasoned about and starts being measured:
+     * the A* proper versus the client-style ranking pass that follows it.
+     */
+    private long rankNanos;
+    private int rankExpanded;
+    private int rankRuns;
+
+    /** Phase split of the last solve, for the log line. */
+    public String lastPhaseSummary()
+    {
+        return "rank=" + (rankNanos / 1_000_000) + "ms/" + rankExpanded + "n rankRuns=" + rankRuns;
+    }
+
+    private SearchResult solveSegmentAStar(WorldPoint start, WorldPoint target) throws InterruptedException
+    {
+        return solveSegmentAStar(start, target, true, RouteRankingMode.CLIENT);
+    }
+
+    private SearchResult solveSegmentAStar(
+        WorldPoint start,
+        WorldPoint target,
+        boolean localWalkingOverridesEnabled
+    ) throws InterruptedException
+    {
+        return solveSegmentAStar(start, target, localWalkingOverridesEnabled, RouteRankingMode.CLIENT);
+    }
+
+    private SearchResult solveSegmentAStar(
+        WorldPoint start,
+        WorldPoint target,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
+    ) throws InterruptedException
+    {
+        if (start.getPlane() != target.getPlane() && transportGraph.isEmpty())
+        {
+            return SearchResult.notFound(0);
+        }
+
+        if (start.equals(target))
+        {
+            return SearchResult.found(Collections.singletonList(start), 0);
+        }
+
+        PriorityQueue<SearchNode> open = new PriorityQueue<>();
+        Map<WorldPoint, SearchNode> bestNodes = new HashMap<>();
+        SearchContext context = new SearchContext(target);
+        int startRemaining = heuristic(start, target);
+        SearchNode startNode = new SearchNode(
+            start,
+            null,
+            0,
+            startRemaining,
+            startRemaining,
+            0,
+            0,
+            context.nextSequence()
+        );
+        open.add(startNode);
+        bestNodes.put(start, startNode);
+        int expanded = 0;
+        SearchNode bestTarget = null;
+        int expandedWhenFirstTargetFound = 0;
+
+        while (!open.isEmpty())
+        {
+            if (Thread.currentThread().isInterrupted())
+            {
+                throw new InterruptedException("Walking route calculation cancelled");
+            }
+
+            SearchNode node = open.poll();
+            SearchNode bestKnownNode = bestNodes.get(node.point);
+            if (bestKnownNode != node)
+            {
+                continue;
+            }
+
+            if (bestTarget != null)
+            {
+                if (node.priority > bestTarget.distance
+                    || expanded - expandedWhenFirstTargetFound > MAX_A_STAR_TIE_REFINEMENT_EXTRA_EXPANDED)
+                {
+                    break;
+                }
+            }
+
+            if (node.point.equals(target))
+            {
+                if (node.distance > MAX_A_STAR_TIE_REFINEMENT_DISTANCE)
+                {
+                    return SearchResult.found(node.path(), expanded);
+                }
+
+                if (bestTarget == null)
+                {
+                    expandedWhenFirstTargetFound = expanded;
+                    bestTarget = node;
+                }
+                else if (node.isBetterPathToSamePointThan(bestTarget, context.target))
+                {
+                    bestTarget = node;
+                }
+                continue;
+            }
+
+            expanded++;
+            if (expanded > MAX_EXPANDED_NODES_PER_SEGMENT)
+            {
+                return SearchResult.notFound(expanded);
+            }
+
+            addNeighbors(node, context, open, bestNodes, localWalkingOverridesEnabled);
+        }
+
+        if (bestTarget != null)
+        {
+            SearchResult result = SearchResult.found(bestTarget.path(), expanded);
+            return preferClientStyleShortestPath(start, target, result, localWalkingOverridesEnabled, rankingMode);
+        }
+
+        return SearchResult.notFound(expanded);
+    }
+
+    private void addNeighbors(
+        SearchNode node,
+        SearchContext context,
+        PriorityQueue<SearchNode> open,
+        Map<WorldPoint, SearchNode> bestNodes,
+        boolean localWalkingOverridesEnabled
+    )
+    {
+        for (RouteStep step : legalSteps(node.point, context.target, localWalkingOverridesEnabled))
+        {
+            addNeighbor(node, step, context, open, bestNodes);
+        }
+    }
+
+    private SearchResult preferClientStyleShortestPath(
+        WorldPoint start,
+        WorldPoint target,
+        SearchResult initialResult,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
+    )
+    {
+        if (!initialResult.isFound() || initialResult.path.size() - 1 > MAX_A_STAR_TIE_REFINEMENT_DISTANCE)
+        {
+            return initialResult;
+        }
+
+        rankRuns++;
+        long rankStartedAt = System.nanoTime();
+        ReverseDistanceResult distances = reverseDistancesToTarget(
+            target,
+            initialResult.path.size() - 1,
+            SearchBounds.aroundPath(initialResult.path),
+            localWalkingOverridesEnabled
+        );
+        rankNanos += System.nanoTime() - rankStartedAt;
+        rankExpanded += distances.expandedNodes;
+        Integer startDistance = distances.distances.get(start);
+        if (startDistance == null || startDistance != initialResult.path.size() - 1)
+        {
+            return initialResult.withAdditionalExpanded(distances.expandedNodes);
+        }
+
+        List<WorldPoint> rankedPath = new ArrayList<>(initialResult.path.size());
+        rankedPath.add(start);
+        WorldPoint current = start;
+        int remainingDistance = startDistance;
+        while (remainingDistance > 0)
+        {
+            RouteStep next = null;
+            for (RouteStep step : legalSteps(current, target, localWalkingOverridesEnabled))
+            {
+                Integer stepDistance = distances.distances.get(step.destination);
+                if (stepDistance != null && stepDistance == remainingDistance - 1)
+                {
+                    if (next == null || isBetterShortestStep(
+                        rankedPath,
+                        current,
+                        step,
+                        next,
+                        start,
+                        target,
+                        rankingMode
+                    ))
+                    {
+                        next = step;
+                    }
+
+                    if (rankingMode == RouteRankingMode.CLIENT)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (next == null)
+            {
+                return initialResult.withAdditionalExpanded(distances.expandedNodes);
+            }
+
+            rankedPath.add(next.destination);
+            current = next.destination;
+            remainingDistance--;
+        }
+
+        if (!target.equals(rankedPath.get(rankedPath.size() - 1)))
+        {
+            return initialResult.withAdditionalExpanded(distances.expandedNodes);
+        }
+
+        return SearchResult.found(rankedPath, initialResult.expandedNodes + distances.expandedNodes);
+    }
+
+    private static boolean isBetterShortestStep(
+        List<WorldPoint> rankedPath,
+        WorldPoint current,
+        RouteStep candidate,
+        RouteStep incumbent,
+        WorldPoint segmentStart,
+        WorldPoint target,
+        RouteRankingMode rankingMode
+    )
+    {
+        if (rankingMode != RouteRankingMode.SHAPE)
+        {
+            return false;
+        }
+
+        int candidateScore = shapeStepScore(rankedPath, current, candidate, segmentStart, target);
+        int incumbentScore = shapeStepScore(rankedPath, current, incumbent, segmentStart, target);
+        if (candidateScore != incumbentScore)
+        {
+            return candidateScore < incumbentScore;
+        }
+
+        if (candidate.preferencePenalty != incumbent.preferencePenalty)
+        {
+            return candidate.preferencePenalty < incumbent.preferencePenalty;
+        }
+
+        return candidate.order < incumbent.order;
+    }
+
+    private static int shapeStepScore(
+        List<WorldPoint> rankedPath,
+        WorldPoint current,
+        RouteStep step,
+        WorldPoint segmentStart,
+        WorldPoint target
+    )
+    {
+        int lineError = shapeLineError(segmentStart, target, step.destination);
+        int turnPenalty = stepCreatesTurn(rankedPath, current, step) ? 1 : 0;
+        int reversePenalty = stepMovesAwayFromTarget(current, step.destination, target) ? 1 : 0;
+        return lineError * 10 + reversePenalty * 10 + turnPenalty * 2 + step.preferencePenalty;
+    }
+
+    private static int shapeLineError(WorldPoint start, WorldPoint target, WorldPoint point)
+    {
+        int totalX = target.getX() - start.getX();
+        int totalY = target.getY() - start.getY();
+        int majorAxis = Math.max(Math.abs(totalX), Math.abs(totalY));
+        if (majorAxis == 0)
+        {
+            return 0;
+        }
+
+        int relativeX = point.getX() - start.getX();
+        int relativeY = point.getY() - start.getY();
+        return Math.abs(relativeX * totalY - relativeY * totalX) / majorAxis;
+    }
+
+    private static boolean stepCreatesTurn(List<WorldPoint> rankedPath, WorldPoint current, RouteStep step)
+    {
+        if (rankedPath.size() < 2)
+        {
+            return false;
+        }
+
+        WorldPoint previous = rankedPath.get(rankedPath.size() - 2);
+        int previousX = Integer.compare(current.getX() - previous.getX(), 0);
+        int previousY = Integer.compare(current.getY() - previous.getY(), 0);
+        return previousX != step.move.x || previousY != step.move.y;
+    }
+
+    private static boolean stepMovesAwayFromTarget(WorldPoint current, WorldPoint next, WorldPoint target)
+    {
+        return heuristic(next, target) > heuristic(current, target);
+    }
+
+    private ReverseDistanceResult reverseDistancesToTarget(
+        WorldPoint target,
+        int maxDistance,
+        SearchBounds bounds,
+        boolean localWalkingOverridesEnabled
+    )
+    {
+        // Dijkstra, not BFS: transport edges no longer all cost the same, and a FIFO queue
+        // only produces correct distances when every edge weighs one.
+        PriorityQueue<ReverseNode> open = new PriorityQueue<>();
+        Map<WorldPoint, Integer> distances = new HashMap<>();
+        open.add(new ReverseNode(target, 0));
+        distances.put(target, 0);
+        int expanded = 0;
+
+        while (!open.isEmpty())
+        {
+            ReverseNode current = open.remove();
+            WorldPoint point = current.point;
+            int distance = current.distance;
+
+            Integer best = distances.get(point);
+            if (best == null || distance > best)
+            {
+                // Superseded by a shorter route found after this entry was queued.
+                continue;
+            }
+
+            if (distance >= maxDistance)
+            {
+                continue;
+            }
+
+            expanded++;
+            if (expanded > MAX_CLIENT_PATH_RANKING_EXPANDED)
+            {
+                break;
+            }
+
+            addReverseWalkingPredecessors(
+                target,
+                point,
+                distance,
+                bounds,
+                open,
+                distances,
+                localWalkingOverridesEnabled
+            );
+            addReverseTransportPredecessors(point, distance, bounds, open, distances);
+        }
+
+        return new ReverseDistanceResult(distances, expanded);
+    }
+
+    private void addReverseWalkingPredecessors(
+        WorldPoint target,
+        WorldPoint point,
+        int distance,
+        SearchBounds bounds,
+        PriorityQueue<ReverseNode> open,
+        Map<WorldPoint, Integer> distances,
+        boolean localWalkingOverridesEnabled
+    )
+    {
+        int x = point.getX();
+        int y = point.getY();
+        int plane = point.getPlane();
+        for (Move move : MOVES)
+        {
+            WorldPoint predecessor = new WorldPoint(x - move.x, y - move.y, plane);
+            if (canMove(predecessor.getX(), predecessor.getY(), predecessor.getPlane(), move))
+            {
+                relax(predecessor, distance + 1, bounds, open, distances);
+            }
+        }
+
+        if (localWalkingOverridesEnabled)
+        {
+            addReverseLocalOverridePredecessors(target, point, distance, bounds, open, distances);
+        }
+    }
+
+    private void addReverseLocalOverridePredecessors(
+        WorldPoint target,
+        WorldPoint point,
+        int distance,
+        SearchBounds bounds,
+        PriorityQueue<ReverseNode> open,
+        Map<WorldPoint, Integer> distances
+    )
+    {
+        for (LocalWalkingOverride override : LOCAL_WALKING_OVERRIDES)
+        {
+            WorldPoint predecessor = override.from;
+            if (!override.matches(predecessor, point, target))
+            {
+                continue;
+            }
+
+            relax(predecessor, distance + 1, bounds, open, distances);
+        }
+    }
+
+    /**
+     * Dijkstra relaxation. Replaces the old first-visit-wins guard, which was only correct
+     * while every edge cost one.
+     */
+    private static void relax(
+        WorldPoint predecessor,
+        int candidateDistance,
+        SearchBounds bounds,
+        PriorityQueue<ReverseNode> open,
+        Map<WorldPoint, Integer> distances
+    )
+    {
+        if (!bounds.contains(predecessor))
+        {
+            return;
+        }
+
+        Integer known = distances.get(predecessor);
+        if (known != null && known <= candidateDistance)
+        {
+            return;
+        }
+
+        distances.put(predecessor, candidateDistance);
+        open.add(new ReverseNode(predecessor, candidateDistance));
+    }
+
+    private void addReverseTransportPredecessors(
+        WorldPoint point,
+        int distance,
+        SearchBounds bounds,
+        PriorityQueue<ReverseNode> open,
+        Map<WorldPoint, Integer> distances
+    )
+    {
+        for (DrewsHelperTransportEdge edge : transportGraph.edgesTo(point))
+        {
+            relax(edge.getSource(), distance + transportCostUnits(edge), bounds, open, distances);
+        }
+    }
+
+    private void addNeighbor(
+        SearchNode node,
+        RouteStep step,
+        SearchContext context,
+        PriorityQueue<SearchNode> open,
+        Map<WorldPoint, SearchNode> bestNodes
+    )
+    {
+        addNeighbor(node, step.destination, step.move, step.preferencePenalty, step.costUnits,
+            context, open, bestNodes);
+    }
+
+    private void addNeighbor(
+        SearchNode node,
+        WorldPoint neighbor,
+        Move move,
+        int stepPreferencePenalty,
+        int stepCostUnits,
+        SearchContext context,
+        PriorityQueue<SearchNode> open,
+        Map<WorldPoint, SearchNode> bestNodes
+    )
+    {
+        int distance = node.distance + Math.max(1, stepCostUnits);
+        int remaining = heuristic(neighbor, context.target);
+        int preferencePenalty = node.preferencePenalty + stepPreferencePenalty;
+        int turns = node.previous == null || (node.directionX == move.x && node.directionY == move.y)
+            ? node.turns
+            : node.turns + 1;
+        SearchNode next = new SearchNode(
+            neighbor,
+            node,
+            distance,
+            distance + remaining,
+            remaining,
+            preferencePenalty,
+            turns,
+            context.nextSequence(),
+            move.x,
+            move.y
+        );
+
+        SearchNode bestNode = bestNodes.get(neighbor);
+        if (bestNode != null && !next.isBetterPathToSamePointThan(bestNode, context.target))
+        {
+            return;
+        }
+
+        bestNodes.put(neighbor, next);
+        open.add(next);
+    }
+
+    private List<RouteStep> legalSteps(WorldPoint from, WorldPoint target)
+    {
+        return legalSteps(from, target, true);
+    }
+
+    private List<RouteStep> legalSteps(WorldPoint from, WorldPoint target, boolean localWalkingOverridesEnabled)
+    {
+        List<RouteStep> steps = new ArrayList<>();
+        int x = from.getX();
+        int y = from.getY();
+        int plane = from.getPlane();
+        int order = 1;
+
+        for (LocalWalkingOverride override : localWalkingOverridesEnabled
+            ? matchingLocalWalkingOverrides(from, target)
+            : Collections.<LocalWalkingOverride>emptyList())
+        {
+            Move move = move(
+                override.destination.getX() - from.getX(),
+                override.destination.getY() - from.getY()
+            );
+            if (move == null)
+            {
+                continue;
+            }
+
+            steps.add(new RouteStep(
+                order++,
+                override.destination,
+                move,
+                false,
+                LOCAL_OVERRIDE_PREFERENCE_PENALTY
+            ));
+        }
+
+        for (Move move : orderedMoves(from, target))
+        {
+            if (canMove(x, y, plane, move))
+            {
+                WorldPoint destination = new WorldPoint(x + move.x, y + move.y, plane);
+                if (containsStepDestination(steps, destination))
+                {
+                    continue;
+                }
+
+                steps.add(new RouteStep(
+                    order++,
+                    destination,
+                    move,
+                    false,
+                    movePreferencePenalty(from, move, target)
+                ));
+            }
+        }
+
+        for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(from))
+        {
+            WorldPoint destination = edge.getDestination();
+            if (containsStepDestination(steps, destination))
+            {
+                continue;
+            }
+
+            Move direction = new Move(
+                Integer.compare(destination.getX(), from.getX()),
+                Integer.compare(destination.getY(), from.getY())
+            );
+            steps.add(new RouteStep(order++, destination, direction, true, 0, transportCostUnits(edge)));
+        }
+
+        return steps;
+    }
+
+    /**
+     * Cost of an edge in half-ticks.
+     *
+     * <p>Running covers two tiles per game tick, so one walked tile already IS one half-tick -
+     * which is why plain steps stay at cost 1 and only transports needed repricing. A transport
+     * that takes D ticks costs 2 * D. Without this a quetzal flight cost the same as one
+     * footstep and the router bent every route through the nearest transport.
+     */
+    private static int transportCostUnits(DrewsHelperTransportEdge edge)
+    {
+        return Math.max(1, 2 * edge.getDurationTicks());
+    }
+
+    private static boolean containsStepDestination(List<RouteStep> steps, WorldPoint destination)
+    {
+        for (RouteStep step : steps)
+        {
+            if (step.destination.equals(destination))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int heuristic(WorldPoint point, WorldPoint target)
+    {
+        return Math.max(Math.abs(point.getX() - target.getX()), Math.abs(point.getY() - target.getY()));
+    }
+
+    private static int movePreferencePenalty(WorldPoint point, Move move, WorldPoint target)
+    {
+        int xDirection = Integer.compare(target.getX(), point.getX());
+        int yDirection = Integer.compare(target.getY(), point.getY());
+        int xRemaining = Math.abs(target.getX() - point.getX());
+        int yRemaining = Math.abs(target.getY() - point.getY());
+
+        if (xRemaining > yRemaining)
+        {
+            return primaryAxisMovePenalty(move, xDirection, yDirection, true);
+        }
+
+        if (yRemaining > xRemaining)
+        {
+            return primaryAxisMovePenalty(move, xDirection, yDirection, false);
+        }
+
+        return tiedAxisMovePenalty(move, xDirection, yDirection);
+    }
+
+    private static int primaryAxisMovePenalty(Move move, int xDirection, int yDirection, boolean xPrimary)
+    {
+        int primaryMove = xPrimary ? move.x : move.y;
+        int secondaryMove = xPrimary ? move.y : move.x;
+        int primaryDirection = xPrimary ? xDirection : yDirection;
+        int secondaryDirection = xPrimary ? yDirection : xDirection;
+
+        if (primaryMove == primaryDirection && secondaryMove == 0)
+        {
+            return 0;
+        }
+
+        if (primaryMove == 0 && secondaryMove == secondaryDirection)
+        {
+            return 1;
+        }
+
+        if (primaryMove == primaryDirection && secondaryDirection != 0 && secondaryMove == secondaryDirection)
+        {
+            return 2;
+        }
+
+        if (primaryMove == primaryDirection)
+        {
+            return 3;
+        }
+
+        return 4;
+    }
+
+    private static int tiedAxisMovePenalty(Move move, int xDirection, int yDirection)
+    {
+        if (move.x == xDirection && move.y == yDirection)
+        {
+            return 0;
+        }
+
+        if ((move.x == xDirection && move.y == 0) || (move.x == 0 && move.y == yDirection))
+        {
+            return 1;
+        }
+
+        if (move.x == xDirection || move.y == yDirection)
+        {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    private boolean canMove(int x, int y, int plane, Move move)
+    {
+        if (move.x < 0 && move.y == 0)
+        {
+            return movementMap.canMoveWest(x, y, plane);
+        }
+        if (move.x > 0 && move.y == 0)
+        {
+            return movementMap.canMoveEast(x, y, plane);
+        }
+        if (move.x == 0 && move.y < 0)
+        {
+            return movementMap.canMoveSouth(x, y, plane);
+        }
+        if (move.x == 0 && move.y > 0)
+        {
+            return movementMap.canMoveNorth(x, y, plane);
+        }
+        if (move.x < 0 && move.y < 0)
+        {
+            return movementMap.canMoveSouthWest(x, y, plane);
+        }
+        if (move.x > 0 && move.y < 0)
+        {
+            return movementMap.canMoveSouthEast(x, y, plane);
+        }
+        if (move.x < 0 && move.y > 0)
+        {
+            return movementMap.canMoveNorthWest(x, y, plane);
+        }
+        if (move.x > 0 && move.y > 0)
+        {
+            return movementMap.canMoveNorthEast(x, y, plane);
+        }
+        return false;
+    }
+
+    private EdgeLegality edgeLegality(WorldPoint from, WorldPoint to, WorldPoint target)
+    {
+        for (DrewsHelperTransportEdge edge : transportGraph.edgesFrom(from))
+        {
+            if (to.equals(edge.getDestination()))
+            {
+                return new EdgeLegality(true, "transport");
+            }
+        }
+
+        if (isLocalWalkingOverride(from, to, target))
+        {
+            int dx = to.getX() - from.getX();
+            int dy = to.getY() - from.getY();
+            return new EdgeLegality(true, dx != 0 && dy != 0 ? "local-override-diagonal" : "local-override-cardinal");
+        }
+
+        if (from.getPlane() != to.getPlane())
+        {
+            return new EdgeLegality(false, "plane-change");
+        }
+
+        int dx = to.getX() - from.getX();
+        int dy = to.getY() - from.getY();
+        if (dx == 0 && dy == 0)
+        {
+            return new EdgeLegality(true, "stationary");
+        }
+
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1)
+        {
+            return new EdgeLegality(false, "non-adjacent");
+        }
+
+        Move move = move(dx, dy);
+        if (move == null)
+        {
+            return new EdgeLegality(false, "unknown");
+        }
+
+        return new EdgeLegality(
+            canMove(from.getX(), from.getY(), from.getPlane(), move),
+            move.x != 0 && move.y != 0 ? "diagonal" : "cardinal"
+        );
+    }
+
+    private static List<Move> orderedMoves(WorldPoint point, WorldPoint target)
+    {
+        int xDirection = Integer.compare(target.getX(), point.getX());
+        int yDirection = Integer.compare(target.getY(), point.getY());
+        int xRemaining = Math.abs(target.getX() - point.getX());
+        int yRemaining = Math.abs(target.getY() - point.getY());
+
+        List<Move> moves = new ArrayList<>(MOVES.length);
+        if (xRemaining > yRemaining)
+        {
+            addMove(moves, xDirection, 0);
+            addMove(moves, 0, yDirection);
+            addMove(moves, xDirection, yDirection);
+        }
+        else if (yRemaining > xRemaining)
+        {
+            addMove(moves, 0, yDirection);
+            addMove(moves, xDirection, 0);
+            addMove(moves, xDirection, yDirection);
+        }
+        else
+        {
+            addMove(moves, xDirection, yDirection);
+            addMove(moves, xDirection, 0);
+            addMove(moves, 0, yDirection);
+        }
+
+        addMove(moves, xDirection, -yDirection);
+        addMove(moves, -xDirection, yDirection);
+        addMove(moves, -xDirection, 0);
+        addMove(moves, 0, -yDirection);
+        addMove(moves, -xDirection, -yDirection);
+
+        for (Move move : MOVES)
+        {
+            addMove(moves, move.x, move.y);
+        }
+        return moves;
+    }
+
+    private static void addMove(List<Move> moves, int x, int y)
+    {
+        if (x == 0 && y == 0)
+        {
+            return;
+        }
+
+        Move move = move(x, y);
+        if (move != null && !moves.contains(move))
+        {
+            moves.add(move);
+        }
+    }
+
+    private static Move move(int x, int y)
+    {
+        for (Move move : MOVES)
+        {
+            if (move.x == x && move.y == y)
+            {
+                return move;
+            }
+        }
+        return null;
+    }
+
+    private static List<LocalWalkingOverride> localWalkingOverrides()
+    {
+        List<LocalWalkingOverride> overrides = new ArrayList<>();
+        WorldPoint path1Target = new WorldPoint(2932, 3214, 0);
+        addLocalOverride(overrides, path1Target, new WorldPoint(2939, 3223, 0), new WorldPoint(2939, 3222, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2939, 3222, 0), new WorldPoint(2938, 3221, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2938, 3221, 0), new WorldPoint(2937, 3220, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2937, 3220, 0), new WorldPoint(2936, 3219, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2936, 3219, 0), new WorldPoint(2935, 3218, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3218, 0), new WorldPoint(2934, 3217, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2934, 3217, 0), new WorldPoint(2933, 3216, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2933, 3216, 0), new WorldPoint(2932, 3215, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2932, 3215, 0), path1Target);
+        addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3218, 0), new WorldPoint(2935, 3217, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2935, 3217, 0), new WorldPoint(2934, 3216, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2934, 3216, 0), new WorldPoint(2933, 3215, 0));
+        addLocalOverride(overrides, path1Target, new WorldPoint(2933, 3215, 0), path1Target);
+
+        WorldPoint path3Target = new WorldPoint(2970, 3229, 0);
+        addLocalOverride(overrides, path3Target, new WorldPoint(2966, 3231, 0), new WorldPoint(2967, 3231, 0));
+        addLocalOverride(overrides, path3Target, new WorldPoint(2967, 3231, 0), new WorldPoint(2968, 3230, 0));
+        addLocalOverride(overrides, path3Target, new WorldPoint(2968, 3230, 0), new WorldPoint(2969, 3229, 0));
+        addLocalOverride(overrides, path3Target, new WorldPoint(2969, 3229, 0), path3Target);
+        return Collections.unmodifiableList(overrides);
+    }
+
+    private static void addLocalOverride(
+        List<LocalWalkingOverride> overrides,
+        WorldPoint target,
+        WorldPoint from,
+        WorldPoint destination
+    )
+    {
+        overrides.add(new LocalWalkingOverride(target, from, destination));
+    }
+
+    private static List<LocalWalkingOverride> matchingLocalWalkingOverrides(WorldPoint from, WorldPoint target)
+    {
+        if (from == null || target == null || LOCAL_WALKING_OVERRIDES.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+
+        List<LocalWalkingOverride> matches = new ArrayList<>();
+        for (LocalWalkingOverride override : LOCAL_WALKING_OVERRIDES)
+        {
+            if (override.matchesFromAndTarget(from, target))
+            {
+                matches.add(override);
+            }
+        }
+        return matches;
+    }
+
+    private static boolean isLocalWalkingOverride(WorldPoint from, WorldPoint destination, WorldPoint target)
+    {
+        for (LocalWalkingOverride override : matchingLocalWalkingOverrides(from, target))
+        {
+            if (override.destination.equals(destination))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private enum RouteRankingMode
+    {
+        CLIENT,
+        SHAPE
+    }
+
+    private static final class RouteComputation
+    {
+        private final List<WorldPoint> path;
+        private final int walkingDistance;
+        private final String message;
+        private final DrewsHelperRouteSearchMetrics metrics;
+
+        private RouteComputation(
+            List<WorldPoint> path,
+            int walkingDistance,
+            String message,
+            DrewsHelperRouteSearchMetrics metrics
+        )
+        {
+            this.path = path == null ? Collections.emptyList() : path;
+            this.walkingDistance = walkingDistance;
+            this.message = message;
+            this.metrics = metrics;
+        }
+
+        private static RouteComputation found(
+            List<WorldPoint> path,
+            int walkingDistance,
+            DrewsHelperRouteSearchMetrics metrics
+        )
+        {
+            return new RouteComputation(path, walkingDistance, "Route ready", metrics);
+        }
+
+        private static RouteComputation notFound(
+            List<WorldPoint> partialPath,
+            int walkingDistance,
+            String message,
+            DrewsHelperRouteSearchMetrics metrics
+        )
+        {
+            return new RouteComputation(partialPath, walkingDistance, message, metrics);
+        }
+
+        private boolean isRouteFound()
+        {
+            return metrics != null && metrics.isRouteFound();
+        }
+    }
+
+    private static final class SearchResult
+    {
+        private final List<WorldPoint> path;
+        private final int expandedNodes;
+
+        private SearchResult(List<WorldPoint> path, int expandedNodes)
+        {
+            this.path = path == null ? Collections.emptyList() : path;
+            this.expandedNodes = expandedNodes;
+        }
+
+        private static SearchResult found(List<WorldPoint> path, int expandedNodes)
+        {
+            return new SearchResult(path, expandedNodes);
+        }
+
+        private static SearchResult notFound(int expandedNodes)
+        {
+            return new SearchResult(Collections.emptyList(), expandedNodes);
+        }
+
+        private SearchResult withAdditionalExpanded(int additionalExpandedNodes)
+        {
+            return new SearchResult(path, expandedNodes + additionalExpandedNodes);
+        }
+
+        private boolean isFound()
+        {
+            return !path.isEmpty();
+        }
+    }
+
+    private static final class SearchBounds
+    {
+        private final int minX;
+        private final int maxX;
+        private final int minY;
+        private final int maxY;
+        private final boolean unbounded;
+
+        private SearchBounds(int minX, int maxX, int minY, int maxY, boolean unbounded)
+        {
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+            this.unbounded = unbounded;
+        }
+
+        private static SearchBounds unbounded()
+        {
+            return new SearchBounds(0, 0, 0, 0, true);
+        }
+
+        private static SearchBounds aroundPath(List<WorldPoint> path)
+        {
+            if (path == null || path.isEmpty())
+            {
+                return unbounded();
+            }
+
+            int minX = Integer.MAX_VALUE;
+            int maxX = Integer.MIN_VALUE;
+            int minY = Integer.MAX_VALUE;
+            int maxY = Integer.MIN_VALUE;
+            for (WorldPoint point : path)
+            {
+                minX = Math.min(minX, point.getX());
+                maxX = Math.max(maxX, point.getX());
+                minY = Math.min(minY, point.getY());
+                maxY = Math.max(maxY, point.getY());
+            }
+
+            int margin = Math.max(8, Math.min(64, path.size() - 1));
+            return new SearchBounds(minX - margin, maxX + margin, minY - margin, maxY + margin, false);
+        }
+
+        private boolean contains(WorldPoint point)
+        {
+            return unbounded
+                || (point.getX() >= minX
+                && point.getX() <= maxX
+                && point.getY() >= minY
+                && point.getY() <= maxY);
+        }
+    }
+
+    private static final class SearchContext
+    {
+        private final WorldPoint target;
+        private long sequence;
+
+        private SearchContext(WorldPoint target)
+        {
+            this.target = target;
+        }
+
+        private long nextSequence()
+        {
+            return sequence++;
+        }
+    }
+
+    private static final class Move
+    {
+        private final int x;
+        private final int y;
+
+        private Move(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    private static final class LocalWalkingOverride
+    {
+        private final WorldPoint target;
+        private final WorldPoint from;
+        private final WorldPoint destination;
+
+        private LocalWalkingOverride(WorldPoint target, WorldPoint from, WorldPoint destination)
+        {
+            this.target = target;
+            this.from = from;
+            this.destination = destination;
+        }
+
+        private boolean matchesFromAndTarget(WorldPoint from, WorldPoint target)
+        {
+            return this.from.equals(from) && this.target.equals(target);
+        }
+
+        private boolean matches(WorldPoint from, WorldPoint destination, WorldPoint target)
+        {
+            return matchesFromAndTarget(from, target) && this.destination.equals(destination);
+        }
+    }
+
+    private static final class RouteStep
+    {
+        private final int order;
+        private final WorldPoint destination;
+        private final Move move;
+        private final boolean transport;
+        private final int preferencePenalty;
+        private final int costUnits;
+
+        private RouteStep(int order, WorldPoint destination, Move move, boolean transport, int preferencePenalty)
+        {
+            this(order, destination, move, transport, preferencePenalty, 1);
+        }
+
+        private RouteStep(
+            int order,
+            WorldPoint destination,
+            Move move,
+            boolean transport,
+            int preferencePenalty,
+            int costUnits
+        )
+        {
+            this.order = order;
+            this.destination = destination;
+            this.move = move;
+            this.transport = transport;
+            this.preferencePenalty = preferencePenalty;
+            this.costUnits = Math.max(1, costUnits);
+        }
+    }
+
+    /** Reverse-search entry. Carries its own distance so the queue can order on it. */
+    private static final class ReverseNode implements Comparable<ReverseNode>
+    {
+        private final WorldPoint point;
+        private final int distance;
+
+        private ReverseNode(WorldPoint point, int distance)
+        {
+            this.point = point;
+            this.distance = distance;
+        }
+
+        @Override
+        public int compareTo(ReverseNode other)
+        {
+            return Integer.compare(distance, other.distance);
+        }
+    }
+
+    private static final class ReverseDistanceResult
+    {
+        private final Map<WorldPoint, Integer> distances;
+        private final int expandedNodes;
+
+        private ReverseDistanceResult(Map<WorldPoint, Integer> distances, int expandedNodes)
+        {
+            this.distances = distances;
+            this.expandedNodes = expandedNodes;
+        }
+    }
+
+    private static final class EdgeLegality
+    {
+        private final boolean legal;
+        private final String type;
+
+        private EdgeLegality(boolean legal, String type)
+        {
+            this.legal = legal;
+            this.type = type;
+        }
+    }
+
+    public static final class MoveCandidate
+    {
+        private final int order;
+        private final WorldPoint destination;
+        private final int directionX;
+        private final int directionY;
+        private final boolean transport;
+        private final int distanceToTarget;
+        private final int preferencePenalty;
+
+        MoveCandidate(
+            int order,
+            WorldPoint destination,
+            int directionX,
+            int directionY,
+            boolean transport,
+            int distanceToTarget,
+            int preferencePenalty
+        )
+        {
+            this.order = order;
+            this.destination = destination;
+            this.directionX = directionX;
+            this.directionY = directionY;
+            this.transport = transport;
+            this.distanceToTarget = distanceToTarget;
+            this.preferencePenalty = preferencePenalty;
+        }
+
+        public int getOrder()
+        {
+            return order;
+        }
+
+        public WorldPoint getDestination()
+        {
+            return destination;
+        }
+
+        public int getDirectionX()
+        {
+            return directionX;
+        }
+
+        public int getDirectionY()
+        {
+            return directionY;
+        }
+
+        public boolean isTransport()
+        {
+            return transport;
+        }
+
+        public int getDistanceToTarget()
+        {
+            return distanceToTarget;
+        }
+
+        public int getPreferencePenalty()
+        {
+            return preferencePenalty;
+        }
+
+        public String getMoveType()
+        {
+            if (transport)
+            {
+                return "transport";
+            }
+
+            if (directionX != 0 && directionY != 0)
+            {
+                return "diagonal";
+            }
+
+            return "cardinal";
+        }
+    }
+
+    public static final class ObservedEdgeDiagnostic
+    {
+        private final WorldPoint from;
+        private final WorldPoint observed;
+        private final WorldPoint target;
+        private final boolean available;
+        private final boolean edgeLegal;
+        private final String edgeType;
+        private final int expectedRemainingFromFork;
+        private final boolean continuationFound;
+        private final int continuationDistance;
+        private final int totalRemainingFromFork;
+        private final int continuationDelta;
+        private final int expandedNodes;
+        private final String reason;
+
+        private ObservedEdgeDiagnostic(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean available,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            boolean continuationFound,
+            int continuationDistance,
+            int expandedNodes,
+            String reason
+        )
+        {
+            this.from = from;
+            this.observed = observed;
+            this.target = target;
+            this.available = available;
+            this.edgeLegal = edgeLegal;
+            this.edgeType = edgeType;
+            this.expectedRemainingFromFork = expectedRemainingFromFork;
+            this.continuationFound = continuationFound;
+            this.continuationDistance = continuationDistance;
+            this.totalRemainingFromFork = continuationFound ? continuationDistance + 1 : -1;
+            this.continuationDelta = continuationFound ? totalRemainingFromFork - expectedRemainingFromFork : 0;
+            this.expandedNodes = expandedNodes;
+            this.reason = reason;
+        }
+
+        private static ObservedEdgeDiagnostic unavailable(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            String reason
+        )
+        {
+            return new ObservedEdgeDiagnostic(
+                from,
+                observed,
+                target,
+                false,
+                false,
+                "unknown",
+                0,
+                false,
+                -1,
+                0,
+                reason
+            );
+        }
+
+        private static ObservedEdgeDiagnostic withoutContinuation(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            String reason
+        )
+        {
+            return withoutContinuation(
+                from,
+                observed,
+                target,
+                edgeLegal,
+                edgeType,
+                expectedRemainingFromFork,
+                reason,
+                0
+            );
+        }
+
+        private static ObservedEdgeDiagnostic withoutContinuation(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            String reason,
+            int expandedNodes
+        )
+        {
+            return new ObservedEdgeDiagnostic(
+                from,
+                observed,
+                target,
+                true,
+                edgeLegal,
+                edgeType,
+                expectedRemainingFromFork,
+                false,
+                -1,
+                expandedNodes,
+                reason
+            );
+        }
+
+        private static ObservedEdgeDiagnostic withContinuation(
+            WorldPoint from,
+            WorldPoint observed,
+            WorldPoint target,
+            boolean edgeLegal,
+            String edgeType,
+            int expectedRemainingFromFork,
+            int continuationDistance,
+            int expandedNodes
+        )
+        {
+            return new ObservedEdgeDiagnostic(
+                from,
+                observed,
+                target,
+                true,
+                edgeLegal,
+                edgeType,
+                expectedRemainingFromFork,
+                true,
+                continuationDistance,
+                expandedNodes,
+                "found"
+            );
+        }
+
+        public WorldPoint getFrom()
+        {
+            return from;
+        }
+
+        public WorldPoint getObserved()
+        {
+            return observed;
+        }
+
+        public WorldPoint getTarget()
+        {
+            return target;
+        }
+
+        public boolean isAvailable()
+        {
+            return available;
+        }
+
+        public boolean isEdgeLegal()
+        {
+            return edgeLegal;
+        }
+
+        public String getEdgeType()
+        {
+            return edgeType;
+        }
+
+        public int getExpectedRemainingFromFork()
+        {
+            return expectedRemainingFromFork;
+        }
+
+        public boolean isContinuationFound()
+        {
+            return continuationFound;
+        }
+
+        public int getContinuationDistance()
+        {
+            return continuationDistance;
+        }
+
+        public int getTotalRemainingFromFork()
+        {
+            return totalRemainingFromFork;
+        }
+
+        public int getContinuationDelta()
+        {
+            return continuationDelta;
+        }
+
+        public boolean isContinuationLonger()
+        {
+            return continuationFound && continuationDelta > 0;
+        }
+
+        public int getExpandedNodes()
+        {
+            return expandedNodes;
+        }
+
+        public String getReason()
+        {
+            return reason;
+        }
+    }
+
+    private static final class SearchNode implements Comparable<SearchNode>
+    {
+        private final WorldPoint point;
+        private final SearchNode previous;
+        private final int distance;
+        private final int priority;
+        private final int remaining;
+        private final int preferencePenalty;
+        private final int turns;
+        private final long sequence;
+        private final int directionX;
+        private final int directionY;
+
+        private SearchNode(
+            WorldPoint point,
+            SearchNode previous,
+            int distance,
+            int priority,
+            int remaining,
+            int preferencePenalty,
+            int turns,
+            long sequence
+        )
+        {
+            this(point, previous, distance, priority, remaining, preferencePenalty, turns, sequence, 0, 0);
+        }
+
+        private SearchNode(
+            WorldPoint point,
+            SearchNode previous,
+            int distance,
+            int priority,
+            int remaining,
+            int preferencePenalty,
+            int turns,
+            long sequence,
+            int directionX,
+            int directionY
+        )
+        {
+            this.point = point;
+            this.previous = previous;
+            this.distance = distance;
+            this.priority = priority;
+            this.remaining = remaining;
+            this.preferencePenalty = preferencePenalty;
+            this.turns = turns;
+            this.sequence = sequence;
+            this.directionX = directionX;
+            this.directionY = directionY;
+        }
+
+        private List<WorldPoint> path()
+        {
+            List<WorldPoint> path = new ArrayList<>();
+            SearchNode node = this;
+            while (node != null)
+            {
+                path.add(0, node.point);
+                node = node.previous;
+            }
+            return path;
+        }
+
+        @Override
+        public int compareTo(SearchNode other)
+        {
+            int byPriority = Integer.compare(priority, other.priority);
+            if (byPriority != 0)
+            {
+                return byPriority;
+            }
+
+            int byRemaining = Integer.compare(remaining, other.remaining);
+            if (byRemaining != 0)
+            {
+                return byRemaining;
+            }
+
+            int byPreferencePenalty = Integer.compare(preferencePenalty, other.preferencePenalty);
+            if (byPreferencePenalty != 0)
+            {
+                return byPreferencePenalty;
+            }
+
+            return Long.compare(sequence, other.sequence);
+        }
+
+        private boolean isBetterPathToSamePointThan(SearchNode other, WorldPoint target)
+        {
+            if (distance != other.distance)
+            {
+                return distance < other.distance;
+            }
+
+            int byClientMovePreference = compareClientMovePreference(other, target);
+            if (byClientMovePreference != 0)
+            {
+                return byClientMovePreference < 0;
+            }
+
+            if (preferencePenalty != other.preferencePenalty)
+            {
+                return preferencePenalty < other.preferencePenalty;
+            }
+
+            return sequence < other.sequence;
+        }
+
+        private int compareClientMovePreference(SearchNode other, WorldPoint target)
+        {
+            List<Integer> thisPreferences = clientMovePreferences(target);
+            List<Integer> otherPreferences = other.clientMovePreferences(target);
+            int limit = Math.min(thisPreferences.size(), otherPreferences.size());
+            for (int index = 0; index < limit; index++)
+            {
+                int byPreference = Integer.compare(thisPreferences.get(index), otherPreferences.get(index));
+                if (byPreference != 0)
+                {
+                    return byPreference;
+                }
+            }
+            return Integer.compare(thisPreferences.size(), otherPreferences.size());
+        }
+
+        private List<Integer> clientMovePreferences(WorldPoint target)
+        {
+            List<Integer> preferences = new ArrayList<>(distance);
+            SearchNode node = this;
+            while (node.previous != null)
+            {
+                preferences.add(0, movePreferencePenalty(
+                    node.previous.point,
+                    new Move(node.directionX, node.directionY),
+                    target
+                ));
+                node = node.previous;
+            }
+            return preferences;
+        }
+    }
+}

@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-07.
+Last updated: 2026-08-09.
 
 ## Current Runtime Reset
 
@@ -17,6 +17,18 @@ Runtime shape now:
 - `JewelleryBoxTier` and `PortalNexusTier` remain only because the config UI dropdowns need those enum values.
 - The vendored `shortestpath` route engine, pathfinder, old map/minimap/tile overlays, old transport resources, minigame scanner, teleport highlighter, route telemetry bridge, route diagnostics, saved route state, and old route behavior tests have been removed.
 - `run-drews-helper-dev.bat` launches the plain Gradle dev client again; the route-diagnostic tee/collector tools are no longer part of the project.
+
+## Active Home Teleport Routing
+
+As of 2026-08-09, the Drew-owned route graph includes home teleports from `teleportation_spells_home.tsv`.
+
+- Home teleport rows are `BASELINE` transport edges with source `-1,-1,0` (`ANYWHERE`), so they are innate routing options rather than a frontend checkbox.
+- Originless edges are offered only at the start of each waypoint leg. A multi-waypoint route may use a home teleport at leg 1, leg 2, etc., but not halfway through walking a leg.
+- Cooldown requirements use upstream's `@` var syntax, e.g. `892@30`. A cooldown is usable only when `(currentEpochMinute - storedEpochMinute) > cooldownMinutes`.
+- Unknown cooldown vars are locked. Unknown ordinary quest/var requirements remain permissive.
+- The generated resource contains 16 home-teleport rows, including all four Lumbridge Home Teleport variants with distinct `VarPlayers` requirements.
+- Until Wilderness teleport-level rules are modeled, originless teleports are under-offered from Wilderness starts.
+- `DrewsHelperTravelEstimate` recognizes originless route jumps as real `Actions` rows with the upstream duration and label, not as walking.
 
 Everything below this note is historical context from the removed route-engine attempt unless a future guide entry explicitly revives it. The active exceptions are the waypoint marker surface and route-guidance sections rebuilt without restoring the old route engine.
 
@@ -297,3 +309,57 @@ arrival. The clock starts on first movement.
 - Stamina potion **duration** is not forecast, only its current on/off state. A stamina
   expiring mid-route will make the ETA optimistic. The varbit unit is unverified.
 - Canoes and grapple shortcuts are unverified in game - Myth has not unlocked them yet.
+
+## 2026-08-09 Teleport Routing Plan
+
+Planned, not yet built as of this note. Current jar remains the Drew-owned waypoint route system with physical transports, ETA/HUD improvements, transport highlighting, and Wilderness avoidance. Magic-tab teleports and home teleports are the next project.
+
+Known facts from recon:
+- Upstream teleport metadata already carries cooldowns in requirement syntax as `@`, for example `892@30`.
+- `@` means cooldown in minutes. The stored var value is an epoch-minute timestamp, not a countdown: usable when `(nowMinutes - storedMinutes) > cooldownMinutes`.
+- The home-teleport cooldown and animation-state requirements are in the VarPlayers column, not Varbits.
+- Cooldown semantics are Myth's ruling: a cooldown-active teleport is treated as locked. No wait time is added to ETA.
+- Unknown cooldown value must be treated as locked. The existing requirement grammar treats unknown vars as satisfied, which is correct for typo-prone quests but wrong for cooldowns.
+- The spell/home TSVs have no origin column. They are destination-only teleports from the player's current tile.
+- Destination-only rows currently fall into the generator's `$destOnly` bucket and are silently dropped unless a file also has origin rows to cross-product with.
+- Lumbridge Home Teleport appears as multiple rows that differ by varplayer animation state and duration. Dedup must include requirement fields for originless teleport rows so those variants do not collapse into one broken row.
+
+Staged implementation plan:
+
+1. **Home teleports first.**
+   - Add `teleportation_spells_home.tsv`.
+   - Emit destination-only rows immediately with sentinel source `-1,-1,0` (`ANYWHERE`).
+   - Offer `ANYWHERE` transports only at the start of each route leg.
+   - Add `@` cooldown support with unknown cooldown value -> locked.
+   - Preserve Lumbridge variants by including varbit/varplayer fields in the originless dedup key.
+   - Fix all three transport lookup paths to consult the same originless helper: edge offering, edge legality, and travel-estimate/action labeling.
+
+2. **Magic-tab spell teleports from carried supplies.**
+   - Add `teleportation_spells.tsv` only after the rune model is wired.
+   - Gate by real Magic level, spellbook/unlock var requirements, and carried cast supplies.
+   - Expand symbolic rune names at generator time into existing item-requirement grammar, including combination runes and elemental staves where the upstream table proves the substitutions.
+   - Count inventory and equipped gear. Staffs are normally equipped, not carried.
+   - Add rune-pouch support separately because pouch contents live in vars, not ordinary item counts.
+   - Do not count bank contents as castable from anywhere.
+
+3. **Bank-aware teleport routing.**
+   - Only consider bank supplies when RuneLite has a known bank cache because the player opened the bank this session/profile.
+   - If bank contents are unknown, do not invent a bank route.
+   - Add bank locations as real graph nodes/edges, using upstream bank tile data first. Ask Myth for missing tile data only if upstream is incomplete.
+   - Search state becomes `(tile, bankedYet)`, not just `tile`.
+   - A bank edge costs honest withdraw time. Highlight the needed rune/staff/item in the bank UI to make that cost lower and more predictable.
+   - A bank route is chosen only if the normal shortest-route search proves it is faster than walking or another transport. No separate "bank if nearby" rule.
+
+Operational rule after bank support:
+
+```text
+If carried supplies can cast it -> use teleport normally.
+If carried supplies cannot cast it but known bank has supplies -> consider route-to-bank + withdraw + teleport.
+If bank is unknown or lacks supplies -> treat teleport as locked.
+If cooldown is active -> treat teleport as locked.
+```
+
+Later phases:
+- Minigame teleports: each destination is already its own row, not a submenu tree. Add after the originless home/spell machinery works.
+- Items, boxes, portals, POH portals, tablets, scrolls, capes: bulk ingest after the originless/cooldown/account gates are proven.
+- Remove or repurpose the dead Teleport Options / Other Transportation placeholder toggles only after their families are innate in routing.

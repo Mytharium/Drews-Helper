@@ -24,11 +24,12 @@ public interface DrewsHelperConfig extends Config
     )
     String teleportOptions = "teleportOptions";
 
-    // "Basic Transportation" is gone. Agility shortcuts, canoes, grapples, gliders, balloons
-    // and quetzals are always available now and gated per edge by the account's real skills,
-    // carried items, completed quests and unlock varbits - which is strictly more accurate
-    // than a checkbox. Only the two that a checkbox can still answer remain, and both live in
-    // other sections.
+    // "Basic Transportation" is gone. Agility shortcuts, canoes, grapples, gliders, balloons,
+    // quetzals, the base spirit tree network and fairy rings are always available now and
+    // gated per edge by the account's real skills, carried items, completed quests and unlock
+    // varbits - which is strictly more accurate than a checkbox. Only the three a checkbox can
+    // still answer remain: magic mushtrees and planted spirit trees (no data exists to verify
+    // them) and Wilderness (a preference, not a capability).
 
     @ConfigSection(
         name = "Advanced Transportation",
@@ -108,43 +109,43 @@ public interface DrewsHelperConfig extends Config
         return true;
     }
 
-    @ConfigItem(keyName = "spiritTreesUnlocked", name = "Unlocked: Spirit Trees", description = "Allow spirit tree routes once your account has them unlocked.", section = advancedTransportationOptions, position = 0)
-    default boolean spiritTreesUnlocked()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "fairyRingsUnlocked", name = "Unlocked: Fairy Rings", description = "Allow fairy ring routes once your account has them unlocked.", section = advancedTransportationOptions, position = 1)
-    default boolean fairyRingsUnlocked()
+    // The base spirit tree network and the whole fairy ring network are automatic now -
+    // every destination carries its quest, so the account's own quest state decides them.
+    // Their boxes are gone. What is left here is the half that quest state cannot answer:
+    // a spirit tree you grew yourself. New key rather than reusing "spiritTreesUnlocked",
+    // because that box meant "may I use spirit trees at all" and this one means "I have
+    // planted trees" - silently inheriting the old value would claim trees you never grew.
+    @ConfigItem(keyName = "plantedSpiritTreesUnlocked", name = "Unlocked: Planted Spirit Trees", description = "Allow routes through spirit trees you grew yourself - Port Sarim, Etceteria, Brimhaven, Hosidius, the Farming Guild and your house. The base network is automatic; nothing in your account state proves a planted tree exists, so this box is your attestation. Tick it once you have planted them.", section = advancedTransportationOptions, position = 0)
+    default boolean plantedSpiritTreesUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "useMagicMushtrees", name = "Unlocked: Magic Mushtrees", description = "Allow Fossil Island magic mushtree routes. Upstream carries no requirement data for these, so this box is your attestation that you have discovered them.", section = advancedTransportationOptions, position = 2)
+    @ConfigItem(keyName = "useMagicMushtrees", name = "Unlocked: Magic Mushtrees", description = "Allow Fossil Island magic mushtree routes. Upstream carries no requirement data for these, so this box is your attestation that you have discovered them.", section = advancedTransportationOptions, position = 1)
     default boolean magicMushtreesUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "pohMountedGloryUnlocked", name = "Unlocked: Mounted Glory", description = "Allow routes through your own player-owned house mounted amulet of glory.", section = advancedTransportationOptions, position = 3)
+    @ConfigItem(keyName = "pohMountedGloryUnlocked", name = "Unlocked: Mounted Glory", description = "Allow routes through your own player-owned house mounted amulet of glory.", section = advancedTransportationOptions, position = 2)
     default boolean pohMountedGloryUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "pohPortalChamberUnlocked", name = "Unlocked: Portal Chamber", description = "Allow routes through your own player-owned house portal chamber.", section = advancedTransportationOptions, position = 4)
+    @ConfigItem(keyName = "pohPortalChamberUnlocked", name = "Unlocked: Portal Chamber", description = "Allow routes through your own player-owned house portal chamber.", section = advancedTransportationOptions, position = 3)
     default boolean pohPortalChamberUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "pohPortalNexusTier", name = "Unlocked: Portal Nexus", description = "Select the highest portal nexus tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 5)
+    @ConfigItem(keyName = "pohPortalNexusTier", name = "Unlocked: Portal Nexus", description = "Select the highest portal nexus tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 4)
     default PortalNexusTier pohPortalNexusTier()
     {
         return PortalNexusTier.NONE;
     }
 
-    @ConfigItem(keyName = "pohJewelryBoxTier", name = "Unlocked: Jewelry Box", description = "Select the highest jewelry box tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 6)
+    @ConfigItem(keyName = "pohJewelryBoxTier", name = "Unlocked: Jewelry Box", description = "Select the highest jewelry box tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 5)
     default JewelleryBoxTier pohJewelryBoxTier()
     {
         return JewelleryBoxTier.NONE;
@@ -222,7 +223,7 @@ public interface DrewsHelperConfig extends Config
         return true;
     }
 
-    @ConfigItem(keyName = "useWildernessTransports", name = "Use: Wilderness Transports", description = "Allow dangerous Wilderness lever and obelisk route edges.", section = otherTransportationOptions, position = 12)
+    @ConfigItem(keyName = "useWildernessTransports", name = "Use: Wilderness Transports", description = "Allow routes to enter the Wilderness at all - the ditch crossing, levers and obelisks. Off means routes go around it, unless a waypoint is inside.", section = otherTransportationOptions, position = 12)
     default boolean wildernessTransportsEnabled()
     {
         return false;
@@ -264,17 +265,12 @@ public interface DrewsHelperConfig extends Config
         return new Color(0x4B0082);
     }
 
-    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Log Benchmark Movement", description = "Log DREW_ROUTE_BENCH overlay-vs-client movement comparisons while you walk the route.", section = waypointSettings, position = 6)
-    default boolean routeBenchmarkEnabled()
-    {
-        return false;
-    }
-
-    @ConfigItem(keyName = "etaDebugLogging", name = "Log ETA Accuracy", description = "Log the predicted travel time at route start and the actual time on arrival, with the energy inputs used. Two lines per journey.", section = waypointSettings, position = 7)
-    default boolean etaDebugLogging()
-    {
-        return true;
-    }
+    // Both logging controls are gone. The movement benchmark did its job - it validated the
+    // overlay against the client's own walking - and is now permanently off behind
+    // ROUTE_BENCHMARK_ENABLED in the plugin. ETA accuracy logging stays ON permanently but
+    // needs no control: it is two lines per journey, and its whole purpose is catching a
+    // forecast that starts drifting when nobody is watching. A control it could be switched
+    // off by is a control that would leave it off.
 
     default boolean hostedPohTeleports()
     {

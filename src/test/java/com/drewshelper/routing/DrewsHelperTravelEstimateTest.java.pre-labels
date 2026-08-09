@@ -1,0 +1,384 @@
+package com.drewshelper.routing;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import net.runelite.api.coords.WorldPoint;
+import org.junit.Test;
+
+public class DrewsHelperTravelEstimateTest
+{
+    private static DrewsHelperPlayerCapability capability(int agility, int weight, int energy)
+    {
+        return DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", agility)
+            .weightKg(weight)
+            .energyUnits(energy)
+            .build();
+    }
+
+    private static List<WorldPoint> straightPath(int tiles)
+    {
+        List<WorldPoint> path = new ArrayList<>(tiles + 1);
+        for (int i = 0; i <= tiles; i++)
+        {
+            path.add(new WorldPoint(3200 + i, 3200, 0));
+        }
+        return path;
+    }
+
+    @Test
+    public void drainMatchesTheWikiWorkedExamples()
+    {
+        // The wiki states 0 kg burns full energy in 250 ticks at 99 Agility and ~170 at level 1.
+        assertEquals(40, DrewsHelperTravelEstimate.drainPerTick(capability(99, 0, 10_000)));
+        assertEquals(250, 10_000 / DrewsHelperTravelEstimate.drainPerTick(capability(99, 0, 10_000)));
+
+        assertEquals(59, DrewsHelperTravelEstimate.drainPerTick(capability(1, 0, 10_000)));
+        assertTrue(10_000 / DrewsHelperTravelEstimate.drainPerTick(capability(1, 0, 10_000)) >= 169);
+    }
+
+    @Test
+    public void weightRaisesDrainAndClampsAtSixtyFour()
+    {
+        int light = DrewsHelperTravelEstimate.drainPerTick(capability(70, 0, 10_000));
+        int heavy = DrewsHelperTravelEstimate.drainPerTick(capability(70, 64, 10_000));
+        int absurd = DrewsHelperTravelEstimate.drainPerTick(capability(70, 500, 10_000));
+
+        assertTrue(heavy > light);
+        assertEquals(heavy, absurd);
+    }
+
+    @Test
+    public void staminaAndEnduranceReduceDrain()
+    {
+        DrewsHelperPlayerCapability plain = capability(70, 20, 10_000);
+        DrewsHelperPlayerCapability stamina = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 70).weightKg(20).energyUnits(10_000).staminaActive(true).build();
+        DrewsHelperPlayerCapability ring = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 70).weightKg(20).energyUnits(10_000).ringOfEndurance(true).build();
+
+        int base = DrewsHelperTravelEstimate.drainPerTick(plain);
+        assertTrue(DrewsHelperTravelEstimate.drainPerTick(stamina) < base);
+        assertTrue(DrewsHelperTravelEstimate.drainPerTick(ring) < base);
+    }
+
+    @Test
+    public void regenStepsEveryTenAgilityLevels()
+    {
+        assertEquals(15, DrewsHelperTravelEstimate.regenPerTick(capability(1, 0, 0)));
+        assertEquals(15, DrewsHelperTravelEstimate.regenPerTick(capability(9, 0, 0)));
+        assertEquals(16, DrewsHelperTravelEstimate.regenPerTick(capability(10, 0, 0)));
+        assertEquals(24, DrewsHelperTravelEstimate.regenPerTick(capability(99, 0, 0)));
+
+        DrewsHelperPlayerCapability graceful = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99).fullGraceful(true).build();
+        assertEquals(31, DrewsHelperTravelEstimate.regenPerTick(graceful));
+    }
+
+    @Test
+    public void fullEnergyRunsTheWholeShortRoute()
+    {
+        // 100 tiles at two tiles per tick, and 100 tiles never exhausts a full bar.
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            straightPath(100),
+            Collections.emptyList(),
+            DrewsHelperTransportGraph.empty(),
+            capability(99, 0, 10_000)
+        );
+
+        assertEquals(50, estimate.getTotalTicks());
+        assertEquals(100, estimate.getWalkedTiles());
+    }
+
+    @Test
+    public void emptyEnergyIsSlowerThanRunningButNeverSlowerThanWalking()
+    {
+        int tiles = 400;
+        DrewsHelperTravelEstimate drained = DrewsHelperTravelEstimate.estimate(
+            straightPath(tiles),
+            Collections.emptyList(),
+            DrewsHelperTransportGraph.empty(),
+            capability(50, 20, 0)
+        );
+
+        assertTrue("must be slower than flat running", drained.getTotalTicks() > tiles / 2);
+        assertTrue("must not be slower than pure walking", drained.getTotalTicks() <= tiles);
+    }
+
+    @Test
+    public void transportsCostTheirDurationAndAreReported()
+    {
+        WorldPoint from = new WorldPoint(3200, 3200, 0);
+        WorldPoint to = new WorldPoint(2500, 2500, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(from, to, DrewsHelperTransportCategory.CANOE, "Paddle Canoe",
+                30, "", "", "", "", "")
+        ));
+
+        List<WorldPoint> path = new ArrayList<>();
+        path.add(from);
+        path.add(to);
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            path, Collections.emptyList(), graph, capability(70, 0, 10_000));
+
+        assertEquals(30, estimate.getTotalTicks());
+        assertEquals(0, estimate.getWalkedTiles());
+        assertEquals(Integer.valueOf(1), estimate.getTransportsUsed().get("Canoe: Paddle Canoe"));
+    }
+
+    @Test
+    public void legTimesAreRecordedPerWaypoint()
+    {
+        List<WorldPoint> path = straightPath(100);
+        List<WorldPoint> waypoints = new ArrayList<>();
+        waypoints.add(path.get(50));
+        waypoints.add(path.get(100));
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            path, waypoints, DrewsHelperTransportGraph.empty(), capability(99, 0, 10_000));
+
+        assertEquals(2, estimate.getLegTicks().size());
+        assertTrue(estimate.getLegTicks().get(0) < estimate.getLegTicks().get(1));
+        assertEquals(Integer.valueOf(estimate.getTotalTicks()), estimate.getLegTicks().get(1));
+    }
+
+    @Test
+    public void gracefulIsPerPieceNotAllOrNothing()
+    {
+        // 99 Agility base regen is 24/tick. Pieces total 20%, the complete set adds 10 more.
+        assertEquals(24, DrewsHelperTravelEstimate.regenPerTick(capability(99, 0, 0)));
+
+        DrewsHelperPlayerCapability fivePieces = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99).gracefulRestorePercent(20).build();
+        assertEquals(28, DrewsHelperTravelEstimate.regenPerTick(fivePieces));
+
+        DrewsHelperPlayerCapability fullSet = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99).gracefulRestorePercent(30).build();
+        assertEquals(31, DrewsHelperTravelEstimate.regenPerTick(fullSet));
+
+        // fullGraceful(true) is just shorthand for the complete set.
+        assertEquals(
+            DrewsHelperTravelEstimate.regenPerTick(fullSet),
+            DrewsHelperTravelEstimate.regenPerTick(DrewsHelperPlayerCapability.builder()
+                .skill("AGILITY", 99).fullGraceful(true).build()));
+    }
+
+    @Test
+    public void gracefulPercentIsClampedToThirty()
+    {
+        DrewsHelperPlayerCapability absurd = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99).gracefulRestorePercent(999).build();
+        assertEquals(30, absurd.getGracefulRestorePercent());
+
+        DrewsHelperPlayerCapability negative = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99).gracefulRestorePercent(-5).build();
+        assertEquals(0, negative.getGracefulRestorePercent());
+    }
+
+    @Test
+    public void runToggledOffWalksTheWholeWay()
+    {
+        DrewsHelperPlayerCapability walking = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .weightKg(0)
+            .energyUnits(10_000)
+            .running(false)
+            .build();
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            straightPath(100), Collections.emptyList(), DrewsHelperTransportGraph.empty(), walking);
+
+        // One tile per tick with run off, versus 50 ticks with it on.
+        assertEquals(100, estimate.getTotalTicks());
+    }
+
+    @Test
+    public void ringOfEnduranceDoesNotStackWithStamina()
+    {
+        DrewsHelperPlayerCapability stamina = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 70).weightKg(20).staminaActive(true).build();
+        DrewsHelperPlayerCapability both = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 70).weightKg(20).staminaActive(true).ringOfEndurance(true).build();
+
+        // The ring's passive is overridden by the stamina effect, so wearing it must not
+        // reduce drain any further.
+        assertEquals(
+            DrewsHelperTravelEstimate.drainPerTick(stamina),
+            DrewsHelperTravelEstimate.drainPerTick(both));
+    }
+
+    @Test
+    public void autoRunThresholdResumesRunningWhenEnergyAllows()
+    {
+        // Run off with the re-enable threshold set: the client turns run back on, so the
+        // forecast must not be a full-length walk.
+        DrewsHelperPlayerCapability autoRun = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .weightKg(0)
+            .energyUnits(10_000)
+            .running(false)
+            .autoRunThresholdPercent(1)
+            .build();
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            straightPath(100), Collections.emptyList(), DrewsHelperTransportGraph.empty(), autoRun);
+
+        assertEquals(50, estimate.getTotalTicks());
+    }
+
+    @Test
+    public void autoRunThresholdWaitsUntilEnergyReachesIt()
+    {
+        // Threshold at 50% with an empty bar: walks while it refills, then runs the rest.
+        DrewsHelperPlayerCapability waiting = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .weightKg(0)
+            .energyUnits(0)
+            .running(false)
+            .autoRunThresholdPercent(50)
+            .build();
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            straightPath(400), Collections.emptyList(), DrewsHelperTransportGraph.empty(), waiting);
+
+        assertTrue("must beat a pure walk", estimate.getTotalTicks() < 400);
+        assertTrue("must be slower than running from the start", estimate.getTotalTicks() > 200);
+    }
+
+    @Test
+    public void autoRunDisabledKeepsRunOffForTheWholeRoute()
+    {
+        DrewsHelperPlayerCapability off = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .weightKg(0)
+            .energyUnits(10_000)
+            .running(false)
+            .autoRunThresholdPercent(0)
+            .build();
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            straightPath(100), Collections.emptyList(), DrewsHelperTransportGraph.empty(), off);
+
+        assertEquals(100, estimate.getTotalTicks());
+    }
+
+    @Test
+    public void longRoutesAverageTheRunWalkDutyCycleNotFlatRunning()
+    {
+        // Steady state is fixed by the energy budget: running ticks x drain must equal walking
+        // ticks x regen. So tiles per tick converges on (2*regen + drain) / (regen + drain) and
+        // can never approach the flat 2.0 of uninterrupted running.
+        DrewsHelperPlayerCapability capability = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99).weightKg(0).energyUnits(0).build();
+
+        int drain = DrewsHelperTravelEstimate.drainPerTick(capability);
+        int regen = DrewsHelperTravelEstimate.regenPerTick(capability);
+        double expected = (2.0 * regen + drain) / (regen + drain);
+
+        int tiles = 2000;
+        int ticks = DrewsHelperTravelEstimate.estimate(
+            straightPath(tiles), Collections.emptyList(),
+            DrewsHelperTransportGraph.empty(), capability).getTotalTicks();
+        double actual = (double) tiles / ticks;
+
+        assertTrue("expected about " + expected + " tiles/tick, got " + actual,
+            Math.abs(actual - expected) < 0.05);
+        assertTrue("must be well short of flat running", actual < 1.6);
+    }
+
+    @Test
+    public void autoRunThresholdChangesTheBurstPatternNotTheLongRunRate()
+    {
+        // A high threshold delays the first burst and makes each later burst longer, but the
+        // sustained rate is set by drain and regen, so it must land in the same place.
+        int tiles = 6000;
+        double lowThreshold = tilesPerTick(tiles, 1);
+        double highThreshold = tilesPerTick(tiles, 50);
+
+        assertTrue("thresholds 1 and 50 should converge, got " + lowThreshold + " vs " + highThreshold,
+            Math.abs(lowThreshold - highThreshold) < 0.05);
+    }
+
+    private static double tilesPerTick(int tiles, int autoRunThresholdPercent)
+    {
+        DrewsHelperPlayerCapability capability = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .weightKg(0)
+            .energyUnits(0)
+            .running(false)
+            .autoRunThresholdPercent(autoRunThresholdPercent)
+            .build();
+
+        int ticks = DrewsHelperTravelEstimate.estimate(
+            straightPath(tiles), Collections.emptyList(),
+            DrewsHelperTransportGraph.empty(), capability).getTotalTicks();
+        return (double) tiles / ticks;
+    }
+
+    @Test
+    public void staminaExpiringMidRouteSlowsTheRemainder()
+    {
+        // Same route, same everything, except one run knows the dose runs out after 60 ticks.
+        DrewsHelperPlayerCapability lastsForever = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 30).weightKg(60).energyUnits(10_000).staminaActive(true).build();
+        DrewsHelperPlayerCapability expires = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 30).weightKg(60).energyUnits(10_000).staminaActive(true)
+            .staminaTicksRemaining(60).build();
+
+        int optimistic = DrewsHelperTravelEstimate.estimate(straightPath(600),
+            Collections.emptyList(), DrewsHelperTransportGraph.empty(), lastsForever).getTotalTicks();
+        int realistic = DrewsHelperTravelEstimate.estimate(straightPath(600),
+            Collections.emptyList(), DrewsHelperTransportGraph.empty(), expires).getTotalTicks();
+
+        assertTrue("a dose that runs out must make the route take longer, not the same",
+            realistic > optimistic);
+    }
+
+    @Test
+    public void unknownStaminaDurationKeepsThePreviousBehaviour()
+    {
+        // 0 means the unit has not been measured yet. It must behave exactly as before the
+        // forecast existed - potion up for the whole route - never as "no stamina at all".
+        DrewsHelperPlayerCapability unknown = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 30).weightKg(60).energyUnits(10_000)
+            .staminaActive(true).staminaTicksRemaining(0).build();
+        DrewsHelperPlayerCapability noStamina = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 30).weightKg(60).energyUnits(10_000).staminaActive(false).build();
+
+        int withUnknown = DrewsHelperTravelEstimate.estimate(straightPath(600),
+            Collections.emptyList(), DrewsHelperTransportGraph.empty(), unknown).getTotalTicks();
+        int without = DrewsHelperTravelEstimate.estimate(straightPath(600),
+            Collections.emptyList(), DrewsHelperTransportGraph.empty(), noStamina).getTotalTicks();
+
+        assertTrue("unmeasured duration must still get the stamina benefit", withUnknown < without);
+    }
+
+    @Test
+    public void staminaAlreadyExpiredDrainsAtTheNormalRate()
+    {
+        DrewsHelperPlayerCapability capability = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 30).weightKg(60).staminaActive(true).staminaTicksRemaining(1).build();
+
+        // Tick 0 is still inside the dose; everything after it is not.
+        assertEquals(
+            DrewsHelperTravelEstimate.drainPerTick(capability, false),
+            DrewsHelperTravelEstimate.drainPerTick(
+                DrewsHelperPlayerCapability.builder()
+                    .skill("AGILITY", 30).weightKg(60).staminaActive(false).build()));
+        assertTrue(DrewsHelperTravelEstimate.drainPerTick(capability, true)
+            < DrewsHelperTravelEstimate.drainPerTick(capability, false));
+    }
+
+    @Test
+    public void formatsTicksAsMinutesAndSeconds()
+    {
+        assertEquals("0:00", DrewsHelperTravelEstimate.formatTicks(0));
+        assertEquals("1:00", DrewsHelperTravelEstimate.formatTicks(100));
+        assertEquals("0:06", DrewsHelperTravelEstimate.formatTicks(10));
+        assertEquals("3:47", DrewsHelperTravelEstimate.formatTicks(378));
+    }
+}

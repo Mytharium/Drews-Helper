@@ -12,12 +12,16 @@ import java.util.Set;
  * completed quests and unlock varbits decide whether each individual edge is usable, which
  * is strictly more accurate than a checkbox could be.
  *
- * <p>Only two families remain opt-in, for two different reasons:
+ * <p>Only three families remain opt-in, for three different reasons:
  * <ul>
  *   <li>{@code MAGIC_MUSHTREE} - upstream carries no requirement data at all for it, so
  *       there is nothing to verify and the checkbox is the user's attestation.</li>
  *   <li>{@code WILDERNESS} - not a capability question. You can always walk into the
  *       Wilderness; the checkbox asks whether you want to be routed through it.</li>
+ *   <li>{@code PLANTED_SPIRIT_TREE} - the base spirit tree network is quest gated and so
+ *       fully automatic, but a planted tree is one the player grew. No quest, varbit or
+ *       item proves it exists, so this half of the network stays an attestation while the
+ *       other half needs no checkbox at all.</li>
  * </ul>
  *
  * <p>The category enum stays package-private, so this exposes named builder methods
@@ -33,7 +37,13 @@ public final class DrewsHelperTransportPolicy
         DrewsHelperTransportCategory.CANOE,
         DrewsHelperTransportCategory.GNOME_GLIDER,
         DrewsHelperTransportCategory.HOT_AIR_BALLOON,
-        DrewsHelperTransportCategory.QUETZAL);
+        DrewsHelperTransportCategory.QUETZAL,
+        // Every spirit tree destination row carries its quest (Tree Gnome Village, plus
+        // Song of the Elves / The Path of Glouphrie / Pandemonium for the outliers), and
+        // every fairy ring edge carries Fairytale II - Cure a Queen, so both networks are
+        // decided entirely by quest state.
+        DrewsHelperTransportCategory.SPIRIT_TREE,
+        DrewsHelperTransportCategory.FAIRY_RING);
 
     private final Set<DrewsHelperTransportCategory> enabled;
     private final String signature;
@@ -60,6 +70,12 @@ public final class DrewsHelperTransportPolicy
     public static Builder builder()
     {
         return new Builder();
+    }
+
+    /** Whether routes may enter the Wilderness at all. Read by the router, not just the graph. */
+    public boolean allowsWilderness()
+    {
+        return allows(DrewsHelperTransportCategory.WILDERNESS);
     }
 
     boolean allows(DrewsHelperTransportCategory category)
@@ -102,6 +118,11 @@ public final class DrewsHelperTransportPolicy
         public Builder magicMushtrees(boolean value)
         {
             return set(DrewsHelperTransportCategory.MAGIC_MUSHTREE, value);
+        }
+
+        public Builder plantedSpiritTrees(boolean value)
+        {
+            return set(DrewsHelperTransportCategory.PLANTED_SPIRIT_TREE, value);
         }
 
         public DrewsHelperTransportPolicy build()

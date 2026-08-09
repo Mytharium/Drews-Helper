@@ -172,6 +172,37 @@ public class DrewsHelperPlayerCapabilityTest
     }
 
     @Test
+    public void cooldownVarTermsTreatUnknownAsLockedAndExpiredAsUsable()
+    {
+        DrewsHelperPlayerCapability expired = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .varPlayer(892, 969)
+            .build();
+        DrewsHelperPlayerCapability exactBoundary = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .varPlayer(892, 970)
+            .build();
+        DrewsHelperPlayerCapability active = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .varPlayer(892, 980)
+            .build();
+        DrewsHelperPlayerCapability unknown = DrewsHelperPlayerCapability.builder()
+            .currentEpochMinute(1_000)
+            .build();
+
+        assertTrue("more than 30 minutes since stored epoch minute means usable",
+            expired.meetsVarPlayers("892@30"));
+        assertFalse("the handoff rule is strictly greater than the cooldown minutes",
+            exactBoundary.meetsVarPlayers("892@30"));
+        assertFalse("active cooldown must lock the teleport",
+            active.meetsVarPlayers("892@30"));
+        assertFalse("unknown cooldown vars must lock the teleport",
+            unknown.meetsVarPlayers("892@30"));
+        assertTrue("ordinary unknown vars stay permissive",
+            unknown.meetsVarPlayers("4560=0"));
+    }
+
+    @Test
     public void unlockStateChangesTheSignature()
     {
         String plain = DrewsHelperPlayerCapability.builder().build().signature();
@@ -183,5 +214,8 @@ public class DrewsHelperPlayerCapabilityTest
             DrewsHelperPlayerCapability.builder().quest("Bone Voyage", true).build().signature());
         assertNotEquals(plain,
             DrewsHelperPlayerCapability.builder().varbit(4182, 1).build().signature());
+        assertNotEquals(
+            DrewsHelperPlayerCapability.builder().currentEpochMinute(10).build().signature(),
+            DrewsHelperPlayerCapability.builder().currentEpochMinute(11).build().signature());
     }
 }

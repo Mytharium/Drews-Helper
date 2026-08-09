@@ -127,7 +127,85 @@ public class DrewsHelperTravelEstimateTest
 
         assertEquals(30, estimate.getTotalTicks());
         assertEquals(0, estimate.getWalkedTiles());
-        assertEquals(Integer.valueOf(1), estimate.getTransportsUsed().get("Canoe"));
+        assertEquals(Integer.valueOf(1), estimate.getTransportsUsed().get("Canoe (Paddle Canoe)"));
+        assertEquals("standing on it, you arrive at tick 0 - not after the hop",
+            Integer.valueOf(0), estimate.getTransportTicks().get("Canoe (Paddle Canoe)"));
+    }
+
+    @Test
+    public void originlessTransportsCostTheirDurationAndAreReported()
+    {
+        WorldPoint from = new WorldPoint(0, 0, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30")
+        ));
+
+        List<WorldPoint> path = new ArrayList<>();
+        path.add(from);
+        path.add(lumbridge);
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            path, Collections.singletonList(lumbridge), graph, capability(70, 0, 10_000));
+
+        assertEquals(23, estimate.getTotalTicks());
+        assertEquals(0, estimate.getWalkedTiles());
+        assertEquals(Integer.valueOf(1), estimate.getTransportsUsed().get("Lumbridge Home Teleport"));
+        assertEquals(Integer.valueOf(0), estimate.getTransportTicks().get("Lumbridge Home Teleport"));
+    }
+
+    @Test
+    public void adjacentWalkOntoOriginlessDestinationDoesNotLookLikeATeleport()
+    {
+        WorldPoint besideLumbridge = new WorldPoint(3220, 3218, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30")
+        ));
+
+        List<WorldPoint> path = new ArrayList<>();
+        path.add(besideLumbridge);
+        path.add(lumbridge);
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            path, Collections.singletonList(lumbridge), graph, capability(70, 0, 10_000));
+
+        assertEquals(1, estimate.getTotalTicks());
+        assertEquals(1, estimate.getWalkedTiles());
+        assertTrue(estimate.getTransportsUsed().isEmpty());
+    }
+
+    @Test
+    public void aStepsTimeIsWhenYouArriveAtItNotWhenTheHopEnds()
+    {
+        // The time beside a step answers "when am I stood at the thing I have to click", so it
+        // is recorded before the hop is paid for. Recorded after, every step would show the
+        // time you land on the far side instead, which is a different and less useful number.
+        WorldPoint board = new WorldPoint(3203, 3200, 0);
+        WorldPoint far = new WorldPoint(2500, 2500, 0);
+
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(board, far, DrewsHelperTransportCategory.CANOE,
+                "Paddle Canoe", 30, "", "", "", "", "")
+        ));
+
+        List<WorldPoint> path = new ArrayList<>();
+        path.add(new WorldPoint(3200, 3200, 0));
+        path.add(new WorldPoint(3201, 3200, 0));
+        path.add(new WorldPoint(3202, 3200, 0));
+        path.add(board);
+        path.add(far);
+
+        DrewsHelperTravelEstimate estimate = DrewsHelperTravelEstimate.estimate(
+            path, Collections.emptyList(), graph, capability(70, 0, 10_000));
+
+        Integer arrival = estimate.getTransportTicks().get("Canoe (Paddle Canoe)");
+        assertTrue("the step must carry an arrival time", arrival != null);
+        assertTrue("walking to it must take some time", arrival.intValue() > 0);
+        assertEquals("everything after the arrival is the hop itself",
+            30, estimate.getTotalTicks() - arrival.intValue());
     }
 
     @Test

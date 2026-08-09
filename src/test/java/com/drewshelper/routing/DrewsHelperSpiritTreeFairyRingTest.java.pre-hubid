@@ -1,0 +1,175 @@
+package com.drewshelper.routing;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.junit.Test;
+
+/**
+ * Guards the two hub networks and the override rows.
+ *
+ * <p>The boarding/landing cross product is the shape that once collapsed the wilderness
+ * obelisks from 325 edges to 7 while still parsing perfectly and reporting success. A
+ * parse that succeeds proves nothing about a hub family, so these assert on edge counts.
+ */
+public class DrewsHelperSpiritTreeFairyRingTest
+{
+    private static List<String[]> rows() throws IOException
+    {
+        List<String[]> out = new ArrayList<>();
+        try (InputStream in = DrewsHelperTransportGraph.class.getResourceAsStream("/drewshelper-transports.tsv");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)))
+        {
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                if (line.isEmpty() || line.startsWith("#"))
+                {
+                    continue;
+                }
+                out.add(line.split("\t", -1));
+            }
+        }
+        return out;
+    }
+
+    private static List<String[]> withCategory(String category) throws IOException
+    {
+        List<String[]> out = new ArrayList<>();
+        for (String[] row : rows())
+        {
+            if (row[0].equals(category))
+            {
+                out.add(row);
+            }
+        }
+        return out;
+    }
+
+    @Test
+    public void bothHubNetworksProducedRealCrossProducts() throws IOException
+    {
+        // Upstream ships 56 fairy ring boarding tiles and 56 landing tiles, and 156 spirit
+        // tree boarding tiles against 14 destinations. A few hundred edges each is the
+        // shape of a working cross product; a couple of dozen means it collapsed.
+        assertTrue("fairy rings collapsed", withCategory("FAIRY_RING").size() > 2500);
+        assertTrue("base spirit trees collapsed", withCategory("SPIRIT_TREE").size() > 400);
+        assertTrue("planted spirit trees collapsed", withCategory("PLANTED_SPIRIT_TREE").size() > 900);
+    }
+
+    @Test
+    public void everyFairyRingEdgeCarriesTheNetworkQuest() throws IOException
+    {
+        // Fairytale II gates the whole network and upstream records it nowhere. If this
+        // ever stops holding, the plugin would offer rings to an account that cannot use
+        // a single one - the exact failure a checkbox used to prevent.
+        List<String[]> fairyRings = withCategory("FAIRY_RING");
+        assertFalse(fairyRings.isEmpty());
+        for (String[] row : fairyRings)
+        {
+            assertTrue("missing network quest: " + String.join("|", row),
+                row[6].contains("Fairytale II - Cure a Queen"));
+        }
+    }
+
+    @Test
+    public void everySpiritTreeEdgeCarriesAQuest() throws IOException
+    {
+        // The whole point of making these automatic: quest state alone decides them.
+        for (String[] row : withCategory("SPIRIT_TREE"))
+        {
+            assertFalse("unGated spirit tree edge: " + String.join("|", row), row[6].isEmpty());
+        }
+    }
+
+    @Test
+    public void plantedSpiritTreesAreOnlyThePlayerGrownDestinations() throws IOException
+    {
+        // Derived from upstream's own section annotation rather than a hardcoded list, so
+        // this pins the six that annotation is expected to catch.
+        Set<String> labels = new HashSet<>();
+        for (String[] row : withCategory("PLANTED_SPIRIT_TREE"))
+        {
+            labels.add(row[3]);
+        }
+        assertTrue(labels.contains("7: Port Sarim"));
+        assertTrue(labels.contains("8: Etceteria"));
+        assertTrue(labels.contains("9: Brimhaven"));
+        assertTrue(labels.contains("A: Hosidius"));
+        assertTrue(labels.contains("B: Farming Guild"));
+        assertTrue(labels.contains("C: Your house"));
+
+        // The invariant that actually matters runs the other way. Base destinations DO
+        // appear under PLANTED - boarding a tree you grew to reach the Grand Exchange is
+        // still gated on having grown it - but the reverse must never happen: with the
+        // box unticked you must never be routed TO a tree you never planted.
+        Set<String> baseLabels = new HashSet<>();
+        for (String[] row : withCategory("SPIRIT_TREE"))
+        {
+            baseLabels.add(row[3]);
+        }
+        assertTrue(baseLabels.contains("1: Tree Gnome Village"));
+        assertTrue(baseLabels.contains("6: Prifddinas"));
+        assertFalse(baseLabels.contains("7: Port Sarim"));
+        assertFalse(baseLabels.contains("8: Etceteria"));
+        assertFalse(baseLabels.contains("9: Brimhaven"));
+        assertFalse(baseLabels.contains("A: Hosidius"));
+        assertFalse(baseLabels.contains("B: Farming Guild"));
+        assertFalse(baseLabels.contains("C: Your house"));
+    }
+
+    @Test
+    public void plantedSplitDidNotLeakIntoFairyRings() throws IOException
+    {
+        // A section comment sets the section for every row after it. fairy_rings.tsv has
+        // two stray comments and no structure, so an unguarded split tagged 594 unrelated
+        // rings as player-built. The split is opt-in per file to stop that recurring.
+        assertEquals(0, withCategory("PLANTED_FAIRY_RING").size());
+    }
+
+    @Test
+    public void taverleyGateOverrideIsPresentInBothDirections() throws IOException
+    {
+        // The wall is one tile thick on the east edge of x=2935; the archway is y=3450 and
+        // y=3451. Upstream has no row for it, so the router walked all the way around.
+        Set<String> crossings = new HashSet<>();
+        for (String[] row : withCategory("BASELINE"))
+        {
+            if (row[3].startsWith("Open Gate (Taverley wall)"))
+            {
+                crossings.add(row[1] + "->" + row[2]);
+            }
+        }
+        assertTrue(crossings.contains("2935,3450,0->2936,3450,0"));
+        assertTrue(crossings.contains("2936,3450,0->2935,3450,0"));
+        assertTrue(crossings.contains("2935,3451,0->2936,3451,0"));
+        assertTrue(crossings.contains("2936,3451,0->2935,3451,0"));
+        assertEquals(4, crossings.size());
+    }
+
+    @Test
+    public void baseNetworksNeedNoCheckboxButPlantedTreesDo()
+    {
+        DrewsHelperTransportPolicy plain = DrewsHelperTransportPolicy.builder().build();
+        assertTrue(plain.allows(DrewsHelperTransportCategory.SPIRIT_TREE));
+        assertTrue(plain.allows(DrewsHelperTransportCategory.FAIRY_RING));
+        assertFalse(plain.allows(DrewsHelperTransportCategory.PLANTED_SPIRIT_TREE));
+
+        DrewsHelperTransportPolicy planted =
+            DrewsHelperTransportPolicy.builder().plantedSpiritTrees(true).build();
+        assertTrue(planted.allows(DrewsHelperTransportCategory.PLANTED_SPIRIT_TREE));
+
+        // ...and the change has to reach the cache key, or the route would not rebuild.
+        assertNotEquals(plain.signature(), planted.signature());
+    }
+}
