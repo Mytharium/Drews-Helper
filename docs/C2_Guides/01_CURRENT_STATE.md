@@ -227,3 +227,73 @@ Known first-pass limits:
 - `DREW_ROUTE_BENCH` divergence strings now include `classification=<...>` and `benign=<...>`. `classification=sameTimePermutation benign=true` means the client took a different local tile order but rejoined the displayed route at the same movement index.
 - `shadow={...}` and `shapeShadow={...}` now include `fit={...}` and use merge-aware route-fit scoring for their `winner`. Exact matches still win, no-merge drift still loses hard, and same-time permutations are scored as low-penalty diagnostics instead of hard route failures.
 - This remains diagnostic-only. The visible route, local Path 1 / Path 3 overrides, `shapeShadow` route solving, waypoint ordering, and benchmark capture lifecycle are unchanged.
+
+## 2026-08-09 Basic Transportation and Travel ETA
+
+The Basic Transportation checkboxes are functional. Each one enables a transport family for the
+router; `BASELINE` is always on and cannot be disabled.
+
+Two gates decide whether an edge is usable:
+
+1. **Policy** - the family's checkbox is enabled (`DrewsHelperTransportPolicy`).
+2. **Capability** - the account currently meets the edge's skill and item requirements
+   (`DrewsHelperPlayerCapability`).
+
+Quests, discoveries and destination unlocks are **not** verified. Those are the user's
+attestation via the checkbox. Skill levels are **real, not boosted**.
+
+### Files
+
+| File | Role |
+|---|---|
+| `DrewsHelperTransportCategory` | The nine families |
+| `DrewsHelperTransportPolicy` | Which families are enabled, plus a cache signature |
+| `DrewsHelperPlayerCapability` | Skills, items, and every energy-model input |
+| `DrewsHelperItemVariation` | 17 symbolic item names to RuneLite `ItemID` arrays |
+| `DrewsHelperTravelEstimate` | Run-energy simulation and ETA |
+| `tools/generate-drewshelper-transports.ps1` | Regenerates the transport resource |
+
+### Transport resource
+
+`src/main/resources/drewshelper-transports.tsv`, 10 columns, 7,331 edges.
+
+```
+BASELINE 5,800   AGILITY_SHORTCUT 557   HOT_AIR_BALLOON 269   QUETZAL 182
+GNOME_GLIDER 103   CANOE 45   MAGIC_MUSHTREE 29   GRAPPLE_SHORTCUT 15   WILDERNESS 331
+```
+
+Regenerate with the tool in `tools/`; see `tools/README.md` for the pitfalls, especially the
+boarding/landing cross product.
+
+### Travel estimate
+
+The overlay shows total ETA, cumulative arrival time per waypoint, and which transport families
+the route uses. Recomputed every tick, so it counts down as you move and drops if you stop and
+let energy recover.
+
+Energy is simulated over the finished path, not priced into A*. Per tick:
+
+- running drains `floor(floor(60 + 67 * clamp(weight,0,64)/64) * (1 - agility/300))`
+- stamina multiplies drain by 0.3, **or** the ring of endurance by 0.85 - these do not stack
+- any non-running tick restores `floor(agility/10) + 15`, raised by the graceful percentage
+- graceful is per-piece: 3/4/4/3/3/3 for 20, complete set adds 10 more, 30 maximum
+- run off means walking, unless the auto re-enable threshold is set, in which case running
+  resumes once energy climbs back over it
+
+Validated in game at 343 tiles: predicted 2:25, arrived 2:25.
+
+### Verifying the ETA
+
+Enable the route benchmark. `DREW_ROUTE_BENCH` now logs an `eta predicted=...` line at route
+start with every model input, and an `eta result predicted=... actual=... delta=...` line on
+arrival. The clock starts on first movement.
+
+### Known gaps
+
+- `VarbitID.RUNENERGY_AUTOENABLE` is read as a percentage but its units are unconfirmed. Safe
+  for the common threshold of 1; confirm from a benchmark log before trusting other values.
+- Ring of endurance charge count is not readable, so a ring under the 500-charge threshold
+  still reads as active.
+- Stamina potion **duration** is not forecast, only its current on/off state. A stamina
+  expiring mid-route will make the ETA optimistic. The varbit unit is unverified.
+- Canoes and grapple shortcuts are unverified in game - Myth has not unlocked them yet.

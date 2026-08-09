@@ -2,11 +2,15 @@ package com.drewshelper;
 
 import com.google.inject.Provides;
 import com.drewshelper.routing.DrewsHelperCollisionMap;
+import com.drewshelper.routing.DrewsHelperPlayerCapability;
 import com.drewshelper.routing.DrewsHelperRouteBenchmark;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
 import com.drewshelper.routing.DrewsHelperRouteSearchMetrics;
 import com.drewshelper.routing.DrewsHelperRouteStatus;
 import com.drewshelper.routing.DrewsHelperTransportGraph;
+import com.drewshelper.routing.DrewsHelperTransportPolicy;
+import com.drewshelper.routing.DrewsHelperTraversableTiles;
+import com.drewshelper.routing.DrewsHelperTravelEstimate;
 import com.drewshelper.routing.DrewsHelperWalkingRouteEngine;
 import com.drewshelper.routing.ui.DrewsHelperRouteMapOverlay;
 import com.drewshelper.routing.ui.DrewsHelperRouteMinimapOverlay;
@@ -16,25 +20,43 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.EquipmentInventorySlot;
+import net.runelite.api.GameState;
+import net.runelite.api.Item;
+import net.runelite.api.ItemComposition;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
+import net.runelite.api.Quest;
+import net.runelite.api.QuestState;
+import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
+import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
+import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -56,8 +78,41 @@ public class DrewsHelperPlugin extends Plugin
 {
     public static final int MAX_WAYPOINTS = 5;
 
-    private static final int COMMITTED_ROUTE_RECALCULATE_DISTANCE = 10;
+    /** How far off the drawn path you may stray before the route is re-solved from where you are. */
+    private static final int ROUTE_RECALCULATE_OFF_PATH_DISTANCE = 2;
+
+    /**
+     * How far the player may be from a benchmark's expected start before that capture is
+     * discarded as stale. Deliberately separate from the re-solve distance above - they were one
+     * constant, but they answer different questions and tightening the re-solve should not make
+     * the benchmark throw away usable samples.
+     */
+    private static final int ROUTE_BENCHMARK_STALE_START_DISTANCE = 10;
     private static final String CONFIG_GROUP = "drewshelper";
+
+    /**
+     * The only skills that appear anywhere in the transport requirements. A level-up in anything
+     * else cannot change the route, so it must not mark it dirty.
+     */
+    private static final Set<Skill> ROUTE_RELEVANT_SKILLS = EnumSet.of(
+        Skill.AGILITY, Skill.CONSTRUCTION, Skill.CRAFTING, Skill.FARMING, Skill.FIREMAKING,
+        Skill.FISHING, Skill.MAGIC, Skill.MINING, Skill.PRAYER, Skill.RANGED, Skill.STRENGTH,
+        Skill.THIEVING, Skill.WOODCUTTING);
+
+    /** Per-slot graceful run-energy restoration. Totals 20; the complete set adds 10 more. */
+    private static final Map<EquipmentInventorySlot, Integer> GRACEFUL_SLOT_PERCENT;
+
+    static
+    {
+        Map<EquipmentInventorySlot, Integer> graceful = new EnumMap<>(EquipmentInventorySlot.class);
+        graceful.put(EquipmentInventorySlot.HEAD, 3);
+        graceful.put(EquipmentInventorySlot.BODY, 4);
+        graceful.put(EquipmentInventorySlot.LEGS, 4);
+        graceful.put(EquipmentInventorySlot.GLOVES, 3);
+        graceful.put(EquipmentInventorySlot.BOOTS, 3);
+        graceful.put(EquipmentInventorySlot.CAPE, 3);
+        GRACEFUL_SLOT_PERCENT = Collections.unmodifiableMap(graceful);
+    }
     private static final String SET = "Set";
     private static final String CANCEL = "Cancel";
     private static final String CLEAR = "Clear";
@@ -101,12 +156,18 @@ public class DrewsHelperPlugin extends Plugin
     private final WorldPoint[] waypoints = new WorldPoint[MAX_WAYPOINTS];
     private final WorldMapPoint[] waypointMarkers = new WorldMapPoint[MAX_WAYPOINTS];
 
+    // A waypoint only auto-clears once the player has actually stood somewhere else first.
+    // Without this, dropping a waypoint on your own tile would delete itself a tick later.
+    private final boolean[] waypointArmed = new boolean[MAX_WAYPOINTS];
+
     private Point lastMenuOpenedPoint;
     private ExecutorService routeExecutor;
     private Future<?> routeFuture;
     private DrewsHelperCollisionMap collisionMap;
     private DrewsHelperWalkingRouteEngine routeEngine;
-    private boolean routeEngineUsesWildernessTransports;
+    private volatile DrewsHelperTravelEstimate travelEstimate = DrewsHelperTravelEstimate.EMPTY;
+    private String routeEngineCacheKey = "";
+    private final Map<Skill, Integer> lastKnownSkillLevels = new HashMap<>();
     private volatile DrewsHelperRouteSnapshot routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
     private int routeRequestId;
     private boolean routeDirty = true;
@@ -114,6 +175,17 @@ public class DrewsHelperPlugin extends Plugin
     private RouteBenchmarkCapture routeBenchmarkCapture;
     private final Map<String, Integer> routeBenchmarkObservedEdgeCounts = new HashMap<>();
     private volatile String routeBenchmarkSummary = "";
+    private EtaDebugCapture etaDebugCapture;
+    private boolean loggedUnresolvedQuests;
+
+    // Stamina duration calibration. The varbit counts down in units of unknown size and RuneLite
+    // never converts it anywhere, so rather than guess we measure: the gap between two
+    // consecutive single-unit decrements IS the unit, in ticks. Persisted once learned.
+    private static final String STAMINA_UNIT_KEY = "staminaTicksPerDurationUnit";
+    private int tickCounter;
+    private int lastStaminaDuration;
+    private int lastStaminaDurationTick;
+    private int staminaTicksPerUnit;
 
     @Override
     protected void startUp()
@@ -127,6 +199,9 @@ public class DrewsHelperPlugin extends Plugin
         routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
         routeDirty = true;
         lastRouteSignature = "";
+        // Learned once, then reused - no need to re-measure the stamina unit every session.
+        staminaTicksPerUnit = parseStaminaUnit(
+            configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
         clearRouteBenchmark();
         routeBenchmarkObservedEdgeCounts.clear();
         overlayManager.remove(overlay);
@@ -165,6 +240,19 @@ public class DrewsHelperPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick event)
     {
+        tickCounter++;
+        updateStaminaCalibration();
+
+        // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
+        // which dirties the route and returns early below - so anything downstream of that
+        // never sees the arrival tick, and the re-solve then discards the capture. That is
+        // exactly why every journey logged "eta predicted" and never "eta result".
+        updateEtaDebugCapture();
+
+        // Runs before the dirty check so arriving at a waypoint takes effect immediately,
+        // rather than waiting for whatever solve is already queued.
+        clearReachedWaypoints();
+
         if (routeDirty)
         {
             refreshRouteIfNeeded();
@@ -176,6 +264,36 @@ public class DrewsHelperPlugin extends Plugin
             recordRouteBenchmarkPosition();
             advanceCommittedRouteIfNeeded();
         }
+
+        refreshTravelEstimate();
+    }
+
+    /**
+     * Recomputed every tick rather than stored on the snapshot, so the ETA actually counts down
+     * as you move and stretches back out if you burn energy faster than the model expected.
+     * Cheap - one pass over the path.
+     */
+    private void refreshTravelEstimate()
+    {
+        DrewsHelperRouteSnapshot snapshot = routeSnapshot;
+        DrewsHelperWalkingRouteEngine engine = routeEngine;
+        if (engine == null || snapshot.getStatus() != DrewsHelperRouteStatus.READY)
+        {
+            travelEstimate = DrewsHelperTravelEstimate.EMPTY;
+            return;
+        }
+
+        travelEstimate = DrewsHelperTravelEstimate.estimate(
+            snapshot.getPath(),
+            snapshot.getDestinations(),
+            engine.getTransportGraph(),
+            buildCapability()
+        );
+    }
+
+    DrewsHelperTravelEstimate getTravelEstimate()
+    {
+        return travelEstimate;
     }
 
     @Subscribe
@@ -224,7 +342,8 @@ public class DrewsHelperPlugin extends Plugin
 
         if ("pathingReplacementEnabled".equals(event.getKey())
             || "routeBenchmarkEnabled".equals(event.getKey())
-            || "useWildernessTransports".equals(event.getKey()))
+            || "etaDebugLogging".equals(event.getKey())
+            || isTransportConfigKey(event.getKey()))
         {
             markRouteDirty();
         }
@@ -287,11 +406,45 @@ public class DrewsHelperPlugin extends Plugin
             return;
         }
 
+        WorldPoint requested = point;
+        point = snapToTraversable(requested);
+        if (!point.equals(requested))
+        {
+            log.debug("{} requested at {} is not standable - snapped to {}",
+                waypointLabel(index), requested, point);
+        }
+
         waypoints[index] = point;
+        waypointArmed[index] = false;
         configManager.setConfiguration(CONFIG_GROUP, waypointPositionKey(index), WaypointPositionCodec.encode(point));
         syncWaypointMarker(index);
         markRouteDirty();
         log.debug("Set {} at {}", waypointLabel(index), point);
+    }
+
+    /**
+     * Keeps waypoints on tiles the character can stand on. Clicking a river or the inside of a
+     * wall otherwise produces a destination the router can never reach, and the only symptom is
+     * a route that quietly refuses to solve.
+     *
+     * <p>If the collision data is not loaded yet the request is honoured unchanged - snapping is
+     * a convenience, and it must never block placing a waypoint.
+     */
+    private WorldPoint snapToTraversable(WorldPoint requested)
+    {
+        try
+        {
+            if (collisionMap == null)
+            {
+                collisionMap = DrewsHelperCollisionMap.loadDefault();
+            }
+            return DrewsHelperTraversableTiles.nearest(collisionMap, requested);
+        }
+        catch (IOException ex)
+        {
+            log.warn("Drew's Helper: collision data unavailable, placing waypoint as clicked", ex);
+            return requested;
+        }
     }
 
     private void clearWaypoints()
@@ -311,10 +464,83 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         waypoints[index] = null;
+        waypointArmed[index] = false;
         configManager.unsetConfiguration(CONFIG_GROUP, waypointPositionKey(index));
         syncWaypointMarker(index);
         markRouteDirty();
         log.debug("Cleared {}", waypointLabel(index));
+    }
+
+    /**
+     * Drops a waypoint the moment the player stands on it - once it is reached there is no route
+     * left to show for it.
+     *
+     * <p>Slots are cleared in place rather than renumbered. The slot is chosen by the user from
+     * the menu, and each slot owns a colour, so compacting the list would silently recolour and
+     * renumber the waypoints still ahead of them mid-journey.
+     */
+    private void clearReachedWaypoints()
+    {
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null || localPlayer.getWorldLocation() == null)
+        {
+            return;
+        }
+
+        WorldPoint here = localPlayer.getWorldLocation();
+        for (int index = 0; index < MAX_WAYPOINTS; index++)
+        {
+            if (reachedWaypoint(waypoints[index], here, waypointArmed, index))
+            {
+                log.debug("Reached {} at {} - clearing it", waypointLabel(index), here);
+                clearWaypoint(index);
+            }
+        }
+    }
+
+    /**
+     * Whether one slot counts as reached this tick, updating its armed flag as a side effect.
+     *
+     * <p>Standing anywhere other than the waypoint arms it. Only an armed waypoint clears on
+     * arrival, which is what stops a waypoint placed on your own tile from deleting itself a
+     * tick later. Static and array-driven so the rule is testable without a client.
+     */
+    static boolean reachedWaypoint(WorldPoint waypoint, WorldPoint here, boolean[] armed, int index)
+    {
+        if (waypoint == null || here == null)
+        {
+            return false;
+        }
+
+        if (!waypoint.equals(here))
+        {
+            armed[index] = true;
+            return false;
+        }
+        return armed[index];
+    }
+
+    /**
+     * The slot number behind a route leg. Destinations are the placed waypoints in slot order, so
+     * leg 0 is the first non-empty slot - which is not slot 0 if you only placed Waypoint #3, or
+     * once an earlier waypoint has been reached and cleared.
+     */
+    public int waypointSlotForLeg(int legIndex)
+    {
+        int seen = 0;
+        for (int index = 0; index < MAX_WAYPOINTS; index++)
+        {
+            if (waypoints[index] == null)
+            {
+                continue;
+            }
+            if (seen == legIndex)
+            {
+                return index;
+            }
+            seen++;
+        }
+        return legIndex;
     }
 
     private void markRouteDirty()
@@ -357,15 +583,17 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         WorldPoint start = localPlayer.getWorldLocation();
-        boolean useWildernessTransports = config().wildernessTransportsEnabled();
+        DrewsHelperTransportPolicy transportPolicy = transportPolicy();
+        // onGameTick runs on the client thread, which is the only place account state may be read.
+        DrewsHelperPlayerCapability capability = buildCapability();
         boolean benchmarkMovement = config().routeBenchmarkEnabled();
-        String signature = routeSignature(start, destinations, useWildernessTransports, benchmarkMovement);
+        String signature = routeSignature(start, destinations, transportPolicy, capability, benchmarkMovement);
         if (!routeDirty && signature.equals(lastRouteSignature))
         {
             return;
         }
 
-        submitRoute(start, destinations, signature, useWildernessTransports);
+        submitRoute(start, destinations, signature, transportPolicy, capability);
     }
 
     private void advanceCommittedRouteIfNeeded()
@@ -385,7 +613,7 @@ public class DrewsHelperPlugin extends Plugin
         CommittedRouteProgress progress = committedRouteProgress(
             snapshot.getPath(),
             localPlayer.getWorldLocation(),
-            COMMITTED_ROUTE_RECALCULATE_DISTANCE
+            ROUTE_RECALCULATE_OFF_PATH_DISTANCE
         );
         if (progress.shouldRecalculate())
         {
@@ -417,7 +645,8 @@ public class DrewsHelperPlugin extends Plugin
         WorldPoint start,
         List<WorldPoint> destinations,
         String signature,
-        boolean useWildernessTransports
+        DrewsHelperTransportPolicy transportPolicy,
+        DrewsHelperPlayerCapability capability
     )
     {
         if (routeExecutor == null)
@@ -439,7 +668,7 @@ public class DrewsHelperPlugin extends Plugin
             DrewsHelperRouteSnapshot calculatedSnapshot;
             try
             {
-                calculatedSnapshot = routeEngine(useWildernessTransports).solve(
+                calculatedSnapshot = routeEngine(transportPolicy, capability).solve(
                     start,
                     routeDestinations
                 );
@@ -468,22 +697,339 @@ public class DrewsHelperPlugin extends Plugin
         });
     }
 
-    private synchronized DrewsHelperWalkingRouteEngine routeEngine(boolean useWildernessTransports) throws IOException
+    private synchronized DrewsHelperWalkingRouteEngine routeEngine(
+        DrewsHelperTransportPolicy transportPolicy,
+        DrewsHelperPlayerCapability capability
+    ) throws IOException
     {
         if (collisionMap == null)
         {
             collisionMap = DrewsHelperCollisionMap.loadDefault();
         }
 
-        if (routeEngine == null || routeEngineUsesWildernessTransports != useWildernessTransports)
+        String cacheKey = transportPolicy.signature() + '#' + capability.signature();
+        if (routeEngine == null || !routeEngineCacheKey.equals(cacheKey))
         {
             routeEngine = new DrewsHelperWalkingRouteEngine(
                 collisionMap,
-                DrewsHelperTransportGraph.loadDefault(useWildernessTransports)
+                DrewsHelperTransportGraph.loadDefault(transportPolicy, capability)
             );
-            routeEngineUsesWildernessTransports = useWildernessTransports;
+            routeEngineCacheKey = cacheKey;
         }
         return routeEngine;
+    }
+
+    /**
+     * Snapshots the account state the router cares about. MUST be called on the client thread.
+     * Quests and unlock varbits are deliberately absent - those are attested by the checkboxes.
+     */
+    private DrewsHelperPlayerCapability buildCapability()
+    {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return DrewsHelperPlayerCapability.UNRESTRICTED;
+        }
+
+        DrewsHelperPlayerCapability.Builder builder = DrewsHelperPlayerCapability.builder();
+        for (Skill skill : Skill.values())
+        {
+            builder.skill(skill.name(), client.getRealSkillLevel(skill));
+        }
+
+        addItems(builder, client.getItemContainer(InventoryID.INV));
+        ItemContainer worn = client.getItemContainer(InventoryID.WORN);
+        addItems(builder, worn);
+        addUnlockState(builder);
+
+        return builder
+            .weightKg(client.getWeight())
+            .energyUnits(client.getEnergy())
+            .running(client.getVarpValue(VarPlayerID.OPTION_RUN) == 1)
+            .staminaActive(client.getVarbitValue(VarbitID.STAMINA_ACTIVE) != 0)
+            .ringOfEndurance(hasChargedRingOfEndurance(worn))
+            .gracefulRestorePercent(gracefulRestorePercent(worn))
+            .autoRunThresholdPercent(client.getVarbitValue(VarbitID.RUNENERGY_AUTOENABLE))
+            .staminaTicksRemaining(staminaTicksRemaining())
+            .build();
+    }
+
+    /**
+     * Ticks of stamina left, or 0 while the unit is still unmeasured - which keeps the previous
+     * behaviour of assuming the dose covers the whole route rather than inventing a number.
+     */
+    private int staminaTicksRemaining()
+    {
+        if (staminaTicksPerUnit <= 0)
+        {
+            return 0;
+        }
+        return Math.max(0, client.getVarbitValue(VarbitID.STAMINA_DURATION)) * staminaTicksPerUnit;
+    }
+
+    /**
+     * Learns how many game ticks one unit of the stamina duration varbit represents, by watching
+     * it count down. MUST be called on the client thread, once per tick.
+     *
+     * <p>The unit is not documented and RuneLite never converts this varbit anywhere, so guessing
+     * it would put an unverified number straight into the ETA. Measuring costs nothing: hold a
+     * dose for a few seconds and the answer falls out exactly.
+     */
+    private void updateStaminaCalibration()
+    {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
+        int duration = client.getVarbitValue(VarbitID.STAMINA_DURATION);
+        if (duration > 0 && lastStaminaDuration > 0)
+        {
+            int measured = staminaTicksPerUnit(
+                lastStaminaDuration, lastStaminaDurationTick, duration, tickCounter, staminaTicksPerUnit);
+            if (measured != staminaTicksPerUnit)
+            {
+                staminaTicksPerUnit = measured;
+                configManager.setConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY, measured);
+                log.info("DREW_ROUTE_BENCH stamina calibrated: 1 duration unit = {} tick(s), "
+                    + "current duration={} (~{} ticks left)", measured, duration, duration * measured);
+            }
+        }
+
+        if (duration != lastStaminaDuration)
+        {
+            lastStaminaDuration = duration;
+            lastStaminaDurationTick = tickCounter;
+        }
+    }
+
+    /**
+     * The measured tick-length of one stamina duration unit, or {@code known} if this sample
+     * cannot establish it.
+     *
+     * <p>Only a drop of exactly one unit counts. A larger drop means ticks went unobserved -
+     * lag, a hop, logging out - and would understate the interval. The 1..100 bound rejects
+     * nonsense from a long gap between observations.
+     */
+    static int parseStaminaUnit(String stored)
+    {
+        try
+        {
+            int value = Integer.parseInt(String.valueOf(stored).trim());
+            return value > 0 && value <= 100 ? value : 0;
+        }
+        catch (NumberFormatException ex)
+        {
+            return 0;
+        }
+    }
+
+    static int staminaTicksPerUnit(int previousValue, int previousTick, int currentValue, int currentTick, int known)
+    {
+        if (previousValue - currentValue != 1)
+        {
+            return known;
+        }
+
+        int elapsed = currentTick - previousTick;
+        if (elapsed < 1 || elapsed > 100)
+        {
+            return known;
+        }
+        return elapsed;
+    }
+
+    /**
+     * Snapshots quest completion and the unlock varbits/varplayers the transport data actually
+     * references. MUST be called on the client thread.
+     *
+     * <p>The id and quest lists come from the data, not from a hardcoded table, so upstream can
+     * add a requirement without a code change. Names that do not resolve to a RuneLite quest are
+     * logged once and then left out - the capability treats an absent entry as satisfied, so a
+     * data problem can never silently delete a route the player can actually use.
+     */
+    private void addUnlockState(DrewsHelperPlayerCapability.Builder builder)
+    {
+        try
+        {
+            Map<String, Quest> byName = questsByName();
+            List<String> unresolved = new ArrayList<>();
+            for (String name : DrewsHelperTransportGraph.requiredQuestNames())
+            {
+                Quest quest = byName.get(name.toLowerCase(Locale.ROOT));
+                if (quest == null)
+                {
+                    unresolved.add(name);
+                    continue;
+                }
+                builder.quest(name, quest.getState(client) == QuestState.FINISHED);
+            }
+
+            if (!unresolved.isEmpty() && !loggedUnresolvedQuests)
+            {
+                loggedUnresolvedQuests = true;
+                log.warn("Drew's Helper: {} transport quest name(s) do not match RuneLite's quest "
+                    + "list and are treated as satisfied: {}", unresolved.size(), unresolved);
+            }
+
+            for (int id : DrewsHelperTransportGraph.requiredVarbitIds())
+            {
+                builder.varbit(id, client.getVarbitValue(id));
+            }
+            for (int id : DrewsHelperTransportGraph.requiredVarPlayerIds())
+            {
+                builder.varPlayer(id, client.getVarpValue(id));
+            }
+        }
+        catch (IOException ex)
+        {
+            // The graph resource is unreadable; routing will fail louder elsewhere. Leaving the
+            // unlock maps empty keeps every edge satisfied rather than blocking the whole graph.
+            log.warn("Drew's Helper: could not read transport unlock requirements", ex);
+        }
+    }
+
+    private static Map<String, Quest> questsByName()
+    {
+        Map<String, Quest> byName = new HashMap<>();
+        for (Quest quest : Quest.values())
+        {
+            byName.put(quest.getName().toLowerCase(Locale.ROOT), quest);
+        }
+        return byName;
+    }
+
+    /**
+     * The charged and uncharged rings are separate items, so charge state is readable. We cannot
+     * see the exact count, so a ring below the 500-charge threshold still reads as active.
+     */
+    private static boolean hasChargedRingOfEndurance(ItemContainer worn)
+    {
+        if (worn == null)
+        {
+            return false;
+        }
+        Item ring = worn.getItem(EquipmentInventorySlot.RING.getSlotIdx());
+        return ring != null && ring.getId() == ItemID.RING_OF_ENDURANCE;
+    }
+
+    /**
+     * Graceful gives a per-piece run-energy restoration bonus, not an all-or-nothing one:
+     * hood 3, top 4, legs 4, gloves 3, boots 3, cape 3 = 20, plus 10 more for the complete set.
+     *
+     * <p>Matched on item name rather than id — there are 147 graceful item ids across the colour
+     * variants, and new recolours keep appearing.
+     */
+    private int gracefulRestorePercent(ItemContainer worn)
+    {
+        if (worn == null)
+        {
+            return 0;
+        }
+
+        int percent = 0;
+        int pieces = 0;
+        for (Map.Entry<EquipmentInventorySlot, Integer> entry : GRACEFUL_SLOT_PERCENT.entrySet())
+        {
+            Item item = worn.getItem(entry.getKey().getSlotIdx());
+            if (item == null || item.getId() <= 0)
+            {
+                continue;
+            }
+
+            ItemComposition composition = client.getItemDefinition(item.getId());
+            if (composition == null || !composition.getName().toLowerCase(Locale.ROOT).contains("graceful"))
+            {
+                continue;
+            }
+
+            percent += entry.getValue();
+            pieces++;
+        }
+
+        if (pieces == GRACEFUL_SLOT_PERCENT.size())
+        {
+            percent += 10;
+        }
+        return percent;
+    }
+
+    private static void addItems(DrewsHelperPlayerCapability.Builder builder, ItemContainer container)
+    {
+        if (container == null)
+        {
+            return;
+        }
+        for (Item item : container.getItems())
+        {
+            if (item != null && item.getId() > 0)
+            {
+                builder.item(item.getId(), Math.max(1, item.getQuantity()));
+            }
+        }
+    }
+
+    @Subscribe
+    public void onStatChanged(StatChanged event)
+    {
+        // Fires on every XP drop, so key on the LEVEL. Keying on experience would rebuild
+        // the route on every hit while training.
+        Skill skill = event.getSkill();
+        if (skill == null || !ROUTE_RELEVANT_SKILLS.contains(skill))
+        {
+            // A Cooking level cannot open or close a transport, so it must not cost a rebuild.
+            return;
+        }
+
+        int level = client.getRealSkillLevel(skill);
+        Integer previous = lastKnownSkillLevels.put(skill, level);
+        if (previous != null && previous != level)
+        {
+            markRouteDirty();
+        }
+    }
+
+    @Subscribe
+    public void onItemContainerChanged(ItemContainerChanged event)
+    {
+        // Carried items gate canoes (axe), grapple shortcuts (crossbow + grapple) and paid ferries.
+        int containerId = event.getContainerId();
+        if (containerId == InventoryID.INV || containerId == InventoryID.WORN)
+        {
+            markRouteDirty();
+        }
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() == GameState.LOGGED_IN)
+        {
+            lastKnownSkillLevels.clear();
+            markRouteDirty();
+        }
+    }
+
+    /**
+     * Which transport families the router may use. The checkbox is an attestation that
+     * the family is unlocked on this account; per-edge requirement checking arrives with
+     * the capability snapshot.
+     */
+    private DrewsHelperTransportPolicy transportPolicy()
+    {
+        // Only two families are still a choice. The rest are always loaded and gated per edge
+        // by the capability snapshot, which knows the account's real skills, items, quests
+        // and unlock varbits.
+        DrewsHelperConfig config = config();
+        return DrewsHelperTransportPolicy.builder()
+            .wilderness(config.wildernessTransportsEnabled())
+            .magicMushtrees(config.magicMushtreesUnlocked())
+            .build();
+    }
+
+    private static boolean isTransportConfigKey(String key)
+    {
+        return "useWildernessTransports".equals(key)
+            || "useMagicMushtrees".equals(key);
     }
 
     private void cancelRouteFuture()
@@ -499,12 +1045,14 @@ public class DrewsHelperPlugin extends Plugin
     private static String routeSignature(
         WorldPoint start,
         List<WorldPoint> destinations,
-        boolean useWildernessTransports,
+        DrewsHelperTransportPolicy transportPolicy,
+        DrewsHelperPlayerCapability capability,
         boolean benchmarkMovement
     )
     {
         StringBuilder signature = new StringBuilder();
-        signature.append(useWildernessTransports ? "wilderness=1|" : "wilderness=0|");
+        signature.append("transports=").append(transportPolicy.signature()).append('|');
+        signature.append("account=").append(capability.signature()).append('|');
         signature.append(benchmarkMovement ? "benchmark=1|" : "benchmark=0|");
         appendPoint(signature, start);
         for (WorldPoint destination : destinations)
@@ -528,14 +1076,89 @@ public class DrewsHelperPlugin extends Plugin
     {
         routeBenchmarkCapture = null;
         routeBenchmarkSummary = "";
+        etaDebugCapture = null;
+    }
+
+    /**
+     * Predicted-versus-actual ETA check, driven off the benchmark's movement lifecycle.
+     *
+     * <p>The clock starts on the first tick the player actually moves, not when the route goes
+     * ready, so time spent standing at the start does not count against the forecast.
+     */
+    private static final class EtaDebugCapture
+    {
+        private final int predictedTicks;
+        private final String inputs;
+        private final WorldPoint destination;
+        private WorldPoint lastPosition;
+        private boolean moving;
+        private int elapsedTicks;
+
+        EtaDebugCapture(int predictedTicks, String inputs, WorldPoint destination)
+        {
+            this.predictedTicks = predictedTicks;
+            this.inputs = inputs;
+            this.destination = destination;
+        }
+
+        String startLine()
+        {
+            return "eta predicted=" + predictedTicks + "t ("
+                + DrewsHelperTravelEstimate.formatTicks(predictedTicks) + ") " + inputs;
+        }
+
+        /** Clocks a tick, starting the count on the first one where the player actually moved. */
+        void onTick(WorldPoint here)
+        {
+            if (lastPosition != null && !lastPosition.equals(here))
+            {
+                moving = true;
+            }
+            lastPosition = here;
+            if (moving)
+            {
+                elapsedTicks++;
+            }
+        }
+
+        /** Arrival is judged against the route's own final tile, not the benchmark's progress. */
+        boolean hasArrived(WorldPoint here)
+        {
+            return moving && destination != null && destination.equals(here);
+        }
+
+        String resultLine()
+        {
+            int delta = elapsedTicks - predictedTicks;
+            String percent = predictedTicks > 0
+                ? String.format("%+.1f%%", (100.0 * delta) / predictedTicks)
+                : "n/a";
+
+            return "eta result predicted=" + predictedTicks + "t ("
+                + DrewsHelperTravelEstimate.formatTicks(predictedTicks) + ") actual="
+                + elapsedTicks + "t (" + DrewsHelperTravelEstimate.formatTicks(elapsedTicks)
+                + ") delta=" + (delta >= 0 ? "+" : "") + delta + "t " + percent
+                + " | " + inputs;
+        }
     }
 
     private void startRouteBenchmarkIfNeeded(DrewsHelperRouteSnapshot snapshot)
     {
         clearRouteBenchmark();
-        if (!config().routeBenchmarkEnabled()
-            || snapshot.getStatus() != DrewsHelperRouteStatus.READY
-            || !snapshot.hasPath())
+        if (snapshot.getStatus() != DrewsHelperRouteStatus.READY || !snapshot.hasPath())
+        {
+            return;
+        }
+
+        // ETA accuracy logging is independent of the movement benchmark. It is two lines per
+        // journey, so it can stay on permanently and catch a forecast that starts drifting,
+        // rather than only firing when someone remembered to enable the benchmark first.
+        if (config().etaDebugLogging())
+        {
+            startEtaDebugCapture(snapshot);
+        }
+
+        if (!config().routeBenchmarkEnabled())
         {
             return;
         }
@@ -552,6 +1175,70 @@ public class DrewsHelperPlugin extends Plugin
             searchMetricsSummary(snapshot.getPrimaryMetrics())
         );
         log.info("DREW_ROUTE_BENCH {}", routeBenchmarkCapture.startTraceLine());
+    }
+
+    /**
+     * Snapshots the forecast while it still describes the whole journey. refreshTravelEstimate
+     * recomputes from the player's current position every tick, so by arrival it reads zero and
+     * would be useless as a comparison baseline.
+     */
+    private void startEtaDebugCapture(DrewsHelperRouteSnapshot snapshot)
+    {
+        List<WorldPoint> path = snapshot.getPath();
+        if (path == null || path.isEmpty())
+        {
+            return;
+        }
+
+        DrewsHelperPlayerCapability capability = buildCapability();
+        DrewsHelperTravelEstimate predicted = DrewsHelperTravelEstimate.estimate(
+            path,
+            snapshot.getDestinations(),
+            routeEngine == null ? null : routeEngine.getTransportGraph(),
+            capability
+        );
+        if (predicted.isEmpty())
+        {
+            return;
+        }
+
+        etaDebugCapture = new EtaDebugCapture(
+            predicted.getTotalTicks(),
+            DrewsHelperTravelEstimate.describeEnergyModel(capability),
+            path.get(path.size() - 1)
+        );
+        log.info("DREW_ROUTE_BENCH {}", etaDebugCapture.startLine());
+    }
+
+    /**
+     * Advances the predicted-versus-actual ETA clock and reports on arrival.
+     *
+     * <p>Runs every tick from the very top of {@code onGameTick}, deliberately independent of
+     * route state and of the movement benchmark. Reaching the last waypoint clears it, which
+     * dirties the route and short-circuits the rest of the tick, so anything checking arrival
+     * later in the tick would never see it.
+     */
+    private void updateEtaDebugCapture()
+    {
+        EtaDebugCapture eta = etaDebugCapture;
+        if (eta == null)
+        {
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null || localPlayer.getWorldLocation() == null)
+        {
+            return;
+        }
+
+        WorldPoint here = localPlayer.getWorldLocation();
+        eta.onTick(here);
+        if (eta.hasArrived(here))
+        {
+            log.info("DREW_ROUTE_BENCH {}", eta.resultLine());
+            etaDebugCapture = null;
+        }
     }
 
     private void recordRouteBenchmarkPosition()
@@ -831,7 +1518,7 @@ public class DrewsHelperPlugin extends Plugin
             int startDistance = tileDistance(point, start);
             if (pendingTicks >= ROUTE_BENCHMARK_PENDING_START_TICK_LIMIT
                 || pendingMoves >= ROUTE_BENCHMARK_PENDING_START_MOVE_LIMIT
-                || startDistance > COMMITTED_ROUTE_RECALCULATE_DISTANCE)
+                || startDistance > ROUTE_BENCHMARK_STALE_START_DISTANCE)
             {
                 return RouteBenchmarkUpdate.ignored(
                     pendingTicks,

@@ -170,3 +170,45 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - Checked Myth's final Point 1 / Point 2 / Point 3 control rerun after the D-0056 random-chain samples. All three visible routes completed with `full=true`, `lenDelta=0`, `maxDev=0`, and `divergence={none}`.
 - The old same-chain fork where `actualRank=1` was promising but did not generalize across new random chains; usable random-chain misses were mostly `sameTimePermutation benign=true`, and the contaminated short-click run is not promotion evidence.
 - No code behavior changed for this closeout. Updated the guide state so future work starts from "route behavior unchanged, diagnostics available" instead of another required rerun.
+
+### D-0058 - Basic Transportation checkboxes now gate the route graph
+- Date: 2026-08-09
+- The Basic Transportation checkboxes were cosmetic. They now select which transport families the router may use, via a new `DrewsHelperTransportPolicy` (immutable enabled-family set plus a stable `signature()` for cache keys).
+- Added `DrewsHelperTransportCategory` with nine families: `BASELINE`, `WILDERNESS`, `AGILITY_SHORTCUT`, `GRAPPLE_SHORTCUT`, `CANOE`, `GNOME_GLIDER`, `HOT_AIR_BALLOON`, `MAGIC_MUSHTREE`, `QUETZAL`. `BASELINE` is always enabled and cannot be switched off.
+- Added `DrewsHelperPlayerCapability`, an immutable snapshot of real (unboosted) skill levels and carried items, built on the client thread and safe to read from the solver thread.
+- Edges now pass two gates: the family is enabled by the policy, and the account currently meets the edge's skill and item requirements.
+
+### D-0059 - Transport resource regenerated with requirement data
+- Date: 2026-08-09
+- `drewshelper-transports.tsv` went from 4 columns to 10: `category, source, destination, label, duration, skills, quests, items, varbits, varplayers`.
+- Rebuilt from upstream: 5,683 edges to 7,331. Every pre-existing edge verified still present, zero regressions.
+- New families recovered: 557 agility shortcuts, 269 balloon, 182 quetzal, 103 glider, 45 canoe, 29 mushtree, 15 grapple. `WILDERNESS` 325 to 331, `BASELINE` 5,358 to 5,800 (the extra baseline rows carry requirements the old format had to discard).
+- Added `DrewsHelperItemVariation`, mapping 17 symbolic item names to RuneLite `ItemID` arrays. The other 10 symbols in the data are already raw item ids.
+- The generator now lives permanently at `tools/generate-drewshelper-transports.ps1` with `tools/README.md`. Verified it reproduces the shipped resource byte-for-byte from its new location.
+
+### D-0060 - Travel time estimate on the HUD
+- Date: 2026-08-09
+- Added `DrewsHelperTravelEstimate`: a tick-by-tick run-energy simulation over the finished path, producing total ETA, per-waypoint leg times, and which transport families the route uses.
+- Energy cannot live inside A*, because what a tile costs depends on the energy you have when you reach it, which depends on the whole path taken to get there. The search keeps fixed costs; the estimate walks the finished path forward.
+- Fixed a real routing bug found on the way: transports were priced as one step regardless of duration, and the reverse-distance ranking pass used uniform-cost BFS, which is wrong once edges have different weights. Transport steps now cost `2 x durationTicks` and the reverse pass is Dijkstra with relaxation.
+- Validated in game: a 343-tile route predicted 2:25 and arrived at 2:25 on a stopwatch.
+
+### D-0061 - Toggle latency fixes
+- Date: 2026-08-09
+- The transport resource was being re-read and re-parsed on every checkbox toggle, inventory change, or coin pickup, because account state is part of the engine cache key. It is now parsed once into an immutable master list and filtered in memory per policy and capability.
+- `onStatChanged` narrowed to 13 route-relevant skills. A Cooking level cannot open or close a transport, so it no longer costs a rebuild.
+- The overlay keeps the last known Route Steps and ETA on screen, greyed, while a new solve is in flight. They previously vanished, which made a slow solve look like the plugin had died.
+
+### D-0062 - Run-energy model reads real gear and run state
+- Date: 2026-08-09
+- Added live reads for graceful, stamina, ring of endurance, and the run toggle.
+- Graceful is per-piece, not all-or-nothing: hood 3, top 4, legs 4, gloves 3, boots 3, cape 3 for 20, and the complete set adds 10 more for 30. Matched on item name containing "graceful" per slot, because 147 item ids across colour variants makes id-matching unmaintainable.
+- **Bug fixed:** stamina and the ring of endurance were being applied multiplicatively (x0.3 then x0.85). The wiki is explicit that the ring's passive does not stack with the stamina effect, so the ring is now only applied when stamina is inactive.
+- Added `autoRunThresholdPercent` from `VarbitID.RUNENERGY_AUTOENABLE`. Run is now a live state inside the simulation rather than a constant, so an account with the re-enable threshold set resumes running once energy climbs back over it instead of forecasting a walk that never happens.
+
+### D-0063 - Predicted-versus-actual ETA logging
+- Date: 2026-08-09
+- Hung ETA verification off the existing benchmark movement lifecycle rather than building a parallel system. Reuses the `routeBenchmarkEnabled` config toggle and the `DREW_ROUTE_BENCH` log prefix.
+- On benchmark start, logs the forecast plus every energy-model input and the two derived rates via `DrewsHelperTravelEstimate.describeEnergyModel(...)`. On arrival, logs predicted versus actual ticks with the delta and percentage error.
+- The clock starts on the first tick the player actually moves, so time spent standing at the start does not count against the forecast.
+- The forecast is snapshotted at start. `refreshTravelEstimate` recomputes from the player's current position every tick, so by arrival it reads zero and would be useless as a comparison baseline.

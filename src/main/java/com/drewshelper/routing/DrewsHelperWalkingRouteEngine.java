@@ -146,6 +146,12 @@ public final class DrewsHelperWalkingRouteEngine
         );
     }
 
+    /** Needed by the travel-time estimator to tell a transport hop from a walked tile. */
+    public DrewsHelperTransportGraph getTransportGraph()
+    {
+        return transportGraph;
+    }
+
     public List<MoveCandidate> moveCandidates(WorldPoint from, WorldPoint target)
     {
         if (from == null || target == null)
@@ -595,16 +601,27 @@ public final class DrewsHelperWalkingRouteEngine
         boolean localWalkingOverridesEnabled
     )
     {
-        Queue<WorldPoint> open = new ArrayDeque<>();
+        // Dijkstra, not BFS: transport edges no longer all cost the same, and a FIFO queue
+        // only produces correct distances when every edge weighs one.
+        PriorityQueue<ReverseNode> open = new PriorityQueue<>();
         Map<WorldPoint, Integer> distances = new HashMap<>();
-        open.add(target);
+        open.add(new ReverseNode(target, 0));
         distances.put(target, 0);
         int expanded = 0;
 
         while (!open.isEmpty())
         {
-            WorldPoint point = open.remove();
-            int distance = distances.get(point);
+            ReverseNode current = open.remove();
+            WorldPoint point = current.point;
+            int distance = current.distance;
+
+            Integer best = distances.get(point);
+            if (best == null || distance > best)
+            {
+                // Superseded by a shorter route found after this entry was queued.
+                continue;
+            }
+
             if (distance >= maxDistance)
             {
                 continue;
@@ -636,7 +653,7 @@ public final class DrewsHelperWalkingRouteEngine
         WorldPoint point,
         int distance,
         SearchBounds bounds,
-        Queue<WorldPoint> open,
+        PriorityQueue<ReverseNode> open,
         Map<WorldPoint, Integer> distances,
         boolean localWalkingOverridesEnabled
     )
@@ -647,15 +664,9 @@ public final class DrewsHelperWalkingRouteEngine
         for (Move move : MOVES)
         {
             WorldPoint predecessor = new WorldPoint(x - move.x, y - move.y, plane);
-            if (!bounds.contains(predecessor) || distances.containsKey(predecessor))
-            {
-                continue;
-            }
-
             if (canMove(predecessor.getX(), predecessor.getY(), predecessor.getPlane(), move))
             {
-                distances.put(predecessor, distance + 1);
-                open.add(predecessor);
+                relax(predecessor, distance + 1, bounds, open, distances);
             }
         }
 
@@ -670,43 +681,60 @@ public final class DrewsHelperWalkingRouteEngine
         WorldPoint point,
         int distance,
         SearchBounds bounds,
-        Queue<WorldPoint> open,
+        PriorityQueue<ReverseNode> open,
         Map<WorldPoint, Integer> distances
     )
     {
         for (LocalWalkingOverride override : LOCAL_WALKING_OVERRIDES)
         {
             WorldPoint predecessor = override.from;
-            if (!override.matches(predecessor, point, target)
-                || !bounds.contains(predecessor)
-                || distances.containsKey(predecessor))
+            if (!override.matches(predecessor, point, target))
             {
                 continue;
             }
 
-            distances.put(predecessor, distance + 1);
-            open.add(predecessor);
+            relax(predecessor, distance + 1, bounds, open, distances);
         }
+    }
+
+    /**
+     * Dijkstra relaxation. Replaces the old first-visit-wins guard, which was only correct
+     * while every edge cost one.
+     */
+    private static void relax(
+        WorldPoint predecessor,
+        int candidateDistance,
+        SearchBounds bounds,
+        PriorityQueue<ReverseNode> open,
+        Map<WorldPoint, Integer> distances
+    )
+    {
+        if (!bounds.contains(predecessor))
+        {
+            return;
+        }
+
+        Integer known = distances.get(predecessor);
+        if (known != null && known <= candidateDistance)
+        {
+            return;
+        }
+
+        distances.put(predecessor, candidateDistance);
+        open.add(new ReverseNode(predecessor, candidateDistance));
     }
 
     private void addReverseTransportPredecessors(
         WorldPoint point,
         int distance,
         SearchBounds bounds,
-        Queue<WorldPoint> open,
+        PriorityQueue<ReverseNode> open,
         Map<WorldPoint, Integer> distances
     )
     {
         for (DrewsHelperTransportEdge edge : transportGraph.edgesTo(point))
         {
-            WorldPoint predecessor = edge.getSource();
-            if (!bounds.contains(predecessor) || distances.containsKey(predecessor))
-            {
-                continue;
-            }
-
-            distances.put(predecessor, distance + 1);
-            open.add(predecessor);
+            relax(edge.getSource(), distance + transportCostUnits(edge), bounds, open, distances);
         }
     }
 
@@ -718,7 +746,8 @@ public final class DrewsHelperWalkingRouteEngine
         Map<WorldPoint, SearchNode> bestNodes
     )
     {
-        addNeighbor(node, step.destination, step.move, step.preferencePenalty, context, open, bestNodes);
+        addNeighbor(node, step.destination, step.move, step.preferencePenalty, step.costUnits,
+            context, open, bestNodes);
     }
 
     private void addNeighbor(
@@ -726,12 +755,13 @@ public final class DrewsHelperWalkingRouteEngine
         WorldPoint neighbor,
         Move move,
         int stepPreferencePenalty,
+        int stepCostUnits,
         SearchContext context,
         PriorityQueue<SearchNode> open,
         Map<WorldPoint, SearchNode> bestNodes
     )
     {
-        int distance = node.distance + 1;
+        int distance = node.distance + Math.max(1, stepCostUnits);
         int remaining = heuristic(neighbor, context.target);
         int preferencePenalty = node.preferencePenalty + stepPreferencePenalty;
         int turns = node.previous == null || (node.directionX == move.x && node.directionY == move.y)
@@ -827,10 +857,23 @@ public final class DrewsHelperWalkingRouteEngine
                 Integer.compare(destination.getX(), from.getX()),
                 Integer.compare(destination.getY(), from.getY())
             );
-            steps.add(new RouteStep(order++, destination, direction, true, 0));
+            steps.add(new RouteStep(order++, destination, direction, true, 0, transportCostUnits(edge)));
         }
 
         return steps;
+    }
+
+    /**
+     * Cost of an edge in half-ticks.
+     *
+     * <p>Running covers two tiles per game tick, so one walked tile already IS one half-tick -
+     * which is why plain steps stay at cost 1 and only transports needed repricing. A transport
+     * that takes D ticks costs 2 * D. Without this a quetzal flight cost the same as one
+     * footstep and the router bent every route through the nearest transport.
+     */
+    private static int transportCostUnits(DrewsHelperTransportEdge edge)
+    {
+        return Math.max(1, 2 * edge.getDurationTicks());
     }
 
     private static boolean containsStepDestination(List<RouteStep> steps, WorldPoint destination)
@@ -1332,14 +1375,47 @@ public final class DrewsHelperWalkingRouteEngine
         private final Move move;
         private final boolean transport;
         private final int preferencePenalty;
+        private final int costUnits;
 
         private RouteStep(int order, WorldPoint destination, Move move, boolean transport, int preferencePenalty)
+        {
+            this(order, destination, move, transport, preferencePenalty, 1);
+        }
+
+        private RouteStep(
+            int order,
+            WorldPoint destination,
+            Move move,
+            boolean transport,
+            int preferencePenalty,
+            int costUnits
+        )
         {
             this.order = order;
             this.destination = destination;
             this.move = move;
             this.transport = transport;
             this.preferencePenalty = preferencePenalty;
+            this.costUnits = Math.max(1, costUnits);
+        }
+    }
+
+    /** Reverse-search entry. Carries its own distance so the queue can order on it. */
+    private static final class ReverseNode implements Comparable<ReverseNode>
+    {
+        private final WorldPoint point;
+        private final int distance;
+
+        private ReverseNode(WorldPoint point, int distance)
+        {
+            this.point = point;
+            this.distance = distance;
+        }
+
+        @Override
+        public int compareTo(ReverseNode other)
+        {
+            return Integer.compare(distance, other.distance);
         }
     }
 

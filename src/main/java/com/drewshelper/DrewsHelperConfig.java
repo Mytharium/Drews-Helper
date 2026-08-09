@@ -24,18 +24,16 @@ public interface DrewsHelperConfig extends Config
     )
     String teleportOptions = "teleportOptions";
 
-    @ConfigSection(
-        name = "Basic Transportation",
-        description = "Unlock-based travel networks. Ordinary click/pay transports are built into routing.",
-        position = 2,
-        closedByDefault = true
-    )
-    String transportationOptions = "transportationOptions";
+    // "Basic Transportation" is gone. Agility shortcuts, canoes, grapples, gliders, balloons
+    // and quetzals are always available now and gated per edge by the account's real skills,
+    // carried items, completed quests and unlock varbits - which is strictly more accurate
+    // than a checkbox. Only the two that a checkbox can still answer remain, and both live in
+    // other sections.
 
     @ConfigSection(
         name = "Advanced Transportation",
         description = "Account unlocks and player-owned house travel settings.",
-        position = 3,
+        position = 2,
         closedByDefault = true
     )
     String advancedTransportationOptions = "advancedTransportationOptions";
@@ -43,7 +41,7 @@ public interface DrewsHelperConfig extends Config
     @ConfigSection(
         name = "Other Transportation",
         description = "Teleport item families and dangerous Wilderness transport preference.",
-        position = 4,
+        position = 3,
         closedByDefault = true
     )
     String otherTransportationOptions = "otherTransportationOptions";
@@ -51,7 +49,7 @@ public interface DrewsHelperConfig extends Config
     @ConfigSection(
         name = "Settings",
         description = "Waypoint path colour preferences.",
-        position = 5,
+        position = 4,
         closedByDefault = false
     )
     String waypointSettings = "waypointSettings";
@@ -92,12 +90,6 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
-    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Benchmark Movement", description = "Log DREW_ROUTE_BENCH overlay-vs-client movement comparisons while you walk the route.", section = routingOptions, position = 6)
-    default boolean routeBenchmarkEnabled()
-    {
-        return false;
-    }
-
     @ConfigItem(keyName = "teleportAssistEnabled", name = "Teleport Highlighter", description = "Reserved for highlighting the selected teleport UI when teleport routing is rebuilt.", section = teleportOptions, position = 0)
     default boolean teleportAssistEnabled()
     {
@@ -116,48 +108,6 @@ public interface DrewsHelperConfig extends Config
         return true;
     }
 
-    @ConfigItem(keyName = "useAgilityShortcuts", name = "Unlocked: Agility Shortcuts", description = "Allow agility shortcuts once your skill and quest requirements are met.", section = transportationOptions, position = 0)
-    default boolean agilityShortcutsUnlocked()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "useCanoes", name = "Unlocked: Canoes", description = "Allow canoe routes when you have the axe and Woodcutting level needed.", section = transportationOptions, position = 1)
-    default boolean canoesUnlocked()
-    {
-        return false;
-    }
-
-    @ConfigItem(keyName = "useQuetzals", name = "Unlocked: Quetzals", description = "Allow quetzal and quetzal whistle routes once your account has them unlocked.", section = transportationOptions, position = 2)
-    default boolean quetzalsUnlocked()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "useGnomeGliders", name = "Unlocked: Gnome Gliders", description = "Allow gnome glider routes once your account has them unlocked.", section = transportationOptions, position = 3)
-    default boolean gnomeGlidersUnlocked()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "useGrappleShortcuts", name = "Unlocked: Grapple Shortcuts", description = "Allow grapple shortcuts once your Agility, Ranged, and Strength requirements are met.", section = transportationOptions, position = 4)
-    default boolean grappleShortcutsUnlocked()
-    {
-        return false;
-    }
-
-    @ConfigItem(keyName = "useMagicMushtrees", name = "Unlocked: Magic Mushtrees", description = "Allow Fossil Island magic mushtree routes once your account has them unlocked.", section = transportationOptions, position = 5)
-    default boolean magicMushtreesUnlocked()
-    {
-        return true;
-    }
-
-    @ConfigItem(keyName = "useHotAirBalloons", name = "Unlocked: Hot-Air Balloons", description = "Allow hot-air balloon routes once your account has them unlocked.", section = transportationOptions, position = 6)
-    default boolean hotAirBalloonsUnlocked()
-    {
-        return false;
-    }
-
     @ConfigItem(keyName = "spiritTreesUnlocked", name = "Unlocked: Spirit Trees", description = "Allow spirit tree routes once your account has them unlocked.", section = advancedTransportationOptions, position = 0)
     default boolean spiritTreesUnlocked()
     {
@@ -170,25 +120,31 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
-    @ConfigItem(keyName = "pohMountedGloryUnlocked", name = "Unlocked: Mounted Glory", description = "Allow routes through your own player-owned house mounted amulet of glory.", section = advancedTransportationOptions, position = 2)
+    @ConfigItem(keyName = "useMagicMushtrees", name = "Unlocked: Magic Mushtrees", description = "Allow Fossil Island magic mushtree routes. Upstream carries no requirement data for these, so this box is your attestation that you have discovered them.", section = advancedTransportationOptions, position = 2)
+    default boolean magicMushtreesUnlocked()
+    {
+        return false;
+    }
+
+    @ConfigItem(keyName = "pohMountedGloryUnlocked", name = "Unlocked: Mounted Glory", description = "Allow routes through your own player-owned house mounted amulet of glory.", section = advancedTransportationOptions, position = 3)
     default boolean pohMountedGloryUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "pohPortalChamberUnlocked", name = "Unlocked: Portal Chamber", description = "Allow routes through your own player-owned house portal chamber.", section = advancedTransportationOptions, position = 3)
+    @ConfigItem(keyName = "pohPortalChamberUnlocked", name = "Unlocked: Portal Chamber", description = "Allow routes through your own player-owned house portal chamber.", section = advancedTransportationOptions, position = 4)
     default boolean pohPortalChamberUnlocked()
     {
         return false;
     }
 
-    @ConfigItem(keyName = "pohPortalNexusTier", name = "Unlocked: Portal Nexus", description = "Select the highest portal nexus tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 4)
+    @ConfigItem(keyName = "pohPortalNexusTier", name = "Unlocked: Portal Nexus", description = "Select the highest portal nexus tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 5)
     default PortalNexusTier pohPortalNexusTier()
     {
         return PortalNexusTier.NONE;
     }
 
-    @ConfigItem(keyName = "pohJewelryBoxTier", name = "Unlocked: Jewelry Box", description = "Select the highest jewelry box tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 5)
+    @ConfigItem(keyName = "pohJewelryBoxTier", name = "Unlocked: Jewelry Box", description = "Select the highest jewelry box tier unlocked in your own player-owned house.", section = advancedTransportationOptions, position = 6)
     default JewelleryBoxTier pohJewelryBoxTier()
     {
         return JewelleryBoxTier.NONE;
@@ -272,40 +228,52 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
-    @ConfigItem(keyName = "pathColor", name = "Path Colour", description = "Colour used for Drew's route overlay. Default: Burgundy (#800020).", section = waypointSettings, position = 0)
+    @ConfigItem(keyName = "pathColor", name = "Path Colour", description = "Colour used for Drew's route overlay. Default: Red (#FF0000).", section = waypointSettings, position = 0)
     default Color pathColor()
     {
-        return new Color(0x800020);
+        return new Color(0xFF0000);
     }
 
-    @ConfigItem(keyName = "waypoint1PathColor", name = "Waypoint #1", description = "Marker colour for waypoint #1. Default: Dark Gray (#A9A9A9).", section = waypointSettings, position = 1)
+    @ConfigItem(keyName = "waypoint1PathColor", name = "Waypoint #1", description = "Marker colour for waypoint #1. Default: Orange (#FFA500).", section = waypointSettings, position = 1)
     default Color waypoint1PathColor()
     {
-        return new Color(0xA9A9A9);
+        return new Color(0xFFA500);
     }
 
-    @ConfigItem(keyName = "waypoint2PathColor", name = "Waypoint #2", description = "Marker colour for waypoint #2. Default: Blue (#0072B2).", section = waypointSettings, position = 2)
+    @ConfigItem(keyName = "waypoint2PathColor", name = "Waypoint #2", description = "Marker colour for waypoint #2. Default: Yellow (#FFFF00).", section = waypointSettings, position = 2)
     default Color waypoint2PathColor()
     {
-        return new Color(0x0072B2);
+        return new Color(0xFFFF00);
     }
 
-    @ConfigItem(keyName = "waypoint3PathColor", name = "Waypoint #3", description = "Marker colour for waypoint #3. Default: Green/Teal (#009E73).", section = waypointSettings, position = 3)
+    @ConfigItem(keyName = "waypoint3PathColor", name = "Waypoint #3", description = "Marker colour for waypoint #3. Default: Green (#008000).", section = waypointSettings, position = 3)
     default Color waypoint3PathColor()
     {
-        return new Color(0x009E73);
+        return new Color(0x008000);
     }
 
-    @ConfigItem(keyName = "waypoint4PathColor", name = "Waypoint #4", description = "Marker colour for waypoint #4. Default: Magenta/Purple (#CC79A7).", section = waypointSettings, position = 4)
+    @ConfigItem(keyName = "waypoint4PathColor", name = "Waypoint #4", description = "Marker colour for waypoint #4. Default: Blue (#0000FF).", section = waypointSettings, position = 4)
     default Color waypoint4PathColor()
     {
-        return new Color(0xCC79A7);
+        return new Color(0x0000FF);
     }
 
-    @ConfigItem(keyName = "waypoint5PathColor", name = "Waypoint #5", description = "Marker colour for waypoint #5. Default: Orange (#E69F00).", section = waypointSettings, position = 5)
+    @ConfigItem(keyName = "waypoint5PathColor", name = "Waypoint #5", description = "Marker colour for waypoint #5. Default: Indigo (#4B0082).", section = waypointSettings, position = 5)
     default Color waypoint5PathColor()
     {
-        return new Color(0xE69F00);
+        return new Color(0x4B0082);
+    }
+
+    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Log Benchmark Movement", description = "Log DREW_ROUTE_BENCH overlay-vs-client movement comparisons while you walk the route.", section = waypointSettings, position = 6)
+    default boolean routeBenchmarkEnabled()
+    {
+        return false;
+    }
+
+    @ConfigItem(keyName = "etaDebugLogging", name = "Log ETA Accuracy", description = "Log the predicted travel time at route start and the actual time on arrival, with the energy inputs used. Two lines per journey.", section = waypointSettings, position = 7)
+    default boolean etaDebugLogging()
+    {
+        return true;
     }
 
     default boolean hostedPohTeleports()

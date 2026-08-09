@@ -9,6 +9,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class DrewsHelperConfigTest
 {
@@ -24,9 +25,51 @@ public class DrewsHelperConfigTest
         assertNotNull(otherTransportationSection);
         assertNotNull(waypointSettingsSection);
         assertEquals("Other Transportation", otherTransportationSection.name());
-        assertEquals(4, otherTransportationSection.position());
         assertEquals("Settings", waypointSettingsSection.name());
-        assertEquals(5, waypointSettingsSection.position());
+
+        // Ordering, not absolute numbers - removing a section renumbers everything below it,
+        // and this test is about which sits below which.
+        assertTrue(waypointSettingsSection.position() > otherTransportationSection.position());
+    }
+
+    @Test
+    public void basicTransportationSectionIsRemovedAndMushtreesMovedToAdvanced() throws Exception
+    {
+        // Agility shortcuts, canoes, grapples, gliders, balloons and quetzals are gated by the
+        // account's real state now, so their checkboxes are gone and the section with them.
+        for (Field field : DrewsHelperConfig.class.getFields())
+        {
+            ConfigSection section = field.getAnnotation(ConfigSection.class);
+            if (section != null)
+            {
+                assertFalse("Basic Transportation".equals(section.name()));
+            }
+        }
+
+        for (String removed : new String[]{
+            "useAgilityShortcuts", "useCanoes", "useQuetzals",
+            "useGnomeGliders", "useGrappleShortcuts", "useHotAirBalloons"})
+        {
+            for (Method method : DrewsHelperConfig.class.getMethods())
+            {
+                ConfigItem item = method.getAnnotation(ConfigItem.class);
+                if (item != null)
+                {
+                    assertFalse(removed + " should no longer be a config item",
+                        removed.equals(item.keyName()));
+                }
+            }
+        }
+
+        // Mushtrees survive as an attestation box, now in Advanced Transportation.
+        DrewsHelperConfig config = new DrewsHelperConfig() {};
+        ConfigItem mushtrees = DrewsHelperConfig.class
+            .getMethod("magicMushtreesUnlocked").getAnnotation(ConfigItem.class);
+
+        assertNotNull(mushtrees);
+        assertEquals("useMagicMushtrees", mushtrees.keyName());
+        assertEquals("advancedTransportationOptions", mushtrees.section());
+        assertFalse(config.magicMushtreesUnlocked());
     }
 
     @Test
@@ -34,12 +77,12 @@ public class DrewsHelperConfigTest
     {
         DrewsHelperConfig config = new DrewsHelperConfig() {};
 
-        assertEquals(new Color(0x800020), config.pathColor());
-        assertEquals(new Color(0xA9A9A9), config.waypoint1PathColor());
-        assertEquals(new Color(0x0072B2), config.waypoint2PathColor());
-        assertEquals(new Color(0x009E73), config.waypoint3PathColor());
-        assertEquals(new Color(0xCC79A7), config.waypoint4PathColor());
-        assertEquals(new Color(0xE69F00), config.waypoint5PathColor());
+        assertEquals("Path Colour must be red", new Color(0xFF0000), config.pathColor());
+        assertEquals("Waypoint #1 must be orange", new Color(0xFFA500), config.waypoint1PathColor());
+        assertEquals("Waypoint #2 must be yellow", new Color(0xFFFF00), config.waypoint2PathColor());
+        assertEquals("Waypoint #3 must be green", new Color(0x008000), config.waypoint3PathColor());
+        assertEquals("Waypoint #4 must be blue", new Color(0x0000FF), config.waypoint4PathColor());
+        assertEquals("Waypoint #5 must be indigo", new Color(0x4B0082), config.waypoint5PathColor());
     }
 
     @Test
@@ -79,7 +122,8 @@ public class DrewsHelperConfigTest
         ConfigItem benchmarkEnabledItem = benchmarkEnabled.getAnnotation(ConfigItem.class);
 
         assertNotNull(benchmarkEnabledItem);
-        assertEquals("routingOptions", benchmarkEnabledItem.section());
+        assertEquals("Log Benchmark Movement", benchmarkEnabledItem.name());
+        assertEquals("waypointSettings", benchmarkEnabledItem.section());
         assertEquals(6, benchmarkEnabledItem.position());
         assertFalse(config.routeBenchmarkEnabled());
 
