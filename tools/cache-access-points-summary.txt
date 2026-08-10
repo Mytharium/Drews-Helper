@@ -7,9 +7,54 @@ transport endpoint tiles: 6434
 regions in our shipped map: 1524
 regions in the cache      : 2936
 object placements scanned : 4980697
+dropped as NOT-A-PASSAGE  : 1574  (Open/Close on a non-wall placement - containers)
+    - 642  Chest
+    - 241  Drawers
+    - 201  Closed chest
+    - 155  Wardrobe
+    - 69  null
+    - 45  Cupboard
+    - 44  Ogre Coffin
+    - 32  Black Chest
+    - 24  Steel Chest
+    - 16  Gold Chest
+    - 13  Coffin
+    - 12  Silver Chest
+    - 10  Lockbox
+    - 10  Bronze Chest
+    - 7  Fossil Storage
+    - 6  Closed Chest
+    - 6  Small chest
+    - 6  Manhole
+    - 4  Dark Chest
+    - 3  Zombie Pirate's Locker
+    - 3  Cave
+    - 2  Tomb exit
+    - 2  Champion Statue
+    - 2  Sacks
+    - 2  Kitchen Drawers
+RESCUED by name hint      : 100  (ambiguous verb, non-wall, but the name says passage)
+    + 42  Trapdoor
+    + 23  Door
+    + 6  Wooden doors
+    + 4  Frozen Door
+    + 4  Ardougne Wall Door
+    + 4  Tree Door
+    + 3  Gate
+    + 2  Ancient Gate
+    + 2  Doorway
+    + 2  Bamboo Gate
+    + 1  Vault Door
+    + 1  Bone door
+    + 1  Magic door
+    + 1  Mahogany trapdoor
+    + 1  Secret Door
+    + 1  Imposing doors
+    + 1  Old battered door
+    + 1  Imposing Doors
 regions the cache has that our collision map does NOT: 1425
 
-wrote 14048 rows to C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\cache-access-points.tsv
+wrote 12474 rows to C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\cache-access-points.tsv
 
 --- ACCEPTANCE: Falador west wall gate at 2935,3450 ---
   FOUND  2935,3450  id=1728  name=Gate  action=Open  covered=yes
@@ -17,28 +62,28 @@ wrote 14048 rows to C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews H
   RESULT: PASS - world-coordinate maths and object filtering are both correct.
 
 --- RESULT ---
-openable placements total : 14048
-  already covered by data : 2438
-  NOT covered             : 11610
+openable placements total : 12474
+  already covered by data : 2393
+  NOT covered             : 10081
 
 most common uncovered object names:
   1793  Door
   1478  Ladder
-  640  Chest
   583  Staircase
   573  Stairs
   396  Cloud bank
   353  Gate
   252  Vine ladder
-  226  Drawers
   202  Ship's ladder
-  197  Closed chest
   192  Wilderness Ditch
   166  Large door
   149  Pillar
-  146  null
-  145  Wardrobe
   131  Wall of flame
   105  Stone
-  91  Cave
+  90  Cave
+  84  null
   78  Gap
+  76  Rickety door
+  72  Gate of War
+  72  Portal of Death
+  71  Portal

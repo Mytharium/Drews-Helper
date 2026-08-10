@@ -104,7 +104,12 @@ If cooldown is active -> treat teleport as locked.
 The map-data work is BUILT but not yet WIRED IN. Route B produces a list; nothing in the
 plugin reads it yet. Everything below is in priority order - do them top down.
 
-### 1. Tighten the movement-verb filter  (small, ~20 min)
+### 1. Tighten the movement-verb filter  -- DONE 2026-08-10 (see D-0119)
+
+**Result: 14,048 -> 12,474 rows. 1,574 containers dropped, 100 real passages rescued, the
+Falador gate fixture still passes cold.** The fix was NOT the one predicted below - see D-0119.
+Original note kept for the record:
+
 
 Blocks judging everything else, so it goes first. `CacheAccessPointDumper.MOVEMENT_OPS`
 matches on "open", which also collects 640 Chest, 226 Drawers, 197 Closed chest and 145
@@ -115,7 +120,31 @@ Fix: intersect the verb match with the object actually obstructing movement.
 `getWallOrDoor()` - none are used yet. A chest blocks nothing you would path through.
 Done when: the Falador gate fixture still passes AND Chest/Drawers/Wardrobe are gone.
 
-### 2. Turn confirmed access points into real transport rows  (the actual payoff)
+### 2. Turn confirmed access points into real transport rows  -- IN PROGRESS, BLOCKED ON CONFIDENCE (see D-0120)
+
+**Generator built, rows not active.** `gradlew.bat generateTransportRows` writes
+`tools/cache-derived-gates.tsv` and deliberately never touches `tools/transport-overrides.tsv`.
+The current output is a review/ranking file, not routing data.
+
+The missing piece is confidence, not plumbing. A transport row needs two tiles, and the dump gives
+one. For wall placements, orientation gives a real signal about the edge: the Falador gate proves
+`orientation 2 = east`, and the current mapping is `0=W, 1=N, 2=E, 3=S`.
+
+But the control is not strong enough to ship:
+- predicted edge blocked: 65.0% (2172 of 3344)
+- perpendicular edge blocked: 40.1% (2680 of 6688)
+
+That 25-point gap proves orientation is not noise. It also proves this is not safe enough to bulk
+merge 1,282 crossings. A wrong row routes the player through a wall, which is worse than the detour
+we started from. Do not move `cache-derived-gates.tsv` rows into `transport-overrides.tsv` until
+they have live-client/manual proof or a stronger filter.
+
+Recommended next filter:
+- rank by detour severity and inspect only the worst chokepoints first
+- drop obvious instance/minigame names from the candidate set before review: Cloud bank, Portal of Death, Oozing barrier, Wall of flame, Gate of War, Energy Barrier
+- use Route A live mismatch reports to prove candidate rows against the client before merging
+
+Original note kept for the record:
 
 This is the step that fixes the original complaint. Until it happens, none of the work so
 far has changed a single route.
@@ -483,7 +512,10 @@ section has been changed. Append new findings here as they come up; strike them 
     - Five unit tests cover the validator: both mismatch directions, the blocked-destination
       rule, the coverage-hole guard, and silence on agreement. Suite 160 -> 165, 0 failures.
 
-16. **Route B's movement-verb filter is too loose - refine before trusting the 11,610.**
+16. ~~**Route B's movement-verb filter is too loose - refine before trusting the 11,610.**~~
+    **CLOSED 2026-08-10 (D-0119).** Fixed, but not the way this item predicted - the predicted
+    fix does not work. See the new item 18 for the small remaining tail.
+
     Matching on "Open" also catches containers: the uncovered breakdown is led by 1,793 Door and
     1,478 Ladder (both real) but also 640 Chest, 226 Drawers, 197 Closed chest and 145 Wardrobe,
     which are not movement at all. So 11,610 is an UPPER BOUND, not a gap count. The genuinely
@@ -497,6 +529,22 @@ section has been changed. Append new findings here as they come up; strike them 
     a build artifact rather than a source. Either gitignore it or commit it deliberately as a
     snapshot - but do not let it drift in uncommitted, which is how the earlier untracked
     `transport-overrides.tsv` problem started.
+
+18. **Small tail the passage filter still drops (2026-08-10, ~11 rows).**
+    The wall-placement + name-hint rule is right for the bulk, but three passage-ish names
+    carry an ambiguous verb on a non-wall placement and do not match any current name hint:
+    `Manhole` (6), `Cave` (3), `Tomb exit` (2).
+    `manhole` is a safe one-word addition to `PASSAGE_NAME_HINTS`. `cave` and `exit` are NOT
+    obviously safe - they are generic enough to risk re-admitting scenery, and the whole point
+    of that list is that it stays short and auditable. Decide deliberately rather than widening
+    it by reflex; the dumper prints everything the hints rescue, so any addition is checkable.
+
+19. **Cache-derived transport rows need a stronger acceptance filter before merge.**
+    `AccessPointRowGenerator` produced 1,282 candidate wall crossings / 2,564 bidirectional rows,
+    but the validation control is only 65.0% predicted-edge blocked versus 40.1% perpendicular-edge
+    blocked. Orientation is real signal, not enough certainty. Next pass should rank by detour
+    severity, remove obvious instance/minigame scenery names, and use Route A live-client mismatch
+    proof before moving any row into `transport-overrides.tsv`.
 
 ### Unconfirmed - status needs checking before acting
 

@@ -1,0 +1,50 @@
+=== ORIENTATION MAPPING PROOF ===
+If 0=W 1=N 2=E 3=S is right, a wall object's predicted edge should be blocked
+in our collision map nearly always. A low rate means the mapping is wrong.
+
+  dir     walls    blocked      rate  emitted
+  E         914        462     50.5%      253
+  N        1043        575     55.1%      354
+  S        1059        559     52.8%      322
+  W        1061        576     54.3%      353
+
+=== CONTROL: is orientation actually telling us anything? ===
+  predicted edge blocked     : 65.0%  (2172 of 3344)
+  perpendicular edge blocked : 40.1%  (2680 of 6688)
+  If these two are close, orientation is NOT a signal and the rows below
+  are guesses. A large gap means the mapping is real, not automatically
+  safe enough to merge without live/manual validation.
+
+=== FUNNEL ===
+  wall placements considered : 4077
+  no collision data          : 733
+  edge not actually blocked  : 1172  (no transport row needed - already walkable)
+  a side is not standable    : 698  (would be an invented shortcut)
+  already covered upstream   : 192
+  CANDIDATE CROSSINGS        : 1282
+  rows to write (both ways)  : 2564
+
+=== CANDIDATES BY NAME ===
+  368  Door
+  180  Gate
+  76  Rickety door
+  72  Gate of War
+  72  Portal of Death
+  62  Large door
+  61  Cloud bank
+  60  Oozing barrier
+  43  Grill
+  42  Wall of flame
+  20  Curtain
+  12  Castle door
+  12  Cell door
+  9  Solid black door
+  8  Energy Barrier
+  8  Neutral Barrier
+  7  Prison Gate
+  7  Solid steel door
+  7  Tent door
+  6  Bamboo Door
+
+wrote 2564 rows to C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\cache-derived-gates.tsv
+NOT merged into transport-overrides.tsv - review first, then move rows across.

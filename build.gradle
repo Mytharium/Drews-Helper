@@ -21,6 +21,11 @@ def pluginMainClass = 'com.drewshelper.DrewsHelperPluginTest'
 sourceSets {
     cachetools {
         java.srcDir 'src/cachetools/java'
+        // The row generator reads our own collision map to sanity-check candidate crossings
+        // before writing review-only rows, so it needs main on the classpath. Still one-way:
+        // nothing in main can see cachetools, so the cache dependency stays out of the jar.
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
     }
 }
 
@@ -77,4 +82,13 @@ tasks.register('dumpAccessPoints', JavaExec) {
     description = 'Decode the OSRS game cache and report gates/doors with no transport row.'
     classpath = sourceSets.cachetools.runtimeClasspath
     mainClass = 'com.drewshelper.cachetools.CacheAccessPointDumper'
+}
+
+// To-do #2 - derive candidate transport rows from the cache dump.
+// Writes tools/cache-derived-gates.tsv. Does NOT touch transport-overrides.tsv.
+tasks.register('generateTransportRows', JavaExec) {
+    group = 'drewshelper'
+    description = 'Turn wall-mounted access points into reviewable candidate transport rows.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.AccessPointRowGenerator'
 }

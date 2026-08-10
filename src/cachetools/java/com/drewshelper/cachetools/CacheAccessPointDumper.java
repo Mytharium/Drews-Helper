@@ -55,6 +55,45 @@ public final class CacheAccessPointDumper
     };
 
     /**
+     * Verbs that only mean "a way through" when the object is set into a wall.
+     *
+     * <p>Measured 2026-08-10: on non-wall placements, {@code Open} is 1,674 rows and every one
+     * of the top names is a container - Chest, Drawers, Closed Chest, Wardrobe. On WALL
+     * placements the same verb is Door, Gate and Large door. Same word, opposite meaning,
+     * decided entirely by how the object is placed.
+     */
+    private static final String[] AMBIGUOUS_OPS = {"open", "close"};
+
+    /**
+     * Placement types that mount an object INTO a wall rather than standing it on the ground.
+     *
+     * <p>This is the discriminator, and it lives on the placement rather than on the object
+     * definition. Measured: Gate 393/402 and Door 1850/1913 are type 0, Large door 188/188 are
+     * type 0, and NOT ONE container placement is a wall type - Chest, Drawers, Wardrobe,
+     * Cupboard, Barrel and Coffin are all type 10.
+     *
+     * <p>Do not try to replace this with an ObjectDefinition field. {@code interactType},
+     * {@code blockingMask} and {@code wallOrDoor} were all measured and all three overlap
+     * completely between gates and chests - a chest really is a solid object with an Open
+     * action, and the definition never records "you can get through this".
+     */
+    private static final int[] WALL_LOC_TYPES = {0, 1, 2, 3, 9};
+
+    /**
+     * Name fragments that stay a passage even with an ambiguous verb on a non-wall placement.
+     *
+     * <p>The wall test alone is a good filter but not a complete one: a trapdoor is genuinely
+     * floor-mounted and genuinely opens onto somewhere, and the first pass silently dropped 42
+     * of them plus 23 ground-placed doors along with the chests. Geometry cannot see that, so
+     * these few names are an explicit, auditable exception rather than a widened rule.
+     *
+     * <p>Substring match is deliberate - it catches "Trapdoor" and "Gate of War" alike. It is
+     * also why this list must stay short: every entry is a chance to re-admit a container.
+     * The dumper prints everything this rescues so the exception can never grow unnoticed.
+     */
+    private static final String[] PASSAGE_NAME_HINTS = {"door", "gate", "hatch", "grate"};
+
+    /**
      * The cache stores map archives unencrypted, so a zero key means "do not decrypt" and
      * everything parses. Verified against the live cache: 2,747 regions, 0 failures.
      */
@@ -168,6 +207,80 @@ public final class CacheAccessPointDumper
         return null;
     }
 
+    /**
+     * Whether this placement is something a route can actually pass through.
+     *
+     * <p>Neither half of this test works on its own. Placement type alone keeps chests (they
+     * share type 10 with ladders and staircases); verb alone keeps chests too (they share
+     * "Open" with doors). Together they separate cleanly.
+     */
+    private static boolean isPassage(String action, int locType, String name)
+    {
+        if (action == null || action.isEmpty())
+        {
+            return false;
+        }
+        String lower = action.toLowerCase(Locale.ROOT);
+        for (String ambiguous : AMBIGUOUS_OPS)
+        {
+            if (lower.startsWith(ambiguous))
+            {
+                // Open/Close counts when the object is mounted in a wall, or when the name
+                // says it is a way through wherever it sits (trapdoors, floor-placed doors).
+                return isWallPlacement(locType) || hasPassageName(name);
+            }
+        }
+        // Climb, Cross, Enter, Squeeze, Jump, Pass... are unambiguous wherever they sit.
+        return true;
+    }
+
+    private static boolean isAmbiguousVerb(String action)
+    {
+        if (action == null)
+        {
+            return false;
+        }
+        String lower = action.toLowerCase(Locale.ROOT);
+        for (String ambiguous : AMBIGUOUS_OPS)
+        {
+            if (lower.startsWith(ambiguous))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether the object name itself says "way through", for the ambiguous-verb case only. */
+    private static boolean hasPassageName(String name)
+    {
+        if (name == null)
+        {
+            return false;
+        }
+        String lower = name.toLowerCase(Locale.ROOT);
+        for (String hint : PASSAGE_NAME_HINTS)
+        {
+            if (lower.contains(hint))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isWallPlacement(int locType)
+    {
+        for (int wall : WALL_LOC_TYPES)
+        {
+            if (wall == locType)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static Set<Long> loadTransportTiles(Path tsv, StringBuilder log) throws IOException
     {
         Set<Long> tiles = new HashSet<>();
@@ -245,7 +358,10 @@ public final class CacheAccessPointDumper
         RegionLoader loader = new RegionLoader(store, ZERO_KEYS);
         List<AccessPoint> points = new ArrayList<>();
         Set<String> cacheRegions = new TreeSet<>();
+        Map<String, Integer> droppedByName = new HashMap<>();
+        Map<String, Integer> rescuedByName = new HashMap<>();
         long placements = 0;
+        long dropped = 0;
 
         for (int rx = MIN_REGION_X; rx <= MAX_REGION_X; rx++)
         {
@@ -277,6 +393,19 @@ public final class CacheAccessPointDumper
                     {
                         continue;
                     }
+                    String action = firstMovementOp(def);
+                    String defName = def.getName() == null ? "(unnamed)" : def.getName();
+                    if (!isWallPlacement(location.getType()) && hasPassageName(defName)
+                        && isAmbiguousVerb(action))
+                    {
+                        rescuedByName.merge(defName, 1, Integer::sum);
+                    }
+                    if (!isPassage(action, location.getType(), defName))
+                    {
+                        dropped++;
+                        droppedByName.merge(defName, 1, Integer::sum);
+                        continue;
+                    }
                     // LocationsDefinition holds region-LOCAL positions; world = region base + local.
                     int x = baseX + location.getPosition().getX();
                     int y = baseY + location.getPosition().getY();
@@ -286,7 +415,7 @@ public final class CacheAccessPointDumper
                         x, y, z,
                         location.getId(),
                         def.getName(),
-                        firstMovementOp(def),
+                        action,
                         location.getType(),
                         location.getOrientation(),
                         isCovered,
@@ -298,6 +427,24 @@ public final class CacheAccessPointDumper
 
         log.append("regions in the cache      : ").append(cacheRegions.size()).append('\n');
         log.append("object placements scanned : ").append(placements).append('\n');
+        log.append("dropped as NOT-A-PASSAGE  : ").append(dropped)
+            .append("  (Open/Close on a non-wall placement - containers)").append('\n');
+        List<Map.Entry<String, Integer>> drops = new ArrayList<>(droppedByName.entrySet());
+        drops.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
+        for (int i = 0; i < Math.min(25, drops.size()); i++)
+        {
+            log.append("    - ").append(drops.get(i).getValue()).append("  ")
+                .append(drops.get(i).getKey()).append('\n');
+        }
+        long rescued = rescuedByName.values().stream().mapToInt(Integer::intValue).sum();
+        log.append("RESCUED by name hint      : ").append(rescued)
+            .append("  (ambiguous verb, non-wall, but the name says passage)").append('\n');
+        List<Map.Entry<String, Integer>> saves = new ArrayList<>(rescuedByName.entrySet());
+        saves.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
+        for (Map.Entry<String, Integer> s : saves)
+        {
+            log.append("    + ").append(s.getValue()).append("  ").append(s.getKey()).append('\n');
+        }
 
         Set<String> missing = new TreeSet<>(cacheRegions);
         missing.removeAll(shippedRegions);
