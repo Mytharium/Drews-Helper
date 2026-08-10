@@ -16,6 +16,14 @@ repositories {
 def runeLiteVersion = 'latest.release'
 def pluginMainClass = 'com.drewshelper.DrewsHelperPluginTest'
 
+// Route B lives in its own source set on purpose: the cache-decoding dependency is a
+// build-time tool only and must never reach the shipped plugin jar or the test suite.
+sourceSets {
+    cachetools {
+        java.srcDir 'src/cachetools/java'
+    }
+}
+
 dependencies {
     compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
     compileOnly 'org.projectlombok:lombok:1.18.30'
@@ -24,6 +32,8 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
     testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
+
+    cachetoolsImplementation group: 'net.runelite', name: 'cache', version: runeLiteVersion
 }
 
 group = 'com.drewshelper'
@@ -58,4 +68,13 @@ tasks.register('shadowJar', Jar) {
     exclude 'META-INF/*.DSA'
     exclude 'META-INF/*.RSA'
     exclude '**/module-info.class'
+}
+
+// Route B - decode the OSRS game cache and report gates/doors that have no transport row.
+// Confirmed 2026-08-10: map archives decode with ZERO xtea keys, so no key file is needed.
+tasks.register('dumpAccessPoints', JavaExec) {
+    group = 'drewshelper'
+    description = 'Decode the OSRS game cache and report gates/doors with no transport row.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.CacheAccessPointDumper'
 }

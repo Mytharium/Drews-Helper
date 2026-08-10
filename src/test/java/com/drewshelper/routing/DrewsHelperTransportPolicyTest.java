@@ -152,6 +152,21 @@ public class DrewsHelperTransportPolicyTest
     }
 
     @Test
+    public void homeTeleportsCarryUpstreamsWildernessCap() throws Exception
+    {
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        List<DrewsHelperTransportEdge> rows =
+            originlessEdgesTo(DrewsHelperTransportGraph.loadDefault(false), lumbridge);
+
+        assertFalse("the generated resource must still carry home teleport rows", rows.isEmpty());
+        for (DrewsHelperTransportEdge edge : rows)
+        {
+            assertEquals("upstream caps home teleports at Wilderness level 20",
+                20, edge.getMaxWildernessLevel());
+        }
+    }
+
+    @Test
     public void homeTeleportCooldownFiltersTheLoadedGraph() throws Exception
     {
         WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);

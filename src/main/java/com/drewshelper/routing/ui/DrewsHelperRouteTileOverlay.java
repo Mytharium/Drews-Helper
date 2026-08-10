@@ -21,6 +21,7 @@ import net.runelite.api.GameObject;
 import net.runelite.api.NPC;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Perspective;
+import net.runelite.api.Point;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.coords.LocalPoint;
@@ -29,6 +30,7 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
+import net.runelite.client.ui.overlay.OverlayUtil;
 
 public final class DrewsHelperRouteTileOverlay extends Overlay
 {
@@ -38,6 +40,8 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
     private static final BasicStroke TRANSPORT_STROKE = new BasicStroke(2f);
     /** An NPC wanders off its transport tile, so match on proximity rather than an exact match. */
     private static final int NPC_SEARCH_RADIUS = 15;
+    /** Height above the marked tile for its label, matching RuneLite's own object markers. */
+    private static final int TILE_LABEL_HEIGHT = 40;
 
     private final Client client;
     private final DrewsHelperPlugin plugin;
@@ -135,9 +139,13 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
                 continue;
             }
 
+            String label = graph == null
+                ? null
+                : DrewsHelperTravelEstimate.transportLabel(graph, from, to);
+
             // The far side is a landing tile - there is nothing to click there, so the tile
             // marker is the right and only marker for it.
-            drawTransportTile(graphics, to);
+            drawTransportTile(graphics, to, label);
 
             int targetId = graph == null ? -1 : DrewsHelperTravelEstimate.targetId(graph, from, to);
             if (targetId >= 0 && drawInteractable(graphics, from, targetId))
@@ -147,7 +155,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
 
             // Nothing resolvable in the loaded scene: fall back to marking the tile, which is
             // still better than drawing nothing.
-            drawTransportTile(graphics, from);
+            drawTransportTile(graphics, from, label);
         }
     }
 
@@ -324,7 +332,12 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
         graphics.draw(shape);
     }
 
-    private void drawTransportTile(Graphics2D graphics, WorldPoint point)
+    /**
+     * A cyan square on its own says "something happens here" without saying what. An
+     * originless teleport has no object to outline and no menu entry to read, so the label is
+     * the only thing in the world telling you where the hop puts you.
+     */
+    private void drawTransportTile(Graphics2D graphics, WorldPoint point, String label)
     {
         Polygon tile = canvasTile(point);
         if (tile == null)
@@ -337,6 +350,24 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
         graphics.setStroke(TRANSPORT_STROKE);
         graphics.setColor(TRANSPORT_OUTLINE);
         graphics.draw(tile);
+
+        if (label == null || label.isEmpty())
+        {
+            return;
+        }
+
+        LocalPoint localPoint = LocalPoint.fromWorld(client, point);
+        if (localPoint == null)
+        {
+            return;
+        }
+
+        Point text = Perspective.getCanvasTextLocation(
+            client, graphics, localPoint, label, TILE_LABEL_HEIGHT);
+        if (text != null)
+        {
+            OverlayUtil.renderTextLocation(graphics, text, label, Color.WHITE);
+        }
     }
 
     private void drawTile(Graphics2D graphics, WorldPoint point, Color color)

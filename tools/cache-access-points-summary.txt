@@ -1,0 +1,44 @@
+cache      : C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
+project    : C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
+
+object definitions      : 62401
+  with a movement action: 5122
+transport endpoint tiles: 6434
+regions in our shipped map: 1524
+regions in the cache      : 2936
+object placements scanned : 4980697
+regions the cache has that our collision map does NOT: 1425
+
+wrote 14048 rows to C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\cache-access-points.tsv
+
+--- ACCEPTANCE: Falador west wall gate at 2935,3450 ---
+  FOUND  2935,3450  id=1728  name=Gate  action=Open  covered=yes
+  FOUND  2935,3451  id=1727  name=Gate  action=Open  covered=yes
+  RESULT: PASS - world-coordinate maths and object filtering are both correct.
+
+--- RESULT ---
+openable placements total : 14048
+  already covered by data : 2438
+  NOT covered             : 11610
+
+most common uncovered object names:
+  1793  Door
+  1478  Ladder
+  640  Chest
+  583  Staircase
+  573  Stairs
+  396  Cloud bank
+  353  Gate
+  252  Vine ladder
+  226  Drawers
+  202  Ship's ladder
+  197  Closed chest
+  192  Wilderness Ditch
+  166  Large door
+  149  Pillar
+  146  null
+  145  Wardrobe
+  131  Wall of flame
+  105  Stone
+  91  Cave
+  78  Gap

@@ -331,4 +331,10 @@ public interface DrewsHelperConfig extends Config
     {
         return false;
     }
+
+    @ConfigItem(keyName = "validateMapData", name = "Validate Map Data", description = "Check our walking data against the game's own collision as you play and log any disagreement. Off by default - this is a data-quality tool, not a gameplay feature.", position = 90)
+    default boolean validateMapData()
+    {
+        return false;
+    }
 }

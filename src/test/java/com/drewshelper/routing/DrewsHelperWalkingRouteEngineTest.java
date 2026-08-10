@@ -102,6 +102,171 @@ public class DrewsHelperWalkingRouteEngineTest
         assertTrue(graph.edgesFrom(start).isEmpty());
     }
 
+    /**
+     * Leaving the Wilderness is the case a blanket in-the-box refusal got wrong: the game
+     * allows a home teleport anywhere up to level 20, and that is exactly where a player is
+     * most likely to want one.
+     */
+    @Test
+    public void homeTeleportEscapesTheShallowWilderness() throws Exception
+    {
+        WorldPoint shallowWilderness = new WorldPoint(3155, 3620, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30", 20)
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solve(shallowWilderness, Collections.singletonList(lumbridge));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertEquals("a teleport out of levels 1-20 is legal and must be offered",
+            Arrays.asList(shallowWilderness, lumbridge), route.getPath());
+    }
+
+    @Test
+    public void homeTeleportIsRefusedAboveWildernessLevelTwenty() throws Exception
+    {
+        WorldPoint deepWilderness = new WorldPoint(3155, 3800, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30", 20)
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solve(deepWilderness, Collections.singletonList(lumbridge));
+
+        assertTrue("above level 20 the game refuses the spell, so the route must not jump",
+            route.getPath().size() > 2);
+    }
+
+    /**
+     * The reported bug, at the shape level: standing in the Wilderness with the target outside,
+     * the router must not reach for a Wilderness-side long-range transport to get out.
+     *
+     * <p>{@code Teleport Mage of Zamorak 2581} runs from 3106,3559 - inside the box - to
+     * 3035,4852 in Abyssal Space, which is outside it. The old rule tested only the destination,
+     * so it never saw this edge. Walking is free here (OpenMovementMap) and the Abyss chain costs
+     * 2 ticks against a 159-tile walk, so the ONLY thing that can keep the route off it is the
+     * rule under test.
+     */
+    @Test
+    public void longRangeWildernessTransportIsRefusedWhenLeaving() throws Exception
+    {
+        WorldPoint mageOfZamorak = new WorldPoint(3106, 3559, 0);
+        WorldPoint abyss = new WorldPoint(3035, 4852, 0);
+        WorldPoint outsideTarget = new WorldPoint(3106, 3400, 0);
+
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Arrays.asList(
+            wildernessEdge(mageOfZamorak, abyss, "Teleport Mage of Zamorak 2581"),
+            wildernessEdge(abyss, outsideTarget, "Operate Appendage 27027")
+        ));
+        DrewsHelperWalkingRouteEngine engine =
+            new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph, true);
+
+        DrewsHelperRouteSnapshot route =
+            engine.solve(mageOfZamorak, Collections.singletonList(outsideTarget));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertFalse("a route out must not go via the Abyss", route.getPath().contains(abyss));
+        assertEquals("and it must still reach the target",
+            outsideTarget, route.getPath().get(route.getPath().size() - 1));
+    }
+
+    /**
+     * The cases the preference has to tell apart, checked on the predicate directly because a
+     * routing test cannot isolate them from A*'s own cost preferences.
+     */
+    @Test
+    public void wildernessPreferenceSeparatesEntryFromExitAndNetworkHops() throws Exception
+    {
+        WorldPoint outside = new WorldPoint(3106, 3520, 0);
+        WorldPoint justInside = new WorldPoint(3106, 3523, 0);
+        WorldPoint gateInside = new WorldPoint(3106, 3530, 0);
+        WorldPoint deepInside = new WorldPoint(3106, 3700, 0);
+        WorldPoint abyss = new WorldPoint(3035, 4852, 0);
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(
+            new OpenMovementMap(),
+            DrewsHelperTransportGraph.of(Collections.<DrewsHelperTransportEdge>emptyList()),
+            true);
+
+        assertTrue("crossing the ditch INTO the Wilderness is still refused",
+            engine.isWildernessTransportToAvoid(
+                wildernessEdge(outside, justInside, "Cross Wilderness Ditch 23271"), lumbridge));
+        assertFalse("crossing the ditch OUT of the Wilderness must stay legal",
+            engine.isWildernessTransportToAvoid(
+                wildernessEdge(justInside, outside, "Cross Wilderness Ditch 23271"), lumbridge));
+        assertFalse("a gate or web inside must stay usable while walking out",
+            engine.isWildernessTransportToAvoid(
+                wildernessEdge(justInside, gateInside, "Open Gate"), lumbridge));
+        assertTrue("a long hop out of the Wilderness needed Wilderness access to reach",
+            engine.isWildernessTransportToAvoid(
+                wildernessEdge(justInside, abyss, "Teleport Mage of Zamorak 2581"), lumbridge));
+        assertTrue("and so does one that stays inside",
+            engine.isWildernessTransportToAvoid(
+                wildernessEdge(justInside, deepInside, "Obelisk"), lumbridge));
+        assertFalse("a home teleport out of the Wilderness must stay legal",
+            engine.isWildernessTransportToAvoid(originlessEdge(lumbridge), lumbridge));
+        assertFalse("nothing is refused when the waypoint itself is in the Wilderness",
+            engine.isWildernessTransportToAvoid(
+                wildernessEdge(justInside, abyss, "Teleport Mage of Zamorak 2581"), deepInside));
+    }
+
+    private static DrewsHelperTransportEdge wildernessEdge(
+        WorldPoint source, WorldPoint destination, String label)
+    {
+        return new DrewsHelperTransportEdge(source, destination,
+            DrewsHelperTransportCategory.BASELINE, label, 1, "", "", "", "", "");
+    }
+
+    private static DrewsHelperTransportEdge originlessEdge(WorldPoint destination)
+    {
+        return new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, destination,
+            DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "", "");
+    }
+
+    /**
+     * Standing in the Wilderness must not switch avoidance off.
+     *
+     * <p>The reported route was Ditch -> Mage of Zamorak -> Abyss -> Lumbridge with Wilderness
+     * transports disabled. Every row in that chain is categorised BASELINE so the toggle never
+     * touched them, and the old "from is inside" escape hatch meant the avoidance rule did not
+     * either - once over the ditch, going deeper was free.
+     *
+     * <p>Modelled by shape rather than by real geography on purpose: one hop deeper, one hop out.
+     * A real-map version of this passed before the fix, because from most Wilderness tiles A* has
+     * no reason to want the Abyss and the test proved nothing.
+     */
+    @Test
+    public void avoidanceStaysOnWhileStandingInTheWilderness() throws Exception
+    {
+        WorldPoint insideWilderness = new WorldPoint(3100, 3600, 0);
+        WorldPoint deeperInside = new WorldPoint(3100, 3900, 0);
+        WorldPoint outsideTarget = new WorldPoint(3100, 3400, 0);
+
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Arrays.asList(
+            new DrewsHelperTransportEdge(insideWilderness, deeperInside,
+                DrewsHelperTransportCategory.BASELINE, "Teleport Mage of Zamorak", 1, "", "", "", "", ""),
+            new DrewsHelperTransportEdge(deeperInside, outsideTarget,
+                DrewsHelperTransportCategory.BASELINE, "Operate Appendage", 1, "", "", "", "", "")
+        ));
+        DrewsHelperWalkingRouteEngine engine =
+            new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph, true);
+
+        DrewsHelperRouteSnapshot route =
+            engine.solve(insideWilderness, Collections.singletonList(outsideTarget));
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertFalse("a route out must not be routed deeper in first",
+            route.getPath().contains(deeperInside));
+        assertEquals("and it must still reach the target",
+            outsideTarget, route.getPath().get(route.getPath().size() - 1));
+    }
+
     @Test
     public void originlessTransportIsOfferedAgainAtEachWaypointLegStart() throws Exception
     {

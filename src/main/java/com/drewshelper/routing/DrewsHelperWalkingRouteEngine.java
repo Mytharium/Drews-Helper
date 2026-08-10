@@ -942,7 +942,7 @@ public final class DrewsHelperWalkingRouteEngine
             return order;
         }
 
-        if (isWildernessEntryToAvoid(from, destination, target))
+        if (isWildernessTransportToAvoid(edge, target))
         {
             return order;
         }
@@ -989,6 +989,24 @@ public final class DrewsHelperWalkingRouteEngine
      * Wilderness content - the ditch, the six obelisks, the lever, webs, barriers and
      * Wilderness ladders. No fairy ring and no spirit tree falls inside it.
      */
+    /**
+     * Upstream's Wilderness level boxes, copied exactly. The level-20 and level-30 boxes
+     * overlap the base box rather than tiling it, which is why the bands are resolved by
+     * narrowing from the deepest one down.
+     */
+    private static final int WILD_ABOVE_MIN_X = 2944;
+    private static final int WILD_ABOVE_MAX_X = 3391;
+    private static final int WILD_ABOVE_MIN_Y = 3525;
+    private static final int WILD_ABOVE_MAX_Y = 3972;
+    private static final int WILD_ABOVE_LEVEL_20_Y = 3680;
+    private static final int WILD_ABOVE_LEVEL_30_Y = 3760;
+    private static final int WILD_UNDER_MIN_X = 2944;
+    private static final int WILD_UNDER_MAX_X = 3461;
+    private static final int WILD_UNDER_MIN_Y = 9918;
+    private static final int WILD_UNDER_MAX_Y = 10375;
+    private static final int WILD_UNDER_LEVEL_20_Y = 10075;
+    private static final int WILD_UNDER_LEVEL_30_Y = 10155;
+
     private static final int WILDERNESS_MIN_X = 2944;
     private static final int WILDERNESS_MAX_X = 3392;
     private static final int WILDERNESS_MIN_Y = 3522;
@@ -1002,29 +1020,117 @@ public final class DrewsHelperWalkingRouteEngine
     }
 
     /**
-     * Whether this transport edge would take the player into the Wilderness against their
-     * wishes.
-     *
-     * <p>Two deliberate escape hatches, so switching the preference off can never strand a
-     * route: if the segment TARGET is in the Wilderness the player asked to go there, and if
-     * the player is already standing in it they must be able to move and to leave. Only
-     * crossing IN from outside is refused.
+     * Longest move that still counts as a physical crossing rather than a network hop. The 668
+     * {@code Cross Wilderness Ditch} rows move 3 tiles, and gates, webs and ladders move fewer;
+     * the Mage of Zamorak teleport moves over 1,200.
      */
-    private boolean isWildernessEntryToAvoid(WorldPoint from, WorldPoint destination, WorldPoint target)
+    private static final int WILDERNESS_PHYSICAL_CROSSING_TILES = 16;
+
+    /**
+     * Whether the Wilderness preference refuses this transport.
+     *
+     * <p>A transport can touch the Wilderness in three ways, and they are not the same
+     * question:
+     *
+     * <ul>
+     *   <li><b>Entering</b> - source outside, destination inside. Always refused. This is what
+     *       the preference has always meant.</li>
+     *   <li><b>Leaving, or moving about inside</b> - source inside. Refused UNLESS it is a short
+     *       physical crossing. Walking out means using the ditch, and whatever gates, webs and
+     *       ladders lie on the way, so those have to stay legal or the player is walled in. A
+     *       long-range hop is a different thing: reaching its source needed Wilderness access in
+     *       the first place, which is exactly what the player switched off.</li>
+     *   <li><b>Neither end inside</b> - never refused.</li>
+     * </ul>
+     *
+     * <p>The reported case was {@code Teleport Mage of Zamorak 2581}: source 3106,3559 inside
+     * the box, destination 3035,4852 out in Abyssal Space. A destination-only test never saw
+     * that edge at all, which is why narrowing the old rule did not change the route.
+     *
+     * <p>One escape hatch throughout: if the segment TARGET is in the Wilderness the player
+     * asked to go there, so nothing is refused. Originless transports are exempt by
+     * construction - their source is the ANYWHERE sentinel, which is not in the box - so
+     * escaping by home teleport still works. Walking is never filtered at all; only transport
+     * steps reach this, so the solver can always walk itself out.
+     */
+    boolean isWildernessTransportToAvoid(DrewsHelperTransportEdge edge, WorldPoint target)
     {
-        return avoidWilderness
-            && isInWilderness(destination)
-            && !isInWilderness(from)
-            && !isInWilderness(target);
+        if (!avoidWilderness || isInWilderness(target))
+        {
+            return false;
+        }
+
+        WorldPoint source = edge.getSource();
+        WorldPoint destination = edge.getDestination();
+        if (edge.isOriginless() || !isInWilderness(source))
+        {
+            return isInWilderness(destination);
+        }
+        return !isShortPhysicalCrossing(source, destination);
     }
 
+    /** Whether a transport moves the player only a few tiles, the way a ditch or a gate does. */
+    private static boolean isShortPhysicalCrossing(WorldPoint from, WorldPoint to)
+    {
+        return Math.abs(from.getX() - to.getX()) <= WILDERNESS_PHYSICAL_CROSSING_TILES
+            && Math.abs(from.getY() - to.getY()) <= WILDERNESS_PHYSICAL_CROSSING_TILES;
+    }
+
+    /**
+     * Wilderness level band the point sits in, mirroring upstream's overlapping-box model
+     * rather than a per-tile arithmetic formula.
+     *
+     * <p>Returns 0 outside, 20 for levels 1-20, 30 for 21-30 and 31 deeper still - the same
+     * buckets upstream narrows down to in its own pathfinder. Upstream's safe-zone carve-outs
+     * (Ferox Enclave, the Edgeville strip) are deliberately not modelled: they only separate
+     * level 0 from levels 1-20, and every cap in the data treats those two identically.
+     */
+    static int wildernessLevelAt(WorldPoint point)
+    {
+        if (point == null)
+        {
+            return 0;
+        }
+
+        int x = point.getX();
+        int y = point.getY();
+        boolean aboveGround = x >= WILD_ABOVE_MIN_X && x <= WILD_ABOVE_MAX_X
+            && y >= WILD_ABOVE_MIN_Y && y <= WILD_ABOVE_MAX_Y;
+        boolean underground = x >= WILD_UNDER_MIN_X && x <= WILD_UNDER_MAX_X
+            && y >= WILD_UNDER_MIN_Y && y <= WILD_UNDER_MAX_Y;
+        if (!aboveGround && !underground)
+        {
+            return 0;
+        }
+        if ((aboveGround && y >= WILD_ABOVE_LEVEL_30_Y) || (underground && y >= WILD_UNDER_LEVEL_30_Y))
+        {
+            return 31;
+        }
+        if ((aboveGround && y >= WILD_ABOVE_LEVEL_20_Y) || (underground && y >= WILD_UNDER_LEVEL_20_Y))
+        {
+            return 30;
+        }
+        return 20;
+    }
+
+    private static boolean wildernessLevelAllows(WorldPoint from, int maxWildernessLevel)
+    {
+        return maxWildernessLevel < 0 || wildernessLevelAt(from) <= maxWildernessLevel;
+    }
+
+    /**
+     * Leaving the Wilderness by teleport is legal and often the whole point, so the test is
+     * the transport's own cap rather than mere presence in the box. Entering is still refused
+     * by {@link #isWildernessTransportToAvoid}, which every home teleport passes anyway because
+     * all four spellbook destinations sit outside.
+     */
     private boolean originlessTransportAllowed(WorldPoint from, DrewsHelperTransportEdge edge, WorldPoint target)
     {
         return edge != null
             && edge.isOriginless()
             && from != null
-            && !isInWilderness(from)
-            && !isWildernessEntryToAvoid(from, edge.getDestination(), target);
+            && wildernessLevelAllows(from, edge.getMaxWildernessLevel())
+            && !isWildernessTransportToAvoid(edge, target);
     }
 
     private static boolean containsStepDestination(List<RouteStep> steps, WorldPoint destination)

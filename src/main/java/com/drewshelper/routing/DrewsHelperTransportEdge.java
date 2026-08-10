@@ -4,6 +4,9 @@ import net.runelite.api.coords.WorldPoint;
 
 public final class DrewsHelperTransportEdge
 {
+    /** Upstream's sentinel for "no Wilderness restriction recorded on this transport". */
+    static final int NO_WILDERNESS_LIMIT = -1;
+
     private final WorldPoint source;
     private final WorldPoint destination;
     private final DrewsHelperTransportCategory category;
@@ -14,6 +17,7 @@ public final class DrewsHelperTransportEdge
     private final String items;
     private final String varbits;
     private final String varPlayers;
+    private final int maxWildernessLevel;
 
     DrewsHelperTransportEdge(
         WorldPoint source,
@@ -38,6 +42,24 @@ public final class DrewsHelperTransportEdge
         String varPlayers
     )
     {
+        this(source, destination, category, label, durationTicks, skills, quests, items,
+            varbits, varPlayers, NO_WILDERNESS_LIMIT);
+    }
+
+    DrewsHelperTransportEdge(
+        WorldPoint source,
+        WorldPoint destination,
+        DrewsHelperTransportCategory category,
+        String label,
+        int durationTicks,
+        String skills,
+        String quests,
+        String items,
+        String varbits,
+        String varPlayers,
+        int maxWildernessLevel
+    )
+    {
         this.source = source;
         this.destination = destination;
         this.category = category;
@@ -48,6 +70,7 @@ public final class DrewsHelperTransportEdge
         this.items = items == null ? "" : items;
         this.varbits = varbits == null ? "" : varbits;
         this.varPlayers = varPlayers == null ? "" : varPlayers;
+        this.maxWildernessLevel = maxWildernessLevel;
     }
 
     public WorldPoint getSource()
@@ -98,6 +121,16 @@ public final class DrewsHelperTransportEdge
     public String getVarbits()
     {
         return varbits;
+    }
+
+    /**
+     * Deepest Wilderness level this transport still works at, or {@link #NO_WILDERNESS_LIMIT}
+     * when upstream records no cap. Home teleports carry 20: the game refuses them above
+     * level 20 so a player cannot escape a fight instantly.
+     */
+    public int getMaxWildernessLevel()
+    {
+        return maxWildernessLevel;
     }
 
     public String getVarPlayers()

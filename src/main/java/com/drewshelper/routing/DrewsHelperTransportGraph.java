@@ -237,8 +237,8 @@ public final class DrewsHelperTransportGraph
                     continue;
                 }
 
-                // -1 keeps trailing empty requirement columns. Reads both the legacy
-                // 4-column resource and the current 10-column one.
+                // -1 keeps trailing empty requirement columns. Reads the legacy 4-column
+                // and 10-column resources as well as the current 11-column one.
                 String[] parts = line.split("\t", -1);
                 if (parts.length < 4)
                 {
@@ -263,13 +263,36 @@ public final class DrewsHelperTransportGraph
                     column(parts, 6),
                     column(parts, 7),
                     column(parts, 8),
-                    column(parts, 9)
+                    column(parts, 9),
+                    parseWildernessLevel(column(parts, 10))
                 );
 
                 edges.add(edge);
             }
         }
         return edges;
+    }
+
+    /**
+     * Wilderness cap for a row, defaulting to no cap.
+     *
+     * <p>Absent for every resource written before the column existed, and blank for every
+     * transport upstream records no limit on, so both have to mean the same thing.
+     */
+    private static int parseWildernessLevel(String value)
+    {
+        if (value == null || value.trim().isEmpty())
+        {
+            return DrewsHelperTransportEdge.NO_WILDERNESS_LIMIT;
+        }
+        try
+        {
+            return Integer.parseInt(value.trim());
+        }
+        catch (NumberFormatException ignored)
+        {
+            return DrewsHelperTransportEdge.NO_WILDERNESS_LIMIT;
+        }
     }
 
     private static DrewsHelperTransportCategory parseCategory(String value)

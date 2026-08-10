@@ -159,7 +159,11 @@ final class DrewsHelperOverlay extends OverlayPanel
             // The repeat count moved onto the LEFT so the right column is a time everywhere in
             // the panel - the waypoint rows above read the same way, and mixing "x2" and "0:30"
             // in one column makes both harder to scan.
-            Map<String, Integer> arrivals = estimate.getTransportTicks();
+            // Duration, not arrival. Arrival answers "when do I do this" and is 0:00 for a
+            // teleport at the start of a route, which reads as "this is free" when the hop
+            // actually costs fourteen seconds. The waypoint rows above already give the
+            // running clock, so these rows carry the cost instead.
+            Map<String, Integer> durations = estimate.getTransportDurations();
             int step = 1;
             for (Map.Entry<String, Integer> entry : transports.entrySet())
             {
@@ -169,10 +173,10 @@ final class DrewsHelperOverlay extends OverlayPanel
                     name = name + " x" + entry.getValue();
                 }
 
-                Integer arrival = arrivals.get(entry.getKey());
+                Integer duration = durations.get(entry.getKey());
                 panelComponent.getChildren().add(LineComponent.builder()
                     .left("  " + step + ". " + name)
-                    .right(arrival == null ? "" : DrewsHelperTravelEstimate.formatTicks(arrival))
+                    .right(duration == null ? "" : DrewsHelperTravelEstimate.formatTicks(duration))
                     .rightColor(MUTED)
                     .build());
                 step++;

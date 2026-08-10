@@ -35,12 +35,14 @@ public final class DrewsHelperTravelEstimate
     private static final double SECONDS_PER_TICK = 0.6;
 
     public static final DrewsHelperTravelEstimate EMPTY = new DrewsHelperTravelEstimate(
-        0, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), 0);
+        0, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(),
+        Collections.emptyMap(), 0);
 
     private final int totalTicks;
     private final List<Integer> legTicks;
     private final Map<String, Integer> transportsUsed;
     private final Map<String, Integer> transportTicks;
+    private final Map<String, Integer> transportDurations;
     private final int walkedTiles;
 
     private DrewsHelperTravelEstimate(
@@ -48,6 +50,7 @@ public final class DrewsHelperTravelEstimate
         List<Integer> legTicks,
         Map<String, Integer> transportsUsed,
         Map<String, Integer> transportTicks,
+        Map<String, Integer> transportDurations,
         int walkedTiles
     )
     {
@@ -55,6 +58,7 @@ public final class DrewsHelperTravelEstimate
         this.legTicks = Collections.unmodifiableList(new ArrayList<>(legTicks));
         this.transportsUsed = Collections.unmodifiableMap(new LinkedHashMap<>(transportsUsed));
         this.transportTicks = Collections.unmodifiableMap(new LinkedHashMap<>(transportTicks));
+        this.transportDurations = Collections.unmodifiableMap(new LinkedHashMap<>(transportDurations));
         this.walkedTiles = walkedTiles;
     }
 
@@ -83,6 +87,19 @@ public final class DrewsHelperTravelEstimate
      * a step is answering. A transport used twice keeps its first arrival, matching the
      * numbering, which is also first-use order.
      */
+    /**
+     * Transport label to the ticks that transport itself costs, in first-use order.
+     *
+     * <p>What the panel shows beside each action. Arrival time answers "when do I do this",
+     * which reads as 0:00 for a teleport cast at the start of a route and makes a hop that
+     * genuinely costs fourteen seconds look free. The waypoint rows above already carry the
+     * cumulative clock, so the action rows are more useful as costs.
+     */
+    public Map<String, Integer> getTransportDurations()
+    {
+        return transportDurations;
+    }
+
     public Map<String, Integer> getTransportTicks()
     {
         return transportTicks;
@@ -223,6 +240,7 @@ public final class DrewsHelperTravelEstimate
         List<Integer> legTicks = new ArrayList<>();
         Map<String, Integer> transportsUsed = new LinkedHashMap<>();
         Map<String, Integer> transportTicks = new LinkedHashMap<>();
+        Map<String, Integer> transportDurations = new LinkedHashMap<>();
 
         int index = 0;
         while (index < path.size() - 1)
@@ -254,6 +272,9 @@ public final class DrewsHelperTravelEstimate
                 // Not running for the duration of the hop, so energy comes back.
                 energy = Math.min(MAX_ENERGY, energy + regen * edge.getDurationTicks());
                 transportsUsed.merge(label, 1, Integer::sum);
+                // Summed, not first-use: a transport taken twice costs its duration twice, and
+                // the label already collapses to a single "x2" row.
+                transportDurations.merge(label, edge.getDurationTicks(), Integer::sum);
                 index++;
             }
             else if (runEnabled && energy >= drain)
@@ -291,7 +312,7 @@ public final class DrewsHelperTravelEstimate
         }
 
         return new DrewsHelperTravelEstimate(
-            ticks, legTicks, transportsUsed, transportTicks, walkedTiles);
+            ticks, legTicks, transportsUsed, transportTicks, transportDurations, walkedTiles);
     }
 
     private static boolean reachedLeg(List<WorldPoint> path, int index, WorldPoint legTarget)
@@ -315,6 +336,23 @@ public final class DrewsHelperTravelEstimate
             return -1;
         }
         return targetId(edge);
+    }
+
+    /**
+     * The HUD label for this hop, or null when the pair is not a transport.
+     *
+     * <p>Same lookup and same cleanup the {@code Actions} rows use, so a marker drawn in the
+     * world and its row in the panel can never disagree about what a hop is called.
+     */
+    public static String transportLabel(
+        DrewsHelperTransportGraph graph, WorldPoint from, WorldPoint to)
+    {
+        DrewsHelperTransportEdge edge = findTransport(graph, from, to);
+        if (edge == null)
+        {
+            return null;
+        }
+        return displayLabel(edge);
     }
 
     static int targetId(DrewsHelperTransportEdge edge)

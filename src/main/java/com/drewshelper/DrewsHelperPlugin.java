@@ -2,6 +2,7 @@ package com.drewshelper;
 
 import com.google.inject.Provides;
 import com.drewshelper.routing.DrewsHelperCollisionMap;
+import com.drewshelper.routing.DrewsHelperMapValidator;
 import com.drewshelper.routing.DrewsHelperPlayerCapability;
 import com.drewshelper.routing.DrewsHelperRouteBenchmark;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
@@ -33,6 +34,7 @@ import java.util.concurrent.Future;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.CollisionData;
 import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GameState;
 import net.runelite.api.Item;
@@ -131,6 +133,12 @@ public class DrewsHelperPlugin extends Plugin
     private static final int ROUTE_BENCHMARK_START_SYNC_TILE_LIMIT = 3;
     private static final int ROUTE_BENCHMARK_PENDING_START_TICK_LIMIT = 10;
     private static final int ROUTE_BENCHMARK_PENDING_START_MOVE_LIMIT = 3;
+
+    /** Cap on validator rows logged per scene, so one bad region cannot flood the console. */
+    private static final int MAX_VALIDATION_ROWS_LOGGED = 25;
+
+    /** Scene the validator last checked, so it runs once per scene rather than every tick. */
+    private String lastValidatedSceneKey;
 
     @Inject
     private Client client;
@@ -251,6 +259,7 @@ public class DrewsHelperPlugin extends Plugin
         tickCounter++;
         updateStaminaCalibration();
         markRouteDirtyOnCooldownMinuteChange();
+        validateMapDataIfEnabled();
 
         // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
         // which dirties the route and returns early below - so anything downstream of that
@@ -303,6 +312,85 @@ public class DrewsHelperPlugin extends Plugin
     DrewsHelperTravelEstimate getTravelEstimate()
     {
         return travelEstimate;
+    }
+
+    /**
+     * Route A - checks our shipped walking data against the game's own collision flags.
+     *
+     * <p>Runs once per scene rather than per tick. The scene only changes when you cross a
+     * region boundary, so re-diffing ten thousand tile edges every 600ms would be pure waste.
+     *
+     * <p>Off unless switched on: this is the check that keeps Route B honest, not a gameplay
+     * feature. What it reports becomes rows in transport-overrides.tsv.
+     */
+    private void validateMapDataIfEnabled()
+    {
+        if (!config().validateMapData() || collisionMap == null)
+        {
+            lastValidatedSceneKey = null;
+            return;
+        }
+
+        int baseX = client.getBaseX();
+        int baseY = client.getBaseY();
+        int plane = client.getPlane();
+        String sceneKey = baseX + ":" + baseY + ":" + plane;
+        if (sceneKey.equals(lastValidatedSceneKey))
+        {
+            return;
+        }
+        lastValidatedSceneKey = sceneKey;
+
+        CollisionData[] collision = client.getCollisionMaps();
+        if (collision == null || plane < 0 || plane >= collision.length
+            || collision[plane] == null)
+        {
+            return;
+        }
+
+        DrewsHelperMapValidator.Report report = DrewsHelperMapValidator.validate(
+            collision[plane].getFlags(), baseX, baseY, plane, collisionMap);
+
+        if (report.isCoverageHole())
+        {
+            log.info("DREW_MAP_VALIDATE scene {} NO COVERAGE - our map has no data for this region",
+                sceneKey);
+            return;
+        }
+        if (report.getMismatches().isEmpty())
+        {
+            return;
+        }
+
+        int weBlockGameAllows = 0;
+        for (DrewsHelperMapValidator.Mismatch mismatch : report.getMismatches())
+        {
+            if (mismatch.getKind() == DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN)
+            {
+                weBlockGameAllows++;
+            }
+        }
+        log.info("DREW_MAP_VALIDATE scene {} tiles={} mismatches={} ({} we block but the game allows)",
+            sceneKey, report.getTilesChecked(), report.getMismatches().size(), weBlockGameAllows);
+
+        // Only the we-block-but-the-game-allows half is listed: that is the Falador-gate
+        // shape, and it is the half that turns into a transport override row.
+        int printed = 0;
+        for (DrewsHelperMapValidator.Mismatch mismatch : report.getMismatches())
+        {
+            if (mismatch.getKind() != DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN)
+            {
+                continue;
+            }
+            log.info("DREW_MAP_VALIDATE   {}", mismatch);
+            printed++;
+            if (printed >= MAX_VALIDATION_ROWS_LOGGED)
+            {
+                log.info("DREW_MAP_VALIDATE   ... {} more suppressed",
+                    weBlockGameAllows - printed);
+                break;
+            }
+        }
     }
 
     @Subscribe

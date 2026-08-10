@@ -1,6 +1,7 @@
 package com.drewshelper.routing;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -152,7 +153,26 @@ public class DrewsHelperTravelEstimateTest
         assertEquals(23, estimate.getTotalTicks());
         assertEquals(0, estimate.getWalkedTiles());
         assertEquals(Integer.valueOf(1), estimate.getTransportsUsed().get("Lumbridge Home Teleport"));
-        assertEquals(Integer.valueOf(0), estimate.getTransportTicks().get("Lumbridge Home Teleport"));
+        assertEquals("arrival stays 0 - the teleport is cast at the start of the route",
+            Integer.valueOf(0), estimate.getTransportTicks().get("Lumbridge Home Teleport"));
+        assertEquals("the Actions row shows what the hop costs, not when you reach it",
+            Integer.valueOf(23), estimate.getTransportDurations().get("Lumbridge Home Teleport"));
+    }
+
+    @Test
+    public void transportLabelNamesTheHopForTheWorldMarker()
+    {
+        WorldPoint lumbridge = new WorldPoint(3221, 3218, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(DrewsHelperTransportGraph.ANYWHERE, lumbridge,
+                DrewsHelperTransportCategory.BASELINE, "Lumbridge Home Teleport", 23, "", "", "", "4070=0", "892@30")
+        ));
+
+        assertEquals("the world marker and the Actions row must name the hop identically",
+            "Lumbridge Home Teleport",
+            DrewsHelperTravelEstimate.transportLabel(graph, new WorldPoint(0, 0, 0), lumbridge));
+        assertNull("a walking step is not a transport and must not be labelled",
+            DrewsHelperTravelEstimate.transportLabel(graph, lumbridge, new WorldPoint(3222, 3218, 0)));
     }
 
     @Test

@@ -1165,3 +1165,113 @@ Proving a regeneration is safe means an A/B on the same generator, not a row cou
 - `tools/transport-overrides.tsv` is an input to the generated resource and is currently untracked. Until it is committed, regeneration on any other checkout silently drops those verified edges.
 
 Cross-reference: `D-0104` in `CHANGELOG_AGENT_NOTES.md` is the build note for the home-teleport ship. Its durable rules live in D-0103.
+
+### D-0106 - Entering and leaving the Wilderness are separate questions
+
+Date: 2026-08-09.
+
+The Wilderness preference answers "may a route take me in". It was never meant to answer "may I
+teleport out", and conflating the two under one `!isInWilderness(from)` test made the router
+refuse a spell the game would have allowed.
+
+- Entering is owned by `isWildernessEntryToAvoid`: refuse only when the destination is inside and
+  neither the origin nor the segment target is. Unchanged.
+- Leaving is owned by the transport's own recorded cap. A home teleport caps at 20, so it is
+  offered in levels 1-20 and refused above, which is the game's rule rather than ours.
+- Every home teleport destination is outside the box, so an escape can never read as an entry.
+
+Two conventions inherited from upstream rather than reinvented, because divergence here would be
+silent: -1 means no cap recorded, and a split transport takes `Math.max` of its two ends.
+
+The level is resolved as a band ceiling (0, 20, 30, 31) from overlapping boxes, not an exact
+level from arithmetic. Upstream does the same, and no cap in the data needs finer resolution.
+
+Cross-reference: build notes for this change are `D-0110` in `CHANGELOG_AGENT_NOTES.md`; the
+numbering of the two files diverged earlier and is not expected to line up.
+
+### D-0107 - Wilderness avoidance has one escape hatch, not two
+
+Date: 2026-08-10.
+
+The avoidance rule answers one question: may a route take me INTO the Wilderness. The only
+legitimate override is the segment target being inside, because then the player asked to go.
+
+Being inside already is NOT an override. It was, and the consequence was that crossing the ditch
+disabled avoidance for the rest of the trip - so a route back out could route further in first to
+reach Wilderness-side content. The reported case was the Abyss.
+
+Two invariants make the narrower rule safe, and both should be preserved by any future change:
+
+- A destination outside the box never trips the rule, so leaving is always permitted.
+- Only transport steps are guarded. Walking is never filtered, so the solver can always walk out
+  of the Wilderness under its own power and can never be stranded.
+
+Related and deliberately NOT fixed here: the `Use: Wilderness Transports` toggle only covers the
+`WILDERNESS` category, which is obelisks and levers. The ditch, the Abyss chain and every edge with
+both ends inside are `BASELINE`. Avoidance is what keeps routes out of the Wilderness; the toggle is
+not. Recategorising is a behaviour change for anyone who has the toggle on - see Parked Item 13.
+
+Cross-reference: build notes are `D-0112` in `CHANGELOG_AGENT_NOTES.md`.
+
+### D-0108 - A transport touches the Wilderness in three ways, not one
+
+Date: 2026-08-10. Supersedes the framing in D-0106 and D-0107, which both assumed the only
+question was the destination.
+
+Asking only "does this transport END in the Wilderness" misses the transports that START there.
+Their source tile can only be reached with Wilderness access, so they are Wilderness content no
+matter where they drop you. `Teleport Mage of Zamorak 2581` is the case that proved it: source
+3106,3559 inside the box, destination 3035,4852 in Abyssal Space, outside it. Two successive
+fixes to the destination test could not see that edge at all.
+
+The rule is therefore three-way:
+
+- ENTERING - source outside, destination inside. Refused.
+- LEAVING or MOVING INSIDE - source inside. Refused unless it is a short physical crossing.
+- NEITHER END INSIDE. Never refused.
+
+The short-physical-crossing exemption is not a convenience, it is the safety property. Walking
+out of the Wilderness means passing the ditch and whatever gates, webs and ladders lie on the
+way, and each of those is a transport row. Refuse them and the player is walled in. 16 tiles on
+both axes separates them cleanly from network hops: the ditch moves 3 tiles, the Mage of Zamorak
+teleport moves over 1,200.
+
+Three invariants any future change must preserve:
+
+- A segment target inside the Wilderness refuses nothing. The player asked to go there.
+- Originless transports are exempt by construction, so escaping by home teleport always works.
+- Only transport steps are guarded. Walking is never filtered, so the solver can always walk out.
+
+Cross-reference: build notes are `D-0114` in `CHANGELOG_AGENT_NOTES.md`.
+
+### D-0109 - The cache builds the map, the live client checks it
+
+Date: 2026-08-10. Settles where our walking data comes from.
+
+Upstream never built `collision-map.zip` either - it was inherited pre-built from Runemoro, and
+nothing in either project imports a cache library. That is exactly why it can be stale and why
+it cannot be repaired in place. It ships 1,524 regions; the game cache has 2,936.
+
+So the division of labour is:
+
+- **Route B, the OSRS cache, is the SOURCE.** It is authoritative, complete, offline, and it
+  carries object identity - names and menu actions - which a collision bitmap structurally
+  cannot. It is also the UPDATE path: a game update refreshes the cache, re-run the task.
+- **Route A, the live client, is the CHECK.** Its job is to disagree. When our shipped data and
+  the running game differ, that is a data bug and it should announce itself rather than surface
+  weeks later as a strange route.
+
+Route A is deliberately NOT the update mechanism. Harvesting by playing would be the slow way to
+do something Route B does in one command.
+
+Two properties to preserve in any future change:
+
+- The cache dependency stays in the `cachetools` source set. It is a build-time tool and must
+  never enter the shipped plugin jar or the test classpath.
+- The dumper keeps a real acceptance fixture. It must find the Falador west wall gate at
+  2935,3450 with no hint; if that ever stops passing, the output is not to be trusted.
+
+No XTEA keys are needed - verified, not assumed. Map archives in the live cache decode with a
+zero key across all 2,747 populated regions.
+
+Cross-reference: build notes are `D-0117` in `CHANGELOG_AGENT_NOTES.md`.

@@ -8,7 +8,7 @@ param(
 # and durations through instead of discarding them.
 #
 # Output columns (tab separated):
-#   category source destination label duration skills quests items varbits varplayers
+#   category source destination label duration skills quests items varbits varplayers wildernessLevel
 #
 # Two row shapes exist upstream and both are handled:
 #   1. Direct rows  - Origin and Destination both filled. One row = one edge.
@@ -171,6 +171,16 @@ function Get-Col {
     return $Fields[$i]
 }
 
+# Upstream records the deepest Wilderness level at which a transport still works - "20" on
+# every home teleport row. Absent or unparseable means no cap, which upstream also stores
+# as -1, so the same sentinel is used here rather than inventing a second convention.
+function Get-WildernessLevel {
+    param([string]$Value)
+    $parsed = 0
+    if ([int]::TryParse(($Value + '').Trim(), [ref]$parsed)) { return $parsed }
+    return -1
+}
+
 # Live convention: prefer the human "Display info" label, fall back to the menu option.
 function Select-Label {
     param([string]$Info, [string]$MenuOption)
@@ -190,7 +200,7 @@ $missingFiles     = New-Object System.Collections.ArrayList
 function Add-Edge {
     param([string]$Category, [string]$Source, [string]$Destination, [string]$Label,
           [int]$Duration, [string]$Skills, [string]$Quests, [string]$Items,
-          [string]$Varbits, [string]$VarPlayers)
+          [string]$Varbits, [string]$VarPlayers, [int]$WildernessLevel = -1)
 
     if ($Source -eq $Destination) {
         $script:skippedSelfLoop++
@@ -198,7 +208,7 @@ function Add-Edge {
     }
     $key = $Category + '|' + $Source + '|' + $Destination + '|' + $Label
     if ($Source -eq $ORIGINLESS_SOURCE) {
-        $key += '|' + $Duration + '|' + $Skills + '|' + $Quests + '|' + $Items + '|' + $Varbits + '|' + $VarPlayers
+        $key += '|' + $Duration + '|' + $Skills + '|' + $Quests + '|' + $Items + '|' + $Varbits + '|' + $VarPlayers + '|' + $WildernessLevel
     }
     if ($script:seen.ContainsKey($key)) {
         $script:dupes++
@@ -216,6 +226,7 @@ function Add-Edge {
         items       = $Items
         varbits     = $Varbits
         varplayers  = $VarPlayers
+        wildernesslevel = $WildernessLevel
     })
 }
 
@@ -283,6 +294,7 @@ foreach ($fileName in $FileCategories.Keys) {
             items      = Format-Field (Get-Col $f $map 'items')
             varbits    = Format-Field (Get-Col $f $map 'varbits')
             varplayers = Format-Field (Get-Col $f $map 'varplayers')
+            wilderness = Get-WildernessLevel (Get-Col $f $map 'wilderness level')
             duration   = 1
             label      = Select-Label (Format-Field (Get-Col $f $map 'display info')) (Format-Field (Get-Col $f $map 'menuoption menutarget objectid'))
             menuId     = Get-TrailingId (Get-Col $f $map 'menuoption menutarget objectid')
@@ -317,7 +329,7 @@ foreach ($fileName in $FileCategories.Keys) {
             Add-Edge $category $rec.src $rec.dst $rec.label $rec.duration `
                 (Format-SkillMap $rec.skills) `
                 (Merge-ListField $rec.quests $NetworkQuest[$baseCategory]) `
-                $rec.items $rec.varbits $rec.varplayers
+                $rec.items $rec.varbits $rec.varplayers $rec.wilderness
         }
         elseif ($hasSrc) { [void]$originOnly.Add($rec) }
         else             { [void]$destOnly.Add($rec) }
@@ -347,7 +359,8 @@ foreach ($fileName in $FileCategories.Keys) {
                     (Merge-ListField (Merge-ListField $o.quests $d.quests) $NetworkQuest[$baseCategory]) `
                     (Merge-ListField $o.items      $d.items) `
                     (Merge-ListField $o.varbits    $d.varbits) `
-                    (Merge-ListField $o.varplayers $d.varplayers)
+                    (Merge-ListField $o.varplayers $d.varplayers) `
+                    ([Math]::Max($o.wilderness, $d.wilderness))
                 $crossEdges++
             }
         }
@@ -357,7 +370,7 @@ foreach ($fileName in $FileCategories.Keys) {
             Add-Edge $baseCategory $ORIGINLESS_SOURCE $d.dst $d.label $d.duration `
                 (Format-SkillMap $d.skills) `
                 (Merge-ListField $d.quests $NetworkQuest[$baseCategory]) `
-                $d.items $d.varbits $d.varplayers
+                $d.items $d.varbits $d.varplayers $d.wilderness
         }
     }
 }
@@ -392,11 +405,11 @@ $sorted = @($rows) | Sort-Object category, source, destination, label
 
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.Append('# Generated from Skretzo/shortest-path transport TSV files.' + $LF)
-[void]$sb.Append('# Columns: category' + $TAB + 'source' + $TAB + 'destination' + $TAB + 'label' + $TAB + 'duration' + $TAB + 'skills' + $TAB + 'quests' + $TAB + 'items' + $TAB + 'varbits' + $TAB + 'varplayers' + $LF)
+[void]$sb.Append('# Columns: category' + $TAB + 'source' + $TAB + 'destination' + $TAB + 'label' + $TAB + 'duration' + $TAB + 'skills' + $TAB + 'quests' + $TAB + 'items' + $TAB + 'varbits' + $TAB + 'varplayers' + $TAB + 'wildernessLevel' + $LF)
 [void]$sb.Append('# duration is in game ticks (floored at 1). Blank requirement fields mean no requirement recorded upstream.' + $LF)
 
 foreach ($r in $sorted) {
-    [void]$sb.Append(($r.category, $r.source, $r.destination, $r.label, $r.duration, $r.skills, $r.quests, $r.items, $r.varbits, $r.varplayers) -join $TAB)
+    [void]$sb.Append(($r.category, $r.source, $r.destination, $r.label, $r.duration, $r.skills, $r.quests, $r.items, $r.varbits, $r.varplayers, $r.wildernesslevel) -join $TAB)
     [void]$sb.Append($LF)
 }
 
