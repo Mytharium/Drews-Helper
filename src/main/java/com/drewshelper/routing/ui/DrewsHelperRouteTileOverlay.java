@@ -4,6 +4,7 @@ import com.drewshelper.DrewsHelperConfig;
 import com.drewshelper.DrewsHelperPlugin;
 import com.drewshelper.DrewsHelperWaypointIcon;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
+import com.drewshelper.routing.DrewsHelperTransportEdge;
 import com.drewshelper.routing.DrewsHelperTransportGraph;
 import com.drewshelper.routing.DrewsHelperTravelEstimate;
 import java.awt.BasicStroke;
@@ -14,7 +15,11 @@ import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
@@ -24,6 +29,7 @@ import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
+import net.runelite.api.WallObject;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.Overlay;
@@ -42,10 +48,18 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
     private static final int NPC_SEARCH_RADIUS = 15;
     /** Height above the marked tile for its label, matching RuneLite's own object markers. */
     private static final int TILE_LABEL_HEIGHT = 40;
+    /** Cap per-frame door outlines so very long routes cannot flood scene rendering. */
+    private static final int MAX_DOOR_HIGHLIGHTS = 64;
+    /** OSRS wall-orientation bits carried by wall objects on their tile. */
+    static final int WALL_WEST = 1;
+    static final int WALL_NORTH = 2;
+    static final int WALL_EAST = 4;
+    static final int WALL_SOUTH = 8;
 
     private final Client client;
     private final DrewsHelperPlugin plugin;
     private final DrewsHelperConfig config;
+    private final Map<Integer, Boolean> doorLikeCache = new HashMap<>();
 
     @Inject
     public DrewsHelperRouteTileOverlay(Client client, DrewsHelperPlugin plugin, DrewsHelperConfig config)
@@ -75,6 +89,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
                 drawTile(graphics, point, color);
             }
             drawTransportEndpoints(graphics, snapshot);
+            drawDoorSteps(graphics, snapshot);
         }
 
         drawWaypointEndpoints(graphics);
@@ -157,6 +172,170 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
             // still better than drawing nothing.
             drawTransportTile(graphics, from, label);
         }
+    }
+
+    /**
+     * Door edges are one-tile walking steps, so the transport-jump heuristic cannot see them.
+     * They still come from route data or loaded scene walls and need the same cyan object
+     * outline as other click targets.
+     */
+    private void drawDoorSteps(Graphics2D graphics, DrewsHelperRouteSnapshot snapshot)
+    {
+        DrewsHelperTransportGraph graph = plugin.getTransportGraph();
+        List<WorldPoint> path = snapshot.getPath();
+        Set<Long> outlinedEdges = new HashSet<>();
+        int outlines = 0;
+
+        for (int index = 0; index + 1 < path.size() && outlines < MAX_DOOR_HIGHLIGHTS; index++)
+        {
+            WorldPoint from = path.get(index);
+            WorldPoint to = path.get(index + 1);
+            if (DrewsHelperRouteSnapshot.isTransportJump(from, to))
+            {
+                continue;
+            }
+
+            int bit = crossedWallBit(from, to);
+            if (bit == 0)
+            {
+                continue;
+            }
+            if (from.getPlane() != client.getPlane())
+            {
+                continue;
+            }
+
+            int edgeX = from.getX();
+            int edgeY = from.getY();
+            int edgeBit = bit;
+            // Key on the southern/western tile plus the north/east wall bit so either
+            // travel direction hits the same physical edge.
+            if (bit == WALL_SOUTH)
+            {
+                edgeY = to.getY();
+                edgeBit = WALL_NORTH;
+            }
+            else if (bit == WALL_WEST)
+            {
+                edgeX = to.getX();
+                edgeBit = WALL_EAST;
+            }
+
+            long edgeKey = (((long) from.getPlane() & 0x3L) << 32)
+                | (((long) edgeX & 0x7FFFL) << 17)
+                | (((long) edgeY & 0x7FFFL) << 2)
+                | (edgeBit == WALL_NORTH ? 0L : 1L);
+            if (!outlinedEdges.add(edgeKey))
+            {
+                continue;
+            }
+
+            if (graph != null)
+            {
+                boolean graphBacked = false;
+                for (DrewsHelperTransportEdge edge : graph.edgesFrom(from))
+                {
+                    if (to.equals(edge.getDestination()))
+                    {
+                        graphBacked = true;
+                        break;
+                    }
+                }
+
+                if (graphBacked)
+                {
+                    int targetId = DrewsHelperTravelEstimate.targetId(graph, from, to);
+                    if (targetId >= 0 && drawInteractable(graphics, from, targetId))
+                    {
+                        outlines++;
+                        continue;
+                    }
+                }
+            }
+
+            Tile fromTile = sceneTile(from);
+            WallObject fromWall = fromTile == null ? null : fromTile.getWallObject();
+            if (fromWall != null && ((fromWall.getOrientationA() | fromWall.getOrientationB()) & bit) != 0
+                && drawDoorWallObject(graphics, fromWall))
+            {
+                outlines++;
+                continue;
+            }
+
+            Tile toTile = sceneTile(to);
+            WallObject toWall = toTile == null ? null : toTile.getWallObject();
+            int oppositeBit = oppositeWallBit(bit);
+            if (toWall != null && ((toWall.getOrientationA() | toWall.getOrientationB()) & oppositeBit) != 0
+                && drawDoorWallObject(graphics, toWall))
+            {
+                outlines++;
+                continue;
+            }
+
+            // An open door has swung, so its recorded orientation may no longer cross the path.
+            if (fromWall != null && drawDoorWallObject(graphics, fromWall))
+            {
+                outlines++;
+            }
+        }
+    }
+
+    private boolean drawDoorWallObject(Graphics2D graphics, WallObject wallObject)
+    {
+        Shape clickbox = wallObject.getClickbox();
+        if (clickbox == null)
+        {
+            return false;
+        }
+
+        if (!isDoorLike(wallObject.getId()))
+        {
+            return false;
+        }
+
+        outline(graphics, clickbox);
+        return true;
+    }
+
+    private boolean isDoorLike(int objectId)
+    {
+        ObjectComposition composition = client.getObjectDefinition(objectId);
+        if (composition == null)
+        {
+            return false;
+        }
+
+        ObjectComposition active = composition.getImpostor();
+        if (active == null)
+        {
+            Boolean cached = doorLikeCache.get(objectId);
+            if (cached != null)
+            {
+                return cached;
+            }
+        }
+
+        String[] actions = active == null ? composition.getActions() : active.getActions();
+        boolean doorLike = false;
+        if (actions != null)
+        {
+            for (String action : actions)
+            {
+                // Open and Close both matter because the route threads the door either way.
+                if ("Open".equalsIgnoreCase(action) || "Close".equalsIgnoreCase(action))
+                {
+                    doorLike = true;
+                    break;
+                }
+            }
+        }
+
+        // Impostors can change at runtime, so only stable base definitions are cached.
+        if (active == null)
+        {
+            doorLikeCache.put(objectId, doorLike);
+        }
+        return doorLike;
     }
 
     /**
@@ -422,5 +601,62 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
     static int waypointIconSize()
     {
         return WAYPOINT_ICON_SIZE;
+    }
+
+    static int crossedWallBit(WorldPoint from, WorldPoint to)
+    {
+        if (from == null || to == null)
+        {
+            return 0;
+        }
+        if (from.getPlane() != to.getPlane())
+        {
+            return 0;
+        }
+
+        int dx = to.getX() - from.getX();
+        int dy = to.getY() - from.getY();
+        if (Math.abs(dx) + Math.abs(dy) != 1)
+        {
+            return 0;
+        }
+        if (dy == 1)
+        {
+            return WALL_NORTH;
+        }
+        if (dy == -1)
+        {
+            return WALL_SOUTH;
+        }
+        if (dx == 1)
+        {
+            return WALL_EAST;
+        }
+        if (dx == -1)
+        {
+            return WALL_WEST;
+        }
+        return 0;
+    }
+
+    static int oppositeWallBit(int bit)
+    {
+        if (bit == WALL_NORTH)
+        {
+            return WALL_SOUTH;
+        }
+        if (bit == WALL_SOUTH)
+        {
+            return WALL_NORTH;
+        }
+        if (bit == WALL_EAST)
+        {
+            return WALL_WEST;
+        }
+        if (bit == WALL_WEST)
+        {
+            return WALL_EAST;
+        }
+        return 0;
     }
 }

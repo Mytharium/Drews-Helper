@@ -450,3 +450,30 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - Red/green proof gate check: a temporary pasted Route A mismatch line for edge `2809,9313,0 N` marked exactly one crossing proven and wrote two bidirectional rows to `cache-derived-gates-proven.tsv`; removing the temp proof file and regenerating returned proven crossings to 0.
 - Final run on the live repo: raw candidate crossings 1,282; obvious junk removed 337; review crossings 945 / 1,890 bidirectional review rows. Detour severity: 862 are `>512`, 5 are `65-512`, 18 are `17-64`, 60 are `2-16`. Route A proof files absent, so proven crossings 0.
 - `tools/transport-overrides.tsv` was checked and has no diff. No route behaviour changed.
+
+
+D-0122 (2026-08-10) - Doors on the route are highlighted in the world.
+  DrewsHelperRouteTileOverlay gained drawDoorSteps, drawDoorWallObject, isDoorLike and
+  the pure helpers crossedWallBit / oppositeWallBit. A door is an ordinary one-tile step,
+  so drawTransportEndpoints could never see it - isTransportJump requires a plane change
+  or a gap larger than one tile. drawDoorSteps walks the adjacent steps instead, resolves
+  the crossed wall edge, and outlines the door with the existing cyan outline() helper.
+  Resolution order is graph-backed first (a real transport row, via the existing
+  drawInteractable and its impostor handling), then the scene wall object on the crossed
+  edge from either side, then a lenient same-tile fallback because an open door has swung
+  and no longer records an orientation across the path. Open and Close both count as
+  door-like: the ask was to see every door the route threads, not only the shut ones.
+  Per-frame work is capped at 64 outlines and edges are de-duplicated on a
+  direction-normalised key. No config option was added and the UI action list is
+  unchanged. Build green, 168 tests (was 165), 0 failures.
+
+D-0123 (2026-08-10) - The Falador Castle proof run of item 2 is void, not negative.
+  No DREW_MAP_VALIDATE line exists in any RuneLite log, ever. drewshelper.validateMapData
+  is true in the profile, so the toggle was not the problem. The client session ran
+  12:38:03 to 13:51:21 from the official launcher, and every external plugin it loaded is
+  a hub plugin; the jar Drew's Helper is deployed into had been replaced by the stock
+  Skretzo build. The observation that the castle doors are ignored is therefore an
+  observation about the stock plugin and says nothing about our data. Re-run through
+  run-drews-helper-dev.bat. Note also that the three target rows are plane 2, the castle
+  upper floor - the validator only checks the player's current plane, so the run has to
+  physically go upstairs.

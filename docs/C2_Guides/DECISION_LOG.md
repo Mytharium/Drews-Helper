@@ -1297,3 +1297,15 @@ Reason: a false positive transport row is worse than a missing shortcut. Missing
 false rows send the player straight into a wall, locked door or instance-only object.
 
 Cross-reference: build notes are `D-0121` in `CHANGELOG_AGENT_NOTES.md`.
+
+D-0111 (2026-08-10) - In-game verification only counts when the client was launched
+through run-drews-helper-dev.bat.
+  Rule: before accepting any in-game result as evidence, confirm the run actually
+  contained our plugin. The cheap check is a DREW_ line in
+  %USERPROFILE%\.runelite\logs\client.log; no DREW_ lines means no Drew's Helper, and the
+  result is void rather than negative.
+  Why: the plugin is installed by overwriting a plugin-hub jar, and RuneLite silently
+  re-downloads the stock jar over it. A test can therefore run to completion, feel
+  normal, and measure someone else's plugin. This burned a full proof run on 2026-08-10.
+  Corollary for C2: never ask for a test result to be pasted back when the artefact is
+  readable over SSH - read the log directly and check this first.

@@ -870,3 +870,36 @@ Next route work:
 - Leave visible routing unchanged. Keep the Path 1 / Path 3 target-aware overrides, keep `shapeShadow` and `forkRank` as telemetry only, and do not promote a broad local ranker from the current evidence.
 - Keep `Benchmark Movement` OFF during normal use. Turn it on only for deliberate route diagnostics.
 - If a future route visibly disagrees with the client, collect a fresh completed `DREW_ROUTE_BENCH` report and judge `classification`, `additionalDivergences`, `additionalDivergenceDetail`, and `forkRank` before making another routing change.
+
+## 2026-08-10 addendum - door highlights, and why the castle proof run was void
+
+### Item 2 (access-point transport rows) - still blocked on live proof
+The 2026-08-10 Falador Castle proof run produced no evidence and must be re-run.
+Cause was not the route data: Drew's Helper was not running in that client at all.
+See parked item 21. Nothing about the ranked queue was disproven or confirmed.
+
+### Done this session
+- Door world-highlights shipped. Route steps that cross a door now outline the door
+  object in the same cyan used for gates and agility shortcuts. Doors are deliberately
+  NOT added to the UI action list.
+
+### Parked items added
+
+20. Adjacent-tile transport edges are invisible to every transport-jump consumer.
+    DrewsHelperRouteSnapshot.isTransportJump is `different plane OR max(|dx|,|dy|) > 1`,
+    so an edge joining two neighbouring tiles never registers as a transport. That is
+    exactly the shape of every row item 2 generates. The overlay now handles it for
+    doors, but the same blind spot may still exist in the travel estimate, the ETA and
+    the transport label path. Audit those before promoting any adjacent-tile row, or the
+    rows will land and silently do nothing visible.
+
+21. The deployed plugin jar is overwritten by RuneLite's plugin-hub sync.
+    Drew's Helper is installed by overwriting
+    `%USERPROFILE%\.runelite\plugins\shortest-path_<hub-hash>.jar`. RuneLite verifies its
+    installed hub jars against the manifest and re-downloads any that do not match, so
+    that file reverts to the stock Skretzo plugin without warning and without a log line.
+    Observed 2026-08-10: all 25 hub jars rewritten at 13:44:51, and the deployed jar now
+    contains 81 `shortestpath/` classes and 0 `drewshelper/` classes. The masquerade
+    install is not a safe test path. Use `run-drews-helper-dev.bat` instead - it runs
+    `gradlew run`, which loads the plugin through ExternalPluginManager.loadBuiltin and
+    cannot be clobbered by the hub.
