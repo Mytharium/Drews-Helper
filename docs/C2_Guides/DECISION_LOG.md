@@ -1275,3 +1275,25 @@ No XTEA keys are needed - verified, not assumed. Map archives in the live cache 
 zero key across all 2,747 populated regions.
 
 Cross-reference: build notes are `D-0117` in `CHANGELOG_AGENT_NOTES.md`.
+
+### D-0110 - Cache-derived transport rows need explicit proof before activation
+
+Date: 2026-08-10. Extends D-0109 for the transport-row import workflow.
+
+Route B can generate and rank likely crossings from the OSRS cache, but it must not activate them
+directly. Object identity, placement type, orientation, blocked-edge checks and detour severity are
+enough to produce a review queue; they are not enough to make the router walk through the edge.
+
+Activation rule:
+
+- `AccessPointRowGenerator` may write review files and live-proven candidate files.
+- It must never write `tools/transport-overrides.tsv`.
+- A candidate becomes copyable only when its normalized edge key matches Route A live-client proof:
+  `DREW_MAP_VALIDATE   x,y,plane DIR OURS_BLOCKS_LIVE_OPEN`.
+- Even then, the row still needs human review and an evidence comment before being copied into the
+  active override file.
+
+Reason: a false positive transport row is worse than a missing shortcut. Missing rows cause detours;
+false rows send the player straight into a wall, locked door or instance-only object.
+
+Cross-reference: build notes are `D-0121` in `CHANGELOG_AGENT_NOTES.md`.

@@ -120,7 +120,7 @@ Fix: intersect the verb match with the object actually obstructing movement.
 `getWallOrDoor()` - none are used yet. A chest blocks nothing you would path through.
 Done when: the Falador gate fixture still passes AND Chest/Drawers/Wardrobe are gone.
 
-### 2. Turn confirmed access points into real transport rows  -- IN PROGRESS, BLOCKED ON CONFIDENCE (see D-0120)
+### 2. Turn confirmed access points into real transport rows  -- IN PROGRESS, WAITING ON ROUTE A PROOF (see D-0120, D-0121)
 
 **Generator built, rows not active.** `gradlew.bat generateTransportRows` writes
 `tools/cache-derived-gates.tsv` and deliberately never touches `tools/transport-overrides.tsv`.
@@ -139,10 +139,34 @@ merge 1,282 crossings. A wrong row routes the player through a wall, which is wo
 we started from. Do not move `cache-derived-gates.tsv` rows into `transport-overrides.tsv` until
 they have live-client/manual proof or a stronger filter.
 
-Recommended next filter:
-- rank by detour severity and inspect only the worst chokepoints first
-- drop obvious instance/minigame names from the candidate set before review: Cloud bank, Portal of Death, Oozing barrier, Wall of flame, Gate of War, Energy Barrier
-- use Route A live mismatch reports to prove candidate rows against the client before merging
+Second slice result:
+- exact obvious instance/minigame/scenery junk is dropped before review: Cloud bank, Portal of
+  Death, Oozing barrier, Wall of flame, Gate of War, Energy Barrier, Neutral Barrier, Blue
+  Barrier, Red Barrier and Alchemical door
+- survivors are ranked by walking detour pain with a 512-step cap
+- `tools/cache-derived-gates.tsv` stays copy-paste-shaped but is sorted by review rank and marked
+  with comments
+- `tools/cache-derived-gates-review.tsv` is the machine-readable review queue with rank, edge key,
+  detour, source tile, destination tile, name and action
+- `tools/cache-derived-gates-proven.tsv` contains only candidates whose normalized edge matched
+  Route A live mismatch proof
+
+Current second-slice funnel:
+- raw candidate crossings: 1,282
+- exact junk removed: 337
+- review crossings left: 945 / 1,890 bidirectional rows
+- detour severity: 862 are `>512`, 5 are `65-512`, 18 are `17-64`, 60 are `2-16`
+- Route A proof files are absent, so proven crossings are 0 and no active route row changed
+
+Route A proof workflow:
+1. Enable `Validate Map Data` in the dev client and visit a ranked candidate area.
+2. Copy raw `DREW_MAP_VALIDATE   x,y,plane DIR OURS_BLOCKS_LIVE_OPEN` lines into
+   `tools/route-a-live-mismatches.txt`, or write `x<TAB>y<TAB>plane<TAB>DIR` rows into
+   `tools/route-a-live-mismatches.tsv`.
+3. Re-run `gradlew.bat --no-daemon --console=plain generateTransportRows`.
+4. Review `tools/cache-derived-gates-proven.tsv`.
+5. Only after that, hand-copy reviewed proven rows into `tools/transport-overrides.tsv` with an
+   evidence comment. The generator still must not write the active override file.
 
 Original note kept for the record:
 
@@ -173,11 +197,10 @@ Runes, staffs, rune pouch. This was the next slice BEFORE the map work started a
 outstanding. Unlike 1-3 it is a visible gameplay feature rather than plumbing, so it may be
 the better pick if Myth wants something he can see working.
 
-### 5. Untested from 2026-08-09 - verify before trusting
+### 5. Wilderness fix live check  -- DONE 2026-08-10
 
-The source-side Wilderness fix (D-0114) was never confirmed in game. Myth was given the
-repro and did not report back. Test: waypoint #1 inside the Wilderness, waypoint #2 at
-Lumbridge, home teleport ON COOLDOWN, Wilderness transports OFF.
+Myth confirmed this works in game. Original repro kept for the record: waypoint #1 inside the
+Wilderness, waypoint #2 at Lumbridge, home teleport ON COOLDOWN, Wilderness transports OFF.
 PASS = routed back across the ditch. FAIL = still offered Teleport Mage of Zamorak.
 Also sanity-check that walking out is still free and that an off-cooldown home teleport is
 still offered - those are what a bad version of that fix would have broken.
@@ -245,13 +268,14 @@ section has been changed. Append new findings here as they come up; strike them 
    and because the stored value is minute-granular, `>=` could offer a teleport up to a minute
    early. Logged so the choice is explicit rather than accidental; no change made.
 
-8. **Agent backup files were committed into the repo.**
+8. ~~**Agent backup files were committed into the repo.**~~ RESOLVED 2026-08-10, committed in `3b0f922`.
    Commit `8aed260` swept in roughly fifteen `.pre-*` snapshots alongside the real changes -
    `DECISION_LOG.pre-d0086.md`, `02_NEXT_WORK.md.pre-teleport-plan-20260809` and similar. These
    are working scratch taken before each edit and are meant to be transient, not repo content;
    several are near-complete duplicates of large guides, so they inflate the tree and will show
    up in future diffs and searches. Suggested cleanup: `git rm --cached` them and add a
-   `*.pre-*` ignore rule. Not actioned - deleting committed files is Myth's call.
+   `*.pre-*` ignore rule. Myth approved deleting them, C2 removed them, and Myth committed the
+   cleanup. Verified after commit: `git ls-files '*.pre-*'` and a worktree scan both return 0.
 
 9. **The `varIds()` comment omits the `@` cooldown operator.**
    `DrewsHelperTransportGraph.java` line 163 states that terms look like `id=value`, `id>value`,
@@ -539,12 +563,13 @@ section has been changed. Append new findings here as they come up; strike them 
     of that list is that it stays short and auditable. Decide deliberately rather than widening
     it by reflex; the dumper prints everything the hints rescue, so any addition is checkable.
 
-19. **Cache-derived transport rows need a stronger acceptance filter before merge.**
+19. ~~**Cache-derived transport rows need a stronger acceptance filter before merge.**~~ RESOLVED 2026-08-10 (filter/proof gate built; #2 still needs live proof before active rows move).
     `AccessPointRowGenerator` produced 1,282 candidate wall crossings / 2,564 bidirectional rows,
     but the validation control is only 65.0% predicted-edge blocked versus 40.1% perpendicular-edge
     blocked. Orientation is real signal, not enough certainty. Next pass should rank by detour
     severity, remove obvious instance/minigame scenery names, and use Route A live-client mismatch
-    proof before moving any row into `transport-overrides.tsv`.
+    proof before moving any row into `transport-overrides.tsv`. Implemented by D-0121: exact junk
+    filter, 512-step detour ranking, review/proven output split, and optional Route A proof parser.
 
 ### Unconfirmed - status needs checking before acting
 

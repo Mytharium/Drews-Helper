@@ -1,0 +1,5 @@
+# LIVE-PROVEN candidate transport rows derived from the OSRS cache by generateTransportRows.
+# NOT active. Review, then move rows into transport-overrides.tsv to use them.
+#
+# Rows here matched Route A live validator edges (DREW_MAP_VALIDATE
+# OURS_BLOCKS_LIVE_OPEN). They still need human review before copying.

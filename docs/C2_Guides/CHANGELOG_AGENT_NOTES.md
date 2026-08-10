@@ -436,3 +436,17 @@ Exact locked-route rerouting is integrated but not yet live-validated. The activ
 - The control is the key result: predicted edge blocked 65.0% (2172/3344), perpendicular edge blocked 40.1% (2680/6688). The gap proves orientation carries real signal. The 65% rate is still far too low to trust blind import.
 - Decision: do not merge cache-derived rows on orientation alone. A bad row is worse than a missing row because the router will confidently path through a wall. Treat `tools/cache-derived-gates.tsv` as a diagnostic/ranking file until a stronger acceptance filter exists.
 - Next filter should rank by detour severity, remove obvious instance/minigame/scenery names from the candidate set (`Cloud bank`, `Portal of Death`, `Oozing barrier`, `Wall of flame`, `Gate of War`, `Energy Barrier`), and prove survivors against the live client via Route A before moving rows into `transport-overrides.tsv`.
+
+### D-0121 - Ranked cache-derived review queue built; active override file still untouched
+
+- Date: 2026-08-10. To-do #2, second slice.
+- `AccessPointRowGenerator` now applies the requested acceptance funnel before anything is reviewable: exact-name junk exclusions for obvious instance/minigame/scenery rows, then a 512-step walking-detour score, then an optional Route A proof match.
+- Exact junk excluded this pass: Cloud bank, Portal of Death, Oozing barrier, Wall of flame, Gate of War, Energy Barrier, Neutral Barrier, Blue Barrier, Red Barrier and Alchemical door.
+- Output split is now explicit:
+  - `tools/cache-derived-gates.tsv` remains review-only copy-paste-shaped rows, sorted by rank and commented with detour/proof state.
+  - `tools/cache-derived-gates-review.tsv` is the machine-readable queue: rank, proof state, detour, normalized edge key, from/to, direction, name, action and label.
+  - `tools/cache-derived-gates-proven.tsv` contains only rows whose normalized edge matched Route A live validator proof.
+- Route A proof input is deliberately explicit rather than hidden log scraping. Paste raw `DREW_MAP_VALIDATE   x,y,plane DIR OURS_BLOCKS_LIVE_OPEN` lines into `tools/route-a-live-mismatches.txt`, or write `x<TAB>y<TAB>plane<TAB>DIR` rows into `tools/route-a-live-mismatches.tsv`, then rerun `gradlew.bat generateTransportRows`.
+- Red/green proof gate check: a temporary pasted Route A mismatch line for edge `2809,9313,0 N` marked exactly one crossing proven and wrote two bidirectional rows to `cache-derived-gates-proven.tsv`; removing the temp proof file and regenerating returned proven crossings to 0.
+- Final run on the live repo: raw candidate crossings 1,282; obvious junk removed 337; review crossings 945 / 1,890 bidirectional review rows. Detour severity: 862 are `>512`, 5 are `65-512`, 18 are `17-64`, 60 are `2-16`. Route A proof files absent, so proven crossings 0.
+- `tools/transport-overrides.tsv` was checked and has no diff. No route behaviour changed.
