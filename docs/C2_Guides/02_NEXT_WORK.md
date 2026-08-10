@@ -941,3 +941,40 @@ run-drews-helper-dev.bat loads the plugin via ExternalPluginManager.loadBuiltin,
 immune to the hub sync. Confirmed: the deployed hub jar was still the stock Skretzo build
 (0 drewshelper classes) during a run in which our validator produced 2,666 mismatches.
 Item 21 therefore only bites when playing through the official launcher.
+
+## 2026-08-10 addendum 3 - item 2 CLOSED: first rows promoted to active routing
+
+The third castle sweep worked exactly as designed. All three planes validated (the ~60s
+re-check did its job), and plane 2's mismatch count visibly moved between 2385 and 2387 as
+doors were opened and shut - the validator watching a door change state in real time.
+
+    scene 2928:3288:0  mismatches=2986  (1395 we block, game allows)
+    scene 2928:3288:1  mismatches=2181  ( 550 we block, game allows)
+    scene 2928:3288:2  mismatches=2387  ( 301 we block, game allows)
+
+2248 unique proof edges captured. generateTransportRows matched 10 of the 945 ranked
+candidates, including the exact three top-floor doors named in the very first test brief.
+All 10 promoted (20 rows, both directions) - see the evidence block in transport-overrides.tsv.
+
+Item 2 is DONE. The loop it proves out - cache candidates, ranked by detour, gated on live
+evidence, merged only after a set-diff regeneration - is now repeatable for anywhere in game.
+
+### Parked items added
+
+22. The route does not re-solve when you walk near a shortcut that would shorten it.
+    Reported from the castle sweep: standing next to a staircase that would obviously
+    improve the remaining trip does not trigger a recalculation. Worth checking against the
+    existing recalculateDistance config and markRouteDirty* paths before assuming it is a
+    bug rather than a deliberate stability choice - constant re-solving while walking is its
+    own problem.
+
+23. The Falador Castle crypt entrance is not in the transport data at all.
+    Cache dump has it: object 39617 "Crypt", verb Enter, at 2965,3330,0. The upstream file
+    contains exactly one row mentioning Crypt and it is 1483,3549,0 -> 1483,9951,3 in
+    Kourend - nothing for Falador. So the router can never use it and it can never
+    highlight, because highlighting only ever follows a route.
+    This one cannot be auto-generated the way the doors were: AccessPointRowGenerator builds
+    adjacent wall crossings from placement orientation, and a crypt entrance is a plane
+    change whose destination tile the cache does not record. Capturing it needs the landing
+    tile observed in game. Same shape as every staircase, ladder and cave entrance in the
+    1478-ladder pile, so solving it once solves a large class.

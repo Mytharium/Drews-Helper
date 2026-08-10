@@ -35,3 +35,52 @@ BASELINE	2935,3450,0	2936,3450,0	Open Gate (Taverley wall)	1
 BASELINE	2936,3450,0	2935,3450,0	Open Gate (Taverley wall)	1
 BASELINE	2935,3451,0	2936,3451,0	Open Gate (Taverley wall)	1
 BASELINE	2936,3451,0	2935,3451,0	Open Gate (Taverley wall)	1
+
+# -----------------------------------------------------------------------------
+# Falador Castle doors  -  Route A live-proven 2026-08-10
+#
+# Rule 1 (blocked in our map): every row below started life as an
+# OURS_BLOCKS_LIVE_OPEN mismatch - our shipped collision map refuses the step.
+# Captured by the Validate Map Data toggle over three planes of Falador Castle:
+#     scene 2928:3288:0  tiles=10609  mismatches=2986  (1395 we block, game allows)
+#     scene 2928:3288:1  tiles=10609  mismatches=2181  ( 550 we block, game allows)
+#     scene 2928:3288:2  tiles=10609  mismatches=2387  ( 301 we block, game allows)
+# 2248 unique proof edges total, in .runelite\drews-map-validate.txt, copied to
+# tools\route-a-live-mismatches.txt. generateTransportRows matched 10 of the 945
+# ranked cache candidates against that live evidence. These are those 10.
+#
+# Rule 2 (upstream has no row): searched the whole bounding box x 2955-2985,
+# y 3330-3348 in src\main\resources\drewshelper-transports.tsv. It returns 14
+# rows, ALL of them Climb-up/Climb-down Staircase. Upstream models the castle
+# staircases and not one of its doors. None of the 20 endpoint tiles below
+# appears anywhere in the upstream file.
+#
+# Rule 3: both directions, and both tiles of each two-tile doorway.
+#
+# Detour cost the router pays today without these rows (A* steps, cap 512):
+#   2959/2960,3334-3335,2  > 512    2960/2961,3342-3343,2  > 512
+#   2964/2965,3338-3339,0    82     2970/2971,3336-3337,0    54
+#   2981/2982,3340-3341,0    26
+#
+# Re-check: rerun generateTransportRows with route-a-live-mismatches.txt in
+# place and confirm these same 10 crossings come back marked PROVEN.
+BASELINE	2959,3335,2	2959,3334,2	Open Castle door	1
+BASELINE	2959,3334,2	2959,3335,2	Open Castle door	1
+BASELINE	2960,3335,2	2960,3334,2	Open Castle door	1
+BASELINE	2960,3334,2	2960,3335,2	Open Castle door	1
+BASELINE	2960,3342,2	2960,3343,2	Open Castle door	1
+BASELINE	2960,3343,2	2960,3342,2	Open Castle door	1
+BASELINE	2961,3342,2	2961,3343,2	Open Castle door	1
+BASELINE	2961,3343,2	2961,3342,2	Open Castle door	1
+BASELINE	2965,3338,0	2964,3338,0	Open Castle door	1
+BASELINE	2964,3338,0	2965,3338,0	Open Castle door	1
+BASELINE	2965,3339,0	2964,3339,0	Open Castle door	1
+BASELINE	2964,3339,0	2965,3339,0	Open Castle door	1
+BASELINE	2970,3337,0	2970,3336,0	Open Castle door	1
+BASELINE	2970,3336,0	2970,3337,0	Open Castle door	1
+BASELINE	2971,3337,0	2971,3336,0	Open Castle door	1
+BASELINE	2971,3336,0	2971,3337,0	Open Castle door	1
+BASELINE	2981,3340,0	2982,3340,0	Open Castle door	1
+BASELINE	2982,3340,0	2981,3340,0	Open Castle door	1
+BASELINE	2981,3341,0	2982,3341,0	Open Castle door	1
+BASELINE	2982,3341,0	2981,3341,0	Open Castle door	1

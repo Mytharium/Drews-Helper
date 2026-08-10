@@ -305,7 +305,15 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
             return false;
         }
 
-        ObjectComposition active = composition.getImpostor();
+        // getImpostor() throws on any object that has no impostor configuration at all, which is
+        // most of them - it must never be called without this guard. matchesObjectId below only
+        // survives because it reaches getImpostor() after an identical getImpostorIds() null check.
+        ObjectComposition active = null;
+        if (composition.getImpostorIds() != null)
+        {
+            active = composition.getImpostor();
+        }
+
         if (active == null)
         {
             Boolean cached = doorLikeCache.get(objectId);

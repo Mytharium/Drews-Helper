@@ -558,22 +558,22 @@ AGILITY_SHORTCUT	3718,3816,0	3713,3830,0	Climb through Hole 31482	1	Agility=70		
 AGILITY_SHORTCUT	3765,3883,1	3765,3898,0	Teeth-grip Zip line 17030	10	Agility=74					-1
 AGILITY_SHORTCUT	3778,3821,0	3784,3821,0	Climb Up Rope anchor 30916	6	Agility=64					-1
 AGILITY_SHORTCUT	3784,3821,0	3778,3821,0	Climb Down Rope anchor 30917	6	Agility=64					-1
-BASELINE	-1,-1,0	1700,3882,0	Arceuus Home Teleport	23				4070=3	4560&249;892@30	20
 BASELINE	-1,-1,0	1700,3882,0	Arceuus Home Teleport	21				4070=3	4560&2;892@30	20
+BASELINE	-1,-1,0	1700,3882,0	Arceuus Home Teleport	23				4070=3	4560&249;892@30	20
 BASELINE	-1,-1,0	1700,3882,0	Arceuus Home Teleport	18				4070=3	4560&4;892@30	20
 BASELINE	-1,-1,0	1700,3882,0	Arceuus Home Teleport	23				4070=3	4560=0;892@30	20
 BASELINE	-1,-1,0	2113,3915,0	Lunar Home Teleport	23		Lunar Diplomacy		4070=2	4560&249;892@30	20
-BASELINE	-1,-1,0	2113,3915,0	Lunar Home Teleport	18		Lunar Diplomacy		4070=2	4560&4;892@30	20
 BASELINE	-1,-1,0	2113,3915,0	Lunar Home Teleport	23		Lunar Diplomacy		4070=2	4560=0;892@30	20
 BASELINE	-1,-1,0	2113,3915,0	Lunar Home Teleport	21		Lunar Diplomacy		4070=2	4560&2;892@30	20
+BASELINE	-1,-1,0	2113,3915,0	Lunar Home Teleport	18		Lunar Diplomacy		4070=2	4560&4;892@30	20
 BASELINE	-1,-1,0	3087,3504,0	Edgeville Home Teleport	23		Desert Treasure I		4070=1	4560&249;892@30	20
+BASELINE	-1,-1,0	3087,3504,0	Edgeville Home Teleport	18		Desert Treasure I		4070=1	4560&4;892@30	20
 BASELINE	-1,-1,0	3087,3504,0	Edgeville Home Teleport	21		Desert Treasure I		4070=1	4560&2;892@30	20
 BASELINE	-1,-1,0	3087,3504,0	Edgeville Home Teleport	23		Desert Treasure I		4070=1	4560=0;892@30	20
-BASELINE	-1,-1,0	3087,3504,0	Edgeville Home Teleport	18		Desert Treasure I		4070=1	4560&4;892@30	20
-BASELINE	-1,-1,0	3221,3218,0	Lumbridge Home Teleport	23				4070=0	4560&249;892@30	20
-BASELINE	-1,-1,0	3221,3218,0	Lumbridge Home Teleport	23				4070=0	4560=0;892@30	20
 BASELINE	-1,-1,0	3221,3218,0	Lumbridge Home Teleport	18				4070=0	4560&4;892@30	20
+BASELINE	-1,-1,0	3221,3218,0	Lumbridge Home Teleport	23				4070=0	4560&249;892@30	20
 BASELINE	-1,-1,0	3221,3218,0	Lumbridge Home Teleport	21				4070=0	4560&2;892@30	20
+BASELINE	-1,-1,0	3221,3218,0	Lumbridge Home Teleport	23				4070=0	4560=0;892@30	20
 BASELINE	1194,3452,0	1229,3469,0	Travel Rowboat 48720	7		Desert Treasure II - The Fallen Empire				-1
 BASELINE	1195,3452,0	1229,3469,0	Travel Rowboat 48720	7		Desert Treasure II - The Fallen Empire				-1
 BASELINE	1218,3737,0	1255,3548,0	8: Mount Quidamortem 28835	5			COINS=20	7796<11		-1
@@ -3746,6 +3746,8 @@ BASELINE	2957,3523,0	2957,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2958,3337,2	2959,3338,3	Climb-up Staircase 24072	1						-1
 BASELINE	2958,3520,0	2958,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2958,3523,0	2958,3520,0	Cross Wilderness Ditch 23271	4						-1
+BASELINE	2959,3334,2	2959,3335,2	Open Castle door	1						-1
+BASELINE	2959,3335,2	2959,3334,2	Open Castle door	1						-1
 BASELINE	2959,3338,3	2958,3337,2	Climb-down Staircase 24074	1						-1
 BASELINE	2959,3339,2	2960,3340,1	Climb-down Staircase 24074	1						-1
 BASELINE	2959,3368,0	2959,3372,1	Climb-up Staircase 24079	1						-1
@@ -3754,12 +3756,18 @@ BASELINE	2959,3520,0	2959,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2959,3523,0	2959,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2960,3141,0	2960,3141,1	Climb-up Ship's ladder 272	1						-1
 BASELINE	2960,3141,1	2960,3141,0	Climb-down Ship's ladder 273	1						-1
+BASELINE	2960,3334,2	2960,3335,2	Open Castle door	1						-1
+BASELINE	2960,3335,2	2960,3334,2	Open Castle door	1						-1
 BASELINE	2960,3340,1	2959,3339,2	Climb-up Staircase 24072	1						-1
+BASELINE	2960,3342,2	2960,3343,2	Open Castle door	1						-1
+BASELINE	2960,3343,2	2960,3342,2	Open Castle door	1						-1
 BASELINE	2960,3368,0	2960,3372,1	Climb-up Staircase 24079	1						-1
 BASELINE	2960,3372,1	2960,3368,0	Climb-down Staircase 24080	1						-1
 BASELINE	2960,3520,0	2960,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2960,3523,0	2960,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2961,3340,1	2959,3339,2	Climb-up Staircase 24072	1						-1
+BASELINE	2961,3342,2	2961,3343,2	Open Castle door	1						-1
+BASELINE	2961,3343,2	2961,3342,2	Open Castle door	1						-1
 BASELINE	2961,3520,0	2961,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2961,3523,0	2961,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2962,3139,1	2964,3139,2	Climb-up Ship's ladder 245	1						-1
@@ -3773,8 +3781,12 @@ BASELINE	2964,3139,2	2962,3139,1	Climb-down Ship's ladder 246	1						-1
 BASELINE	2964,3143,2	2962,3143,1	Climb-down Ship's ladder 246	1						-1
 BASELINE	2964,3215,0	2968,3215,1	Climb-up Staircase 18991	1						-1
 BASELINE	2964,3216,0	2968,3215,1	Climb-up Staircase 18991	1						-1
+BASELINE	2964,3338,0	2965,3338,0	Open Castle door	1						-1
+BASELINE	2964,3339,0	2965,3339,0	Open Castle door	1						-1
 BASELINE	2964,3520,0	2964,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2964,3523,0	2964,3520,0	Cross Wilderness Ditch 23271	4						-1
+BASELINE	2965,3338,0	2964,3338,0	Open Castle door	1						-1
+BASELINE	2965,3339,0	2964,3339,0	Open Castle door	1						-1
 BASELINE	2965,3520,0	2965,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2965,3523,0	2965,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2966,3520,0	2966,3523,0	Cross Wilderness Ditch 23271	4						-1
@@ -3788,9 +3800,13 @@ BASELINE	2968,3520,0	2968,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2968,3523,0	2968,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2969,3520,0	2969,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2969,3523,0	2969,3520,0	Cross Wilderness Ditch 23271	4						-1
+BASELINE	2970,3336,0	2970,3337,0	Open Castle door	1						-1
+BASELINE	2970,3337,0	2970,3336,0	Open Castle door	1						-1
 BASELINE	2970,3462,0	2972,3462,0	Climb-over Crumbling wall 24749	2						-1
 BASELINE	2970,3520,0	2970,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2970,3523,0	2970,3520,0	Cross Wilderness Ditch 23271	4						-1
+BASELINE	2971,3336,0	2971,3337,0	Open Castle door	1						-1
+BASELINE	2971,3337,0	2971,3336,0	Open Castle door	1						-1
 BASELINE	2971,3347,0	2968,3348,1	Climb-up Staircase 24067	1						-1
 BASELINE	2971,3369,0	2971,3373,1	Climb-up Staircase 24079	1						-1
 BASELINE	2971,3373,1	2971,3369,0	Climb-down Staircase 24080	1						-1
@@ -3820,8 +3836,12 @@ BASELINE	2979,3520,0	2979,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2979,3523,0	2979,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2980,3520,0	2980,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2980,3523,0	2980,3520,0	Cross Wilderness Ditch 23271	4						-1
+BASELINE	2981,3340,0	2982,3340,0	Open Castle door	1						-1
+BASELINE	2981,3341,0	2982,3341,0	Open Castle door	1						-1
 BASELINE	2981,3520,0	2981,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2981,3523,0	2981,3520,0	Cross Wilderness Ditch 23271	4						-1
+BASELINE	2982,3340,0	2981,3340,0	Open Castle door	1						-1
+BASELINE	2982,3341,0	2981,3341,0	Open Castle door	1						-1
 BASELINE	2982,3520,0	2982,3523,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2982,3523,0	2982,3520,0	Cross Wilderness Ditch 23271	4						-1
 BASELINE	2983,3350,0	2983,3350,1	Climb-up Ladder 24070	2						-1

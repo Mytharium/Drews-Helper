@@ -498,3 +498,23 @@ D-0125 (2026-08-10) - Validator now writes uncapped proof rows to a file and re-
   VALIDATION_REVALIDATE_TICKS = 100 (~60s). The 25-row console cap is deliberately
   unchanged - the file is the evidence path now, the console is just for eyeballing.
   Build green, 168 tests, 0 failures.
+
+D-0126 (2026-08-10) - Door highlights never drew because the overlay threw every frame.
+  ObjectComposition.getImpostor() throws on any object with no impostor configuration, and
+  isDoorLike called it unguarded. RuneLite's OverlayRenderer.safeRender swallowed the throw,
+  so there was no visible symptom beyond "nothing is highlighted" - 29,921 "Error during
+  overlay rendering" lines in the dev console, every one of them ours. Everything drawn after
+  the throw point in that overlay was also lost, which silently included the waypoint
+  endpoint markers. Fixed by guarding with getImpostorIds() != null, exactly as the
+  pre-existing matchesObjectId already does two methods further down - the codebase had the
+  answer in it the whole time. Build green, 168 tests.
+
+D-0127 (2026-08-10) - First cache-derived rows promoted into active routing.
+  10 crossings / 20 rows, all Falador Castle doors, moved from cache-derived-gates-proven.tsv
+  into tools/transport-overrides.tsv with a full evidence block. Rule 2 of that file was
+  checked properly: the whole bounding box x 2955-2985, y 3330-3348 returns 14 upstream rows
+  and every one is a staircase - upstream models the castle stairs and not one of its doors.
+  Then regenerated src/main/resources/drewshelper-transports.tsv, because that resource is
+  what the router actually loads (see D-0114). Verified with the README's own acceptance
+  test: 12,275 edges before, 12,295 after, ZERO pre-existing edges lost, 20/20 new crossings
+  present, and the original Taverley gate override still present as a regression canary.

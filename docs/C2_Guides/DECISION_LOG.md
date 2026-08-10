@@ -1328,3 +1328,22 @@ D-0113 (2026-08-10) - Never sample validator output; capture all of it.
   west edge, and the generator honestly reported "0 proven". The data was fine; the
   sampling destroyed it. If output must be bounded, bound it randomly or by region, and say
   in the output what was dropped.
+
+D-0114 (2026-08-10) - tools/transport-overrides.tsv is NOT read at runtime.
+  Rule: adding rows to transport-overrides.tsv changes nothing on its own. The router loads
+  src/main/resources/drewshelper-transports.tsv, and the override rows only reach it when
+  tools/generate-drewshelper-transports.ps1 is re-run with -TransportDir pointing at the
+  sibling "Drew Shortest Path" checkout's src/main/resources/transports folder.
+  Why: promoting rows and stopping there produces a change that looks complete in git, passes
+  every test, and has zero effect in game. Always regenerate, and always verify with the
+  set-diff acceptance test in tools/README.md - old source->destination set must be a subset
+  of the new one. Never verify a regeneration by row count.
+
+D-0115 (2026-08-10) - An exception in an overlay is invisible except as "nothing drew".
+  Rule: when something stops rendering in RuneLite, grep the dev console for "Error during
+  overlay rendering" before touching the drawing logic. OverlayRenderer.safeRender catches
+  the throw, so the client keeps running normally and the only symptom is absence.
+  Corollary: everything after the throw point in that overlay's render() is lost too, so one
+  bad call takes out unrelated features that happen to be drawn later in the same method.
+  Why: a full render-order feature (door outlines) looked like a logic bug for a whole test
+  cycle when it was a one-line unguarded API call.

@@ -1,888 +1,888 @@
 # Machine-readable review queue. One row per crossing; not an active transport file.
 rank	routeAProven	detourSteps	detourCapped	edgeKey	from	to	direction	name	action	label
-1	false	>512	true	2809,9313,0 N	2809,9314,0	2809,9313,0	S	Ancient Gate	Open	Open Ancient Gate
-2	false	>512	true	2809,9331,0 N	2809,9332,0	2809,9331,0	S	Ancient Gate	Open	Open Ancient Gate
-3	false	>512	true	2810,9313,0 N	2810,9314,0	2810,9313,0	S	Ancient Gate	Open	Open Ancient Gate
-4	false	>512	true	2810,9331,0 N	2810,9332,0	2810,9331,0	S	Ancient Gate	Open	Open Ancient Gate
-5	false	>512	true	2928,9516,0 N	2928,9516,0	2928,9517,0	N	Ancient metal gate	Open	Open Ancient metal gate
-6	false	>512	true	2929,9516,0 N	2929,9516,0	2929,9517,0	N	Ancient metal gate	Open	Open Ancient metal gate
-7	false	>512	true	2743,2767,0 E	2744,2767,0	2743,2767,0	W	Bamboo Door	Open	Open Bamboo Door
-8	false	>512	true	2776,9195,0 E	2777,9195,0	2776,9195,0	W	Bamboo Door	Open	Open Bamboo Door
-9	false	>512	true	2782,3057,0 E	2782,3057,0	2783,3057,0	E	Bamboo Door	Open	Open Bamboo Door
-10	false	>512	true	2792,3054,0 E	2792,3054,0	2793,3054,0	E	Bamboo Door	Open	Open Bamboo Door
-11	false	>512	true	2802,3058,0 E	2802,3058,0	2803,3058,0	E	Bamboo Door	Open	Open Bamboo Door
-12	false	>512	true	2007,5914,0 E	2007,5914,0	2008,5914,0	E	Barrier	Pass	Pass Barrier
-13	false	>512	true	2027,5914,0 E	2028,5914,0	2027,5914,0	W	Barrier	Pass	Pass Barrier
-14	false	>512	true	2199,2842,0 E	2199,2842,0	2200,2842,0	E	Barrier	Pass	Pass Barrier
-15	false	>512	true	2219,2842,0 E	2220,2842,0	2219,2842,0	W	Barrier	Pass	Pass Barrier
-16	false	>512	true	3282,3382,0 E	3282,3382,0	3283,3382,0	E	Bedroom door	Open	Open Bedroom door
-17	false	>512	true	2850,5333,2 E	2851,5333,2	2850,5333,2	W	Big door	Open	Open Big door
-18	false	>512	true	2930,9644,0 E	2931,9644,0	2930,9644,0	W	Blue door	Open	Open Blue door
-19	false	>512	true	3538,3261,0 N	3538,3261,0	3538,3262,0	N	Broken fence	Climb-over	Climb-over Broken fence
-20	false	>512	true	3582,3263,0 N	3582,3263,0	3582,3264,0	N	Broken fence	Climb-over	Climb-over Broken fence
-21	false	>512	true	3491,3230,0 N	3491,3230,0	3491,3231,0	N	Broken wall	Climb-over	Climb-over Broken wall
-22	false	>512	true	2610,9195,1 E	2610,9195,1	2611,9195,1	E	Bronze Door	Open	Open Bronze Door
-23	false	>512	true	2959,3334,2 N	2959,3335,2	2959,3334,2	S	Castle door	Open	Open Castle door
-24	false	>512	true	2960,3334,2 N	2960,3335,2	2960,3334,2	S	Castle door	Open	Open Castle door
-25	false	>512	true	2960,3342,2 N	2960,3342,2	2960,3343,2	N	Castle door	Open	Open Castle door
-26	false	>512	true	2961,3342,2 N	2961,3342,2	2961,3343,2	N	Castle door	Open	Open Castle door
-27	false	>512	true	3045,3371,0 N	3045,3371,0	3045,3372,0	N	Castle door	Open	Open Castle door
-28	false	>512	true	3046,3371,0 N	3046,3371,0	3046,3372,0	N	Castle door	Open	Open Castle door
-29	false	>512	true	3141,3638,1 N	3141,3638,1	3141,3639,1	N	Casual	Pass-Through	Pass-Through Casual
-30	false	>512	true	3142,3638,1 N	3142,3638,1	3142,3639,1	N	Casual	Pass-Through	Pass-Through Casual
-31	false	>512	true	1674,3678,2 E	1674,3678,2	1675,3678,2	E	Cell Door	Open	Open Cell Door
-32	false	>512	true	1931,9447,0 E	1932,9447,0	1931,9447,0	W	Cell door	Open	Open Cell door
-33	false	>512	true	2141,3901,0 E	2141,3901,0	2142,3901,0	E	Cell door	Open	Open Cell door
-34	false	>512	true	2225,3798,0 E	2225,3798,0	2226,3798,0	E	Cell door	Open	Open Cell door
-35	false	>512	true	2572,9705,0 E	2573,9705,0	2572,9705,0	W	Cell door	Open	Open Cell door
-36	false	>512	true	2572,9708,0 E	2573,9708,0	2572,9708,0	W	Cell door	Open	Open Cell door
-37	false	>512	true	2572,9711,0 E	2573,9711,0	2572,9711,0	W	Cell door	Open	Open Cell door
-38	false	>512	true	2572,9714,0 E	2573,9714,0	2572,9714,0	W	Cell door	Open	Open Cell door
-39	false	>512	true	2854,10055,1 E	2855,10055,1	2854,10055,1	W	Cell Door	Open	Open Cell Door
-40	false	>512	true	3012,3189,0 E	3012,3189,0	3013,3189,0	E	Cell door	Open	Open Cell door
-41	false	>512	true	3012,3192,0 E	3012,3192,0	3013,3192,0	E	Cell door	Open	Open Cell door
-42	false	>512	true	3012,3195,0 E	3012,3195,0	3013,3195,0	E	Cell door	Open	Open Cell door
-43	false	>512	true	3618,3377,0 N	3618,3378,0	3618,3377,0	S	Cell door	Open	Open Cell door
-44	false	>512	true	3619,3379,0 E	3620,3379,0	3619,3379,0	W	Cell door	Open	Open Cell door
-45	false	>512	true	2503,3062,0 E	2504,3062,0	2503,3062,0	W	City gate	Open	Open City gate
-46	false	>512	true	2503,3063,0 E	2504,3063,0	2503,3063,0	W	City gate	Open	Open City gate
-47	false	>512	true	2549,3027,0 N	2549,3028,0	2549,3027,0	S	City gate	Open	Open City gate
-48	false	>512	true	2550,3027,0 N	2550,3028,0	2550,3027,0	S	City gate	Open	Open City gate
-49	false	>512	true	3141,3638,0 N	3141,3639,0	3141,3638,0	S	Competitive	Pass-Through	Pass-Through Competitive
-50	false	>512	true	3142,3638,0 N	3142,3639,0	3142,3638,0	S	Competitive	Pass-Through	Pass-Through Competitive
-51	false	>512	true	1759,4711,0 N	1759,4712,0	1759,4711,0	S	Crack	Enter	Enter Crack
-52	false	>512	true	2569,5189,0 N	2569,5190,0	2569,5189,0	S	Crack	Squeeze-through	Squeeze-through Crack
-53	false	>512	true	2569,5194,0 N	2569,5194,0	2569,5195,0	N	Crack	Squeeze-through	Squeeze-through Crack
-54	false	>512	true	2617,9827,0 N	2617,9827,0	2617,9828,0	N	Crack	Enter	Enter Crack
-55	false	>512	true	1926,6223,0 E	1926,6223,0	1927,6223,0	E	Crevice	Squeeze-through	Squeeze-through Crevice
-56	false	>512	true	1711,6113,0 E	1711,6113,0	1712,6113,0	E	Curtain	Open	Open Curtain
-57	false	>512	true	1711,6116,0 E	1711,6116,0	1712,6116,0	E	Curtain	Open	Open Curtain
-58	false	>512	true	3071,9896,0 E	3072,9896,0	3071,9896,0	W	Curtain	Enter	Enter Curtain
-59	false	>512	true	3072,9882,0 E	3073,9882,0	3072,9882,0	W	Curtain	Enter	Enter Curtain
-60	false	>512	true	3078,9899,0 N	3078,9899,0	3078,9900,0	N	Curtain	Enter	Enter Curtain
-61	false	>512	true	3082,9877,0 N	3082,9878,0	3082,9877,0	S	Curtain	Enter	Enter Curtain
-62	false	>512	true	3119,3105,0 E	3119,3105,0	3120,3105,0	E	Curtain	Open	Open Curtain
-63	false	>512	true	3119,3108,0 E	3119,3108,0	3120,3108,0	E	Curtain	Open	Open Curtain
-64	false	>512	true	3172,2976,0 N	3172,2977,0	3172,2976,0	S	Curtain	Open	Open Curtain
-65	false	>512	true	3182,2984,0 E	3182,2984,0	3183,2984,0	E	Curtain	Open	Open Curtain
-66	false	>512	true	3287,3173,1 E	3288,3173,1	3287,3173,1	W	Curtain	Open	Open Curtain
-67	false	>512	true	3291,3030,0 N	3291,3030,0	3291,3031,0	N	Curtain	Open	Open Curtain
-68	false	>512	true	3344,2955,0 E	3345,2955,0	3344,2955,0	W	Curtain	Open	Open Curtain
-69	false	>512	true	3350,2956,0 N	3350,2957,0	3350,2956,0	S	Curtain	Open	Open Curtain
-70	false	>512	true	3359,2981,0 N	3359,2981,0	3359,2982,0	N	Curtain	Open	Open Curtain
-71	false	>512	true	3360,2993,0 E	3361,2993,0	3360,2993,0	W	Curtain	Open	Open Curtain
-72	false	>512	true	3364,2999,0 N	3364,2999,0	3364,3000,0	N	Curtain	Open	Open Curtain
-73	false	>512	true	3365,2983,1 E	3366,2983,1	3365,2983,1	W	Curtain	Open	Open Curtain
-74	false	>512	true	3372,2968,1 N	3372,2969,1	3372,2968,1	S	Curtain	Open	Open Curtain
-75	false	>512	true	1237,3683,0 E	1237,3683,0	1238,3683,0	E	Door	Open	Open Door
-76	false	>512	true	1239,3681,1 E	1240,3681,1	1239,3681,1	W	Door	Open	Open Door
-77	false	>512	true	1242,3682,0 N	1242,3682,0	1242,3683,0	N	Door	Open	Open Door
-78	false	>512	true	1243,3680,1 N	1243,3681,1	1243,3680,1	S	Door	Open	Open Door
-79	false	>512	true	1243,3682,1 N	1243,3682,1	1243,3683,1	N	Door	Open	Open Door
-80	false	>512	true	1244,3685,0 E	1245,3685,0	1244,3685,0	W	Door	Open	Open Door
-81	false	>512	true	1284,3758,0 N	1284,3758,0	1284,3759,0	N	Door	Open	Open Door
-82	false	>512	true	1382,3816,0 N	1382,3817,0	1382,3816,0	S	Door	Open	Open Door
-83	false	>512	true	1431,3796,0 E	1431,3796,0	1432,3796,0	E	Door	Open	Open Door
-84	false	>512	true	1434,3743,0 N	1434,3744,0	1434,3743,0	S	Door	Open	Open Door
-85	false	>512	true	1440,3788,0 N	1440,3788,0	1440,3789,0	N	Door	Open	Open Door
-86	false	>512	true	1456,3748,0 E	1456,3748,0	1457,3748,0	E	Door	Open	Open Door
-87	false	>512	true	1462,3758,0 N	1462,3759,0	1462,3758,0	S	Door	Open	Open Door
-88	false	>512	true	1489,3834,0 E	1489,3834,0	1490,3834,0	E	Door	Open	Open Door
-89	false	>512	true	1512,3832,0 E	1513,3832,0	1512,3832,0	W	Door	Open	Open Door
-90	false	>512	true	1525,3746,0 N	1525,3747,0	1525,3746,0	S	Door	Open	Open Door
-91	false	>512	true	1534,3723,0 N	1534,3723,0	1534,3724,0	N	Door	Open	Open Door
-92	false	>512	true	1536,3808,0 E	1537,3808,0	1536,3808,0	W	Door	Open	Open Door
-93	false	>512	true	1542,3783,0 N	1542,3783,0	1542,3784,0	N	Door	Open	Open Door
-94	false	>512	true	1551,3782,0 E	1552,3782,0	1551,3782,0	W	Door	Open	Open Door
-95	false	>512	true	1553,3799,0 N	1553,3799,0	1553,3800,0	N	Door	Open	Open Door
-96	false	>512	true	1560,3759,0 E	1561,3759,0	1560,3759,0	W	Door	Open	Open Door
-97	false	>512	true	1561,3737,0 E	1561,3737,0	1562,3737,0	E	Door	Open	Open Door
-98	false	>512	true	1595,3819,0 E	1596,3819,0	1595,3819,0	W	Door	Open	Open Door
-99	false	>512	true	1595,3820,0 E	1596,3820,0	1595,3820,0	W	Door	Open	Open Door
-100	false	>512	true	1622,3807,0 E	1623,3807,0	1622,3807,0	W	Door	Open	Open Door
-101	false	>512	true	1622,3808,0 E	1623,3808,0	1622,3808,0	W	Door	Open	Open Door
-102	false	>512	true	1627,4829,0 E	1628,4829,0	1627,4829,0	W	Door	Open	Open Door
-103	false	>512	true	1631,4834,0 N	1631,4835,0	1631,4834,0	S	Door	Open	Open Door
-104	false	>512	true	1632,3817,0 N	1632,3817,0	1632,3818,0	N	Door	Open	Open Door
-105	false	>512	true	1632,4837,0 E	1633,4837,0	1632,4837,0	W	Door	Open	Open Door
-106	false	>512	true	1633,3817,0 N	1633,3817,0	1633,3818,0	N	Door	Open	Open Door
-107	false	>512	true	1633,4842,0 E	1634,4842,0	1633,4842,0	W	Door	Open	Open Door
-108	false	>512	true	1634,3797,0 N	1634,3798,0	1634,3797,0	S	Door	Open	Open Door
-109	false	>512	true	1635,3797,0 N	1635,3798,0	1635,3797,0	S	Door	Open	Open Door
-110	false	>512	true	1635,4838,0 E	1635,4838,0	1636,4838,0	E	Door	Open	Open Door
-111	false	>512	true	1640,4828,0 E	1640,4828,0	1641,4828,0	E	Door	Open	Open Door
-112	false	>512	true	1642,3805,0 E	1642,3805,0	1643,3805,0	E	Door	Open	Open Door
-113	false	>512	true	1642,3806,0 E	1642,3806,0	1643,3806,0	E	Door	Open	Open Door
-114	false	>512	true	1643,4839,0 N	1643,4839,0	1643,4840,0	N	Door	Open	Open Door
-115	false	>512	true	1650,3736,0 N	1650,3736,0	1650,3737,0	N	Door	Open	Open Door
-116	false	>512	true	1651,3736,0 N	1651,3736,0	1651,3737,0	N	Door	Open	Open Door
-117	false	>512	true	1664,6098,0 E	1664,6098,0	1665,6098,0	E	Door	Open	Open Door
-118	false	>512	true	1670,6092,0 E	1671,6092,0	1670,6092,0	W	Door	Open	Open Door
-119	false	>512	true	1677,3784,0 E	1678,3784,0	1677,3784,0	W	Door	Open	Open Door
-120	false	>512	true	1677,3785,0 E	1678,3785,0	1677,3785,0	W	Door	Open	Open Door
-121	false	>512	true	1677,3802,0 E	1678,3802,0	1677,3802,0	W	Door	Open	Open Door
-122	false	>512	true	1677,3803,0 E	1678,3803,0	1677,3803,0	W	Door	Open	Open Door
-123	false	>512	true	1678,6133,0 N	1678,6134,0	1678,6133,0	S	Door	Open	Open Door
-124	false	>512	true	1689,6115,0 E	1690,6115,0	1689,6115,0	W	Door	Open	Open Door
-125	false	>512	true	1693,3723,0 N	1693,3723,0	1693,3724,0	N	Door	Open	Open Door
-126	false	>512	true	1694,3723,0 N	1694,3723,0	1694,3724,0	N	Door	Open	Open Door
-127	false	>512	true	1701,3763,0 N	1701,3764,0	1701,3763,0	S	Door	Open	Open Door
-128	false	>512	true	1702,3763,0 N	1702,3764,0	1702,3763,0	S	Door	Open	Open Door
-129	false	>512	true	1716,3742,0 E	1717,3742,0	1716,3742,0	W	Door	Open	Open Door
-130	false	>512	true	1716,3743,0 E	1717,3743,0	1716,3743,0	W	Door	Open	Open Door
-131	false	>512	true	1716,3757,0 E	1717,3757,0	1716,3757,0	W	Door	Open	Open Door
-132	false	>512	true	1716,3758,0 E	1717,3758,0	1716,3758,0	W	Door	Open	Open Door
-133	false	>512	true	1720,6114,0 E	1721,6114,0	1720,6114,0	W	Door	Open	Open Door
-134	false	>512	true	1720,6115,0 E	1721,6115,0	1720,6115,0	W	Door	Open	Open Door
-135	false	>512	true	1721,6132,0 E	1722,6132,0	1721,6132,0	W	Door	Open	Open Door
-136	false	>512	true	1810,9944,0 N	1810,9945,0	1810,9944,0	S	Door	Open	Open Door
-137	false	>512	true	1864,5127,0 E	1864,5127,0	1865,5127,0	E	Door	Open	Open Door
-138	false	>512	true	1864,5137,0 E	1864,5137,0	1865,5137,0	E	Door	Open	Open Door
-139	false	>512	true	1881,5022,0 E	1881,5022,0	1882,5022,0	E	Door	Open	Open Door
-140	false	>512	true	1881,5030,0 E	1881,5030,0	1882,5030,0	E	Door	Open	Open Door
-141	false	>512	true	1886,5032,0 N	1886,5033,0	1886,5032,0	S	Door	Open	Open Door
-142	false	>512	true	1890,5019,0 E	1891,5019,0	1890,5019,0	W	Door	Open	Open Door
-143	false	>512	true	2033,4636,0 E	2034,4636,0	2033,4636,0	W	Door	Open	Open Door
-144	false	>512	true	2037,4633,0 N	2037,4633,0	2037,4634,0	N	Door	Open	Open Door
-145	false	>512	true	2042,4633,0 N	2042,4633,0	2042,4634,0	N	Door	Open	Open Door
-146	false	>512	true	2191,4950,1 E	2191,4950,1	2192,4950,1	E	Door	Open	Open Door
-147	false	>512	true	2191,4958,0 E	2191,4958,0	2192,4958,0	E	Door	Open	Open Door
-148	false	>512	true	2191,4958,1 E	2191,4958,1	2192,4958,1	E	Door	Open	Open Door
-149	false	>512	true	2198,4943,1 N	2198,4943,1	2198,4944,1	N	Door	Open	Open Door
-150	false	>512	true	2217,4943,1 N	2217,4943,1	2217,4944,1	N	Door	Open	Open Door
-151	false	>512	true	2223,4950,1 E	2224,4950,1	2223,4950,1	W	Door	Open	Open Door
-152	false	>512	true	2223,4958,0 E	2224,4958,0	2223,4958,0	W	Door	Open	Open Door
-153	false	>512	true	2223,4958,1 E	2224,4958,1	2223,4958,1	W	Door	Open	Open Door
-154	false	>512	true	2319,3677,0 N	2319,3677,0	2319,3678,0	N	Door	Open	Open Door
-155	false	>512	true	2319,3689,0 N	2319,3690,0	2319,3689,0	S	Door	Open	Open Door
-156	false	>512	true	2321,3667,0 E	2322,3667,0	2321,3667,0	W	Door	Open	Open Door
-157	false	>512	true	2326,3671,0 N	2326,3672,0	2326,3671,0	S	Door	Open	Open Door
-158	false	>512	true	2337,3675,0 E	2337,3675,0	2338,3675,0	E	Door	Open	Open Door
-159	false	>512	true	2339,3800,0 N	2339,3801,0	2339,3800,0	S	Door	Open	Open Door
-160	false	>512	true	2351,3679,0 E	2351,3679,0	2352,3679,0	E	Door	Open	Open Door
-161	false	>512	true	2398,5542,0 E	2399,5542,0	2398,5542,0	W	Door	Open	Open Door
-162	false	>512	true	2442,3183,0 N	2442,3183,0	2442,3184,0	N	Door	Open	Open Door
-163	false	>512	true	2502,3250,0 N	2502,3250,0	2502,3251,0	N	Door	Open	Open Door
-164	false	>512	true	2515,9575,0 N	2515,9575,0	2515,9576,0	N	Door	Open	Open Door
-165	false	>512	true	2538,9097,1 E	2539,9097,1	2538,9097,1	W	Door	Open	Open Door
-166	false	>512	true	2540,9900,0 N	2540,9900,0	2540,9901,0	N	Door	Open	Open Door
-167	false	>512	true	2542,9125,1 N	2542,9126,1	2542,9125,1	S	Door	Open	Open Door
-168	false	>512	true	2542,9892,0 N	2542,9892,0	2542,9893,0	N	Door	Open	Open Door
-169	false	>512	true	2546,3325,1 E	2547,3325,1	2546,3325,1	W	Door	Open	Open Door
-170	false	>512	true	2551,3320,0 N	2551,3320,0	2551,3321,0	N	Door	Open	Open Door
-171	false	>512	true	2551,3327,0 N	2551,3328,0	2551,3327,0	S	Door	Open	Open Door
-172	false	>512	true	2564,3356,0 E	2565,3356,0	2564,3356,0	W	Door	Open	Open Door
-173	false	>512	true	2566,5192,0 E	2567,5192,0	2566,5192,0	W	Door	Open	Open Door
-174	false	>512	true	2566,5198,0 E	2567,5198,0	2566,5198,0	W	Door	Open	Open Door
-175	false	>512	true	2572,3287,1 N	2572,3288,1	2572,3287,1	S	Door	Open	Open Door
-176	false	>512	true	2572,3305,1 N	2572,3305,1	2572,3306,1	N	Door	Open	Open Door
-177	false	>512	true	2576,5192,0 E	2576,5192,0	2577,5192,0	E	Door	Open	Open Door
-178	false	>512	true	2576,5198,0 E	2576,5198,0	2577,5198,0	E	Door	Open	Open Door
-179	false	>512	true	2579,4455,0 N	2579,4455,0	2579,4456,0	N	Door	Open	Open Door
-180	false	>512	true	2579,5278,0 N	2579,5278,0	2579,5279,0	N	Door	Pass	Pass Door
-181	false	>512	true	2579,5288,0 N	2579,5288,0	2579,5289,0	N	Door	Pass	Pass Door
-182	false	>512	true	2579,5298,0 N	2579,5298,0	2579,5299,0	N	Door	Pass	Pass Door
-183	false	>512	true	2581,9120,1 E	2582,9120,1	2581,9120,1	W	Door	Open	Open Door
-184	false	>512	true	2584,3141,0 E	2585,3141,0	2584,3141,0	W	Door	Open	Open Door
-185	false	>512	true	2587,5278,0 N	2587,5278,0	2587,5279,0	N	Door	Pass	Pass Door
-186	false	>512	true	2587,5288,0 N	2587,5288,0	2587,5289,0	N	Door	Pass	Pass Door
-187	false	>512	true	2587,5298,0 N	2587,5298,0	2587,5299,0	N	Door	Pass	Pass Door
-188	false	>512	true	2594,3266,0 N	2594,3266,0	2594,3267,0	N	Door	Open	Open Door
-189	false	>512	true	2599,5288,0 N	2599,5288,0	2599,5289,0	N	Door	Pass	Pass Door
-190	false	>512	true	2599,5298,0 N	2599,5298,0	2599,5299,0	N	Door	Pass	Pass Door
-191	false	>512	true	2602,5278,0 N	2602,5278,0	2602,5279,0	N	Door	Pass	Pass Door
-192	false	>512	true	2606,9892,0 N	2606,9892,0	2606,9893,0	N	Door	Open	Open Door
-193	false	>512	true	2607,5288,0 N	2607,5288,0	2607,5289,0	N	Door	Pass	Pass Door
-194	false	>512	true	2607,5298,0 N	2607,5298,0	2607,5299,0	N	Door	Pass	Pass Door
-195	false	>512	true	2610,3316,0 E	2610,3316,0	2611,3316,0	E	Door	Open	Open Door
-196	false	>512	true	2617,3171,0 N	2617,3171,0	2617,3172,0	N	Door	Open	Open Door
-197	false	>512	true	2631,3666,0 N	2631,3667,0	2631,3666,0	S	Door	Open	Open Door
-198	false	>512	true	2633,3323,0 E	2634,3323,0	2633,3323,0	W	Door	Open	Open Door
-199	false	>512	true	2635,3321,0 N	2635,3321,0	2635,3322,0	N	Door	Open	Open Door
-200	false	>512	true	2636,3666,0 N	2636,3667,0	2636,3666,0	S	Door	Open	Open Door
-201	false	>512	true	2639,10382,0 E	2640,10382,0	2639,10382,0	W	Door	Open	Open Door
-202	false	>512	true	2643,10417,0 N	2643,10418,0	2643,10417,0	S	Door	Open	Open Door
-203	false	>512	true	2646,9870,0 N	2646,9870,0	2646,9871,0	N	Door	Open	Open Door
-204	false	>512	true	2648,9185,1 N	2648,9185,1	2648,9186,1	N	Door	Open	Open Door
-205	false	>512	true	2648,9857,0 N	2648,9857,0	2648,9858,0	N	Door	Open	Open Door
-206	false	>512	true	2657,3496,0 N	2657,3496,0	2657,3497,0	N	Door	Open	Open Door
-207	false	>512	true	2662,10396,0 E	2662,10396,0	2663,10396,0	E	Door	Open	Open Door
-208	false	>512	true	2665,9663,0 N	2665,9663,0	2665,9664,0	N	Door	Open	Open Door
-209	false	>512	true	2666,3683,0 E	2667,3683,0	2666,3683,0	W	Door	Open	Open Door
-210	false	>512	true	2666,9189,1 N	2666,9189,1	2666,9190,1	N	Door	Open	Open Door
-211	false	>512	true	2674,3303,0 N	2674,3304,0	2674,3303,0	S	Door	Open	Open Door
-212	false	>512	true	2674,3305,0 N	2674,3305,0	2674,3306,0	N	Door	Open	Open Door
-213	false	>512	true	2694,5292,0 N	2694,5293,0	2694,5292,0	S	Door	Open	Open Door
-214	false	>512	true	2696,5324,1 E	2696,5324,1	2697,5324,1	E	Door	Open	Open Door
-215	false	>512	true	2697,5336,1 N	2697,5336,1	2697,5337,1	N	Door	Open	Open Door
-216	false	>512	true	2697,5343,1 E	2697,5343,1	2698,5343,1	E	Door	Open	Open Door
-217	false	>512	true	2698,5288,1 N	2698,5289,1	2698,5288,1	S	Door	Open	Open Door
-218	false	>512	true	2698,5299,1 N	2698,5300,1	2698,5299,1	S	Door	Open	Open Door
-219	false	>512	true	2699,5297,0 E	2699,5297,0	2700,5297,0	E	Door	Open	Open Door
-220	false	>512	true	2699,5317,1 E	2699,5317,1	2700,5317,1	E	Door	Open	Open Door
-221	false	>512	true	2700,5262,0 E	2700,5262,0	2701,5262,0	E	Door	Open	Open Door
-222	false	>512	true	2701,5317,0 E	2702,5317,0	2701,5317,0	W	Door	Open	Open Door
-223	false	>512	true	2701,5331,0 E	2702,5331,0	2701,5331,0	W	Door	Open	Open Door
-224	false	>512	true	2701,5354,1 N	2701,5354,1	2701,5355,1	N	Door	Open	Open Door
-225	false	>512	true	2706,5265,0 E	2706,5265,0	2707,5265,0	E	Door	Open	Open Door
-226	false	>512	true	2708,5362,0 E	2709,5362,0	2708,5362,0	W	Door	Open	Open Door
-227	false	>512	true	2712,3283,0 E	2713,3283,0	2712,3283,0	W	Door	Open	Open Door
-228	false	>512	true	2717,3274,0 E	2718,3274,0	2717,3274,0	W	Door	Open	Open Door
-229	false	>512	true	2719,9671,0 N	2719,9671,0	2719,9672,0	N	Door	Open	Open Door
-230	false	>512	true	2722,9671,0 N	2722,9671,0	2722,9672,0	N	Door	Open	Open Door
-231	false	>512	true	2723,3275,0 N	2723,3276,0	2723,3275,0	S	Door	Open	Open Door
-232	false	>512	true	2723,9710,0 N	2723,9711,0	2723,9710,0	S	Door	Open	Open Door
-233	false	>512	true	2727,9690,0 E	2727,9690,0	2728,9690,0	E	Door	Open	Open Door
-234	false	>512	true	2729,3276,0 E	2729,3276,0	2730,3276,0	E	Door	Open	Open Door
-235	false	>512	true	2730,3292,0 E	2730,3292,0	2731,3292,0	E	Door	Open	Open Door
-236	false	>512	true	2730,5354,0 E	2730,5354,0	2731,5354,0	E	Door	Open	Open Door
-237	false	>512	true	2733,5362,1 N	2733,5363,1	2733,5362,1	S	Door	Open	Open Door
-238	false	>512	true	2734,3295,0 N	2734,3296,0	2734,3295,0	S	Door	Open	Open Door
-239	false	>512	true	2736,5285,1 E	2737,5285,1	2736,5285,1	W	Door	Open	Open Door
-240	false	>512	true	2736,5291,0 E	2737,5291,0	2736,5291,0	W	Door	Open	Open Door
-241	false	>512	true	2736,5295,1 E	2737,5295,1	2736,5295,1	W	Door	Open	Open Door
-242	false	>512	true	2736,5353,1 N	2736,5353,1	2736,5354,1	N	Door	Open	Open Door
-243	false	>512	true	2737,5264,0 E	2738,5264,0	2737,5264,0	W	Door	Open	Open Door
-244	false	>512	true	2739,5338,1 E	2740,5338,1	2739,5338,1	W	Door	Open	Open Door
-245	false	>512	true	2740,5327,1 N	2740,5327,1	2740,5328,1	N	Door	Open	Open Door
-246	false	>512	true	2740,5331,0 N	2740,5332,0	2740,5331,0	S	Door	Open	Open Door
-247	false	>512	true	2741,5264,1 N	2741,5264,1	2741,5265,1	N	Door	Open	Open Door
-248	false	>512	true	2741,5362,0 N	2741,5363,0	2741,5362,0	S	Door	Open	Open Door
-249	false	>512	true	2742,5260,0 N	2742,5260,0	2742,5261,0	N	Door	Open	Open Door
-250	false	>512	true	2744,5338,0 N	2744,5338,0	2744,5339,0	N	Door	Open	Open Door
-251	false	>512	true	2746,5331,0 N	2746,5332,0	2746,5331,0	S	Door	Open	Open Door
-252	false	>512	true	2763,3197,0 E	2764,3197,0	2763,3197,0	W	Door	Open	Open Door
-253	false	>512	true	2764,3503,1 E	2764,3503,1	2765,3503,1	E	Door	Open	Open Door
-254	false	>512	true	2767,3288,1 E	2768,3288,1	2767,3288,1	W	Door	Open	Open Door
-255	false	>512	true	2774,3187,0 N	2774,3187,0	2774,3188,0	N	Door	Open	Open Door
-256	false	>512	true	2781,3196,0 N	2781,3197,0	2781,3196,0	S	Door	Open	Open Door
-257	false	>512	true	2788,3189,0 N	2788,3189,0	2788,3190,0	N	Door	Open	Open Door
-258	false	>512	true	2794,3199,0 N	2794,3199,0	2794,3200,0	N	Door	Open	Open Door
-259	false	>512	true	2810,3170,0 E	2811,3170,0	2810,3170,0	W	Door	Open	Open Door
-260	false	>512	true	2835,5093,0 N	2835,5093,0	2835,5094,0	N	Door	Open	Open Door
-261	false	>512	true	2838,5099,1 E	2838,5099,1	2839,5099,1	E	Door	Open	Open Door
-262	false	>512	true	2838,5100,0 E	2838,5100,0	2839,5100,0	E	Door	Open	Open Door
-263	false	>512	true	2839,5091,0 E	2840,5091,0	2839,5091,0	W	Door	Open	Open Door
-264	false	>512	true	2843,5096,0 N	2843,5097,0	2843,5096,0	S	Door	Open	Open Door
-265	false	>512	true	2852,5096,0 N	2852,5097,0	2852,5096,0	S	Door	Open	Open Door
-266	false	>512	true	2855,5091,0 E	2855,5091,0	2856,5091,0	E	Door	Open	Open Door
-267	false	>512	true	2856,5099,1 E	2857,5099,1	2856,5099,1	W	Door	Open	Open Door
-268	false	>512	true	2856,5100,0 E	2857,5100,0	2856,5100,0	W	Door	Open	Open Door
-269	false	>512	true	2860,5093,0 N	2860,5093,0	2860,5094,0	N	Door	Open	Open Door
-270	false	>512	true	2901,3465,0 N	2901,3465,0	2901,3466,0	N	Door	Open	Open Door
-271	false	>512	true	2901,3470,1 N	2901,3471,1	2901,3470,1	S	Door	Open	Open Door
-272	false	>512	true	2901,3510,0 E	2902,3510,0	2901,3510,0	W	Door	Open	Open Door
-273	false	>512	true	2901,3511,0 E	2902,3511,0	2901,3511,0	W	Door	Open	Open Door
-274	false	>512	true	2902,3467,0 N	2902,3467,0	2902,3468,0	N	Door	Open	Open Door
-275	false	>512	true	2906,3542,1 N	2906,3543,1	2906,3542,1	S	Door	Open	Open Door
-276	false	>512	true	2911,9968,0 E	2911,9968,0	2912,9968,0	E	Door	Open	Open Door
-277	false	>512	true	2931,9689,0 N	2931,9690,0	2931,9689,0	S	Door	Open	Open Door
-278	false	>512	true	2931,9694,0 N	2931,9694,0	2931,9695,0	N	Door	Open	Open Door
-279	false	>512	true	2933,3463,0 E	2934,3463,0	2933,3463,0	W	Door	Open	Open Door
-280	false	>512	true	3014,3181,0 N	3014,3182,0	3014,3181,0	S	Door	Open	Open Door
-281	false	>512	true	3014,3453,0 E	3015,3453,0	3014,3453,0	W	Door	Open	Open Door
-282	false	>512	true	3018,3181,0 N	3018,3182,0	3018,3181,0	S	Door	Open	Open Door
-283	false	>512	true	3018,3187,0 N	3018,3187,0	3018,3188,0	N	Door	Open	Open Door
-284	false	>512	true	3019,3515,0 E	3020,3515,0	3019,3515,0	W	Door	Open	Open Door
-285	false	>512	true	3019,9732,0 N	3019,9732,0	3019,9733,0	N	Door	Open	Open Door
-286	false	>512	true	3023,5082,1 E	3023,5082,1	3024,5082,1	E	Door	Open	Open Door
-287	false	>512	true	3037,3956,0 E	3038,3956,0	3037,3956,0	W	Door	Open	Open Door
-288	false	>512	true	3041,3959,0 N	3041,3959,0	3041,3960,0	N	Door	Open	Open Door
-289	false	>512	true	3043,9729,0 N	3043,9729,0	3043,9730,0	N	Door	Open	Open Door
-290	false	>512	true	3044,3956,0 E	3044,3956,0	3045,3956,0	E	Door	Open	Open Door
-291	false	>512	true	3079,9334,3 N	3079,9334,3	3079,9335,3	N	Door	Open	Open Door
-292	false	>512	true	3081,9287,3 E	3082,9287,3	3081,9287,3	W	Door	Open	Open Door
-293	false	>512	true	3107,3367,0 E	3107,3367,0	3108,3367,0	E	Door	Open	Open Door
-294	false	>512	true	3115,3449,0 N	3115,3450,0	3115,3449,0	S	Door	Open	Open Door
-295	false	>512	true	3129,9289,3 N	3129,9290,3	3129,9289,3	S	Door	Open	Open Door
-296	false	>512	true	3129,9334,3 N	3129,9334,3	3129,9335,3	N	Door	Open	Open Door
-297	false	>512	true	3143,3443,0 N	3143,3443,0	3143,3444,0	N	Door	Open	Open Door
-298	false	>512	true	3143,3452,0 E	3144,3452,0	3143,3452,0	W	Door	Open	Open Door
-299	false	>512	true	3147,3172,0 N	3147,3172,0	3147,3173,0	N	Door	Open	Open Door
-300	false	>512	true	3153,3405,0 E	3154,3405,0	3153,3405,0	W	Door	Open	Open Door
-301	false	>512	true	3153,3409,0 E	3154,3409,0	3153,3409,0	W	Door	Open	Open Door
-302	false	>512	true	3182,9611,0 E	3183,9611,0	3182,9611,0	W	Door	Open	Open Door
-303	false	>512	true	3184,3412,0 E	3184,3412,0	3185,3412,0	E	Door	Open	Open Door
-304	false	>512	true	3185,3387,0 N	3185,3388,0	3185,3387,0	S	Door	Open	Open Door
-305	false	>512	true	3189,3384,0 E	3190,3384,0	3189,3384,0	W	Door	Open	Open Door
-306	false	>512	true	3190,3957,0 N	3190,3957,0	3190,3958,0	N	Door	Open	Open Door
-307	false	>512	true	3191,3362,0 N	3191,3363,0	3191,3362,0	S	Door	Open	Open Door
-308	false	>512	true	3191,3962,0 N	3191,3963,0	3191,3962,0	S	Door	Open	Open Door
-309	false	>512	true	3195,3384,0 E	3196,3384,0	3195,3384,0	W	Door	Open	Open Door
-310	false	>512	true	3195,3398,0 N	3195,3399,0	3195,3398,0	S	Door	Open	Open Door
-311	false	>512	true	3203,3475,2 N	3203,3476,2	3203,3475,2	S	Door	Open	Open Door
-312	false	>512	true	3203,3493,2 N	3203,3493,2	3203,3494,2	N	Door	Open	Open Door
-313	false	>512	true	3205,3489,1 N	3205,3489,1	3205,3490,1	N	Door	Open	Open Door
-314	false	>512	true	3235,3404,0 E	3235,3404,0	3236,3404,0	E	Door	Open	Open Door
-315	false	>512	true	3238,9767,0 N	3238,9767,0	3238,9768,0	N	Door	Open	Open Door
-316	false	>512	true	3240,3406,0 E	3241,3406,0	3240,3406,0	W	Door	Open	Open Door
-317	false	>512	true	3241,3382,0 E	3241,3382,0	3242,3382,0	E	Door	Open	Open Door
-318	false	>512	true	3241,3412,0 E	3242,3412,0	3241,3412,0	W	Door	Open	Open Door
-319	false	>512	true	3246,3385,0 N	3246,3386,0	3246,3385,0	S	Door	Open	Open Door
-320	false	>512	true	3247,9779,0 N	3247,9779,0	3247,9780,0	N	Door	Open	Open Door
-321	false	>512	true	3248,3410,0 N	3248,3411,0	3248,3410,0	S	Door	Open	Open Door
-322	false	>512	true	3249,9773,0 N	3249,9774,0	3249,9773,0	S	Door	Open	Open Door
-323	false	>512	true	3250,9769,0 N	3250,9770,0	3250,9769,0	S	Door	Open	Open Door
-324	false	>512	true	3251,3385,0 N	3251,3386,0	3251,3385,0	S	Door	Open	Open Door
-325	false	>512	true	3255,3388,0 E	3255,3388,0	3256,3388,0	E	Door	Open	Open Door
-326	false	>512	true	3259,3400,0 E	3259,3400,0	3260,3400,0	E	Door	Open	Open Door
-327	false	>512	true	3264,3441,0 N	3264,3441,0	3264,3442,0	N	Door	Open	Open Door
-328	false	>512	true	3265,3441,0 N	3265,3441,0	3265,3442,0	N	Door	Open	Open Door
-329	false	>512	true	3267,3382,0 E	3267,3382,0	3268,3382,0	E	Door	Open	Open Door
-330	false	>512	true	3272,3379,0 N	3272,3380,0	3272,3379,0	S	Door	Open	Open Door
-331	false	>512	true	3273,3382,0 E	3274,3382,0	3273,3382,0	W	Door	Open	Open Door
-332	false	>512	true	3280,9199,0 N	3280,9199,0	3280,9200,0	N	Door	Open	Open Door
-333	false	>512	true	3306,9199,0 N	3306,9199,0	3306,9200,0	N	Door	Open	Open Door
-334	false	>512	true	3337,5947,0 E	3338,5947,0	3337,5947,0	W	Door	Open	Open Door
-335	false	>512	true	3339,5945,0 N	3339,5945,0	3339,5946,0	N	Door	Open	Open Door
-336	false	>512	true	3353,9544,0 N	3353,9544,0	3353,9545,0	N	Door	Open	Open Door
-337	false	>512	true	3354,9544,0 N	3354,9544,0	3354,9545,0	N	Door	Open	Open Door
-338	false	>512	true	3354,9558,0 N	3354,9558,0	3354,9559,0	N	Door	Open	Open Door
-339	false	>512	true	3355,9558,0 N	3355,9558,0	3355,9559,0	N	Door	Open	Open Door
-340	false	>512	true	3365,9542,0 N	3365,9542,0	3365,9543,0	N	Door	Open	Open Door
-341	false	>512	true	3371,9556,0 E	3372,9556,0	3371,9556,0	W	Door	Open	Open Door
-342	false	>512	true	3373,9547,0 E	3374,9547,0	3373,9547,0	W	Door	Open	Open Door
-343	false	>512	true	3378,5927,0 N	3378,5928,0	3378,5927,0	S	Door	Open	Open Door
-344	false	>512	true	3378,5929,0 N	3378,5929,0	3378,5930,0	N	Door	Open	Open Door
-345	false	>512	true	3490,3474,1 E	3490,3474,1	3491,3474,1	E	Door	Open	Open Door
-346	false	>512	true	3492,3476,1 N	3492,3476,1	3492,3477,1	N	Door	Open	Open Door
-347	false	>512	true	3493,3470,1 N	3493,3471,1	3493,3470,1	S	Door	Open	Open Door
-348	false	>512	true	3496,3476,1 N	3496,3476,1	3496,3477,1	N	Door	Open	Open Door
-349	false	>512	true	3497,3470,1 N	3497,3471,1	3497,3470,1	S	Door	Open	Open Door
-350	false	>512	true	3592,3227,0 E	3593,3227,0	3592,3227,0	W	Door	Open	Open Door
-351	false	>512	true	3594,3218,0 N	3594,3219,0	3594,3218,0	S	Door	Open	Open Door
-352	false	>512	true	3595,3186,0 N	3595,3187,0	3595,3186,0	S	Door	Open	Open Door
-353	false	>512	true	3595,3214,0 E	3595,3214,0	3596,3214,0	E	Door	Open	Open Door
-354	false	>512	true	3595,3236,0 E	3595,3236,0	3596,3236,0	E	Door	Open	Open Door
-355	false	>512	true	3595,3251,0 E	3596,3251,0	3595,3251,0	W	Door	Open	Open Door
-356	false	>512	true	3597,3205,0 N	3597,3205,0	3597,3206,0	N	Door	Open	Open Door
-357	false	>512	true	3598,3189,0 E	3598,3189,0	3599,3189,0	E	Door	Open	Open Door
-358	false	>512	true	3598,3197,0 N	3598,3198,0	3598,3197,0	S	Door	Open	Open Door
-359	false	>512	true	3598,3209,0 N	3598,3210,0	3598,3209,0	S	Door	Open	Open Door
-360	false	>512	true	3598,3242,0 E	3599,3242,0	3598,3242,0	W	Door	Open	Open Door
-361	false	>512	true	3598,3259,0 N	3598,3260,0	3598,3259,0	S	Door	Open	Open Door
-362	false	>512	true	3599,3227,0 E	3600,3227,0	3599,3227,0	W	Door	Open	Open Door
-363	false	>512	true	3599,3282,0 N	3599,3282,0	3599,3283,0	N	Door	Open	Open Door
-364	false	>512	true	3601,3382,0 N	3601,3382,0	3601,3383,0	N	Door	Open	Open Door
-365	false	>512	true	3602,3207,0 N	3602,3208,0	3602,3207,0	S	Door	Open	Open Door
-366	false	>512	true	3602,3389,0 E	3602,3389,0	3603,3389,0	E	Door	Open	Open Door
-367	false	>512	true	3604,3262,0 N	3604,3262,0	3604,3263,0	N	Door	Open	Open Door
-368	false	>512	true	3605,3358,0 N	3605,3358,0	3605,3359,0	N	Door	Open	Open Door
-369	false	>512	true	3605,3364,0 N	3605,3365,0	3605,3364,0	S	Door	Open	Open Door
-370	false	>512	true	3606,3205,0 N	3606,3206,0	3606,3205,0	S	Door	Open	Open Door
-371	false	>512	true	3608,3263,0 E	3609,3263,0	3608,3263,0	W	Door	Open	Open Door
-372	false	>512	true	3608,3289,0 N	3608,3290,0	3608,3289,0	S	Door	Open	Open Door
-373	false	>512	true	3609,3387,0 N	3609,3387,0	3609,3388,0	N	Door	Open	Open Door
-374	false	>512	true	3610,3391,0 N	3610,3392,0	3610,3391,0	S	Door	Open	Open Door
-375	false	>512	true	3612,3196,0 E	3613,3196,0	3612,3196,0	W	Door	Open	Open Door
-376	false	>512	true	3612,3208,0 N	3612,3209,0	3612,3208,0	S	Door	Open	Open Door
-377	false	>512	true	3612,3377,0 E	3612,3377,0	3613,3377,0	E	Door	Open	Open Door
-378	false	>512	true	3613,3303,0 E	3613,3303,0	3614,3303,0	E	Door	Open	Open Door
-379	false	>512	true	3614,3204,0 N	3614,3204,0	3614,3205,0	N	Door	Open	Open Door
-380	false	>512	true	3614,3254,0 N	3614,3254,0	3614,3255,0	N	Door	Open	Open Door
-381	false	>512	true	3616,3234,0 E	3616,3234,0	3617,3234,0	E	Door	Open	Open Door
-382	false	>512	true	3616,3241,0 N	3616,3242,0	3616,3241,0	S	Door	Open	Open Door
-383	false	>512	true	3617,3281,0 E	3618,3281,0	3617,3281,0	W	Door	Open	Open Door
-384	false	>512	true	3618,3223,0 N	3618,3223,0	3618,3224,0	N	Door	Open	Open Door
-385	false	>512	true	3618,3304,0 N	3618,3305,0	3618,3304,0	S	Door	Open	Open Door
-386	false	>512	true	3619,3295,0 N	3619,3296,0	3619,3295,0	S	Door	Open	Open Door
-387	false	>512	true	3619,3381,0 N	3619,3381,0	3619,3382,0	N	Door	Open	Open Door
-388	false	>512	true	3620,3238,0 E	3621,3238,0	3620,3238,0	W	Door	Open	Open Door
-389	false	>512	true	3620,3384,0 N	3620,3385,0	3620,3384,0	S	Door	Open	Open Door
-390	false	>512	true	3621,3212,0 E	3622,3212,0	3621,3212,0	W	Door	Open	Open Door
-391	false	>512	true	3621,3230,0 N	3621,3230,0	3621,3231,0	N	Door	Open	Open Door
-392	false	>512	true	3624,3207,0 N	3624,3207,0	3624,3208,0	N	Door	Open	Open Door
-393	false	>512	true	3624,3221,0 N	3624,3221,0	3624,3222,0	N	Door	Open	Open Door
-394	false	>512	true	3625,3204,0 E	3625,3204,0	3626,3204,0	E	Door	Open	Open Door
-395	false	>512	true	3625,3258,0 E	3626,3258,0	3625,3258,0	W	Door	Open	Open Door
-396	false	>512	true	3626,3393,0 E	3626,3393,0	3627,3393,0	E	Door	Open	Open Door
-397	false	>512	true	3628,3204,0 E	3629,3204,0	3628,3204,0	W	Door	Open	Open Door
-398	false	>512	true	3628,3250,0 E	3628,3250,0	3629,3250,0	E	Door	Open	Open Door
-399	false	>512	true	3629,3232,0 N	3629,3232,0	3629,3233,0	N	Door	Open	Open Door
-400	false	>512	true	3629,3296,0 E	3630,3296,0	3629,3296,0	W	Door	Open	Open Door
-401	false	>512	true	3630,3320,0 E	3630,3320,0	3631,3320,0	E	Door	Open	Open Door
-402	false	>512	true	3631,3261,0 N	3631,3262,0	3631,3261,0	S	Door	Open	Open Door
-403	false	>512	true	3631,3266,0 N	3631,3266,0	3631,3267,0	N	Door	Open	Open Door
-404	false	>512	true	3632,3280,0 E	3633,3280,0	3632,3280,0	W	Door	Open	Open Door
-405	false	>512	true	3632,3316,0 E	3633,3316,0	3632,3316,0	W	Door	Open	Open Door
-406	false	>512	true	3632,3383,0 E	3632,3383,0	3633,3383,0	E	Door	Open	Open Door
-407	false	>512	true	3633,3242,0 N	3633,3243,0	3633,3242,0	S	Door	Open	Open Door
-408	false	>512	true	3633,3272,0 E	3633,3272,0	3634,3272,0	E	Door	Open	Open Door
-409	false	>512	true	3633,3284,0 N	3633,3285,0	3633,3284,0	S	Door	Open	Open Door
-410	false	>512	true	3634,3239,0 E	3635,3239,0	3634,3239,0	W	Door	Open	Open Door
-411	false	>512	true	3635,3254,0 E	3636,3254,0	3635,3254,0	W	Door	Open	Open Door
-412	false	>512	true	3635,3289,0 N	3635,3290,0	3635,3289,0	S	Door	Open	Open Door
-413	false	>512	true	3637,3242,0 N	3637,3243,0	3637,3242,0	S	Door	Open	Open Door
-414	false	>512	true	3639,3284,0 N	3639,3285,0	3639,3284,0	S	Door	Open	Open Door
-415	false	>512	true	3639,3302,0 E	3639,3302,0	3640,3302,0	E	Door	Open	Open Door
-416	false	>512	true	3642,3383,0 N	3642,3384,0	3642,3383,0	S	Door	Open	Open Door
-417	false	>512	true	3645,3380,0 N	3645,3380,0	3645,3381,0	N	Door	Open	Open Door
-418	false	>512	true	3662,3377,0 N	3662,3378,0	3662,3377,0	S	Door	Open	Open Door
-419	false	>512	true	3750,3292,0 N	3750,3292,0	3750,3293,0	N	Door	Open	Open Door
-420	false	>512	true	1765,10149,0 N	1765,10149,0	1765,10150,0	N	Doorway	Go-through	Go-through Doorway
-421	false	>512	true	2445,4595,0 N	2445,4596,0	2445,4595,0	S	Doorway	Walk-through	Walk-through Doorway
-422	false	>512	true	2509,3635,0 N	2509,3636,0	2509,3635,0	S	Doorway	Walk-through	Walk-through Doorway
-423	false	>512	true	3056,4991,1 N	3056,4991,1	3056,4992,1	N	Doorway	Open	Open Doorway
-424	false	>512	true	3510,9957,0 E	3510,9957,0	3511,9957,0	E	Entrance	Open	Open Entrance
-425	false	>512	true	2923,9654,0 E	2924,9654,0	2923,9654,0	W	Exit door	Open	Open Exit door
-426	false	>512	true	2926,9649,0 E	2927,9649,0	2926,9649,0	W	Exit door	Open	Open Exit door
-427	false	>512	true	2930,9640,0 E	2931,9640,0	2930,9640,0	W	Exit door	Open	Open Exit door
-428	false	>512	true	1804,3501,0 E	1805,3501,0	1804,3501,0	W	Farm door	Open	Open Farm door
-429	false	>512	true	1681,6099,0 E	1681,6099,0	1682,6099,0	E	Gate	Open	Open Gate
-430	false	>512	true	1681,6100,0 E	1681,6100,0	1682,6100,0	E	Gate	Open	Open Gate
-431	false	>512	true	1686,12510,0 E	1686,12510,0	1687,12510,0	E	Gate	Open	Open Gate
-432	false	>512	true	1686,12511,0 E	1686,12511,0	1687,12511,0	E	Gate	Open	Open Gate
-433	false	>512	true	1702,12526,0 E	1703,12526,0	1702,12526,0	W	Gate	Open	Open Gate
-434	false	>512	true	1702,12527,0 E	1703,12527,0	1702,12527,0	W	Gate	Open	Open Gate
-435	false	>512	true	1934,5536,0 E	1935,5536,0	1934,5536,0	W	Gate	Open	Open Gate
-436	false	>512	true	2382,3488,0 E	2383,3488,0	2382,3488,0	W	Gate	Open	Open Gate
-437	false	>512	true	2382,4445,0 E	2383,4445,0	2382,4445,0	W	Gate	Open	Open Gate
-438	false	>512	true	2382,4446,0 E	2383,4446,0	2382,4446,0	W	Gate	Open	Open Gate
-439	false	>512	true	2517,3356,0 N	2517,3356,0	2517,3357,0	N	Gate	Open	Open Gate
-440	false	>512	true	2518,3356,0 N	2518,3356,0	2518,3357,0	N	Gate	Open	Open Gate
-441	false	>512	true	2528,5844,1 N	2528,5845,1	2528,5844,1	S	Gate	Squeeze-through	Squeeze-through Gate
-442	false	>512	true	2545,3569,0 E	2545,3569,0	2546,3569,0	E	Gate	Open	Open Gate
-443	false	>512	true	2545,3570,0 E	2545,3570,0	2546,3570,0	E	Gate	Open	Open Gate
-444	false	>512	true	2551,3325,1 E	2551,3325,1	2552,3325,1	E	Gate	Open	Open Gate
-445	false	>512	true	2551,3326,1 E	2551,3326,1	2552,3326,1	E	Gate	Open	Open Gate
-446	false	>512	true	2578,9656,0 E	2579,9656,0	2578,9656,0	W	Gate	Go-through	Go-through Gate
-447	false	>512	true	2592,9489,0 N	2592,9490,0	2592,9489,0	S	Gate	Open	Open Gate
-448	false	>512	true	2593,9489,0 N	2593,9490,0	2593,9489,0	S	Gate	Open	Open Gate
-449	false	>512	true	2594,3361,0 E	2594,3361,0	2595,3361,0	E	Gate	Open	Open Gate
-450	false	>512	true	2594,3362,0 E	2594,3362,0	2595,3362,0	E	Gate	Open	Open Gate
-451	false	>512	true	2595,9657,0 E	2595,9657,0	2596,9657,0	E	Gate	Open	Open Gate
-452	false	>512	true	2635,3307,0 N	2635,3307,0	2635,3308,0	N	Gate	Open	Open Gate
-453	false	>512	true	2636,3307,0 N	2636,3307,0	2636,3308,0	N	Gate	Open	Open Gate
-454	false	>512	true	2642,3441,0 E	2642,3441,0	2643,3441,0	E	Gate	Open	Open Gate
-455	false	>512	true	2642,3442,0 E	2642,3442,0	2643,3442,0	E	Gate	Open	Open Gate
-456	false	>512	true	2649,3469,0 N	2649,3470,0	2649,3469,0	S	Gate	Open	Open Gate
-457	false	>512	true	2650,3469,0 N	2650,3470,0	2650,3469,0	S	Gate	Open	Open Gate
-458	false	>512	true	2651,4039,1 E	2652,4039,1	2651,4039,1	W	Gate	Open	Open Gate
-459	false	>512	true	2655,9714,0 E	2655,9714,0	2656,9714,0	E	Gate	Open	Open Gate
-460	false	>512	true	2655,9715,0 E	2655,9715,0	2656,9715,0	E	Gate	Open	Open Gate
-461	false	>512	true	2661,9802,0 N	2661,9803,0	2661,9802,0	S	Gate	Open	Open Gate
-462	false	>512	true	2661,9814,0 N	2661,9815,0	2661,9814,0	S	Gate	Open	Open Gate
-463	false	>512	true	2662,9802,0 N	2662,9803,0	2662,9802,0	S	Gate	Open	Open Gate
-464	false	>512	true	2662,9814,0 N	2662,9815,0	2662,9814,0	S	Gate	Open	Open Gate
-465	false	>512	true	2681,3697,0 N	2681,3697,0	2681,3698,0	N	Gate	Open	Open Gate
-466	false	>512	true	2682,3697,0 N	2682,3697,0	2682,3698,0	N	Gate	Open	Open Gate
-467	false	>512	true	2726,3494,1 N	2726,3494,1	2726,3495,1	N	Gate	Open	Open Gate
-468	false	>512	true	2727,3494,1 N	2727,3494,1	2727,3495,1	N	Gate	Open	Open Gate
-469	false	>512	true	2728,3349,0 N	2728,3349,0	2728,3350,0	N	Gate	Open	Open Gate
-470	false	>512	true	2729,3349,0 N	2729,3349,0	2729,3350,0	N	Gate	Open	Open Gate
-471	false	>512	true	2742,5343,1 N	2742,5343,1	2742,5344,1	N	Gate	Open	Open Gate
-472	false	>512	true	2745,5333,1 N	2745,5334,1	2745,5333,1	S	Gate	Open	Open Gate
-473	false	>512	true	2815,3182,0 E	2816,3182,0	2815,3182,0	W	Gate	Open	Open Gate
-474	false	>512	true	2815,3183,0 E	2816,3183,0	2815,3183,0	W	Gate	Open	Open Gate
-475	false	>512	true	2888,4587,0 E	2888,4587,0	2889,4587,0	E	Gate	Open	Open Gate
-476	false	>512	true	2890,4563,0 E	2890,4563,0	2891,4563,0	E	Gate	Open	Open Gate
-477	false	>512	true	2890,4592,0 E	2890,4592,0	2891,4592,0	E	Gate	Open	Open Gate
-478	false	>512	true	2892,4574,0 E	2892,4574,0	2893,4574,0	E	Gate	Open	Open Gate
-479	false	>512	true	2894,4580,0 E	2894,4580,0	2895,4580,0	E	Gate	Open	Open Gate
-480	false	>512	true	2894,4587,0 E	2894,4587,0	2895,4587,0	E	Gate	Open	Open Gate
-481	false	>512	true	2895,4597,0 N	2895,4598,0	2895,4597,0	S	Gate	Open	Open Gate
-482	false	>512	true	2896,4562,0 E	2896,4562,0	2897,4562,0	E	Gate	Open	Open Gate
-483	false	>512	true	2896,4583,0 E	2896,4583,0	2897,4583,0	E	Gate	Open	Open Gate
-484	false	>512	true	2898,4570,0 E	2898,4570,0	2899,4570,0	E	Gate	Open	Open Gate
-485	false	>512	true	2898,4585,0 E	2898,4585,0	2899,4585,0	E	Gate	Open	Open Gate
-486	false	>512	true	2898,4599,0 N	2898,4600,0	2898,4599,0	S	Gate	Open	Open Gate
-487	false	>512	true	2899,4595,0 N	2899,4596,0	2899,4595,0	S	Gate	Open	Open Gate
-488	false	>512	true	2900,4567,0 E	2900,4567,0	2901,4567,0	E	Gate	Open	Open Gate
-489	false	>512	true	2902,4575,0 E	2902,4575,0	2903,4575,0	E	Gate	Open	Open Gate
-490	false	>512	true	2902,5470,0 E	2903,5470,0	2902,5470,0	W	Gate	Open	Open Gate
-491	false	>512	true	2902,9873,0 E	2902,9873,0	2903,9873,0	E	Gate	Open	Open Gate
-492	false	>512	true	2902,9874,0 E	2902,9874,0	2903,9874,0	E	Gate	Open	Open Gate
-493	false	>512	true	2903,4554,0 N	2903,4554,0	2903,4555,0	N	Gate	Open	Open Gate
-494	false	>512	true	2903,4587,0 N	2903,4588,0	2903,4587,0	S	Gate	Open	Open Gate
-495	false	>512	true	2903,4593,0 N	2903,4594,0	2903,4593,0	S	Gate	Open	Open Gate
-496	false	>512	true	2904,4573,0 E	2904,4573,0	2905,4573,0	E	Gate	Open	Open Gate
-497	false	>512	true	2905,4560,0 N	2905,4560,0	2905,4561,0	N	Gate	Open	Open Gate
-498	false	>512	true	2906,4585,0 N	2906,4586,0	2906,4585,0	S	Gate	Open	Open Gate
-499	false	>512	true	2908,4591,0 N	2908,4592,0	2908,4591,0	S	Gate	Open	Open Gate
-500	false	>512	true	2909,4562,0 N	2909,4562,0	2909,4563,0	N	Gate	Open	Open Gate
-501	false	>512	true	2909,9909,0 N	2909,9910,0	2909,9909,0	S	Gate	Open	Open Gate
-502	false	>512	true	2910,4597,0 N	2910,4598,0	2910,4597,0	S	Gate	Open	Open Gate
-503	false	>512	true	2910,5480,0 N	2910,5480,0	2910,5481,0	N	Gate	Open	Open Gate
-504	false	>512	true	2910,9909,0 N	2910,9910,0	2910,9909,0	S	Gate	Open	Open Gate
-505	false	>512	true	2911,4566,0 N	2911,4566,0	2911,4567,0	N	Gate	Open	Open Gate
-506	false	>512	true	2912,4572,0 N	2912,4572,0	2912,4573,0	N	Gate	Open	Open Gate
-507	false	>512	true	2912,4583,0 N	2912,4584,0	2912,4583,0	S	Gate	Open	Open Gate
-508	false	>512	true	2913,5462,0 N	2913,5463,0	2913,5462,0	S	Gate	Open	Open Gate
-509	false	>512	true	2914,4599,0 N	2914,4600,0	2914,4599,0	S	Gate	Open	Open Gate
-510	false	>512	true	2915,4560,0 N	2915,4560,0	2915,4561,0	N	Gate	Open	Open Gate
-511	false	>512	true	2915,4595,0 N	2915,4596,0	2915,4595,0	S	Gate	Open	Open Gate
-512	false	>512	true	2916,4552,0 N	2916,4552,0	2916,4553,0	N	Gate	Open	Open Gate
-513	false	>512	true	2916,4568,0 N	2916,4568,0	2916,4569,0	N	Gate	Open	Open Gate
-514	false	>512	true	2916,4585,0 N	2916,4586,0	2916,4585,0	S	Gate	Open	Open Gate
-515	false	>512	true	2917,4576,0 E	2918,4576,0	2917,4576,0	W	Gate	Open	Open Gate
-516	false	>512	true	2920,5473,0 E	2920,5473,0	2921,5473,0	E	Gate	Open	Open Gate
-517	false	>512	true	2921,4575,0 E	2922,4575,0	2921,4575,0	W	Gate	Open	Open Gate
-518	false	>512	true	2921,4599,0 N	2921,4600,0	2921,4599,0	S	Gate	Open	Open Gate
-519	false	>512	true	2923,4566,0 E	2924,4566,0	2923,4566,0	W	Gate	Open	Open Gate
-520	false	>512	true	2923,4583,0 E	2924,4583,0	2923,4583,0	W	Gate	Open	Open Gate
-521	false	>512	true	2924,4554,0 N	2924,4554,0	2924,4555,0	N	Gate	Open	Open Gate
-522	false	>512	true	2925,4578,0 E	2926,4578,0	2925,4578,0	W	Gate	Open	Open Gate
-523	false	>512	true	2927,4588,0 E	2928,4588,0	2927,4588,0	W	Gate	Open	Open Gate
-524	false	>512	true	2928,4597,0 N	2928,4598,0	2928,4597,0	S	Gate	Open	Open Gate
-525	false	>512	true	2929,4573,0 E	2930,4573,0	2929,4573,0	W	Gate	Open	Open Gate
-526	false	>512	true	2929,4581,0 E	2930,4581,0	2929,4581,0	W	Gate	Open	Open Gate
-527	false	>512	true	2929,4586,0 E	2930,4586,0	2929,4586,0	W	Gate	Open	Open Gate
-528	false	>512	true	2931,4561,0 E	2932,4561,0	2931,4561,0	W	Gate	Open	Open Gate
-529	false	>512	true	2933,3319,0 N	2933,3320,0	2933,3319,0	S	Gate	Open	Open Gate
-530	false	>512	true	2933,4565,0 E	2934,4565,0	2933,4565,0	W	Gate	Open	Open Gate
-531	false	>512	true	2934,3319,0 N	2934,3320,0	2934,3319,0	S	Gate	Open	Open Gate
-532	false	>512	true	2935,4560,0 E	2936,4560,0	2935,4560,0	W	Gate	Open	Open Gate
-533	false	>512	true	2944,3041,0 E	2945,3041,0	2944,3041,0	W	Gate	Open	Open Gate
-534	false	>512	true	2944,3042,0 E	2945,3042,0	2944,3042,0	W	Gate	Open	Open Gate
-535	false	>512	true	2947,3903,0 N	2947,3904,0	2947,3903,0	S	Gate	Open	Open Gate
-536	false	>512	true	2948,3903,0 N	2948,3904,0	2948,3903,0	S	Gate	Open	Open Gate
-537	false	>512	true	3007,3849,0 E	3008,3849,0	3007,3849,0	W	Gate	Open	Open Gate
-538	false	>512	true	3007,3850,0 E	3008,3850,0	3007,3850,0	W	Gate	Open	Open Gate
-539	false	>512	true	3022,10311,0 E	3022,10311,0	3023,10311,0	E	Gate	Open	Open Gate
-540	false	>512	true	3022,10312,0 E	3022,10312,0	3023,10312,0	E	Gate	Open	Open Gate
-541	false	>512	true	3040,10307,0 E	3040,10307,0	3041,10307,0	E	Gate	Open	Open Gate
-542	false	>512	true	3040,10308,0 E	3040,10308,0	3041,10308,0	E	Gate	Open	Open Gate
-543	false	>512	true	3044,10341,0 E	3044,10341,0	3045,10341,0	E	Gate	Open	Open Gate
-544	false	>512	true	3044,10342,0 E	3044,10342,0	3045,10342,0	E	Gate	Open	Open Gate
-545	false	>512	true	3075,3867,0 N	3075,3867,0	3075,3868,0	N	Gate	Open	Open Gate
-546	false	>512	true	3076,3867,0 N	3076,3867,0	3076,3868,0	N	Gate	Open	Open Gate
-547	false	>512	true	3091,9815,0 N	3091,9815,0	3091,9816,0	N	Gate	Open	Open Gate
-548	false	>512	true	3092,9815,0 N	3092,9815,0	3092,9816,0	N	Gate	Open	Open Gate
-549	false	>512	true	3103,9909,0 E	3103,9909,0	3104,9909,0	E	Gate	Open	Open Gate
-550	false	>512	true	3103,9910,0 E	3103,9910,0	3104,9910,0	E	Gate	Open	Open Gate
-551	false	>512	true	3145,9870,0 E	3145,9870,0	3146,9870,0	E	Gate	Open	Open Gate
-552	false	>512	true	3145,9871,0 E	3145,9871,0	3146,9871,0	E	Gate	Open	Open Gate
-553	false	>512	true	3201,3855,0 N	3201,3856,0	3201,3855,0	S	Gate	Open	Open Gate
-554	false	>512	true	3202,3855,0 N	3202,3856,0	3202,3855,0	S	Gate	Open	Open Gate
-555	false	>512	true	3224,3903,0 N	3224,3904,0	3224,3903,0	S	Gate	Open	Open Gate
-556	false	>512	true	3225,3903,0 N	3225,3904,0	3225,3903,0	S	Gate	Open	Open Gate
-557	false	>512	true	3261,3446,0 N	3261,3446,0	3261,3447,0	N	Gate	Open	Open Gate
-558	false	>512	true	3273,3028,0 E	3273,3028,0	3274,3028,0	E	Gate	Open	Open Gate
-559	false	>512	true	3273,3029,0 E	3273,3029,0	3274,3029,0	E	Gate	Open	Open Gate
-560	false	>512	true	3292,9434,0 E	3292,9434,0	3293,9434,0	E	Gate	Open	Open Gate
-561	false	>512	true	3292,9435,0 E	3292,9435,0	3293,9435,0	E	Gate	Open	Open Gate
-562	false	>512	true	3311,3331,0 E	3312,3331,0	3311,3331,0	W	Gate	Open	Open Gate
-563	false	>512	true	3311,3332,0 E	3312,3332,0	3311,3332,0	W	Gate	Open	Open Gate
-564	false	>512	true	3319,3467,0 E	3319,3467,0	3320,3467,0	E	Gate	Open	Open Gate
-565	false	>512	true	3319,3468,0 E	3319,3468,0	3320,3468,0	E	Gate	Open	Open Gate
-566	false	>512	true	3322,9448,0 N	3322,9448,0	3322,9449,0	N	Gate	Open	Open Gate
-567	false	>512	true	3323,9448,0 N	3323,9448,0	3323,9449,0	N	Gate	Open	Open Gate
-568	false	>512	true	3336,3895,0 N	3336,3896,0	3336,3895,0	S	Gate	Open	Open Gate
-569	false	>512	true	3337,3895,0 N	3337,3896,0	3337,3895,0	S	Gate	Open	Open Gate
-570	false	>512	true	2936,9655,0 N	2936,9655,0	2936,9656,0	N	Green door	Open	Open Green door
-571	false	>512	true	2972,5093,1 N	2972,5094,1	2972,5093,1	S	Grill	Open	Open Grill
-572	false	>512	true	2973,5093,1 N	2973,5094,1	2973,5093,1	S	Grill	Open	Open Grill
-573	false	>512	true	2975,5107,1 E	2975,5107,1	2976,5107,1	E	Grill	Open	Open Grill
-574	false	>512	true	2989,5057,1 E	2989,5057,1	2990,5057,1	E	Grill	Open	Open Grill
-575	false	>512	true	2989,5058,1 E	2989,5058,1	2990,5058,1	E	Grill	Open	Open Grill
-576	false	>512	true	2994,5021,1 E	2995,5021,1	2994,5021,1	W	Grill	Open	Open Grill
-577	false	>512	true	3009,5033,1 E	3010,5033,1	3009,5033,1	W	Grill	Open	Open Grill
-578	false	>512	true	3014,5033,1 E	3015,5033,1	3014,5033,1	W	Grill	Open	Open Grill
-579	false	>512	true	3017,5021,1 E	3018,5021,1	3017,5021,1	W	Grill	Open	Open Grill
-580	false	>512	true	3023,5001,1 E	3024,5001,1	3023,5001,1	W	Grill	Open	Open Grill
-581	false	>512	true	3030,5079,1 E	3030,5079,1	3031,5079,1	E	Grill	Open	Open Grill
-582	false	>512	true	3032,5068,1 N	3032,5069,1	3032,5068,1	S	Grill	Open	Open Grill
-583	false	>512	true	3032,5077,1 N	3032,5078,1	3032,5077,1	S	Grill	Open	Open Grill
-584	false	>512	true	3033,5070,1 E	3034,5070,1	3033,5070,1	W	Grill	Open	Open Grill
-585	false	>512	true	3033,5073,1 E	3034,5073,1	3033,5073,1	W	Grill	Open	Open Grill
-586	false	>512	true	3035,5071,1 N	3035,5072,1	3035,5071,1	S	Grill	Open	Open Grill
-587	false	>512	true	3035,5074,1 N	3035,5075,1	3035,5074,1	S	Grill	Open	Open Grill
-588	false	>512	true	3035,5077,1 N	3035,5077,1	3035,5078,1	N	Grill	Open	Open Grill
-589	false	>512	true	3036,5067,1 E	3037,5067,1	3036,5067,1	W	Grill	Open	Open Grill
-590	false	>512	true	3036,5070,1 E	3037,5070,1	3036,5070,1	W	Grill	Open	Open Grill
-591	false	>512	true	3036,5073,1 E	3037,5073,1	3036,5073,1	W	Grill	Open	Open Grill
-592	false	>512	true	3036,5076,1 E	3036,5076,1	3037,5076,1	E	Grill	Open	Open Grill
-593	false	>512	true	3036,5079,1 E	3037,5079,1	3036,5079,1	W	Grill	Open	Open Grill
-594	false	>512	true	3038,5068,1 N	3038,5069,1	3038,5068,1	S	Grill	Open	Open Grill
-595	false	>512	true	3038,5071,1 N	3038,5071,1	3038,5072,1	N	Grill	Open	Open Grill
-596	false	>512	true	3038,5074,1 N	3038,5074,1	3038,5075,1	N	Grill	Open	Open Grill
-597	false	>512	true	3039,5067,1 E	3039,5067,1	3040,5067,1	E	Grill	Open	Open Grill
-598	false	>512	true	3039,5070,1 E	3040,5070,1	3039,5070,1	W	Grill	Open	Open Grill
-599	false	>512	true	3039,5073,1 E	3040,5073,1	3039,5073,1	W	Grill	Open	Open Grill
-600	false	>512	true	3039,5076,1 E	3040,5076,1	3039,5076,1	W	Grill	Open	Open Grill
-601	false	>512	true	3039,5079,1 E	3039,5079,1	3040,5079,1	E	Grill	Open	Open Grill
-602	false	>512	true	3041,5068,1 N	3041,5068,1	3041,5069,1	N	Grill	Open	Open Grill
-603	false	>512	true	3041,5071,1 N	3041,5071,1	3041,5072,1	N	Grill	Open	Open Grill
-604	false	>512	true	3041,5074,1 N	3041,5075,1	3041,5074,1	S	Grill	Open	Open Grill
-605	false	>512	true	3042,5070,1 E	3042,5070,1	3043,5070,1	E	Grill	Open	Open Grill
-606	false	>512	true	3042,5073,1 E	3043,5073,1	3042,5073,1	W	Grill	Open	Open Grill
-607	false	>512	true	3042,5076,1 E	3042,5076,1	3043,5076,1	E	Grill	Open	Open Grill
-608	false	>512	true	3042,5079,1 E	3043,5079,1	3042,5079,1	W	Grill	Open	Open Grill
-609	false	>512	true	3044,5068,1 N	3044,5069,1	3044,5068,1	S	Grill	Open	Open Grill
-610	false	>512	true	3044,5077,1 N	3044,5077,1	3044,5078,1	N	Grill	Open	Open Grill
-611	false	>512	true	3054,5028,1 N	3054,5029,1	3054,5028,1	S	Grill	Open	Open Grill
-612	false	>512	true	2816,3083,0 E	2817,3083,0	2816,3083,0	W	Hardwood Grove Doors	Open	Open Hardwood Grove Doors
-613	false	>512	true	2816,3084,0 E	2817,3084,0	2816,3084,0	W	Hardwood Grove Doors	Open	Open Hardwood Grove Doors
-614	false	>512	true	3141,3638,2 N	3141,3639,2	3141,3638,2	S	High Stakes	Pass-Through	Pass-Through High Stakes
-615	false	>512	true	3142,3638,2 N	3142,3639,2	3142,3638,2	S	High Stakes	Pass-Through	Pass-Through High Stakes
-616	false	>512	true	2326,9393,0 N	2326,9393,0	2326,9394,0	N	Kitchen gate	Open	Open Kitchen gate
-617	false	>512	true	2327,9393,0 N	2327,9393,0	2327,9394,0	N	Kitchen gate	Open	Open Kitchen gate
-618	false	>512	true	1636,4824,0 N	1636,4824,0	1636,4825,0	N	Large door	Open	Open Large door
-619	false	>512	true	1637,4824,0 N	1637,4824,0	1637,4825,0	N	Large door	Open	Open Large door
-620	false	>512	true	2193,4959,0 E	2194,4959,0	2193,4959,0	W	Large door	Open	Open Large door
-621	false	>512	true	2193,4960,0 E	2194,4960,0	2193,4960,0	W	Large door	Open	Open Large door
-622	false	>512	true	2207,4973,0 N	2207,4973,0	2207,4974,0	N	Large door	Open	Open Large door
-623	false	>512	true	2208,4973,0 N	2208,4973,0	2208,4974,0	N	Large door	Open	Open Large door
-624	false	>512	true	2221,4959,0 E	2221,4959,0	2222,4959,0	E	Large door	Open	Open Large door
-625	false	>512	true	2221,4960,0 E	2221,4960,0	2222,4960,0	E	Large door	Open	Open Large door
-626	false	>512	true	2390,3793,0 E	2390,3793,0	2391,3793,0	E	Large door	Open	Open Large door
-627	false	>512	true	2390,3804,0 E	2390,3804,0	2391,3804,0	E	Large door	Open	Open Large door
-628	false	>512	true	2407,3806,0 N	2407,3806,0	2407,3807,0	N	Large door	Open	Open Large door
-629	false	>512	true	2410,3820,0 N	2410,3821,0	2410,3820,0	S	Large door	Open	Open Large door
-630	false	>512	true	2421,3820,0 N	2421,3821,0	2421,3820,0	S	Large door	Open	Open Large door
-631	false	>512	true	2444,3089,0 E	2445,3089,0	2444,3089,0	W	Large door	Open	Open Large door
-632	false	>512	true	2444,3090,0 E	2445,3090,0	2444,3090,0	W	Large door	Open	Open Large door
-633	false	>512	true	2444,3098,0 N	2444,3099,0	2444,3098,0	S	Large door	Open	Open Large door
-634	false	>512	true	2500,3848,0 N	2500,3849,0	2500,3848,0	S	Large door	Open	Open Large door
-635	false	>512	true	2500,3848,1 N	2500,3849,1	2500,3848,1	S	Large door	Open	Open Large door
-636	false	>512	true	2500,3871,0 N	2500,3871,0	2500,3872,0	N	Large door	Open	Open Large door
-637	false	>512	true	2500,3871,1 N	2500,3871,1	2500,3872,1	N	Large door	Open	Open Large door
-638	false	>512	true	2504,3853,0 E	2504,3853,0	2505,3853,0	E	Large door	Open	Open Large door
-639	false	>512	true	2504,3853,1 E	2504,3853,1	2505,3853,1	E	Large door	Open	Open Large door
-640	false	>512	true	2504,3860,0 E	2505,3860,0	2504,3860,0	W	Large door	Open	Open Large door
-641	false	>512	true	2504,3867,0 E	2504,3867,0	2505,3867,0	E	Large door	Open	Open Large door
-642	false	>512	true	2504,3867,1 E	2504,3867,1	2505,3867,1	E	Large door	Open	Open Large door
-643	false	>512	true	2510,3860,0 E	2510,3860,0	2511,3860,0	E	Large door	Open	Open Large door
-644	false	>512	true	2607,3875,0 E	2608,3875,0	2607,3875,0	W	Large door	Open	Open Large door
-645	false	>512	true	2609,3875,0 E	2609,3875,0	2610,3875,0	E	Large door	Open	Open Large door
-646	false	>512	true	2609,3875,1 E	2609,3875,1	2610,3875,1	E	Large door	Open	Open Large door
-647	false	>512	true	2611,3866,1 E	2611,3866,1	2612,3866,1	E	Large door	Open	Open Large door
-648	false	>512	true	2611,3883,0 E	2611,3883,0	2612,3883,0	E	Large door	Open	Open Large door
-649	false	>512	true	2611,3883,1 E	2611,3883,1	2612,3883,1	E	Large door	Open	Open Large door
-650	false	>512	true	2613,3864,0 N	2613,3864,0	2613,3865,0	N	Large door	Open	Open Large door
-651	false	>512	true	2613,3864,1 N	2613,3865,1	2613,3864,1	S	Large door	Open	Open Large door
-652	false	>512	true	2613,3885,0 N	2613,3886,0	2613,3885,0	S	Large door	Open	Open Large door
-653	false	>512	true	2613,3885,1 N	2613,3885,1	2613,3886,1	N	Large door	Open	Open Large door
-654	false	>512	true	2615,3870,1 N	2615,3870,1	2615,3871,1	N	Large door	Open	Open Large door
-655	false	>512	true	2615,3879,0 N	2615,3880,0	2615,3879,0	S	Large door	Open	Open Large door
-656	false	>512	true	2615,3879,1 N	2615,3880,1	2615,3879,1	S	Large door	Open	Open Large door
-657	false	>512	true	2665,3241,0 E	2665,3241,0	2666,3241,0	E	Large door	Open	Open Large door
-658	false	>512	true	2740,3572,0 N	2740,3572,0	2740,3573,0	N	Large door	Open	Open Large door
-659	false	>512	true	2741,3572,0 N	2741,3572,0	2741,3573,0	N	Large door	Open	Open Large door
-660	false	>512	true	2751,3507,2 E	2751,3507,2	2752,3507,2	E	Large door	Open	Open Large door
-661	false	>512	true	2751,3508,2 E	2751,3508,2	2752,3508,2	E	Large door	Open	Open Large door
-662	false	>512	true	2763,3401,0 E	2763,3401,0	2764,3401,0	E	Large door	Open	Open Large door
-663	false	>512	true	2763,3402,0 E	2763,3402,0	2764,3402,0	E	Large door	Open	Open Large door
-664	false	>512	true	2788,4593,0 E	2789,4593,0	2788,4593,0	W	Large door	Open	Open Large door
-665	false	>512	true	2788,4594,0 E	2789,4594,0	2788,4594,0	W	Large door	Open	Open Large door
-666	false	>512	true	2794,4594,0 E	2794,4594,0	2795,4594,0	E	Large door	Open	Open Large door
-667	false	>512	true	2794,4595,0 E	2794,4595,0	2795,4595,0	E	Large door	Open	Open Large door
-668	false	>512	true	2895,3559,0 E	2896,3559,0	2895,3559,0	W	Large door	Open	Open Large door
-669	false	>512	true	2901,3559,0 E	2901,3559,0	2902,3559,0	E	Large door	Open	Open Large door
-670	false	>512	true	2901,3568,0 E	2901,3568,0	2902,3568,0	E	Large door	Open	Open Large door
-671	false	>512	true	3007,3515,0 E	3007,3515,0	3008,3515,0	E	Large door	Open	Open Large door
-672	false	>512	true	3007,3516,0 E	3007,3516,0	3008,3516,0	E	Large door	Open	Open Large door
-673	false	>512	true	1503,9943,1 N	1503,9944,1	1503,9943,1	S	Large doors	Open	Open Large doors
-674	false	>512	true	1503,9956,1 N	1503,9956,1	1503,9957,1	N	Large doors	Open	Open Large doors
-675	false	>512	true	1504,9943,1 N	1504,9944,1	1504,9943,1	S	Large doors	Open	Open Large doors
-676	false	>512	true	2728,3373,0 N	2728,3373,0	2728,3374,0	N	Legends Guild door	Open	Open Legends Guild door
-677	false	>512	true	2729,3373,0 N	2729,3373,0	2729,3374,0	N	Legends Guild door	Open	Open Legends Guild door
-678	false	>512	true	1743,3602,0 E	1743,3602,0	1744,3602,0	E	Locked door	Open	Open Locked door
-679	false	>512	true	1745,3602,0 E	1745,3602,0	1746,3602,0	E	Locked door	Open	Open Locked door
-680	false	>512	true	1749,3601,0 N	1749,3602,0	1749,3601,0	S	Locked door	Open	Open Locked door
-681	false	>512	true	1783,3571,1 E	1784,3571,1	1783,3571,1	W	Locked door	Open	Open Locked door
-682	false	>512	true	3078,3435,0 N	3078,3435,0	3078,3436,0	N	Longhall door	Open	Open Longhall door
-683	false	>512	true	3079,3435,0 N	3079,3435,0	3079,3436,0	N	Longhall door	Open	Open Longhall door
-684	false	>512	true	2522,3375,0 E	2522,3375,0	2523,3375,0	E	Loose Railing	Squeeze-through	Squeeze-through Loose Railing
-685	false	>512	true	2929,9651,0 N	2929,9652,0	2929,9651,0	S	Magenta door	Open	Open Magenta door
-686	false	>512	true	2465,4433,0 N	2465,4434,0	2465,4433,0	S	Magic door	Open	Open Magic door
-687	false	>512	true	2466,4433,0 N	2466,4434,0	2466,4433,0	S	Magic door	Open	Open Magic door
-688	false	>512	true	2469,4437,0 E	2469,4437,0	2470,4437,0	E	Magic door	Open	Open Magic door
-689	false	>512	true	2469,4438,0 E	2469,4438,0	2470,4438,0	E	Magic door	Open	Open Magic door
-690	false	>512	true	1894,4272,0 N	1894,4273,0	1894,4272,0	S	Metal door	Open	Open Metal door
-691	false	>512	true	1900,4265,0 N	1900,4265,0	1900,4266,0	N	Metal door	Open	Open Metal door
-692	false	>512	true	1904,4272,0 N	1904,4273,0	1904,4272,0	S	Metal door	Open	Open Metal door
-693	false	>512	true	1910,4265,0 N	1910,4265,0	1910,4266,0	N	Metal door	Open	Open Metal door
-694	false	>512	true	1951,5149,0 E	1952,5149,0	1951,5149,0	W	Mind Door	Open	Open Mind Door
-695	false	>512	true	1951,5150,0 E	1952,5150,0	1951,5150,0	W	Mind Door	Open	Open Mind Door
-696	false	>512	true	3278,9426,0 N	3278,9426,0	3278,9427,0	N	Mine door entrance	Open	Open Mine door entrance
-697	false	>512	true	3279,9426,0 N	3279,9426,0	3279,9427,0	N	Mine door entrance	Open	Open Mine door entrance
-698	false	>512	true	3301,3036,0 N	3301,3036,0	3301,3037,0	N	Mine door entrance	Open	Open Mine door entrance
-699	false	>512	true	3302,3036,0 N	3302,3036,0	3302,3037,0	N	Mine door entrance	Open	Open Mine door entrance
-700	false	>512	true	2002,4947,3 E	2003,4947,3	2002,4947,3	W	null	Open	Open null
-701	false	>512	true	2002,4948,3 E	2003,4948,3	2002,4948,3	W	null	Open	Open null
-702	false	>512	true	2440,9425,2 N	2440,9426,2	2440,9425,2	S	Ogre stone door	Open	Open Ogre stone door
-703	false	>512	true	2441,9425,2 N	2441,9426,2	2441,9425,2	S	Ogre stone door	Open	Open Ogre stone door
-704	false	>512	true	2930,3247,1 E	2931,3247,1	2930,3247,1	W	Orange door	Open	Open Orange door
-705	false	>512	true	2930,3250,1 E	2931,3250,1	2930,3250,1	W	Orange door	Open	Open Orange door
-706	false	>512	true	2930,3253,1 E	2931,3253,1	2930,3253,1	W	Orange door	Open	Open Orange door
-707	false	>512	true	2930,3256,1 E	2931,3256,1	2930,3256,1	W	Orange door	Open	Open Orange door
-708	false	>512	true	2974,9514,1 N	2974,9514,1	2974,9515,1	N	Pen Door	Open	Open Pen Door
-709	false	>512	true	2975,9514,1 N	2975,9514,1	2975,9515,1	N	Pen Door	Open	Open Pen Door
-710	false	>512	true	3287,3034,0 E	3287,3034,0	3288,3034,0	E	Prison door	Open	Open Prison door
-711	false	>512	true	2589,3141,0 N	2589,3142,0	2589,3141,0	S	Prison Gate	Open	Open Prison Gate
-712	false	>512	true	2595,3141,0 N	2595,3142,0	2595,3141,0	S	Prison Gate	Open	Open Prison Gate
-713	false	>512	true	2600,3141,0 N	2600,3142,0	2600,3141,0	S	Prison Gate	Open	Open Prison Gate
-714	false	>512	true	2616,3159,0 E	2617,3159,0	2616,3159,0	W	Prison Gate	Open	Open Prison Gate
-715	false	>512	true	2616,3163,0 E	2617,3163,0	2616,3163,0	W	Prison Gate	Open	Open Prison Gate
-716	false	>512	true	2616,3167,0 E	2617,3167,0	2616,3167,0	W	Prison Gate	Open	Open Prison Gate
-717	false	>512	true	3123,3243,0 N	3123,3243,0	3123,3244,0	N	Prison Gate	Open	Open Prison Gate
-718	false	>512	true	1994,5193,0 N	1994,5194,0	1994,5193,0	S	Rickety door	Open	Open Rickety door
-719	false	>512	true	1994,5196,0 N	1994,5196,0	1994,5197,0	N	Rickety door	Open	Open Rickety door
-720	false	>512	true	1995,5193,0 N	1995,5194,0	1995,5193,0	S	Rickety door	Open	Open Rickety door
-721	false	>512	true	1995,5196,0 N	1995,5196,0	1995,5197,0	N	Rickety door	Open	Open Rickety door
-722	false	>512	true	1996,5215,0 E	1997,5215,0	1996,5215,0	W	Rickety door	Open	Open Rickety door
-723	false	>512	true	1996,5216,0 E	1997,5216,0	1996,5216,0	W	Rickety door	Open	Open Rickety door
-724	false	>512	true	1999,5215,0 E	1999,5215,0	2000,5215,0	E	Rickety door	Open	Open Rickety door
-725	false	>512	true	1999,5216,0 E	1999,5216,0	2000,5216,0	E	Rickety door	Open	Open Rickety door
-726	false	>512	true	2004,5191,0 N	2004,5192,0	2004,5191,0	S	Rickety door	Open	Open Rickety door
-727	false	>512	true	2004,5194,0 N	2004,5194,0	2004,5195,0	N	Rickety door	Open	Open Rickety door
-728	false	>512	true	2005,5191,0 N	2005,5192,0	2005,5191,0	S	Rickety door	Open	Open Rickety door
-729	false	>512	true	2005,5194,0 N	2005,5194,0	2005,5195,0	N	Rickety door	Open	Open Rickety door
-730	false	>512	true	2005,5215,0 E	2006,5215,0	2005,5215,0	W	Rickety door	Open	Open Rickety door
-731	false	>512	true	2005,5216,0 E	2006,5216,0	2005,5216,0	W	Rickety door	Open	Open Rickety door
-732	false	>512	true	2005,5234,0 N	2005,5235,0	2005,5234,0	S	Rickety door	Open	Open Rickety door
-733	false	>512	true	2005,5237,0 N	2005,5237,0	2005,5238,0	N	Rickety door	Open	Open Rickety door
-734	false	>512	true	2006,5234,0 N	2006,5235,0	2006,5234,0	S	Rickety door	Open	Open Rickety door
-735	false	>512	true	2006,5237,0 N	2006,5237,0	2006,5238,0	N	Rickety door	Open	Open Rickety door
-736	false	>512	true	2008,5215,0 E	2008,5215,0	2009,5215,0	E	Rickety door	Open	Open Rickety door
-737	false	>512	true	2008,5216,0 E	2008,5216,0	2009,5216,0	E	Rickety door	Open	Open Rickety door
-738	false	>512	true	2013,5239,0 N	2013,5240,0	2013,5239,0	S	Rickety door	Open	Open Rickety door
-739	false	>512	true	2013,5242,0 N	2013,5242,0	2013,5243,0	N	Rickety door	Open	Open Rickety door
-740	false	>512	true	2014,5239,0 N	2014,5240,0	2014,5239,0	S	Rickety door	Open	Open Rickety door
-741	false	>512	true	2014,5242,0 N	2014,5242,0	2014,5243,0	N	Rickety door	Open	Open Rickety door
-742	false	>512	true	2015,5227,0 E	2016,5227,0	2015,5227,0	W	Rickety door	Open	Open Rickety door
-743	false	>512	true	2015,5228,0 E	2016,5228,0	2015,5228,0	W	Rickety door	Open	Open Rickety door
-744	false	>512	true	2018,5227,0 E	2018,5227,0	2019,5227,0	E	Rickety door	Open	Open Rickety door
-745	false	>512	true	2018,5228,0 E	2018,5228,0	2019,5228,0	E	Rickety door	Open	Open Rickety door
-746	false	>512	true	2019,5239,0 N	2019,5240,0	2019,5239,0	S	Rickety door	Open	Open Rickety door
-747	false	>512	true	2019,5242,0 N	2019,5242,0	2019,5243,0	N	Rickety door	Open	Open Rickety door
-748	false	>512	true	2020,5199,0 N	2020,5200,0	2020,5199,0	S	Rickety door	Open	Open Rickety door
-749	false	>512	true	2020,5202,0 N	2020,5202,0	2020,5203,0	N	Rickety door	Open	Open Rickety door
-750	false	>512	true	2020,5239,0 N	2020,5240,0	2020,5239,0	S	Rickety door	Open	Open Rickety door
-751	false	>512	true	2020,5242,0 N	2020,5242,0	2020,5243,0	N	Rickety door	Open	Open Rickety door
-752	false	>512	true	2021,5199,0 N	2021,5200,0	2021,5199,0	S	Rickety door	Open	Open Rickety door
-753	false	>512	true	2021,5202,0 N	2021,5202,0	2021,5203,0	N	Rickety door	Open	Open Rickety door
-754	false	>512	true	2026,5238,0 N	2026,5239,0	2026,5238,0	S	Rickety door	Open	Open Rickety door
-755	false	>512	true	2026,5241,0 N	2026,5241,0	2026,5242,0	N	Rickety door	Open	Open Rickety door
-756	false	>512	true	2027,5238,0 N	2027,5239,0	2027,5238,0	S	Rickety door	Open	Open Rickety door
-757	false	>512	true	2027,5241,0 N	2027,5241,0	2027,5242,0	N	Rickety door	Open	Open Rickety door
-758	false	>512	true	2031,5195,0 N	2031,5196,0	2031,5195,0	S	Rickety door	Open	Open Rickety door
-759	false	>512	true	2031,5198,0 N	2031,5198,0	2031,5199,0	N	Rickety door	Open	Open Rickety door
-760	false	>512	true	2031,5224,0 N	2031,5225,0	2031,5224,0	S	Rickety door	Open	Open Rickety door
-761	false	>512	true	2031,5227,0 N	2031,5227,0	2031,5228,0	N	Rickety door	Open	Open Rickety door
-762	false	>512	true	2032,5195,0 N	2032,5196,0	2032,5195,0	S	Rickety door	Open	Open Rickety door
-763	false	>512	true	2032,5198,0 N	2032,5198,0	2032,5199,0	N	Rickety door	Open	Open Rickety door
-764	false	>512	true	2032,5224,0 N	2032,5225,0	2032,5224,0	S	Rickety door	Open	Open Rickety door
-765	false	>512	true	2032,5227,0 N	2032,5227,0	2032,5228,0	N	Rickety door	Open	Open Rickety door
-766	false	>512	true	2033,5185,0 E	2034,5185,0	2033,5185,0	W	Rickety door	Open	Open Rickety door
-767	false	>512	true	2033,5186,0 E	2034,5186,0	2033,5186,0	W	Rickety door	Open	Open Rickety door
-768	false	>512	true	2033,5207,0 N	2033,5208,0	2033,5207,0	S	Rickety door	Open	Open Rickety door
-769	false	>512	true	2033,5210,0 N	2033,5210,0	2033,5211,0	N	Rickety door	Open	Open Rickety door
-770	false	>512	true	2034,5207,0 N	2034,5208,0	2034,5207,0	S	Rickety door	Open	Open Rickety door
-771	false	>512	true	2034,5210,0 N	2034,5210,0	2034,5211,0	N	Rickety door	Open	Open Rickety door
-772	false	>512	true	2036,5185,0 E	2036,5185,0	2037,5185,0	E	Rickety door	Open	Open Rickety door
-773	false	>512	true	2036,5186,0 E	2036,5186,0	2037,5186,0	E	Rickety door	Open	Open Rickety door
-774	false	>512	true	2036,5200,0 N	2036,5201,0	2036,5200,0	S	Rickety door	Open	Open Rickety door
-775	false	>512	true	2036,5203,0 N	2036,5203,0	2036,5204,0	N	Rickety door	Open	Open Rickety door
-776	false	>512	true	2036,5244,0 E	2037,5244,0	2036,5244,0	W	Rickety door	Open	Open Rickety door
-777	false	>512	true	2036,5245,0 E	2037,5245,0	2036,5245,0	W	Rickety door	Open	Open Rickety door
-778	false	>512	true	2037,5200,0 N	2037,5201,0	2037,5200,0	S	Rickety door	Open	Open Rickety door
-779	false	>512	true	2037,5203,0 N	2037,5203,0	2037,5204,0	N	Rickety door	Open	Open Rickety door
-780	false	>512	true	2039,5222,0 E	2040,5222,0	2039,5222,0	W	Rickety door	Open	Open Rickety door
-781	false	>512	true	2039,5223,0 E	2040,5223,0	2039,5223,0	W	Rickety door	Open	Open Rickety door
-782	false	>512	true	2039,5244,0 E	2039,5244,0	2040,5244,0	E	Rickety door	Open	Open Rickety door
-783	false	>512	true	2039,5245,0 E	2039,5245,0	2040,5245,0	E	Rickety door	Open	Open Rickety door
-784	false	>512	true	2042,5222,0 E	2042,5222,0	2043,5222,0	E	Rickety door	Open	Open Rickety door
-785	false	>512	true	2042,5223,0 E	2042,5223,0	2043,5223,0	E	Rickety door	Open	Open Rickety door
-786	false	>512	true	2044,5236,0 N	2044,5237,0	2044,5236,0	S	Rickety door	Open	Open Rickety door
-787	false	>512	true	2044,5239,0 N	2044,5239,0	2044,5240,0	N	Rickety door	Open	Open Rickety door
-788	false	>512	true	2045,5194,0 N	2045,5195,0	2045,5194,0	S	Rickety door	Open	Open Rickety door
-789	false	>512	true	2045,5197,0 N	2045,5197,0	2045,5198,0	N	Rickety door	Open	Open Rickety door
-790	false	>512	true	2045,5236,0 N	2045,5237,0	2045,5236,0	S	Rickety door	Open	Open Rickety door
-791	false	>512	true	2045,5239,0 N	2045,5239,0	2045,5240,0	N	Rickety door	Open	Open Rickety door
-792	false	>512	true	2046,5194,0 N	2046,5195,0	2046,5194,0	S	Rickety door	Open	Open Rickety door
-793	false	>512	true	2046,5197,0 N	2046,5197,0	2046,5198,0	N	Rickety door	Open	Open Rickety door
-794	false	>512	true	2420,4690,0 N	2420,4690,0	2420,4691,0	N	Shimmering field	Walk-through	Walk-through Shimmering field
-795	false	>512	true	2421,4690,0 N	2421,4690,0	2421,4691,0	N	Shimmering field	Walk-through	Walk-through Shimmering field
-796	false	>512	true	3464,9668,0 E	3465,9668,0	3464,9668,0	W	Solid black door	Open	Open Solid black door
-797	false	>512	true	3464,9677,0 E	3465,9677,0	3464,9677,0	W	Solid black door	Open	Open Solid black door
-798	false	>512	true	3464,9686,0 E	3465,9686,0	3464,9686,0	W	Solid black door	Open	Open Solid black door
-799	false	>512	true	3469,9668,0 E	3469,9668,0	3470,9668,0	E	Solid black door	Open	Open Solid black door
-800	false	>512	true	3477,9681,0 E	3478,9681,0	3477,9681,0	W	Solid black door	Open	Open Solid black door
-801	false	>512	true	3479,9691,0 N	3479,9692,0	3479,9691,0	S	Solid black door	Open	Open Solid black door
-802	false	>512	true	3482,9668,0 E	3482,9668,0	3483,9668,0	E	Solid black door	Open	Open Solid black door
-803	false	>512	true	3482,9677,0 E	3482,9677,0	3483,9677,0	E	Solid black door	Open	Open Solid black door
-804	false	>512	true	3482,9686,0 E	3482,9686,0	3483,9686,0	E	Solid black door	Open	Open Solid black door
-805	false	>512	true	3481,9723,0 E	3482,9723,0	3481,9723,0	W	Solid bronze door	Open	Open Solid bronze door
-806	false	>512	true	3493,9726,0 N	3493,9726,0	3493,9727,0	N	Solid bronze door	Open	Open Solid bronze door
-807	false	>512	true	3504,9723,0 E	3504,9723,0	3505,9723,0	E	Solid bronze door	Open	Open Solid bronze door
-808	false	>512	true	3501,9677,0 E	3501,9677,0	3502,9677,0	E	Solid gold door	Open	Open Solid gold door
-809	false	>512	true	3507,9671,0 N	3507,9671,0	3507,9672,0	N	Solid gold door	Open	Open Solid gold door
-810	false	>512	true	3507,9682,0 N	3507,9683,0	3507,9682,0	S	Solid gold door	Open	Open Solid gold door
-811	false	>512	true	3507,9691,0 N	3507,9692,0	3507,9691,0	S	Solid gold door	Open	Open Solid gold door
-812	false	>512	true	3512,9677,0 E	3513,9677,0	3512,9677,0	W	Solid gold door	Open	Open Solid gold door
-813	false	>512	true	3461,9708,0 E	3462,9708,0	3461,9708,0	W	Solid silver door	Open	Open Solid silver door
-814	false	>512	true	3464,9699,0 N	3464,9700,0	3464,9699,0	S	Solid silver door	Open	Open Solid silver door
-815	false	>512	true	3464,9716,0 N	3464,9716,0	3464,9717,0	N	Solid silver door	Open	Open Solid silver door
-816	false	>512	true	3466,9708,0 E	3467,9708,0	3466,9708,0	W	Solid silver door	Open	Open Solid silver door
-817	false	>512	true	3471,9710,0 N	3471,9710,0	3471,9711,0	N	Solid steel door	Open	Open Solid steel door
-818	false	>512	true	3479,9710,0 N	3479,9710,0	3479,9711,0	N	Solid steel door	Open	Open Solid steel door
-819	false	>512	true	3487,9710,0 N	3487,9710,0	3487,9711,0	N	Solid steel door	Open	Open Solid steel door
-820	false	>512	true	3493,9714,0 N	3493,9715,0	3493,9714,0	S	Solid steel door	Open	Open Solid steel door
-821	false	>512	true	3499,9710,0 N	3499,9710,0	3499,9711,0	N	Solid steel door	Open	Open Solid steel door
-822	false	>512	true	3507,9710,0 N	3507,9710,0	3507,9711,0	N	Solid steel door	Open	Open Solid steel door
-823	false	>512	true	3515,9710,0 N	3515,9710,0	3515,9711,0	N	Solid steel door	Open	Open Solid steel door
-824	false	>512	true	3016,3514,0 N	3016,3514,0	3016,3515,0	N	Sturdy door	Open	Open Sturdy door
-825	false	>512	true	3025,3511,1 E	3025,3511,1	3026,3511,1	E	Sturdy door	Open	Open Sturdy door
-826	false	>512	true	2799,3665,0 N	2799,3665,0	2799,3666,0	N	Tent door	Go-through	Go-through Tent door
-827	false	>512	true	2800,3665,0 N	2800,3665,0	2800,3666,0	N	Tent door	Go-through	Go-through Tent door
-828	false	>512	true	2800,3675,0 N	2800,3676,0	2800,3675,0	S	Tent door	Open	Open Tent door
-829	false	>512	true	2801,3675,0 N	2801,3676,0	2801,3675,0	S	Tent door	Open	Open Tent door
-830	false	>512	true	2804,3672,0 E	2805,3672,0	2804,3672,0	W	Tent door	Open	Open Tent door
-831	false	>512	true	2804,3673,0 E	2805,3673,0	2804,3673,0	W	Tent door	Open	Open Tent door
-832	false	>512	true	3169,3045,0 N	3169,3046,0	3169,3045,0	S	Tent door	Walk-through	Walk-through Tent door
-833	false	>512	true	1841,9911,0 N	1841,9912,0	1841,9911,0	S	Thick Web	Enter-crypt	Enter-crypt Thick Web
-834	false	>512	true	1842,9911,0 N	1842,9912,0	1842,9911,0	S	Thick Web	Enter-crypt	Enter-crypt Thick Web
-835	false	>512	true	1934,4419,3 N	1934,4419,3	1934,4420,3	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
-836	false	>512	true	1934,4449,2 N	1934,4449,2	1934,4450,2	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
-837	false	>512	true	1968,4419,2 N	1968,4419,2	1968,4420,2	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
-838	false	>512	true	1968,4449,3 N	1968,4449,3	1968,4450,3	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
-839	false	>512	true	2892,9480,0 N	2892,9480,0	2892,9481,0	N	Tomb doors	Open	Open Tomb doors
-840	false	>512	true	2892,9497,0 N	2892,9497,0	2892,9498,0	N	Tomb doors	Open	Open Tomb doors
-841	false	>512	true	2893,9480,0 N	2893,9480,0	2893,9481,0	N	Tomb doors	Open	Open Tomb doors
-842	false	>512	true	2893,9497,0 N	2893,9497,0	2893,9498,0	N	Tomb doors	Open	Open Tomb doors
-843	false	>512	true	2649,3224,0 N	2649,3225,0	2649,3224,0	S	Tower door	Open	Open Tower door
-844	false	>512	true	2949,9515,1 N	2949,9516,1	2949,9515,1	S	Underwater Cavern Entrance	Enter	Enter Underwater Cavern Entrance
-845	false	>512	true	2949,9519,1 N	2949,9519,1	2949,9520,1	N	Underwater Cavern Entrance	Exit	Exit Underwater Cavern Entrance
-846	false	>512	true	2950,9515,1 N	2950,9516,1	2950,9515,1	S	Underwater Cavern Entrance	Enter	Enter Underwater Cavern Entrance
-847	false	>512	true	2950,9519,1 N	2950,9519,1	2950,9520,1	N	Underwater Cavern Entrance	Exit	Exit Underwater Cavern Entrance
-848	false	>512	true	3802,3015,0 E	3802,3015,0	3803,3015,0	E	Waiting Room Door	Open	Open Waiting Room Door
-849	false	>512	true	3822,3015,0 E	3823,3015,0	3822,3015,0	W	Waiting Room Door	Open	Open Waiting Room Door
-850	false	>512	true	2940,4672,1 N	2940,4673,1	2940,4672,1	S	Wall	Jump	Jump Wall
-851	false	>512	true	2940,4674,1 N	2940,4674,1	2940,4675,1	N	Wall	Jump	Jump Wall
-852	false	>512	true	2709,5781,0 E	2710,5781,0	2709,5781,0	W	Water's edge	Cross	Cross Water's edge
-853	false	>512	true	2709,5782,0 E	2710,5782,0	2709,5782,0	W	Water's edge	Cross	Cross Water's edge
-854	false	>512	true	2709,5783,0 E	2710,5783,0	2709,5783,0	W	Water's edge	Cross	Cross Water's edge
-855	false	>512	true	2730,5781,0 E	2730,5781,0	2731,5781,0	E	Water's edge	Cross	Cross Water's edge
-856	false	>512	true	2730,5782,0 E	2730,5782,0	2731,5782,0	E	Water's edge	Cross	Cross Water's edge
-857	false	>512	true	2867,2952,0 E	2867,2952,0	2868,2952,0	E	Wooden gate	Open	Open Wooden gate
-858	false	>512	true	2867,2953,0 E	2867,2953,0	2868,2953,0	E	Wooden gate	Open	Open Wooden gate
-859	false	>512	true	2924,3249,2 N	2924,3249,2	2924,3250,2	N	Yellow door	Open	Open Yellow door
-860	false	>512	true	2928,3249,2 N	2928,3249,2	2928,3250,2	N	Yellow door	Open	Open Yellow door
-861	false	>512	true	2931,3249,2 N	2931,3249,2	2931,3250,2	N	Yellow door	Open	Open Yellow door
-862	false	>512	true	2935,3256,2 E	2936,3256,2	2935,3256,2	W	Yellow door	Open	Open Yellow door
-863	false	82	false	2964,3338,0 E	2965,3338,0	2964,3338,0	W	Castle door	Open	Open Castle door
-864	false	82	false	2964,3339,0 E	2965,3339,0	2964,3339,0	W	Castle door	Open	Open Castle door
-865	false	81	false	2940,4672,0 N	2940,4673,0	2940,4672,0	S	Wall	Grapple	Grapple Wall
-866	false	80	false	3105,9944,0 N	3105,9944,0	3105,9945,0	N	Gate	Open	Open Gate
-867	false	79	false	3106,9944,0 N	3106,9944,0	3106,9945,0	N	Gate	Open	Open Gate
-868	false	64	false	2897,9831,0 E	2898,9831,0	2897,9831,0	W	Gate	Open	Open Gate
-869	false	64	false	2897,9832,0 E	2898,9832,0	2897,9832,0	W	Gate	Open	Open Gate
-870	false	62	false	2890,3948,0 N	2890,3948,0	2890,3949,0	N	Fence	Cross	Cross Fence
-871	false	61	false	3340,5931,0 N	3340,5931,0	3340,5932,0	N	Gate	Open	Open Gate
-872	false	59	false	3339,5931,0 N	3339,5931,0	3339,5932,0	N	Gate	Open	Open Gate
-873	false	59	false	3044,5103,1 N	3044,5103,1	3044,5104,1	N	Grill	Open	Open Grill
-874	false	54	false	2970,3336,0 N	2970,3337,0	2970,3336,0	S	Castle door	Open	Open Castle door
-875	false	54	false	2971,3336,0 N	2971,3337,0	2971,3336,0	S	Castle door	Open	Open Castle door
-876	false	51	false	3379,3284,0 E	3380,3284,0	3379,3284,0	W	Curtain	Open	Open Curtain
-877	false	45	false	1512,3765,0 N	1512,3766,0	1512,3765,0	S	Door	Open	Open Door
-878	false	45	false	3218,3490,1 N	3218,3491,1	3218,3490,1	S	Door	Open	Open Door
-879	false	44	false	1501,3765,0 N	1501,3766,0	1501,3765,0	S	Door	Open	Open Door
-880	false	34	false	2764,2763,0 N	2764,2764,0	2764,2763,0	S	Doorway	Open	Open Doorway
-881	false	27	false	3239,3391,0 N	3239,3391,0	3239,3392,0	N	Door	Open	Open Door
-882	false	26	false	2981,3340,0 E	2981,3340,0	2982,3340,0	E	Castle door	Open	Open Castle door
-883	false	26	false	2981,3341,0 E	2981,3341,0	2982,3341,0	E	Castle door	Open	Open Castle door
+1	true	>512	true	2959,3334,2 N	2959,3335,2	2959,3334,2	S	Castle door	Open	Open Castle door
+2	true	>512	true	2960,3334,2 N	2960,3335,2	2960,3334,2	S	Castle door	Open	Open Castle door
+3	true	>512	true	2960,3342,2 N	2960,3342,2	2960,3343,2	N	Castle door	Open	Open Castle door
+4	true	>512	true	2961,3342,2 N	2961,3342,2	2961,3343,2	N	Castle door	Open	Open Castle door
+5	true	82	false	2964,3338,0 E	2965,3338,0	2964,3338,0	W	Castle door	Open	Open Castle door
+6	true	82	false	2964,3339,0 E	2965,3339,0	2964,3339,0	W	Castle door	Open	Open Castle door
+7	true	54	false	2970,3336,0 N	2970,3337,0	2970,3336,0	S	Castle door	Open	Open Castle door
+8	true	54	false	2971,3336,0 N	2971,3337,0	2971,3336,0	S	Castle door	Open	Open Castle door
+9	true	26	false	2981,3340,0 E	2981,3340,0	2982,3340,0	E	Castle door	Open	Open Castle door
+10	true	26	false	2981,3341,0 E	2981,3341,0	2982,3341,0	E	Castle door	Open	Open Castle door
+11	false	>512	true	2809,9313,0 N	2809,9314,0	2809,9313,0	S	Ancient Gate	Open	Open Ancient Gate
+12	false	>512	true	2809,9331,0 N	2809,9332,0	2809,9331,0	S	Ancient Gate	Open	Open Ancient Gate
+13	false	>512	true	2810,9313,0 N	2810,9314,0	2810,9313,0	S	Ancient Gate	Open	Open Ancient Gate
+14	false	>512	true	2810,9331,0 N	2810,9332,0	2810,9331,0	S	Ancient Gate	Open	Open Ancient Gate
+15	false	>512	true	2928,9516,0 N	2928,9516,0	2928,9517,0	N	Ancient metal gate	Open	Open Ancient metal gate
+16	false	>512	true	2929,9516,0 N	2929,9516,0	2929,9517,0	N	Ancient metal gate	Open	Open Ancient metal gate
+17	false	>512	true	2743,2767,0 E	2744,2767,0	2743,2767,0	W	Bamboo Door	Open	Open Bamboo Door
+18	false	>512	true	2776,9195,0 E	2777,9195,0	2776,9195,0	W	Bamboo Door	Open	Open Bamboo Door
+19	false	>512	true	2782,3057,0 E	2782,3057,0	2783,3057,0	E	Bamboo Door	Open	Open Bamboo Door
+20	false	>512	true	2792,3054,0 E	2792,3054,0	2793,3054,0	E	Bamboo Door	Open	Open Bamboo Door
+21	false	>512	true	2802,3058,0 E	2802,3058,0	2803,3058,0	E	Bamboo Door	Open	Open Bamboo Door
+22	false	>512	true	2007,5914,0 E	2007,5914,0	2008,5914,0	E	Barrier	Pass	Pass Barrier
+23	false	>512	true	2027,5914,0 E	2028,5914,0	2027,5914,0	W	Barrier	Pass	Pass Barrier
+24	false	>512	true	2199,2842,0 E	2199,2842,0	2200,2842,0	E	Barrier	Pass	Pass Barrier
+25	false	>512	true	2219,2842,0 E	2220,2842,0	2219,2842,0	W	Barrier	Pass	Pass Barrier
+26	false	>512	true	3282,3382,0 E	3282,3382,0	3283,3382,0	E	Bedroom door	Open	Open Bedroom door
+27	false	>512	true	2850,5333,2 E	2851,5333,2	2850,5333,2	W	Big door	Open	Open Big door
+28	false	>512	true	2930,9644,0 E	2931,9644,0	2930,9644,0	W	Blue door	Open	Open Blue door
+29	false	>512	true	3538,3261,0 N	3538,3261,0	3538,3262,0	N	Broken fence	Climb-over	Climb-over Broken fence
+30	false	>512	true	3582,3263,0 N	3582,3263,0	3582,3264,0	N	Broken fence	Climb-over	Climb-over Broken fence
+31	false	>512	true	3491,3230,0 N	3491,3230,0	3491,3231,0	N	Broken wall	Climb-over	Climb-over Broken wall
+32	false	>512	true	2610,9195,1 E	2610,9195,1	2611,9195,1	E	Bronze Door	Open	Open Bronze Door
+33	false	>512	true	3045,3371,0 N	3045,3371,0	3045,3372,0	N	Castle door	Open	Open Castle door
+34	false	>512	true	3046,3371,0 N	3046,3371,0	3046,3372,0	N	Castle door	Open	Open Castle door
+35	false	>512	true	3141,3638,1 N	3141,3638,1	3141,3639,1	N	Casual	Pass-Through	Pass-Through Casual
+36	false	>512	true	3142,3638,1 N	3142,3638,1	3142,3639,1	N	Casual	Pass-Through	Pass-Through Casual
+37	false	>512	true	1674,3678,2 E	1674,3678,2	1675,3678,2	E	Cell Door	Open	Open Cell Door
+38	false	>512	true	1931,9447,0 E	1932,9447,0	1931,9447,0	W	Cell door	Open	Open Cell door
+39	false	>512	true	2141,3901,0 E	2141,3901,0	2142,3901,0	E	Cell door	Open	Open Cell door
+40	false	>512	true	2225,3798,0 E	2225,3798,0	2226,3798,0	E	Cell door	Open	Open Cell door
+41	false	>512	true	2572,9705,0 E	2573,9705,0	2572,9705,0	W	Cell door	Open	Open Cell door
+42	false	>512	true	2572,9708,0 E	2573,9708,0	2572,9708,0	W	Cell door	Open	Open Cell door
+43	false	>512	true	2572,9711,0 E	2573,9711,0	2572,9711,0	W	Cell door	Open	Open Cell door
+44	false	>512	true	2572,9714,0 E	2573,9714,0	2572,9714,0	W	Cell door	Open	Open Cell door
+45	false	>512	true	2854,10055,1 E	2855,10055,1	2854,10055,1	W	Cell Door	Open	Open Cell Door
+46	false	>512	true	3012,3189,0 E	3012,3189,0	3013,3189,0	E	Cell door	Open	Open Cell door
+47	false	>512	true	3012,3192,0 E	3012,3192,0	3013,3192,0	E	Cell door	Open	Open Cell door
+48	false	>512	true	3012,3195,0 E	3012,3195,0	3013,3195,0	E	Cell door	Open	Open Cell door
+49	false	>512	true	3618,3377,0 N	3618,3378,0	3618,3377,0	S	Cell door	Open	Open Cell door
+50	false	>512	true	3619,3379,0 E	3620,3379,0	3619,3379,0	W	Cell door	Open	Open Cell door
+51	false	>512	true	2503,3062,0 E	2504,3062,0	2503,3062,0	W	City gate	Open	Open City gate
+52	false	>512	true	2503,3063,0 E	2504,3063,0	2503,3063,0	W	City gate	Open	Open City gate
+53	false	>512	true	2549,3027,0 N	2549,3028,0	2549,3027,0	S	City gate	Open	Open City gate
+54	false	>512	true	2550,3027,0 N	2550,3028,0	2550,3027,0	S	City gate	Open	Open City gate
+55	false	>512	true	3141,3638,0 N	3141,3639,0	3141,3638,0	S	Competitive	Pass-Through	Pass-Through Competitive
+56	false	>512	true	3142,3638,0 N	3142,3639,0	3142,3638,0	S	Competitive	Pass-Through	Pass-Through Competitive
+57	false	>512	true	1759,4711,0 N	1759,4712,0	1759,4711,0	S	Crack	Enter	Enter Crack
+58	false	>512	true	2569,5189,0 N	2569,5190,0	2569,5189,0	S	Crack	Squeeze-through	Squeeze-through Crack
+59	false	>512	true	2569,5194,0 N	2569,5194,0	2569,5195,0	N	Crack	Squeeze-through	Squeeze-through Crack
+60	false	>512	true	2617,9827,0 N	2617,9827,0	2617,9828,0	N	Crack	Enter	Enter Crack
+61	false	>512	true	1926,6223,0 E	1926,6223,0	1927,6223,0	E	Crevice	Squeeze-through	Squeeze-through Crevice
+62	false	>512	true	1711,6113,0 E	1711,6113,0	1712,6113,0	E	Curtain	Open	Open Curtain
+63	false	>512	true	1711,6116,0 E	1711,6116,0	1712,6116,0	E	Curtain	Open	Open Curtain
+64	false	>512	true	3071,9896,0 E	3072,9896,0	3071,9896,0	W	Curtain	Enter	Enter Curtain
+65	false	>512	true	3072,9882,0 E	3073,9882,0	3072,9882,0	W	Curtain	Enter	Enter Curtain
+66	false	>512	true	3078,9899,0 N	3078,9899,0	3078,9900,0	N	Curtain	Enter	Enter Curtain
+67	false	>512	true	3082,9877,0 N	3082,9878,0	3082,9877,0	S	Curtain	Enter	Enter Curtain
+68	false	>512	true	3119,3105,0 E	3119,3105,0	3120,3105,0	E	Curtain	Open	Open Curtain
+69	false	>512	true	3119,3108,0 E	3119,3108,0	3120,3108,0	E	Curtain	Open	Open Curtain
+70	false	>512	true	3172,2976,0 N	3172,2977,0	3172,2976,0	S	Curtain	Open	Open Curtain
+71	false	>512	true	3182,2984,0 E	3182,2984,0	3183,2984,0	E	Curtain	Open	Open Curtain
+72	false	>512	true	3287,3173,1 E	3288,3173,1	3287,3173,1	W	Curtain	Open	Open Curtain
+73	false	>512	true	3291,3030,0 N	3291,3030,0	3291,3031,0	N	Curtain	Open	Open Curtain
+74	false	>512	true	3344,2955,0 E	3345,2955,0	3344,2955,0	W	Curtain	Open	Open Curtain
+75	false	>512	true	3350,2956,0 N	3350,2957,0	3350,2956,0	S	Curtain	Open	Open Curtain
+76	false	>512	true	3359,2981,0 N	3359,2981,0	3359,2982,0	N	Curtain	Open	Open Curtain
+77	false	>512	true	3360,2993,0 E	3361,2993,0	3360,2993,0	W	Curtain	Open	Open Curtain
+78	false	>512	true	3364,2999,0 N	3364,2999,0	3364,3000,0	N	Curtain	Open	Open Curtain
+79	false	>512	true	3365,2983,1 E	3366,2983,1	3365,2983,1	W	Curtain	Open	Open Curtain
+80	false	>512	true	3372,2968,1 N	3372,2969,1	3372,2968,1	S	Curtain	Open	Open Curtain
+81	false	>512	true	1237,3683,0 E	1237,3683,0	1238,3683,0	E	Door	Open	Open Door
+82	false	>512	true	1239,3681,1 E	1240,3681,1	1239,3681,1	W	Door	Open	Open Door
+83	false	>512	true	1242,3682,0 N	1242,3682,0	1242,3683,0	N	Door	Open	Open Door
+84	false	>512	true	1243,3680,1 N	1243,3681,1	1243,3680,1	S	Door	Open	Open Door
+85	false	>512	true	1243,3682,1 N	1243,3682,1	1243,3683,1	N	Door	Open	Open Door
+86	false	>512	true	1244,3685,0 E	1245,3685,0	1244,3685,0	W	Door	Open	Open Door
+87	false	>512	true	1284,3758,0 N	1284,3758,0	1284,3759,0	N	Door	Open	Open Door
+88	false	>512	true	1382,3816,0 N	1382,3817,0	1382,3816,0	S	Door	Open	Open Door
+89	false	>512	true	1431,3796,0 E	1431,3796,0	1432,3796,0	E	Door	Open	Open Door
+90	false	>512	true	1434,3743,0 N	1434,3744,0	1434,3743,0	S	Door	Open	Open Door
+91	false	>512	true	1440,3788,0 N	1440,3788,0	1440,3789,0	N	Door	Open	Open Door
+92	false	>512	true	1456,3748,0 E	1456,3748,0	1457,3748,0	E	Door	Open	Open Door
+93	false	>512	true	1462,3758,0 N	1462,3759,0	1462,3758,0	S	Door	Open	Open Door
+94	false	>512	true	1489,3834,0 E	1489,3834,0	1490,3834,0	E	Door	Open	Open Door
+95	false	>512	true	1512,3832,0 E	1513,3832,0	1512,3832,0	W	Door	Open	Open Door
+96	false	>512	true	1525,3746,0 N	1525,3747,0	1525,3746,0	S	Door	Open	Open Door
+97	false	>512	true	1534,3723,0 N	1534,3723,0	1534,3724,0	N	Door	Open	Open Door
+98	false	>512	true	1536,3808,0 E	1537,3808,0	1536,3808,0	W	Door	Open	Open Door
+99	false	>512	true	1542,3783,0 N	1542,3783,0	1542,3784,0	N	Door	Open	Open Door
+100	false	>512	true	1551,3782,0 E	1552,3782,0	1551,3782,0	W	Door	Open	Open Door
+101	false	>512	true	1553,3799,0 N	1553,3799,0	1553,3800,0	N	Door	Open	Open Door
+102	false	>512	true	1560,3759,0 E	1561,3759,0	1560,3759,0	W	Door	Open	Open Door
+103	false	>512	true	1561,3737,0 E	1561,3737,0	1562,3737,0	E	Door	Open	Open Door
+104	false	>512	true	1595,3819,0 E	1596,3819,0	1595,3819,0	W	Door	Open	Open Door
+105	false	>512	true	1595,3820,0 E	1596,3820,0	1595,3820,0	W	Door	Open	Open Door
+106	false	>512	true	1622,3807,0 E	1623,3807,0	1622,3807,0	W	Door	Open	Open Door
+107	false	>512	true	1622,3808,0 E	1623,3808,0	1622,3808,0	W	Door	Open	Open Door
+108	false	>512	true	1627,4829,0 E	1628,4829,0	1627,4829,0	W	Door	Open	Open Door
+109	false	>512	true	1631,4834,0 N	1631,4835,0	1631,4834,0	S	Door	Open	Open Door
+110	false	>512	true	1632,3817,0 N	1632,3817,0	1632,3818,0	N	Door	Open	Open Door
+111	false	>512	true	1632,4837,0 E	1633,4837,0	1632,4837,0	W	Door	Open	Open Door
+112	false	>512	true	1633,3817,0 N	1633,3817,0	1633,3818,0	N	Door	Open	Open Door
+113	false	>512	true	1633,4842,0 E	1634,4842,0	1633,4842,0	W	Door	Open	Open Door
+114	false	>512	true	1634,3797,0 N	1634,3798,0	1634,3797,0	S	Door	Open	Open Door
+115	false	>512	true	1635,3797,0 N	1635,3798,0	1635,3797,0	S	Door	Open	Open Door
+116	false	>512	true	1635,4838,0 E	1635,4838,0	1636,4838,0	E	Door	Open	Open Door
+117	false	>512	true	1640,4828,0 E	1640,4828,0	1641,4828,0	E	Door	Open	Open Door
+118	false	>512	true	1642,3805,0 E	1642,3805,0	1643,3805,0	E	Door	Open	Open Door
+119	false	>512	true	1642,3806,0 E	1642,3806,0	1643,3806,0	E	Door	Open	Open Door
+120	false	>512	true	1643,4839,0 N	1643,4839,0	1643,4840,0	N	Door	Open	Open Door
+121	false	>512	true	1650,3736,0 N	1650,3736,0	1650,3737,0	N	Door	Open	Open Door
+122	false	>512	true	1651,3736,0 N	1651,3736,0	1651,3737,0	N	Door	Open	Open Door
+123	false	>512	true	1664,6098,0 E	1664,6098,0	1665,6098,0	E	Door	Open	Open Door
+124	false	>512	true	1670,6092,0 E	1671,6092,0	1670,6092,0	W	Door	Open	Open Door
+125	false	>512	true	1677,3784,0 E	1678,3784,0	1677,3784,0	W	Door	Open	Open Door
+126	false	>512	true	1677,3785,0 E	1678,3785,0	1677,3785,0	W	Door	Open	Open Door
+127	false	>512	true	1677,3802,0 E	1678,3802,0	1677,3802,0	W	Door	Open	Open Door
+128	false	>512	true	1677,3803,0 E	1678,3803,0	1677,3803,0	W	Door	Open	Open Door
+129	false	>512	true	1678,6133,0 N	1678,6134,0	1678,6133,0	S	Door	Open	Open Door
+130	false	>512	true	1689,6115,0 E	1690,6115,0	1689,6115,0	W	Door	Open	Open Door
+131	false	>512	true	1693,3723,0 N	1693,3723,0	1693,3724,0	N	Door	Open	Open Door
+132	false	>512	true	1694,3723,0 N	1694,3723,0	1694,3724,0	N	Door	Open	Open Door
+133	false	>512	true	1701,3763,0 N	1701,3764,0	1701,3763,0	S	Door	Open	Open Door
+134	false	>512	true	1702,3763,0 N	1702,3764,0	1702,3763,0	S	Door	Open	Open Door
+135	false	>512	true	1716,3742,0 E	1717,3742,0	1716,3742,0	W	Door	Open	Open Door
+136	false	>512	true	1716,3743,0 E	1717,3743,0	1716,3743,0	W	Door	Open	Open Door
+137	false	>512	true	1716,3757,0 E	1717,3757,0	1716,3757,0	W	Door	Open	Open Door
+138	false	>512	true	1716,3758,0 E	1717,3758,0	1716,3758,0	W	Door	Open	Open Door
+139	false	>512	true	1720,6114,0 E	1721,6114,0	1720,6114,0	W	Door	Open	Open Door
+140	false	>512	true	1720,6115,0 E	1721,6115,0	1720,6115,0	W	Door	Open	Open Door
+141	false	>512	true	1721,6132,0 E	1722,6132,0	1721,6132,0	W	Door	Open	Open Door
+142	false	>512	true	1810,9944,0 N	1810,9945,0	1810,9944,0	S	Door	Open	Open Door
+143	false	>512	true	1864,5127,0 E	1864,5127,0	1865,5127,0	E	Door	Open	Open Door
+144	false	>512	true	1864,5137,0 E	1864,5137,0	1865,5137,0	E	Door	Open	Open Door
+145	false	>512	true	1881,5022,0 E	1881,5022,0	1882,5022,0	E	Door	Open	Open Door
+146	false	>512	true	1881,5030,0 E	1881,5030,0	1882,5030,0	E	Door	Open	Open Door
+147	false	>512	true	1886,5032,0 N	1886,5033,0	1886,5032,0	S	Door	Open	Open Door
+148	false	>512	true	1890,5019,0 E	1891,5019,0	1890,5019,0	W	Door	Open	Open Door
+149	false	>512	true	2033,4636,0 E	2034,4636,0	2033,4636,0	W	Door	Open	Open Door
+150	false	>512	true	2037,4633,0 N	2037,4633,0	2037,4634,0	N	Door	Open	Open Door
+151	false	>512	true	2042,4633,0 N	2042,4633,0	2042,4634,0	N	Door	Open	Open Door
+152	false	>512	true	2191,4950,1 E	2191,4950,1	2192,4950,1	E	Door	Open	Open Door
+153	false	>512	true	2191,4958,0 E	2191,4958,0	2192,4958,0	E	Door	Open	Open Door
+154	false	>512	true	2191,4958,1 E	2191,4958,1	2192,4958,1	E	Door	Open	Open Door
+155	false	>512	true	2198,4943,1 N	2198,4943,1	2198,4944,1	N	Door	Open	Open Door
+156	false	>512	true	2217,4943,1 N	2217,4943,1	2217,4944,1	N	Door	Open	Open Door
+157	false	>512	true	2223,4950,1 E	2224,4950,1	2223,4950,1	W	Door	Open	Open Door
+158	false	>512	true	2223,4958,0 E	2224,4958,0	2223,4958,0	W	Door	Open	Open Door
+159	false	>512	true	2223,4958,1 E	2224,4958,1	2223,4958,1	W	Door	Open	Open Door
+160	false	>512	true	2319,3677,0 N	2319,3677,0	2319,3678,0	N	Door	Open	Open Door
+161	false	>512	true	2319,3689,0 N	2319,3690,0	2319,3689,0	S	Door	Open	Open Door
+162	false	>512	true	2321,3667,0 E	2322,3667,0	2321,3667,0	W	Door	Open	Open Door
+163	false	>512	true	2326,3671,0 N	2326,3672,0	2326,3671,0	S	Door	Open	Open Door
+164	false	>512	true	2337,3675,0 E	2337,3675,0	2338,3675,0	E	Door	Open	Open Door
+165	false	>512	true	2339,3800,0 N	2339,3801,0	2339,3800,0	S	Door	Open	Open Door
+166	false	>512	true	2351,3679,0 E	2351,3679,0	2352,3679,0	E	Door	Open	Open Door
+167	false	>512	true	2398,5542,0 E	2399,5542,0	2398,5542,0	W	Door	Open	Open Door
+168	false	>512	true	2442,3183,0 N	2442,3183,0	2442,3184,0	N	Door	Open	Open Door
+169	false	>512	true	2502,3250,0 N	2502,3250,0	2502,3251,0	N	Door	Open	Open Door
+170	false	>512	true	2515,9575,0 N	2515,9575,0	2515,9576,0	N	Door	Open	Open Door
+171	false	>512	true	2538,9097,1 E	2539,9097,1	2538,9097,1	W	Door	Open	Open Door
+172	false	>512	true	2540,9900,0 N	2540,9900,0	2540,9901,0	N	Door	Open	Open Door
+173	false	>512	true	2542,9125,1 N	2542,9126,1	2542,9125,1	S	Door	Open	Open Door
+174	false	>512	true	2542,9892,0 N	2542,9892,0	2542,9893,0	N	Door	Open	Open Door
+175	false	>512	true	2546,3325,1 E	2547,3325,1	2546,3325,1	W	Door	Open	Open Door
+176	false	>512	true	2551,3320,0 N	2551,3320,0	2551,3321,0	N	Door	Open	Open Door
+177	false	>512	true	2551,3327,0 N	2551,3328,0	2551,3327,0	S	Door	Open	Open Door
+178	false	>512	true	2564,3356,0 E	2565,3356,0	2564,3356,0	W	Door	Open	Open Door
+179	false	>512	true	2566,5192,0 E	2567,5192,0	2566,5192,0	W	Door	Open	Open Door
+180	false	>512	true	2566,5198,0 E	2567,5198,0	2566,5198,0	W	Door	Open	Open Door
+181	false	>512	true	2572,3287,1 N	2572,3288,1	2572,3287,1	S	Door	Open	Open Door
+182	false	>512	true	2572,3305,1 N	2572,3305,1	2572,3306,1	N	Door	Open	Open Door
+183	false	>512	true	2576,5192,0 E	2576,5192,0	2577,5192,0	E	Door	Open	Open Door
+184	false	>512	true	2576,5198,0 E	2576,5198,0	2577,5198,0	E	Door	Open	Open Door
+185	false	>512	true	2579,4455,0 N	2579,4455,0	2579,4456,0	N	Door	Open	Open Door
+186	false	>512	true	2579,5278,0 N	2579,5278,0	2579,5279,0	N	Door	Pass	Pass Door
+187	false	>512	true	2579,5288,0 N	2579,5288,0	2579,5289,0	N	Door	Pass	Pass Door
+188	false	>512	true	2579,5298,0 N	2579,5298,0	2579,5299,0	N	Door	Pass	Pass Door
+189	false	>512	true	2581,9120,1 E	2582,9120,1	2581,9120,1	W	Door	Open	Open Door
+190	false	>512	true	2584,3141,0 E	2585,3141,0	2584,3141,0	W	Door	Open	Open Door
+191	false	>512	true	2587,5278,0 N	2587,5278,0	2587,5279,0	N	Door	Pass	Pass Door
+192	false	>512	true	2587,5288,0 N	2587,5288,0	2587,5289,0	N	Door	Pass	Pass Door
+193	false	>512	true	2587,5298,0 N	2587,5298,0	2587,5299,0	N	Door	Pass	Pass Door
+194	false	>512	true	2594,3266,0 N	2594,3266,0	2594,3267,0	N	Door	Open	Open Door
+195	false	>512	true	2599,5288,0 N	2599,5288,0	2599,5289,0	N	Door	Pass	Pass Door
+196	false	>512	true	2599,5298,0 N	2599,5298,0	2599,5299,0	N	Door	Pass	Pass Door
+197	false	>512	true	2602,5278,0 N	2602,5278,0	2602,5279,0	N	Door	Pass	Pass Door
+198	false	>512	true	2606,9892,0 N	2606,9892,0	2606,9893,0	N	Door	Open	Open Door
+199	false	>512	true	2607,5288,0 N	2607,5288,0	2607,5289,0	N	Door	Pass	Pass Door
+200	false	>512	true	2607,5298,0 N	2607,5298,0	2607,5299,0	N	Door	Pass	Pass Door
+201	false	>512	true	2610,3316,0 E	2610,3316,0	2611,3316,0	E	Door	Open	Open Door
+202	false	>512	true	2617,3171,0 N	2617,3171,0	2617,3172,0	N	Door	Open	Open Door
+203	false	>512	true	2631,3666,0 N	2631,3667,0	2631,3666,0	S	Door	Open	Open Door
+204	false	>512	true	2633,3323,0 E	2634,3323,0	2633,3323,0	W	Door	Open	Open Door
+205	false	>512	true	2635,3321,0 N	2635,3321,0	2635,3322,0	N	Door	Open	Open Door
+206	false	>512	true	2636,3666,0 N	2636,3667,0	2636,3666,0	S	Door	Open	Open Door
+207	false	>512	true	2639,10382,0 E	2640,10382,0	2639,10382,0	W	Door	Open	Open Door
+208	false	>512	true	2643,10417,0 N	2643,10418,0	2643,10417,0	S	Door	Open	Open Door
+209	false	>512	true	2646,9870,0 N	2646,9870,0	2646,9871,0	N	Door	Open	Open Door
+210	false	>512	true	2648,9185,1 N	2648,9185,1	2648,9186,1	N	Door	Open	Open Door
+211	false	>512	true	2648,9857,0 N	2648,9857,0	2648,9858,0	N	Door	Open	Open Door
+212	false	>512	true	2657,3496,0 N	2657,3496,0	2657,3497,0	N	Door	Open	Open Door
+213	false	>512	true	2662,10396,0 E	2662,10396,0	2663,10396,0	E	Door	Open	Open Door
+214	false	>512	true	2665,9663,0 N	2665,9663,0	2665,9664,0	N	Door	Open	Open Door
+215	false	>512	true	2666,3683,0 E	2667,3683,0	2666,3683,0	W	Door	Open	Open Door
+216	false	>512	true	2666,9189,1 N	2666,9189,1	2666,9190,1	N	Door	Open	Open Door
+217	false	>512	true	2674,3303,0 N	2674,3304,0	2674,3303,0	S	Door	Open	Open Door
+218	false	>512	true	2674,3305,0 N	2674,3305,0	2674,3306,0	N	Door	Open	Open Door
+219	false	>512	true	2694,5292,0 N	2694,5293,0	2694,5292,0	S	Door	Open	Open Door
+220	false	>512	true	2696,5324,1 E	2696,5324,1	2697,5324,1	E	Door	Open	Open Door
+221	false	>512	true	2697,5336,1 N	2697,5336,1	2697,5337,1	N	Door	Open	Open Door
+222	false	>512	true	2697,5343,1 E	2697,5343,1	2698,5343,1	E	Door	Open	Open Door
+223	false	>512	true	2698,5288,1 N	2698,5289,1	2698,5288,1	S	Door	Open	Open Door
+224	false	>512	true	2698,5299,1 N	2698,5300,1	2698,5299,1	S	Door	Open	Open Door
+225	false	>512	true	2699,5297,0 E	2699,5297,0	2700,5297,0	E	Door	Open	Open Door
+226	false	>512	true	2699,5317,1 E	2699,5317,1	2700,5317,1	E	Door	Open	Open Door
+227	false	>512	true	2700,5262,0 E	2700,5262,0	2701,5262,0	E	Door	Open	Open Door
+228	false	>512	true	2701,5317,0 E	2702,5317,0	2701,5317,0	W	Door	Open	Open Door
+229	false	>512	true	2701,5331,0 E	2702,5331,0	2701,5331,0	W	Door	Open	Open Door
+230	false	>512	true	2701,5354,1 N	2701,5354,1	2701,5355,1	N	Door	Open	Open Door
+231	false	>512	true	2706,5265,0 E	2706,5265,0	2707,5265,0	E	Door	Open	Open Door
+232	false	>512	true	2708,5362,0 E	2709,5362,0	2708,5362,0	W	Door	Open	Open Door
+233	false	>512	true	2712,3283,0 E	2713,3283,0	2712,3283,0	W	Door	Open	Open Door
+234	false	>512	true	2717,3274,0 E	2718,3274,0	2717,3274,0	W	Door	Open	Open Door
+235	false	>512	true	2719,9671,0 N	2719,9671,0	2719,9672,0	N	Door	Open	Open Door
+236	false	>512	true	2722,9671,0 N	2722,9671,0	2722,9672,0	N	Door	Open	Open Door
+237	false	>512	true	2723,3275,0 N	2723,3276,0	2723,3275,0	S	Door	Open	Open Door
+238	false	>512	true	2723,9710,0 N	2723,9711,0	2723,9710,0	S	Door	Open	Open Door
+239	false	>512	true	2727,9690,0 E	2727,9690,0	2728,9690,0	E	Door	Open	Open Door
+240	false	>512	true	2729,3276,0 E	2729,3276,0	2730,3276,0	E	Door	Open	Open Door
+241	false	>512	true	2730,3292,0 E	2730,3292,0	2731,3292,0	E	Door	Open	Open Door
+242	false	>512	true	2730,5354,0 E	2730,5354,0	2731,5354,0	E	Door	Open	Open Door
+243	false	>512	true	2733,5362,1 N	2733,5363,1	2733,5362,1	S	Door	Open	Open Door
+244	false	>512	true	2734,3295,0 N	2734,3296,0	2734,3295,0	S	Door	Open	Open Door
+245	false	>512	true	2736,5285,1 E	2737,5285,1	2736,5285,1	W	Door	Open	Open Door
+246	false	>512	true	2736,5291,0 E	2737,5291,0	2736,5291,0	W	Door	Open	Open Door
+247	false	>512	true	2736,5295,1 E	2737,5295,1	2736,5295,1	W	Door	Open	Open Door
+248	false	>512	true	2736,5353,1 N	2736,5353,1	2736,5354,1	N	Door	Open	Open Door
+249	false	>512	true	2737,5264,0 E	2738,5264,0	2737,5264,0	W	Door	Open	Open Door
+250	false	>512	true	2739,5338,1 E	2740,5338,1	2739,5338,1	W	Door	Open	Open Door
+251	false	>512	true	2740,5327,1 N	2740,5327,1	2740,5328,1	N	Door	Open	Open Door
+252	false	>512	true	2740,5331,0 N	2740,5332,0	2740,5331,0	S	Door	Open	Open Door
+253	false	>512	true	2741,5264,1 N	2741,5264,1	2741,5265,1	N	Door	Open	Open Door
+254	false	>512	true	2741,5362,0 N	2741,5363,0	2741,5362,0	S	Door	Open	Open Door
+255	false	>512	true	2742,5260,0 N	2742,5260,0	2742,5261,0	N	Door	Open	Open Door
+256	false	>512	true	2744,5338,0 N	2744,5338,0	2744,5339,0	N	Door	Open	Open Door
+257	false	>512	true	2746,5331,0 N	2746,5332,0	2746,5331,0	S	Door	Open	Open Door
+258	false	>512	true	2763,3197,0 E	2764,3197,0	2763,3197,0	W	Door	Open	Open Door
+259	false	>512	true	2764,3503,1 E	2764,3503,1	2765,3503,1	E	Door	Open	Open Door
+260	false	>512	true	2767,3288,1 E	2768,3288,1	2767,3288,1	W	Door	Open	Open Door
+261	false	>512	true	2774,3187,0 N	2774,3187,0	2774,3188,0	N	Door	Open	Open Door
+262	false	>512	true	2781,3196,0 N	2781,3197,0	2781,3196,0	S	Door	Open	Open Door
+263	false	>512	true	2788,3189,0 N	2788,3189,0	2788,3190,0	N	Door	Open	Open Door
+264	false	>512	true	2794,3199,0 N	2794,3199,0	2794,3200,0	N	Door	Open	Open Door
+265	false	>512	true	2810,3170,0 E	2811,3170,0	2810,3170,0	W	Door	Open	Open Door
+266	false	>512	true	2835,5093,0 N	2835,5093,0	2835,5094,0	N	Door	Open	Open Door
+267	false	>512	true	2838,5099,1 E	2838,5099,1	2839,5099,1	E	Door	Open	Open Door
+268	false	>512	true	2838,5100,0 E	2838,5100,0	2839,5100,0	E	Door	Open	Open Door
+269	false	>512	true	2839,5091,0 E	2840,5091,0	2839,5091,0	W	Door	Open	Open Door
+270	false	>512	true	2843,5096,0 N	2843,5097,0	2843,5096,0	S	Door	Open	Open Door
+271	false	>512	true	2852,5096,0 N	2852,5097,0	2852,5096,0	S	Door	Open	Open Door
+272	false	>512	true	2855,5091,0 E	2855,5091,0	2856,5091,0	E	Door	Open	Open Door
+273	false	>512	true	2856,5099,1 E	2857,5099,1	2856,5099,1	W	Door	Open	Open Door
+274	false	>512	true	2856,5100,0 E	2857,5100,0	2856,5100,0	W	Door	Open	Open Door
+275	false	>512	true	2860,5093,0 N	2860,5093,0	2860,5094,0	N	Door	Open	Open Door
+276	false	>512	true	2901,3465,0 N	2901,3465,0	2901,3466,0	N	Door	Open	Open Door
+277	false	>512	true	2901,3470,1 N	2901,3471,1	2901,3470,1	S	Door	Open	Open Door
+278	false	>512	true	2901,3510,0 E	2902,3510,0	2901,3510,0	W	Door	Open	Open Door
+279	false	>512	true	2901,3511,0 E	2902,3511,0	2901,3511,0	W	Door	Open	Open Door
+280	false	>512	true	2902,3467,0 N	2902,3467,0	2902,3468,0	N	Door	Open	Open Door
+281	false	>512	true	2906,3542,1 N	2906,3543,1	2906,3542,1	S	Door	Open	Open Door
+282	false	>512	true	2911,9968,0 E	2911,9968,0	2912,9968,0	E	Door	Open	Open Door
+283	false	>512	true	2931,9689,0 N	2931,9690,0	2931,9689,0	S	Door	Open	Open Door
+284	false	>512	true	2931,9694,0 N	2931,9694,0	2931,9695,0	N	Door	Open	Open Door
+285	false	>512	true	2933,3463,0 E	2934,3463,0	2933,3463,0	W	Door	Open	Open Door
+286	false	>512	true	3014,3181,0 N	3014,3182,0	3014,3181,0	S	Door	Open	Open Door
+287	false	>512	true	3014,3453,0 E	3015,3453,0	3014,3453,0	W	Door	Open	Open Door
+288	false	>512	true	3018,3181,0 N	3018,3182,0	3018,3181,0	S	Door	Open	Open Door
+289	false	>512	true	3018,3187,0 N	3018,3187,0	3018,3188,0	N	Door	Open	Open Door
+290	false	>512	true	3019,3515,0 E	3020,3515,0	3019,3515,0	W	Door	Open	Open Door
+291	false	>512	true	3019,9732,0 N	3019,9732,0	3019,9733,0	N	Door	Open	Open Door
+292	false	>512	true	3023,5082,1 E	3023,5082,1	3024,5082,1	E	Door	Open	Open Door
+293	false	>512	true	3037,3956,0 E	3038,3956,0	3037,3956,0	W	Door	Open	Open Door
+294	false	>512	true	3041,3959,0 N	3041,3959,0	3041,3960,0	N	Door	Open	Open Door
+295	false	>512	true	3043,9729,0 N	3043,9729,0	3043,9730,0	N	Door	Open	Open Door
+296	false	>512	true	3044,3956,0 E	3044,3956,0	3045,3956,0	E	Door	Open	Open Door
+297	false	>512	true	3079,9334,3 N	3079,9334,3	3079,9335,3	N	Door	Open	Open Door
+298	false	>512	true	3081,9287,3 E	3082,9287,3	3081,9287,3	W	Door	Open	Open Door
+299	false	>512	true	3107,3367,0 E	3107,3367,0	3108,3367,0	E	Door	Open	Open Door
+300	false	>512	true	3115,3449,0 N	3115,3450,0	3115,3449,0	S	Door	Open	Open Door
+301	false	>512	true	3129,9289,3 N	3129,9290,3	3129,9289,3	S	Door	Open	Open Door
+302	false	>512	true	3129,9334,3 N	3129,9334,3	3129,9335,3	N	Door	Open	Open Door
+303	false	>512	true	3143,3443,0 N	3143,3443,0	3143,3444,0	N	Door	Open	Open Door
+304	false	>512	true	3143,3452,0 E	3144,3452,0	3143,3452,0	W	Door	Open	Open Door
+305	false	>512	true	3147,3172,0 N	3147,3172,0	3147,3173,0	N	Door	Open	Open Door
+306	false	>512	true	3153,3405,0 E	3154,3405,0	3153,3405,0	W	Door	Open	Open Door
+307	false	>512	true	3153,3409,0 E	3154,3409,0	3153,3409,0	W	Door	Open	Open Door
+308	false	>512	true	3182,9611,0 E	3183,9611,0	3182,9611,0	W	Door	Open	Open Door
+309	false	>512	true	3184,3412,0 E	3184,3412,0	3185,3412,0	E	Door	Open	Open Door
+310	false	>512	true	3185,3387,0 N	3185,3388,0	3185,3387,0	S	Door	Open	Open Door
+311	false	>512	true	3189,3384,0 E	3190,3384,0	3189,3384,0	W	Door	Open	Open Door
+312	false	>512	true	3190,3957,0 N	3190,3957,0	3190,3958,0	N	Door	Open	Open Door
+313	false	>512	true	3191,3362,0 N	3191,3363,0	3191,3362,0	S	Door	Open	Open Door
+314	false	>512	true	3191,3962,0 N	3191,3963,0	3191,3962,0	S	Door	Open	Open Door
+315	false	>512	true	3195,3384,0 E	3196,3384,0	3195,3384,0	W	Door	Open	Open Door
+316	false	>512	true	3195,3398,0 N	3195,3399,0	3195,3398,0	S	Door	Open	Open Door
+317	false	>512	true	3203,3475,2 N	3203,3476,2	3203,3475,2	S	Door	Open	Open Door
+318	false	>512	true	3203,3493,2 N	3203,3493,2	3203,3494,2	N	Door	Open	Open Door
+319	false	>512	true	3205,3489,1 N	3205,3489,1	3205,3490,1	N	Door	Open	Open Door
+320	false	>512	true	3235,3404,0 E	3235,3404,0	3236,3404,0	E	Door	Open	Open Door
+321	false	>512	true	3238,9767,0 N	3238,9767,0	3238,9768,0	N	Door	Open	Open Door
+322	false	>512	true	3240,3406,0 E	3241,3406,0	3240,3406,0	W	Door	Open	Open Door
+323	false	>512	true	3241,3382,0 E	3241,3382,0	3242,3382,0	E	Door	Open	Open Door
+324	false	>512	true	3241,3412,0 E	3242,3412,0	3241,3412,0	W	Door	Open	Open Door
+325	false	>512	true	3246,3385,0 N	3246,3386,0	3246,3385,0	S	Door	Open	Open Door
+326	false	>512	true	3247,9779,0 N	3247,9779,0	3247,9780,0	N	Door	Open	Open Door
+327	false	>512	true	3248,3410,0 N	3248,3411,0	3248,3410,0	S	Door	Open	Open Door
+328	false	>512	true	3249,9773,0 N	3249,9774,0	3249,9773,0	S	Door	Open	Open Door
+329	false	>512	true	3250,9769,0 N	3250,9770,0	3250,9769,0	S	Door	Open	Open Door
+330	false	>512	true	3251,3385,0 N	3251,3386,0	3251,3385,0	S	Door	Open	Open Door
+331	false	>512	true	3255,3388,0 E	3255,3388,0	3256,3388,0	E	Door	Open	Open Door
+332	false	>512	true	3259,3400,0 E	3259,3400,0	3260,3400,0	E	Door	Open	Open Door
+333	false	>512	true	3264,3441,0 N	3264,3441,0	3264,3442,0	N	Door	Open	Open Door
+334	false	>512	true	3265,3441,0 N	3265,3441,0	3265,3442,0	N	Door	Open	Open Door
+335	false	>512	true	3267,3382,0 E	3267,3382,0	3268,3382,0	E	Door	Open	Open Door
+336	false	>512	true	3272,3379,0 N	3272,3380,0	3272,3379,0	S	Door	Open	Open Door
+337	false	>512	true	3273,3382,0 E	3274,3382,0	3273,3382,0	W	Door	Open	Open Door
+338	false	>512	true	3280,9199,0 N	3280,9199,0	3280,9200,0	N	Door	Open	Open Door
+339	false	>512	true	3306,9199,0 N	3306,9199,0	3306,9200,0	N	Door	Open	Open Door
+340	false	>512	true	3337,5947,0 E	3338,5947,0	3337,5947,0	W	Door	Open	Open Door
+341	false	>512	true	3339,5945,0 N	3339,5945,0	3339,5946,0	N	Door	Open	Open Door
+342	false	>512	true	3353,9544,0 N	3353,9544,0	3353,9545,0	N	Door	Open	Open Door
+343	false	>512	true	3354,9544,0 N	3354,9544,0	3354,9545,0	N	Door	Open	Open Door
+344	false	>512	true	3354,9558,0 N	3354,9558,0	3354,9559,0	N	Door	Open	Open Door
+345	false	>512	true	3355,9558,0 N	3355,9558,0	3355,9559,0	N	Door	Open	Open Door
+346	false	>512	true	3365,9542,0 N	3365,9542,0	3365,9543,0	N	Door	Open	Open Door
+347	false	>512	true	3371,9556,0 E	3372,9556,0	3371,9556,0	W	Door	Open	Open Door
+348	false	>512	true	3373,9547,0 E	3374,9547,0	3373,9547,0	W	Door	Open	Open Door
+349	false	>512	true	3378,5927,0 N	3378,5928,0	3378,5927,0	S	Door	Open	Open Door
+350	false	>512	true	3378,5929,0 N	3378,5929,0	3378,5930,0	N	Door	Open	Open Door
+351	false	>512	true	3490,3474,1 E	3490,3474,1	3491,3474,1	E	Door	Open	Open Door
+352	false	>512	true	3492,3476,1 N	3492,3476,1	3492,3477,1	N	Door	Open	Open Door
+353	false	>512	true	3493,3470,1 N	3493,3471,1	3493,3470,1	S	Door	Open	Open Door
+354	false	>512	true	3496,3476,1 N	3496,3476,1	3496,3477,1	N	Door	Open	Open Door
+355	false	>512	true	3497,3470,1 N	3497,3471,1	3497,3470,1	S	Door	Open	Open Door
+356	false	>512	true	3592,3227,0 E	3593,3227,0	3592,3227,0	W	Door	Open	Open Door
+357	false	>512	true	3594,3218,0 N	3594,3219,0	3594,3218,0	S	Door	Open	Open Door
+358	false	>512	true	3595,3186,0 N	3595,3187,0	3595,3186,0	S	Door	Open	Open Door
+359	false	>512	true	3595,3214,0 E	3595,3214,0	3596,3214,0	E	Door	Open	Open Door
+360	false	>512	true	3595,3236,0 E	3595,3236,0	3596,3236,0	E	Door	Open	Open Door
+361	false	>512	true	3595,3251,0 E	3596,3251,0	3595,3251,0	W	Door	Open	Open Door
+362	false	>512	true	3597,3205,0 N	3597,3205,0	3597,3206,0	N	Door	Open	Open Door
+363	false	>512	true	3598,3189,0 E	3598,3189,0	3599,3189,0	E	Door	Open	Open Door
+364	false	>512	true	3598,3197,0 N	3598,3198,0	3598,3197,0	S	Door	Open	Open Door
+365	false	>512	true	3598,3209,0 N	3598,3210,0	3598,3209,0	S	Door	Open	Open Door
+366	false	>512	true	3598,3242,0 E	3599,3242,0	3598,3242,0	W	Door	Open	Open Door
+367	false	>512	true	3598,3259,0 N	3598,3260,0	3598,3259,0	S	Door	Open	Open Door
+368	false	>512	true	3599,3227,0 E	3600,3227,0	3599,3227,0	W	Door	Open	Open Door
+369	false	>512	true	3599,3282,0 N	3599,3282,0	3599,3283,0	N	Door	Open	Open Door
+370	false	>512	true	3601,3382,0 N	3601,3382,0	3601,3383,0	N	Door	Open	Open Door
+371	false	>512	true	3602,3207,0 N	3602,3208,0	3602,3207,0	S	Door	Open	Open Door
+372	false	>512	true	3602,3389,0 E	3602,3389,0	3603,3389,0	E	Door	Open	Open Door
+373	false	>512	true	3604,3262,0 N	3604,3262,0	3604,3263,0	N	Door	Open	Open Door
+374	false	>512	true	3605,3358,0 N	3605,3358,0	3605,3359,0	N	Door	Open	Open Door
+375	false	>512	true	3605,3364,0 N	3605,3365,0	3605,3364,0	S	Door	Open	Open Door
+376	false	>512	true	3606,3205,0 N	3606,3206,0	3606,3205,0	S	Door	Open	Open Door
+377	false	>512	true	3608,3263,0 E	3609,3263,0	3608,3263,0	W	Door	Open	Open Door
+378	false	>512	true	3608,3289,0 N	3608,3290,0	3608,3289,0	S	Door	Open	Open Door
+379	false	>512	true	3609,3387,0 N	3609,3387,0	3609,3388,0	N	Door	Open	Open Door
+380	false	>512	true	3610,3391,0 N	3610,3392,0	3610,3391,0	S	Door	Open	Open Door
+381	false	>512	true	3612,3196,0 E	3613,3196,0	3612,3196,0	W	Door	Open	Open Door
+382	false	>512	true	3612,3208,0 N	3612,3209,0	3612,3208,0	S	Door	Open	Open Door
+383	false	>512	true	3612,3377,0 E	3612,3377,0	3613,3377,0	E	Door	Open	Open Door
+384	false	>512	true	3613,3303,0 E	3613,3303,0	3614,3303,0	E	Door	Open	Open Door
+385	false	>512	true	3614,3204,0 N	3614,3204,0	3614,3205,0	N	Door	Open	Open Door
+386	false	>512	true	3614,3254,0 N	3614,3254,0	3614,3255,0	N	Door	Open	Open Door
+387	false	>512	true	3616,3234,0 E	3616,3234,0	3617,3234,0	E	Door	Open	Open Door
+388	false	>512	true	3616,3241,0 N	3616,3242,0	3616,3241,0	S	Door	Open	Open Door
+389	false	>512	true	3617,3281,0 E	3618,3281,0	3617,3281,0	W	Door	Open	Open Door
+390	false	>512	true	3618,3223,0 N	3618,3223,0	3618,3224,0	N	Door	Open	Open Door
+391	false	>512	true	3618,3304,0 N	3618,3305,0	3618,3304,0	S	Door	Open	Open Door
+392	false	>512	true	3619,3295,0 N	3619,3296,0	3619,3295,0	S	Door	Open	Open Door
+393	false	>512	true	3619,3381,0 N	3619,3381,0	3619,3382,0	N	Door	Open	Open Door
+394	false	>512	true	3620,3238,0 E	3621,3238,0	3620,3238,0	W	Door	Open	Open Door
+395	false	>512	true	3620,3384,0 N	3620,3385,0	3620,3384,0	S	Door	Open	Open Door
+396	false	>512	true	3621,3212,0 E	3622,3212,0	3621,3212,0	W	Door	Open	Open Door
+397	false	>512	true	3621,3230,0 N	3621,3230,0	3621,3231,0	N	Door	Open	Open Door
+398	false	>512	true	3624,3207,0 N	3624,3207,0	3624,3208,0	N	Door	Open	Open Door
+399	false	>512	true	3624,3221,0 N	3624,3221,0	3624,3222,0	N	Door	Open	Open Door
+400	false	>512	true	3625,3204,0 E	3625,3204,0	3626,3204,0	E	Door	Open	Open Door
+401	false	>512	true	3625,3258,0 E	3626,3258,0	3625,3258,0	W	Door	Open	Open Door
+402	false	>512	true	3626,3393,0 E	3626,3393,0	3627,3393,0	E	Door	Open	Open Door
+403	false	>512	true	3628,3204,0 E	3629,3204,0	3628,3204,0	W	Door	Open	Open Door
+404	false	>512	true	3628,3250,0 E	3628,3250,0	3629,3250,0	E	Door	Open	Open Door
+405	false	>512	true	3629,3232,0 N	3629,3232,0	3629,3233,0	N	Door	Open	Open Door
+406	false	>512	true	3629,3296,0 E	3630,3296,0	3629,3296,0	W	Door	Open	Open Door
+407	false	>512	true	3630,3320,0 E	3630,3320,0	3631,3320,0	E	Door	Open	Open Door
+408	false	>512	true	3631,3261,0 N	3631,3262,0	3631,3261,0	S	Door	Open	Open Door
+409	false	>512	true	3631,3266,0 N	3631,3266,0	3631,3267,0	N	Door	Open	Open Door
+410	false	>512	true	3632,3280,0 E	3633,3280,0	3632,3280,0	W	Door	Open	Open Door
+411	false	>512	true	3632,3316,0 E	3633,3316,0	3632,3316,0	W	Door	Open	Open Door
+412	false	>512	true	3632,3383,0 E	3632,3383,0	3633,3383,0	E	Door	Open	Open Door
+413	false	>512	true	3633,3242,0 N	3633,3243,0	3633,3242,0	S	Door	Open	Open Door
+414	false	>512	true	3633,3272,0 E	3633,3272,0	3634,3272,0	E	Door	Open	Open Door
+415	false	>512	true	3633,3284,0 N	3633,3285,0	3633,3284,0	S	Door	Open	Open Door
+416	false	>512	true	3634,3239,0 E	3635,3239,0	3634,3239,0	W	Door	Open	Open Door
+417	false	>512	true	3635,3254,0 E	3636,3254,0	3635,3254,0	W	Door	Open	Open Door
+418	false	>512	true	3635,3289,0 N	3635,3290,0	3635,3289,0	S	Door	Open	Open Door
+419	false	>512	true	3637,3242,0 N	3637,3243,0	3637,3242,0	S	Door	Open	Open Door
+420	false	>512	true	3639,3284,0 N	3639,3285,0	3639,3284,0	S	Door	Open	Open Door
+421	false	>512	true	3639,3302,0 E	3639,3302,0	3640,3302,0	E	Door	Open	Open Door
+422	false	>512	true	3642,3383,0 N	3642,3384,0	3642,3383,0	S	Door	Open	Open Door
+423	false	>512	true	3645,3380,0 N	3645,3380,0	3645,3381,0	N	Door	Open	Open Door
+424	false	>512	true	3662,3377,0 N	3662,3378,0	3662,3377,0	S	Door	Open	Open Door
+425	false	>512	true	3750,3292,0 N	3750,3292,0	3750,3293,0	N	Door	Open	Open Door
+426	false	>512	true	1765,10149,0 N	1765,10149,0	1765,10150,0	N	Doorway	Go-through	Go-through Doorway
+427	false	>512	true	2445,4595,0 N	2445,4596,0	2445,4595,0	S	Doorway	Walk-through	Walk-through Doorway
+428	false	>512	true	2509,3635,0 N	2509,3636,0	2509,3635,0	S	Doorway	Walk-through	Walk-through Doorway
+429	false	>512	true	3056,4991,1 N	3056,4991,1	3056,4992,1	N	Doorway	Open	Open Doorway
+430	false	>512	true	3510,9957,0 E	3510,9957,0	3511,9957,0	E	Entrance	Open	Open Entrance
+431	false	>512	true	2923,9654,0 E	2924,9654,0	2923,9654,0	W	Exit door	Open	Open Exit door
+432	false	>512	true	2926,9649,0 E	2927,9649,0	2926,9649,0	W	Exit door	Open	Open Exit door
+433	false	>512	true	2930,9640,0 E	2931,9640,0	2930,9640,0	W	Exit door	Open	Open Exit door
+434	false	>512	true	1804,3501,0 E	1805,3501,0	1804,3501,0	W	Farm door	Open	Open Farm door
+435	false	>512	true	1681,6099,0 E	1681,6099,0	1682,6099,0	E	Gate	Open	Open Gate
+436	false	>512	true	1681,6100,0 E	1681,6100,0	1682,6100,0	E	Gate	Open	Open Gate
+437	false	>512	true	1686,12510,0 E	1686,12510,0	1687,12510,0	E	Gate	Open	Open Gate
+438	false	>512	true	1686,12511,0 E	1686,12511,0	1687,12511,0	E	Gate	Open	Open Gate
+439	false	>512	true	1702,12526,0 E	1703,12526,0	1702,12526,0	W	Gate	Open	Open Gate
+440	false	>512	true	1702,12527,0 E	1703,12527,0	1702,12527,0	W	Gate	Open	Open Gate
+441	false	>512	true	1934,5536,0 E	1935,5536,0	1934,5536,0	W	Gate	Open	Open Gate
+442	false	>512	true	2382,3488,0 E	2383,3488,0	2382,3488,0	W	Gate	Open	Open Gate
+443	false	>512	true	2382,4445,0 E	2383,4445,0	2382,4445,0	W	Gate	Open	Open Gate
+444	false	>512	true	2382,4446,0 E	2383,4446,0	2382,4446,0	W	Gate	Open	Open Gate
+445	false	>512	true	2517,3356,0 N	2517,3356,0	2517,3357,0	N	Gate	Open	Open Gate
+446	false	>512	true	2518,3356,0 N	2518,3356,0	2518,3357,0	N	Gate	Open	Open Gate
+447	false	>512	true	2528,5844,1 N	2528,5845,1	2528,5844,1	S	Gate	Squeeze-through	Squeeze-through Gate
+448	false	>512	true	2545,3569,0 E	2545,3569,0	2546,3569,0	E	Gate	Open	Open Gate
+449	false	>512	true	2545,3570,0 E	2545,3570,0	2546,3570,0	E	Gate	Open	Open Gate
+450	false	>512	true	2551,3325,1 E	2551,3325,1	2552,3325,1	E	Gate	Open	Open Gate
+451	false	>512	true	2551,3326,1 E	2551,3326,1	2552,3326,1	E	Gate	Open	Open Gate
+452	false	>512	true	2578,9656,0 E	2579,9656,0	2578,9656,0	W	Gate	Go-through	Go-through Gate
+453	false	>512	true	2592,9489,0 N	2592,9490,0	2592,9489,0	S	Gate	Open	Open Gate
+454	false	>512	true	2593,9489,0 N	2593,9490,0	2593,9489,0	S	Gate	Open	Open Gate
+455	false	>512	true	2594,3361,0 E	2594,3361,0	2595,3361,0	E	Gate	Open	Open Gate
+456	false	>512	true	2594,3362,0 E	2594,3362,0	2595,3362,0	E	Gate	Open	Open Gate
+457	false	>512	true	2595,9657,0 E	2595,9657,0	2596,9657,0	E	Gate	Open	Open Gate
+458	false	>512	true	2635,3307,0 N	2635,3307,0	2635,3308,0	N	Gate	Open	Open Gate
+459	false	>512	true	2636,3307,0 N	2636,3307,0	2636,3308,0	N	Gate	Open	Open Gate
+460	false	>512	true	2642,3441,0 E	2642,3441,0	2643,3441,0	E	Gate	Open	Open Gate
+461	false	>512	true	2642,3442,0 E	2642,3442,0	2643,3442,0	E	Gate	Open	Open Gate
+462	false	>512	true	2649,3469,0 N	2649,3470,0	2649,3469,0	S	Gate	Open	Open Gate
+463	false	>512	true	2650,3469,0 N	2650,3470,0	2650,3469,0	S	Gate	Open	Open Gate
+464	false	>512	true	2651,4039,1 E	2652,4039,1	2651,4039,1	W	Gate	Open	Open Gate
+465	false	>512	true	2655,9714,0 E	2655,9714,0	2656,9714,0	E	Gate	Open	Open Gate
+466	false	>512	true	2655,9715,0 E	2655,9715,0	2656,9715,0	E	Gate	Open	Open Gate
+467	false	>512	true	2661,9802,0 N	2661,9803,0	2661,9802,0	S	Gate	Open	Open Gate
+468	false	>512	true	2661,9814,0 N	2661,9815,0	2661,9814,0	S	Gate	Open	Open Gate
+469	false	>512	true	2662,9802,0 N	2662,9803,0	2662,9802,0	S	Gate	Open	Open Gate
+470	false	>512	true	2662,9814,0 N	2662,9815,0	2662,9814,0	S	Gate	Open	Open Gate
+471	false	>512	true	2681,3697,0 N	2681,3697,0	2681,3698,0	N	Gate	Open	Open Gate
+472	false	>512	true	2682,3697,0 N	2682,3697,0	2682,3698,0	N	Gate	Open	Open Gate
+473	false	>512	true	2726,3494,1 N	2726,3494,1	2726,3495,1	N	Gate	Open	Open Gate
+474	false	>512	true	2727,3494,1 N	2727,3494,1	2727,3495,1	N	Gate	Open	Open Gate
+475	false	>512	true	2728,3349,0 N	2728,3349,0	2728,3350,0	N	Gate	Open	Open Gate
+476	false	>512	true	2729,3349,0 N	2729,3349,0	2729,3350,0	N	Gate	Open	Open Gate
+477	false	>512	true	2742,5343,1 N	2742,5343,1	2742,5344,1	N	Gate	Open	Open Gate
+478	false	>512	true	2745,5333,1 N	2745,5334,1	2745,5333,1	S	Gate	Open	Open Gate
+479	false	>512	true	2815,3182,0 E	2816,3182,0	2815,3182,0	W	Gate	Open	Open Gate
+480	false	>512	true	2815,3183,0 E	2816,3183,0	2815,3183,0	W	Gate	Open	Open Gate
+481	false	>512	true	2888,4587,0 E	2888,4587,0	2889,4587,0	E	Gate	Open	Open Gate
+482	false	>512	true	2890,4563,0 E	2890,4563,0	2891,4563,0	E	Gate	Open	Open Gate
+483	false	>512	true	2890,4592,0 E	2890,4592,0	2891,4592,0	E	Gate	Open	Open Gate
+484	false	>512	true	2892,4574,0 E	2892,4574,0	2893,4574,0	E	Gate	Open	Open Gate
+485	false	>512	true	2894,4580,0 E	2894,4580,0	2895,4580,0	E	Gate	Open	Open Gate
+486	false	>512	true	2894,4587,0 E	2894,4587,0	2895,4587,0	E	Gate	Open	Open Gate
+487	false	>512	true	2895,4597,0 N	2895,4598,0	2895,4597,0	S	Gate	Open	Open Gate
+488	false	>512	true	2896,4562,0 E	2896,4562,0	2897,4562,0	E	Gate	Open	Open Gate
+489	false	>512	true	2896,4583,0 E	2896,4583,0	2897,4583,0	E	Gate	Open	Open Gate
+490	false	>512	true	2898,4570,0 E	2898,4570,0	2899,4570,0	E	Gate	Open	Open Gate
+491	false	>512	true	2898,4585,0 E	2898,4585,0	2899,4585,0	E	Gate	Open	Open Gate
+492	false	>512	true	2898,4599,0 N	2898,4600,0	2898,4599,0	S	Gate	Open	Open Gate
+493	false	>512	true	2899,4595,0 N	2899,4596,0	2899,4595,0	S	Gate	Open	Open Gate
+494	false	>512	true	2900,4567,0 E	2900,4567,0	2901,4567,0	E	Gate	Open	Open Gate
+495	false	>512	true	2902,4575,0 E	2902,4575,0	2903,4575,0	E	Gate	Open	Open Gate
+496	false	>512	true	2902,5470,0 E	2903,5470,0	2902,5470,0	W	Gate	Open	Open Gate
+497	false	>512	true	2902,9873,0 E	2902,9873,0	2903,9873,0	E	Gate	Open	Open Gate
+498	false	>512	true	2902,9874,0 E	2902,9874,0	2903,9874,0	E	Gate	Open	Open Gate
+499	false	>512	true	2903,4554,0 N	2903,4554,0	2903,4555,0	N	Gate	Open	Open Gate
+500	false	>512	true	2903,4587,0 N	2903,4588,0	2903,4587,0	S	Gate	Open	Open Gate
+501	false	>512	true	2903,4593,0 N	2903,4594,0	2903,4593,0	S	Gate	Open	Open Gate
+502	false	>512	true	2904,4573,0 E	2904,4573,0	2905,4573,0	E	Gate	Open	Open Gate
+503	false	>512	true	2905,4560,0 N	2905,4560,0	2905,4561,0	N	Gate	Open	Open Gate
+504	false	>512	true	2906,4585,0 N	2906,4586,0	2906,4585,0	S	Gate	Open	Open Gate
+505	false	>512	true	2908,4591,0 N	2908,4592,0	2908,4591,0	S	Gate	Open	Open Gate
+506	false	>512	true	2909,4562,0 N	2909,4562,0	2909,4563,0	N	Gate	Open	Open Gate
+507	false	>512	true	2909,9909,0 N	2909,9910,0	2909,9909,0	S	Gate	Open	Open Gate
+508	false	>512	true	2910,4597,0 N	2910,4598,0	2910,4597,0	S	Gate	Open	Open Gate
+509	false	>512	true	2910,5480,0 N	2910,5480,0	2910,5481,0	N	Gate	Open	Open Gate
+510	false	>512	true	2910,9909,0 N	2910,9910,0	2910,9909,0	S	Gate	Open	Open Gate
+511	false	>512	true	2911,4566,0 N	2911,4566,0	2911,4567,0	N	Gate	Open	Open Gate
+512	false	>512	true	2912,4572,0 N	2912,4572,0	2912,4573,0	N	Gate	Open	Open Gate
+513	false	>512	true	2912,4583,0 N	2912,4584,0	2912,4583,0	S	Gate	Open	Open Gate
+514	false	>512	true	2913,5462,0 N	2913,5463,0	2913,5462,0	S	Gate	Open	Open Gate
+515	false	>512	true	2914,4599,0 N	2914,4600,0	2914,4599,0	S	Gate	Open	Open Gate
+516	false	>512	true	2915,4560,0 N	2915,4560,0	2915,4561,0	N	Gate	Open	Open Gate
+517	false	>512	true	2915,4595,0 N	2915,4596,0	2915,4595,0	S	Gate	Open	Open Gate
+518	false	>512	true	2916,4552,0 N	2916,4552,0	2916,4553,0	N	Gate	Open	Open Gate
+519	false	>512	true	2916,4568,0 N	2916,4568,0	2916,4569,0	N	Gate	Open	Open Gate
+520	false	>512	true	2916,4585,0 N	2916,4586,0	2916,4585,0	S	Gate	Open	Open Gate
+521	false	>512	true	2917,4576,0 E	2918,4576,0	2917,4576,0	W	Gate	Open	Open Gate
+522	false	>512	true	2920,5473,0 E	2920,5473,0	2921,5473,0	E	Gate	Open	Open Gate
+523	false	>512	true	2921,4575,0 E	2922,4575,0	2921,4575,0	W	Gate	Open	Open Gate
+524	false	>512	true	2921,4599,0 N	2921,4600,0	2921,4599,0	S	Gate	Open	Open Gate
+525	false	>512	true	2923,4566,0 E	2924,4566,0	2923,4566,0	W	Gate	Open	Open Gate
+526	false	>512	true	2923,4583,0 E	2924,4583,0	2923,4583,0	W	Gate	Open	Open Gate
+527	false	>512	true	2924,4554,0 N	2924,4554,0	2924,4555,0	N	Gate	Open	Open Gate
+528	false	>512	true	2925,4578,0 E	2926,4578,0	2925,4578,0	W	Gate	Open	Open Gate
+529	false	>512	true	2927,4588,0 E	2928,4588,0	2927,4588,0	W	Gate	Open	Open Gate
+530	false	>512	true	2928,4597,0 N	2928,4598,0	2928,4597,0	S	Gate	Open	Open Gate
+531	false	>512	true	2929,4573,0 E	2930,4573,0	2929,4573,0	W	Gate	Open	Open Gate
+532	false	>512	true	2929,4581,0 E	2930,4581,0	2929,4581,0	W	Gate	Open	Open Gate
+533	false	>512	true	2929,4586,0 E	2930,4586,0	2929,4586,0	W	Gate	Open	Open Gate
+534	false	>512	true	2931,4561,0 E	2932,4561,0	2931,4561,0	W	Gate	Open	Open Gate
+535	false	>512	true	2933,3319,0 N	2933,3320,0	2933,3319,0	S	Gate	Open	Open Gate
+536	false	>512	true	2933,4565,0 E	2934,4565,0	2933,4565,0	W	Gate	Open	Open Gate
+537	false	>512	true	2934,3319,0 N	2934,3320,0	2934,3319,0	S	Gate	Open	Open Gate
+538	false	>512	true	2935,4560,0 E	2936,4560,0	2935,4560,0	W	Gate	Open	Open Gate
+539	false	>512	true	2944,3041,0 E	2945,3041,0	2944,3041,0	W	Gate	Open	Open Gate
+540	false	>512	true	2944,3042,0 E	2945,3042,0	2944,3042,0	W	Gate	Open	Open Gate
+541	false	>512	true	2947,3903,0 N	2947,3904,0	2947,3903,0	S	Gate	Open	Open Gate
+542	false	>512	true	2948,3903,0 N	2948,3904,0	2948,3903,0	S	Gate	Open	Open Gate
+543	false	>512	true	3007,3849,0 E	3008,3849,0	3007,3849,0	W	Gate	Open	Open Gate
+544	false	>512	true	3007,3850,0 E	3008,3850,0	3007,3850,0	W	Gate	Open	Open Gate
+545	false	>512	true	3022,10311,0 E	3022,10311,0	3023,10311,0	E	Gate	Open	Open Gate
+546	false	>512	true	3022,10312,0 E	3022,10312,0	3023,10312,0	E	Gate	Open	Open Gate
+547	false	>512	true	3040,10307,0 E	3040,10307,0	3041,10307,0	E	Gate	Open	Open Gate
+548	false	>512	true	3040,10308,0 E	3040,10308,0	3041,10308,0	E	Gate	Open	Open Gate
+549	false	>512	true	3044,10341,0 E	3044,10341,0	3045,10341,0	E	Gate	Open	Open Gate
+550	false	>512	true	3044,10342,0 E	3044,10342,0	3045,10342,0	E	Gate	Open	Open Gate
+551	false	>512	true	3075,3867,0 N	3075,3867,0	3075,3868,0	N	Gate	Open	Open Gate
+552	false	>512	true	3076,3867,0 N	3076,3867,0	3076,3868,0	N	Gate	Open	Open Gate
+553	false	>512	true	3091,9815,0 N	3091,9815,0	3091,9816,0	N	Gate	Open	Open Gate
+554	false	>512	true	3092,9815,0 N	3092,9815,0	3092,9816,0	N	Gate	Open	Open Gate
+555	false	>512	true	3103,9909,0 E	3103,9909,0	3104,9909,0	E	Gate	Open	Open Gate
+556	false	>512	true	3103,9910,0 E	3103,9910,0	3104,9910,0	E	Gate	Open	Open Gate
+557	false	>512	true	3145,9870,0 E	3145,9870,0	3146,9870,0	E	Gate	Open	Open Gate
+558	false	>512	true	3145,9871,0 E	3145,9871,0	3146,9871,0	E	Gate	Open	Open Gate
+559	false	>512	true	3201,3855,0 N	3201,3856,0	3201,3855,0	S	Gate	Open	Open Gate
+560	false	>512	true	3202,3855,0 N	3202,3856,0	3202,3855,0	S	Gate	Open	Open Gate
+561	false	>512	true	3224,3903,0 N	3224,3904,0	3224,3903,0	S	Gate	Open	Open Gate
+562	false	>512	true	3225,3903,0 N	3225,3904,0	3225,3903,0	S	Gate	Open	Open Gate
+563	false	>512	true	3261,3446,0 N	3261,3446,0	3261,3447,0	N	Gate	Open	Open Gate
+564	false	>512	true	3273,3028,0 E	3273,3028,0	3274,3028,0	E	Gate	Open	Open Gate
+565	false	>512	true	3273,3029,0 E	3273,3029,0	3274,3029,0	E	Gate	Open	Open Gate
+566	false	>512	true	3292,9434,0 E	3292,9434,0	3293,9434,0	E	Gate	Open	Open Gate
+567	false	>512	true	3292,9435,0 E	3292,9435,0	3293,9435,0	E	Gate	Open	Open Gate
+568	false	>512	true	3311,3331,0 E	3312,3331,0	3311,3331,0	W	Gate	Open	Open Gate
+569	false	>512	true	3311,3332,0 E	3312,3332,0	3311,3332,0	W	Gate	Open	Open Gate
+570	false	>512	true	3319,3467,0 E	3319,3467,0	3320,3467,0	E	Gate	Open	Open Gate
+571	false	>512	true	3319,3468,0 E	3319,3468,0	3320,3468,0	E	Gate	Open	Open Gate
+572	false	>512	true	3322,9448,0 N	3322,9448,0	3322,9449,0	N	Gate	Open	Open Gate
+573	false	>512	true	3323,9448,0 N	3323,9448,0	3323,9449,0	N	Gate	Open	Open Gate
+574	false	>512	true	3336,3895,0 N	3336,3896,0	3336,3895,0	S	Gate	Open	Open Gate
+575	false	>512	true	3337,3895,0 N	3337,3896,0	3337,3895,0	S	Gate	Open	Open Gate
+576	false	>512	true	2936,9655,0 N	2936,9655,0	2936,9656,0	N	Green door	Open	Open Green door
+577	false	>512	true	2972,5093,1 N	2972,5094,1	2972,5093,1	S	Grill	Open	Open Grill
+578	false	>512	true	2973,5093,1 N	2973,5094,1	2973,5093,1	S	Grill	Open	Open Grill
+579	false	>512	true	2975,5107,1 E	2975,5107,1	2976,5107,1	E	Grill	Open	Open Grill
+580	false	>512	true	2989,5057,1 E	2989,5057,1	2990,5057,1	E	Grill	Open	Open Grill
+581	false	>512	true	2989,5058,1 E	2989,5058,1	2990,5058,1	E	Grill	Open	Open Grill
+582	false	>512	true	2994,5021,1 E	2995,5021,1	2994,5021,1	W	Grill	Open	Open Grill
+583	false	>512	true	3009,5033,1 E	3010,5033,1	3009,5033,1	W	Grill	Open	Open Grill
+584	false	>512	true	3014,5033,1 E	3015,5033,1	3014,5033,1	W	Grill	Open	Open Grill
+585	false	>512	true	3017,5021,1 E	3018,5021,1	3017,5021,1	W	Grill	Open	Open Grill
+586	false	>512	true	3023,5001,1 E	3024,5001,1	3023,5001,1	W	Grill	Open	Open Grill
+587	false	>512	true	3030,5079,1 E	3030,5079,1	3031,5079,1	E	Grill	Open	Open Grill
+588	false	>512	true	3032,5068,1 N	3032,5069,1	3032,5068,1	S	Grill	Open	Open Grill
+589	false	>512	true	3032,5077,1 N	3032,5078,1	3032,5077,1	S	Grill	Open	Open Grill
+590	false	>512	true	3033,5070,1 E	3034,5070,1	3033,5070,1	W	Grill	Open	Open Grill
+591	false	>512	true	3033,5073,1 E	3034,5073,1	3033,5073,1	W	Grill	Open	Open Grill
+592	false	>512	true	3035,5071,1 N	3035,5072,1	3035,5071,1	S	Grill	Open	Open Grill
+593	false	>512	true	3035,5074,1 N	3035,5075,1	3035,5074,1	S	Grill	Open	Open Grill
+594	false	>512	true	3035,5077,1 N	3035,5077,1	3035,5078,1	N	Grill	Open	Open Grill
+595	false	>512	true	3036,5067,1 E	3037,5067,1	3036,5067,1	W	Grill	Open	Open Grill
+596	false	>512	true	3036,5070,1 E	3037,5070,1	3036,5070,1	W	Grill	Open	Open Grill
+597	false	>512	true	3036,5073,1 E	3037,5073,1	3036,5073,1	W	Grill	Open	Open Grill
+598	false	>512	true	3036,5076,1 E	3036,5076,1	3037,5076,1	E	Grill	Open	Open Grill
+599	false	>512	true	3036,5079,1 E	3037,5079,1	3036,5079,1	W	Grill	Open	Open Grill
+600	false	>512	true	3038,5068,1 N	3038,5069,1	3038,5068,1	S	Grill	Open	Open Grill
+601	false	>512	true	3038,5071,1 N	3038,5071,1	3038,5072,1	N	Grill	Open	Open Grill
+602	false	>512	true	3038,5074,1 N	3038,5074,1	3038,5075,1	N	Grill	Open	Open Grill
+603	false	>512	true	3039,5067,1 E	3039,5067,1	3040,5067,1	E	Grill	Open	Open Grill
+604	false	>512	true	3039,5070,1 E	3040,5070,1	3039,5070,1	W	Grill	Open	Open Grill
+605	false	>512	true	3039,5073,1 E	3040,5073,1	3039,5073,1	W	Grill	Open	Open Grill
+606	false	>512	true	3039,5076,1 E	3040,5076,1	3039,5076,1	W	Grill	Open	Open Grill
+607	false	>512	true	3039,5079,1 E	3039,5079,1	3040,5079,1	E	Grill	Open	Open Grill
+608	false	>512	true	3041,5068,1 N	3041,5068,1	3041,5069,1	N	Grill	Open	Open Grill
+609	false	>512	true	3041,5071,1 N	3041,5071,1	3041,5072,1	N	Grill	Open	Open Grill
+610	false	>512	true	3041,5074,1 N	3041,5075,1	3041,5074,1	S	Grill	Open	Open Grill
+611	false	>512	true	3042,5070,1 E	3042,5070,1	3043,5070,1	E	Grill	Open	Open Grill
+612	false	>512	true	3042,5073,1 E	3043,5073,1	3042,5073,1	W	Grill	Open	Open Grill
+613	false	>512	true	3042,5076,1 E	3042,5076,1	3043,5076,1	E	Grill	Open	Open Grill
+614	false	>512	true	3042,5079,1 E	3043,5079,1	3042,5079,1	W	Grill	Open	Open Grill
+615	false	>512	true	3044,5068,1 N	3044,5069,1	3044,5068,1	S	Grill	Open	Open Grill
+616	false	>512	true	3044,5077,1 N	3044,5077,1	3044,5078,1	N	Grill	Open	Open Grill
+617	false	>512	true	3054,5028,1 N	3054,5029,1	3054,5028,1	S	Grill	Open	Open Grill
+618	false	>512	true	2816,3083,0 E	2817,3083,0	2816,3083,0	W	Hardwood Grove Doors	Open	Open Hardwood Grove Doors
+619	false	>512	true	2816,3084,0 E	2817,3084,0	2816,3084,0	W	Hardwood Grove Doors	Open	Open Hardwood Grove Doors
+620	false	>512	true	3141,3638,2 N	3141,3639,2	3141,3638,2	S	High Stakes	Pass-Through	Pass-Through High Stakes
+621	false	>512	true	3142,3638,2 N	3142,3639,2	3142,3638,2	S	High Stakes	Pass-Through	Pass-Through High Stakes
+622	false	>512	true	2326,9393,0 N	2326,9393,0	2326,9394,0	N	Kitchen gate	Open	Open Kitchen gate
+623	false	>512	true	2327,9393,0 N	2327,9393,0	2327,9394,0	N	Kitchen gate	Open	Open Kitchen gate
+624	false	>512	true	1636,4824,0 N	1636,4824,0	1636,4825,0	N	Large door	Open	Open Large door
+625	false	>512	true	1637,4824,0 N	1637,4824,0	1637,4825,0	N	Large door	Open	Open Large door
+626	false	>512	true	2193,4959,0 E	2194,4959,0	2193,4959,0	W	Large door	Open	Open Large door
+627	false	>512	true	2193,4960,0 E	2194,4960,0	2193,4960,0	W	Large door	Open	Open Large door
+628	false	>512	true	2207,4973,0 N	2207,4973,0	2207,4974,0	N	Large door	Open	Open Large door
+629	false	>512	true	2208,4973,0 N	2208,4973,0	2208,4974,0	N	Large door	Open	Open Large door
+630	false	>512	true	2221,4959,0 E	2221,4959,0	2222,4959,0	E	Large door	Open	Open Large door
+631	false	>512	true	2221,4960,0 E	2221,4960,0	2222,4960,0	E	Large door	Open	Open Large door
+632	false	>512	true	2390,3793,0 E	2390,3793,0	2391,3793,0	E	Large door	Open	Open Large door
+633	false	>512	true	2390,3804,0 E	2390,3804,0	2391,3804,0	E	Large door	Open	Open Large door
+634	false	>512	true	2407,3806,0 N	2407,3806,0	2407,3807,0	N	Large door	Open	Open Large door
+635	false	>512	true	2410,3820,0 N	2410,3821,0	2410,3820,0	S	Large door	Open	Open Large door
+636	false	>512	true	2421,3820,0 N	2421,3821,0	2421,3820,0	S	Large door	Open	Open Large door
+637	false	>512	true	2444,3089,0 E	2445,3089,0	2444,3089,0	W	Large door	Open	Open Large door
+638	false	>512	true	2444,3090,0 E	2445,3090,0	2444,3090,0	W	Large door	Open	Open Large door
+639	false	>512	true	2444,3098,0 N	2444,3099,0	2444,3098,0	S	Large door	Open	Open Large door
+640	false	>512	true	2500,3848,0 N	2500,3849,0	2500,3848,0	S	Large door	Open	Open Large door
+641	false	>512	true	2500,3848,1 N	2500,3849,1	2500,3848,1	S	Large door	Open	Open Large door
+642	false	>512	true	2500,3871,0 N	2500,3871,0	2500,3872,0	N	Large door	Open	Open Large door
+643	false	>512	true	2500,3871,1 N	2500,3871,1	2500,3872,1	N	Large door	Open	Open Large door
+644	false	>512	true	2504,3853,0 E	2504,3853,0	2505,3853,0	E	Large door	Open	Open Large door
+645	false	>512	true	2504,3853,1 E	2504,3853,1	2505,3853,1	E	Large door	Open	Open Large door
+646	false	>512	true	2504,3860,0 E	2505,3860,0	2504,3860,0	W	Large door	Open	Open Large door
+647	false	>512	true	2504,3867,0 E	2504,3867,0	2505,3867,0	E	Large door	Open	Open Large door
+648	false	>512	true	2504,3867,1 E	2504,3867,1	2505,3867,1	E	Large door	Open	Open Large door
+649	false	>512	true	2510,3860,0 E	2510,3860,0	2511,3860,0	E	Large door	Open	Open Large door
+650	false	>512	true	2607,3875,0 E	2608,3875,0	2607,3875,0	W	Large door	Open	Open Large door
+651	false	>512	true	2609,3875,0 E	2609,3875,0	2610,3875,0	E	Large door	Open	Open Large door
+652	false	>512	true	2609,3875,1 E	2609,3875,1	2610,3875,1	E	Large door	Open	Open Large door
+653	false	>512	true	2611,3866,1 E	2611,3866,1	2612,3866,1	E	Large door	Open	Open Large door
+654	false	>512	true	2611,3883,0 E	2611,3883,0	2612,3883,0	E	Large door	Open	Open Large door
+655	false	>512	true	2611,3883,1 E	2611,3883,1	2612,3883,1	E	Large door	Open	Open Large door
+656	false	>512	true	2613,3864,0 N	2613,3864,0	2613,3865,0	N	Large door	Open	Open Large door
+657	false	>512	true	2613,3864,1 N	2613,3865,1	2613,3864,1	S	Large door	Open	Open Large door
+658	false	>512	true	2613,3885,0 N	2613,3886,0	2613,3885,0	S	Large door	Open	Open Large door
+659	false	>512	true	2613,3885,1 N	2613,3885,1	2613,3886,1	N	Large door	Open	Open Large door
+660	false	>512	true	2615,3870,1 N	2615,3870,1	2615,3871,1	N	Large door	Open	Open Large door
+661	false	>512	true	2615,3879,0 N	2615,3880,0	2615,3879,0	S	Large door	Open	Open Large door
+662	false	>512	true	2615,3879,1 N	2615,3880,1	2615,3879,1	S	Large door	Open	Open Large door
+663	false	>512	true	2665,3241,0 E	2665,3241,0	2666,3241,0	E	Large door	Open	Open Large door
+664	false	>512	true	2740,3572,0 N	2740,3572,0	2740,3573,0	N	Large door	Open	Open Large door
+665	false	>512	true	2741,3572,0 N	2741,3572,0	2741,3573,0	N	Large door	Open	Open Large door
+666	false	>512	true	2751,3507,2 E	2751,3507,2	2752,3507,2	E	Large door	Open	Open Large door
+667	false	>512	true	2751,3508,2 E	2751,3508,2	2752,3508,2	E	Large door	Open	Open Large door
+668	false	>512	true	2763,3401,0 E	2763,3401,0	2764,3401,0	E	Large door	Open	Open Large door
+669	false	>512	true	2763,3402,0 E	2763,3402,0	2764,3402,0	E	Large door	Open	Open Large door
+670	false	>512	true	2788,4593,0 E	2789,4593,0	2788,4593,0	W	Large door	Open	Open Large door
+671	false	>512	true	2788,4594,0 E	2789,4594,0	2788,4594,0	W	Large door	Open	Open Large door
+672	false	>512	true	2794,4594,0 E	2794,4594,0	2795,4594,0	E	Large door	Open	Open Large door
+673	false	>512	true	2794,4595,0 E	2794,4595,0	2795,4595,0	E	Large door	Open	Open Large door
+674	false	>512	true	2895,3559,0 E	2896,3559,0	2895,3559,0	W	Large door	Open	Open Large door
+675	false	>512	true	2901,3559,0 E	2901,3559,0	2902,3559,0	E	Large door	Open	Open Large door
+676	false	>512	true	2901,3568,0 E	2901,3568,0	2902,3568,0	E	Large door	Open	Open Large door
+677	false	>512	true	3007,3515,0 E	3007,3515,0	3008,3515,0	E	Large door	Open	Open Large door
+678	false	>512	true	3007,3516,0 E	3007,3516,0	3008,3516,0	E	Large door	Open	Open Large door
+679	false	>512	true	1503,9943,1 N	1503,9944,1	1503,9943,1	S	Large doors	Open	Open Large doors
+680	false	>512	true	1503,9956,1 N	1503,9956,1	1503,9957,1	N	Large doors	Open	Open Large doors
+681	false	>512	true	1504,9943,1 N	1504,9944,1	1504,9943,1	S	Large doors	Open	Open Large doors
+682	false	>512	true	2728,3373,0 N	2728,3373,0	2728,3374,0	N	Legends Guild door	Open	Open Legends Guild door
+683	false	>512	true	2729,3373,0 N	2729,3373,0	2729,3374,0	N	Legends Guild door	Open	Open Legends Guild door
+684	false	>512	true	1743,3602,0 E	1743,3602,0	1744,3602,0	E	Locked door	Open	Open Locked door
+685	false	>512	true	1745,3602,0 E	1745,3602,0	1746,3602,0	E	Locked door	Open	Open Locked door
+686	false	>512	true	1749,3601,0 N	1749,3602,0	1749,3601,0	S	Locked door	Open	Open Locked door
+687	false	>512	true	1783,3571,1 E	1784,3571,1	1783,3571,1	W	Locked door	Open	Open Locked door
+688	false	>512	true	3078,3435,0 N	3078,3435,0	3078,3436,0	N	Longhall door	Open	Open Longhall door
+689	false	>512	true	3079,3435,0 N	3079,3435,0	3079,3436,0	N	Longhall door	Open	Open Longhall door
+690	false	>512	true	2522,3375,0 E	2522,3375,0	2523,3375,0	E	Loose Railing	Squeeze-through	Squeeze-through Loose Railing
+691	false	>512	true	2929,9651,0 N	2929,9652,0	2929,9651,0	S	Magenta door	Open	Open Magenta door
+692	false	>512	true	2465,4433,0 N	2465,4434,0	2465,4433,0	S	Magic door	Open	Open Magic door
+693	false	>512	true	2466,4433,0 N	2466,4434,0	2466,4433,0	S	Magic door	Open	Open Magic door
+694	false	>512	true	2469,4437,0 E	2469,4437,0	2470,4437,0	E	Magic door	Open	Open Magic door
+695	false	>512	true	2469,4438,0 E	2469,4438,0	2470,4438,0	E	Magic door	Open	Open Magic door
+696	false	>512	true	1894,4272,0 N	1894,4273,0	1894,4272,0	S	Metal door	Open	Open Metal door
+697	false	>512	true	1900,4265,0 N	1900,4265,0	1900,4266,0	N	Metal door	Open	Open Metal door
+698	false	>512	true	1904,4272,0 N	1904,4273,0	1904,4272,0	S	Metal door	Open	Open Metal door
+699	false	>512	true	1910,4265,0 N	1910,4265,0	1910,4266,0	N	Metal door	Open	Open Metal door
+700	false	>512	true	1951,5149,0 E	1952,5149,0	1951,5149,0	W	Mind Door	Open	Open Mind Door
+701	false	>512	true	1951,5150,0 E	1952,5150,0	1951,5150,0	W	Mind Door	Open	Open Mind Door
+702	false	>512	true	3278,9426,0 N	3278,9426,0	3278,9427,0	N	Mine door entrance	Open	Open Mine door entrance
+703	false	>512	true	3279,9426,0 N	3279,9426,0	3279,9427,0	N	Mine door entrance	Open	Open Mine door entrance
+704	false	>512	true	3301,3036,0 N	3301,3036,0	3301,3037,0	N	Mine door entrance	Open	Open Mine door entrance
+705	false	>512	true	3302,3036,0 N	3302,3036,0	3302,3037,0	N	Mine door entrance	Open	Open Mine door entrance
+706	false	>512	true	2002,4947,3 E	2003,4947,3	2002,4947,3	W	null	Open	Open null
+707	false	>512	true	2002,4948,3 E	2003,4948,3	2002,4948,3	W	null	Open	Open null
+708	false	>512	true	2440,9425,2 N	2440,9426,2	2440,9425,2	S	Ogre stone door	Open	Open Ogre stone door
+709	false	>512	true	2441,9425,2 N	2441,9426,2	2441,9425,2	S	Ogre stone door	Open	Open Ogre stone door
+710	false	>512	true	2930,3247,1 E	2931,3247,1	2930,3247,1	W	Orange door	Open	Open Orange door
+711	false	>512	true	2930,3250,1 E	2931,3250,1	2930,3250,1	W	Orange door	Open	Open Orange door
+712	false	>512	true	2930,3253,1 E	2931,3253,1	2930,3253,1	W	Orange door	Open	Open Orange door
+713	false	>512	true	2930,3256,1 E	2931,3256,1	2930,3256,1	W	Orange door	Open	Open Orange door
+714	false	>512	true	2974,9514,1 N	2974,9514,1	2974,9515,1	N	Pen Door	Open	Open Pen Door
+715	false	>512	true	2975,9514,1 N	2975,9514,1	2975,9515,1	N	Pen Door	Open	Open Pen Door
+716	false	>512	true	3287,3034,0 E	3287,3034,0	3288,3034,0	E	Prison door	Open	Open Prison door
+717	false	>512	true	2589,3141,0 N	2589,3142,0	2589,3141,0	S	Prison Gate	Open	Open Prison Gate
+718	false	>512	true	2595,3141,0 N	2595,3142,0	2595,3141,0	S	Prison Gate	Open	Open Prison Gate
+719	false	>512	true	2600,3141,0 N	2600,3142,0	2600,3141,0	S	Prison Gate	Open	Open Prison Gate
+720	false	>512	true	2616,3159,0 E	2617,3159,0	2616,3159,0	W	Prison Gate	Open	Open Prison Gate
+721	false	>512	true	2616,3163,0 E	2617,3163,0	2616,3163,0	W	Prison Gate	Open	Open Prison Gate
+722	false	>512	true	2616,3167,0 E	2617,3167,0	2616,3167,0	W	Prison Gate	Open	Open Prison Gate
+723	false	>512	true	3123,3243,0 N	3123,3243,0	3123,3244,0	N	Prison Gate	Open	Open Prison Gate
+724	false	>512	true	1994,5193,0 N	1994,5194,0	1994,5193,0	S	Rickety door	Open	Open Rickety door
+725	false	>512	true	1994,5196,0 N	1994,5196,0	1994,5197,0	N	Rickety door	Open	Open Rickety door
+726	false	>512	true	1995,5193,0 N	1995,5194,0	1995,5193,0	S	Rickety door	Open	Open Rickety door
+727	false	>512	true	1995,5196,0 N	1995,5196,0	1995,5197,0	N	Rickety door	Open	Open Rickety door
+728	false	>512	true	1996,5215,0 E	1997,5215,0	1996,5215,0	W	Rickety door	Open	Open Rickety door
+729	false	>512	true	1996,5216,0 E	1997,5216,0	1996,5216,0	W	Rickety door	Open	Open Rickety door
+730	false	>512	true	1999,5215,0 E	1999,5215,0	2000,5215,0	E	Rickety door	Open	Open Rickety door
+731	false	>512	true	1999,5216,0 E	1999,5216,0	2000,5216,0	E	Rickety door	Open	Open Rickety door
+732	false	>512	true	2004,5191,0 N	2004,5192,0	2004,5191,0	S	Rickety door	Open	Open Rickety door
+733	false	>512	true	2004,5194,0 N	2004,5194,0	2004,5195,0	N	Rickety door	Open	Open Rickety door
+734	false	>512	true	2005,5191,0 N	2005,5192,0	2005,5191,0	S	Rickety door	Open	Open Rickety door
+735	false	>512	true	2005,5194,0 N	2005,5194,0	2005,5195,0	N	Rickety door	Open	Open Rickety door
+736	false	>512	true	2005,5215,0 E	2006,5215,0	2005,5215,0	W	Rickety door	Open	Open Rickety door
+737	false	>512	true	2005,5216,0 E	2006,5216,0	2005,5216,0	W	Rickety door	Open	Open Rickety door
+738	false	>512	true	2005,5234,0 N	2005,5235,0	2005,5234,0	S	Rickety door	Open	Open Rickety door
+739	false	>512	true	2005,5237,0 N	2005,5237,0	2005,5238,0	N	Rickety door	Open	Open Rickety door
+740	false	>512	true	2006,5234,0 N	2006,5235,0	2006,5234,0	S	Rickety door	Open	Open Rickety door
+741	false	>512	true	2006,5237,0 N	2006,5237,0	2006,5238,0	N	Rickety door	Open	Open Rickety door
+742	false	>512	true	2008,5215,0 E	2008,5215,0	2009,5215,0	E	Rickety door	Open	Open Rickety door
+743	false	>512	true	2008,5216,0 E	2008,5216,0	2009,5216,0	E	Rickety door	Open	Open Rickety door
+744	false	>512	true	2013,5239,0 N	2013,5240,0	2013,5239,0	S	Rickety door	Open	Open Rickety door
+745	false	>512	true	2013,5242,0 N	2013,5242,0	2013,5243,0	N	Rickety door	Open	Open Rickety door
+746	false	>512	true	2014,5239,0 N	2014,5240,0	2014,5239,0	S	Rickety door	Open	Open Rickety door
+747	false	>512	true	2014,5242,0 N	2014,5242,0	2014,5243,0	N	Rickety door	Open	Open Rickety door
+748	false	>512	true	2015,5227,0 E	2016,5227,0	2015,5227,0	W	Rickety door	Open	Open Rickety door
+749	false	>512	true	2015,5228,0 E	2016,5228,0	2015,5228,0	W	Rickety door	Open	Open Rickety door
+750	false	>512	true	2018,5227,0 E	2018,5227,0	2019,5227,0	E	Rickety door	Open	Open Rickety door
+751	false	>512	true	2018,5228,0 E	2018,5228,0	2019,5228,0	E	Rickety door	Open	Open Rickety door
+752	false	>512	true	2019,5239,0 N	2019,5240,0	2019,5239,0	S	Rickety door	Open	Open Rickety door
+753	false	>512	true	2019,5242,0 N	2019,5242,0	2019,5243,0	N	Rickety door	Open	Open Rickety door
+754	false	>512	true	2020,5199,0 N	2020,5200,0	2020,5199,0	S	Rickety door	Open	Open Rickety door
+755	false	>512	true	2020,5202,0 N	2020,5202,0	2020,5203,0	N	Rickety door	Open	Open Rickety door
+756	false	>512	true	2020,5239,0 N	2020,5240,0	2020,5239,0	S	Rickety door	Open	Open Rickety door
+757	false	>512	true	2020,5242,0 N	2020,5242,0	2020,5243,0	N	Rickety door	Open	Open Rickety door
+758	false	>512	true	2021,5199,0 N	2021,5200,0	2021,5199,0	S	Rickety door	Open	Open Rickety door
+759	false	>512	true	2021,5202,0 N	2021,5202,0	2021,5203,0	N	Rickety door	Open	Open Rickety door
+760	false	>512	true	2026,5238,0 N	2026,5239,0	2026,5238,0	S	Rickety door	Open	Open Rickety door
+761	false	>512	true	2026,5241,0 N	2026,5241,0	2026,5242,0	N	Rickety door	Open	Open Rickety door
+762	false	>512	true	2027,5238,0 N	2027,5239,0	2027,5238,0	S	Rickety door	Open	Open Rickety door
+763	false	>512	true	2027,5241,0 N	2027,5241,0	2027,5242,0	N	Rickety door	Open	Open Rickety door
+764	false	>512	true	2031,5195,0 N	2031,5196,0	2031,5195,0	S	Rickety door	Open	Open Rickety door
+765	false	>512	true	2031,5198,0 N	2031,5198,0	2031,5199,0	N	Rickety door	Open	Open Rickety door
+766	false	>512	true	2031,5224,0 N	2031,5225,0	2031,5224,0	S	Rickety door	Open	Open Rickety door
+767	false	>512	true	2031,5227,0 N	2031,5227,0	2031,5228,0	N	Rickety door	Open	Open Rickety door
+768	false	>512	true	2032,5195,0 N	2032,5196,0	2032,5195,0	S	Rickety door	Open	Open Rickety door
+769	false	>512	true	2032,5198,0 N	2032,5198,0	2032,5199,0	N	Rickety door	Open	Open Rickety door
+770	false	>512	true	2032,5224,0 N	2032,5225,0	2032,5224,0	S	Rickety door	Open	Open Rickety door
+771	false	>512	true	2032,5227,0 N	2032,5227,0	2032,5228,0	N	Rickety door	Open	Open Rickety door
+772	false	>512	true	2033,5185,0 E	2034,5185,0	2033,5185,0	W	Rickety door	Open	Open Rickety door
+773	false	>512	true	2033,5186,0 E	2034,5186,0	2033,5186,0	W	Rickety door	Open	Open Rickety door
+774	false	>512	true	2033,5207,0 N	2033,5208,0	2033,5207,0	S	Rickety door	Open	Open Rickety door
+775	false	>512	true	2033,5210,0 N	2033,5210,0	2033,5211,0	N	Rickety door	Open	Open Rickety door
+776	false	>512	true	2034,5207,0 N	2034,5208,0	2034,5207,0	S	Rickety door	Open	Open Rickety door
+777	false	>512	true	2034,5210,0 N	2034,5210,0	2034,5211,0	N	Rickety door	Open	Open Rickety door
+778	false	>512	true	2036,5185,0 E	2036,5185,0	2037,5185,0	E	Rickety door	Open	Open Rickety door
+779	false	>512	true	2036,5186,0 E	2036,5186,0	2037,5186,0	E	Rickety door	Open	Open Rickety door
+780	false	>512	true	2036,5200,0 N	2036,5201,0	2036,5200,0	S	Rickety door	Open	Open Rickety door
+781	false	>512	true	2036,5203,0 N	2036,5203,0	2036,5204,0	N	Rickety door	Open	Open Rickety door
+782	false	>512	true	2036,5244,0 E	2037,5244,0	2036,5244,0	W	Rickety door	Open	Open Rickety door
+783	false	>512	true	2036,5245,0 E	2037,5245,0	2036,5245,0	W	Rickety door	Open	Open Rickety door
+784	false	>512	true	2037,5200,0 N	2037,5201,0	2037,5200,0	S	Rickety door	Open	Open Rickety door
+785	false	>512	true	2037,5203,0 N	2037,5203,0	2037,5204,0	N	Rickety door	Open	Open Rickety door
+786	false	>512	true	2039,5222,0 E	2040,5222,0	2039,5222,0	W	Rickety door	Open	Open Rickety door
+787	false	>512	true	2039,5223,0 E	2040,5223,0	2039,5223,0	W	Rickety door	Open	Open Rickety door
+788	false	>512	true	2039,5244,0 E	2039,5244,0	2040,5244,0	E	Rickety door	Open	Open Rickety door
+789	false	>512	true	2039,5245,0 E	2039,5245,0	2040,5245,0	E	Rickety door	Open	Open Rickety door
+790	false	>512	true	2042,5222,0 E	2042,5222,0	2043,5222,0	E	Rickety door	Open	Open Rickety door
+791	false	>512	true	2042,5223,0 E	2042,5223,0	2043,5223,0	E	Rickety door	Open	Open Rickety door
+792	false	>512	true	2044,5236,0 N	2044,5237,0	2044,5236,0	S	Rickety door	Open	Open Rickety door
+793	false	>512	true	2044,5239,0 N	2044,5239,0	2044,5240,0	N	Rickety door	Open	Open Rickety door
+794	false	>512	true	2045,5194,0 N	2045,5195,0	2045,5194,0	S	Rickety door	Open	Open Rickety door
+795	false	>512	true	2045,5197,0 N	2045,5197,0	2045,5198,0	N	Rickety door	Open	Open Rickety door
+796	false	>512	true	2045,5236,0 N	2045,5237,0	2045,5236,0	S	Rickety door	Open	Open Rickety door
+797	false	>512	true	2045,5239,0 N	2045,5239,0	2045,5240,0	N	Rickety door	Open	Open Rickety door
+798	false	>512	true	2046,5194,0 N	2046,5195,0	2046,5194,0	S	Rickety door	Open	Open Rickety door
+799	false	>512	true	2046,5197,0 N	2046,5197,0	2046,5198,0	N	Rickety door	Open	Open Rickety door
+800	false	>512	true	2420,4690,0 N	2420,4690,0	2420,4691,0	N	Shimmering field	Walk-through	Walk-through Shimmering field
+801	false	>512	true	2421,4690,0 N	2421,4690,0	2421,4691,0	N	Shimmering field	Walk-through	Walk-through Shimmering field
+802	false	>512	true	3464,9668,0 E	3465,9668,0	3464,9668,0	W	Solid black door	Open	Open Solid black door
+803	false	>512	true	3464,9677,0 E	3465,9677,0	3464,9677,0	W	Solid black door	Open	Open Solid black door
+804	false	>512	true	3464,9686,0 E	3465,9686,0	3464,9686,0	W	Solid black door	Open	Open Solid black door
+805	false	>512	true	3469,9668,0 E	3469,9668,0	3470,9668,0	E	Solid black door	Open	Open Solid black door
+806	false	>512	true	3477,9681,0 E	3478,9681,0	3477,9681,0	W	Solid black door	Open	Open Solid black door
+807	false	>512	true	3479,9691,0 N	3479,9692,0	3479,9691,0	S	Solid black door	Open	Open Solid black door
+808	false	>512	true	3482,9668,0 E	3482,9668,0	3483,9668,0	E	Solid black door	Open	Open Solid black door
+809	false	>512	true	3482,9677,0 E	3482,9677,0	3483,9677,0	E	Solid black door	Open	Open Solid black door
+810	false	>512	true	3482,9686,0 E	3482,9686,0	3483,9686,0	E	Solid black door	Open	Open Solid black door
+811	false	>512	true	3481,9723,0 E	3482,9723,0	3481,9723,0	W	Solid bronze door	Open	Open Solid bronze door
+812	false	>512	true	3493,9726,0 N	3493,9726,0	3493,9727,0	N	Solid bronze door	Open	Open Solid bronze door
+813	false	>512	true	3504,9723,0 E	3504,9723,0	3505,9723,0	E	Solid bronze door	Open	Open Solid bronze door
+814	false	>512	true	3501,9677,0 E	3501,9677,0	3502,9677,0	E	Solid gold door	Open	Open Solid gold door
+815	false	>512	true	3507,9671,0 N	3507,9671,0	3507,9672,0	N	Solid gold door	Open	Open Solid gold door
+816	false	>512	true	3507,9682,0 N	3507,9683,0	3507,9682,0	S	Solid gold door	Open	Open Solid gold door
+817	false	>512	true	3507,9691,0 N	3507,9692,0	3507,9691,0	S	Solid gold door	Open	Open Solid gold door
+818	false	>512	true	3512,9677,0 E	3513,9677,0	3512,9677,0	W	Solid gold door	Open	Open Solid gold door
+819	false	>512	true	3461,9708,0 E	3462,9708,0	3461,9708,0	W	Solid silver door	Open	Open Solid silver door
+820	false	>512	true	3464,9699,0 N	3464,9700,0	3464,9699,0	S	Solid silver door	Open	Open Solid silver door
+821	false	>512	true	3464,9716,0 N	3464,9716,0	3464,9717,0	N	Solid silver door	Open	Open Solid silver door
+822	false	>512	true	3466,9708,0 E	3467,9708,0	3466,9708,0	W	Solid silver door	Open	Open Solid silver door
+823	false	>512	true	3471,9710,0 N	3471,9710,0	3471,9711,0	N	Solid steel door	Open	Open Solid steel door
+824	false	>512	true	3479,9710,0 N	3479,9710,0	3479,9711,0	N	Solid steel door	Open	Open Solid steel door
+825	false	>512	true	3487,9710,0 N	3487,9710,0	3487,9711,0	N	Solid steel door	Open	Open Solid steel door
+826	false	>512	true	3493,9714,0 N	3493,9715,0	3493,9714,0	S	Solid steel door	Open	Open Solid steel door
+827	false	>512	true	3499,9710,0 N	3499,9710,0	3499,9711,0	N	Solid steel door	Open	Open Solid steel door
+828	false	>512	true	3507,9710,0 N	3507,9710,0	3507,9711,0	N	Solid steel door	Open	Open Solid steel door
+829	false	>512	true	3515,9710,0 N	3515,9710,0	3515,9711,0	N	Solid steel door	Open	Open Solid steel door
+830	false	>512	true	3016,3514,0 N	3016,3514,0	3016,3515,0	N	Sturdy door	Open	Open Sturdy door
+831	false	>512	true	3025,3511,1 E	3025,3511,1	3026,3511,1	E	Sturdy door	Open	Open Sturdy door
+832	false	>512	true	2799,3665,0 N	2799,3665,0	2799,3666,0	N	Tent door	Go-through	Go-through Tent door
+833	false	>512	true	2800,3665,0 N	2800,3665,0	2800,3666,0	N	Tent door	Go-through	Go-through Tent door
+834	false	>512	true	2800,3675,0 N	2800,3676,0	2800,3675,0	S	Tent door	Open	Open Tent door
+835	false	>512	true	2801,3675,0 N	2801,3676,0	2801,3675,0	S	Tent door	Open	Open Tent door
+836	false	>512	true	2804,3672,0 E	2805,3672,0	2804,3672,0	W	Tent door	Open	Open Tent door
+837	false	>512	true	2804,3673,0 E	2805,3673,0	2804,3673,0	W	Tent door	Open	Open Tent door
+838	false	>512	true	3169,3045,0 N	3169,3046,0	3169,3045,0	S	Tent door	Walk-through	Walk-through Tent door
+839	false	>512	true	1841,9911,0 N	1841,9912,0	1841,9911,0	S	Thick Web	Enter-crypt	Enter-crypt Thick Web
+840	false	>512	true	1842,9911,0 N	1842,9912,0	1842,9911,0	S	Thick Web	Enter-crypt	Enter-crypt Thick Web
+841	false	>512	true	1934,4419,3 N	1934,4419,3	1934,4420,3	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
+842	false	>512	true	1934,4449,2 N	1934,4449,2	1934,4450,2	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
+843	false	>512	true	1968,4419,2 N	1968,4419,2	1968,4420,2	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
+844	false	>512	true	1968,4449,3 N	1968,4449,3	1968,4450,3	N	Tomb Door	Leave Tomb	Leave Tomb Tomb Door
+845	false	>512	true	2892,9480,0 N	2892,9480,0	2892,9481,0	N	Tomb doors	Open	Open Tomb doors
+846	false	>512	true	2892,9497,0 N	2892,9497,0	2892,9498,0	N	Tomb doors	Open	Open Tomb doors
+847	false	>512	true	2893,9480,0 N	2893,9480,0	2893,9481,0	N	Tomb doors	Open	Open Tomb doors
+848	false	>512	true	2893,9497,0 N	2893,9497,0	2893,9498,0	N	Tomb doors	Open	Open Tomb doors
+849	false	>512	true	2649,3224,0 N	2649,3225,0	2649,3224,0	S	Tower door	Open	Open Tower door
+850	false	>512	true	2949,9515,1 N	2949,9516,1	2949,9515,1	S	Underwater Cavern Entrance	Enter	Enter Underwater Cavern Entrance
+851	false	>512	true	2949,9519,1 N	2949,9519,1	2949,9520,1	N	Underwater Cavern Entrance	Exit	Exit Underwater Cavern Entrance
+852	false	>512	true	2950,9515,1 N	2950,9516,1	2950,9515,1	S	Underwater Cavern Entrance	Enter	Enter Underwater Cavern Entrance
+853	false	>512	true	2950,9519,1 N	2950,9519,1	2950,9520,1	N	Underwater Cavern Entrance	Exit	Exit Underwater Cavern Entrance
+854	false	>512	true	3802,3015,0 E	3802,3015,0	3803,3015,0	E	Waiting Room Door	Open	Open Waiting Room Door
+855	false	>512	true	3822,3015,0 E	3823,3015,0	3822,3015,0	W	Waiting Room Door	Open	Open Waiting Room Door
+856	false	>512	true	2940,4672,1 N	2940,4673,1	2940,4672,1	S	Wall	Jump	Jump Wall
+857	false	>512	true	2940,4674,1 N	2940,4674,1	2940,4675,1	N	Wall	Jump	Jump Wall
+858	false	>512	true	2709,5781,0 E	2710,5781,0	2709,5781,0	W	Water's edge	Cross	Cross Water's edge
+859	false	>512	true	2709,5782,0 E	2710,5782,0	2709,5782,0	W	Water's edge	Cross	Cross Water's edge
+860	false	>512	true	2709,5783,0 E	2710,5783,0	2709,5783,0	W	Water's edge	Cross	Cross Water's edge
+861	false	>512	true	2730,5781,0 E	2730,5781,0	2731,5781,0	E	Water's edge	Cross	Cross Water's edge
+862	false	>512	true	2730,5782,0 E	2730,5782,0	2731,5782,0	E	Water's edge	Cross	Cross Water's edge
+863	false	>512	true	2867,2952,0 E	2867,2952,0	2868,2952,0	E	Wooden gate	Open	Open Wooden gate
+864	false	>512	true	2867,2953,0 E	2867,2953,0	2868,2953,0	E	Wooden gate	Open	Open Wooden gate
+865	false	>512	true	2924,3249,2 N	2924,3249,2	2924,3250,2	N	Yellow door	Open	Open Yellow door
+866	false	>512	true	2928,3249,2 N	2928,3249,2	2928,3250,2	N	Yellow door	Open	Open Yellow door
+867	false	>512	true	2931,3249,2 N	2931,3249,2	2931,3250,2	N	Yellow door	Open	Open Yellow door
+868	false	>512	true	2935,3256,2 E	2936,3256,2	2935,3256,2	W	Yellow door	Open	Open Yellow door
+869	false	81	false	2940,4672,0 N	2940,4673,0	2940,4672,0	S	Wall	Grapple	Grapple Wall
+870	false	80	false	3105,9944,0 N	3105,9944,0	3105,9945,0	N	Gate	Open	Open Gate
+871	false	79	false	3106,9944,0 N	3106,9944,0	3106,9945,0	N	Gate	Open	Open Gate
+872	false	64	false	2897,9831,0 E	2898,9831,0	2897,9831,0	W	Gate	Open	Open Gate
+873	false	64	false	2897,9832,0 E	2898,9832,0	2897,9832,0	W	Gate	Open	Open Gate
+874	false	62	false	2890,3948,0 N	2890,3948,0	2890,3949,0	N	Fence	Cross	Cross Fence
+875	false	61	false	3340,5931,0 N	3340,5931,0	3340,5932,0	N	Gate	Open	Open Gate
+876	false	59	false	3339,5931,0 N	3339,5931,0	3339,5932,0	N	Gate	Open	Open Gate
+877	false	59	false	3044,5103,1 N	3044,5103,1	3044,5104,1	N	Grill	Open	Open Grill
+878	false	51	false	3379,3284,0 E	3380,3284,0	3379,3284,0	W	Curtain	Open	Open Curtain
+879	false	45	false	1512,3765,0 N	1512,3766,0	1512,3765,0	S	Door	Open	Open Door
+880	false	45	false	3218,3490,1 N	3218,3491,1	3218,3490,1	S	Door	Open	Open Door
+881	false	44	false	1501,3765,0 N	1501,3766,0	1501,3765,0	S	Door	Open	Open Door
+882	false	34	false	2764,2763,0 N	2764,2764,0	2764,2763,0	S	Doorway	Open	Open Doorway
+883	false	27	false	3239,3391,0 N	3239,3391,0	3239,3392,0	N	Door	Open	Open Door
 884	false	18	false	2769,2747,0 N	2769,2748,0	2769,2747,0	S	Bamboo Door	Open	Open Bamboo Door
 885	false	18	false	3606,3280,0 N	3606,3280,0	3606,3281,0	N	Door	Open	Open Door
 886	false	16	false	3602,3203,0 N	3602,3203,0	3602,3204,0	N	Door	Open	Open Door
