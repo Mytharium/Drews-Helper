@@ -16,14 +16,19 @@ import com.drewshelper.routing.DrewsHelperWalkingRouteEngine;
 import com.drewshelper.routing.ui.DrewsHelperRouteMapOverlay;
 import com.drewshelper.routing.ui.DrewsHelperRouteMinimapOverlay;
 import com.drewshelper.routing.ui.DrewsHelperRouteTileOverlay;
+import java.io.File;
 import java.io.IOException;
 import java.awt.Rectangle;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -60,6 +65,7 @@ import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
@@ -136,9 +142,15 @@ public class DrewsHelperPlugin extends Plugin
 
     /** Cap on validator rows logged per scene, so one bad region cannot flood the console. */
     private static final int MAX_VALIDATION_ROWS_LOGGED = 25;
+    private static final int MAX_VALIDATION_ROWS_WRITTEN = 50000;
+    private static final int VALIDATION_REVALIDATE_TICKS = 100;
 
-    /** Scene the validator last checked, so it runs once per scene rather than every tick. */
+    /** Scene and tick the validator last checked, so it can re-sample open doors without running every tick. */
     private String lastValidatedSceneKey;
+    private int lastValidationTick;
+    private final Set<String> emittedValidationLines = new HashSet<>();
+    private boolean validationWriteLimitWarned;
+    private boolean validationFileWriteWarned;
 
     @Inject
     private Client client;
@@ -215,6 +227,19 @@ public class DrewsHelperPlugin extends Plugin
         routeDirty = true;
         lastRouteSignature = "";
         lastCooldownEpochMinute = -1;
+        lastValidatedSceneKey = null;
+        lastValidationTick = 0;
+        emittedValidationLines.clear();
+        validationWriteLimitWarned = false;
+        validationFileWriteWarned = false;
+        try
+        {
+            Files.deleteIfExists(new File(RuneLite.RUNELITE_DIR, "drews-map-validate.txt").toPath());
+        }
+        catch (IOException ex)
+        {
+            log.warn("Drew's Helper: could not reset map validation proof file", ex);
+        }
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
             configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
@@ -317,8 +342,11 @@ public class DrewsHelperPlugin extends Plugin
     /**
      * Route A - checks our shipped walking data against the game's own collision flags.
      *
-     * <p>Runs once per scene rather than per tick. The scene only changes when you cross a
-     * region boundary, so re-diffing ten thousand tile edges every 600ms would be pure waste.
+     * <p>Runs when the scene changes, then re-checks the same scene at a slow interval. A
+     * closed door is not evidence: the live client says blocked and our map says blocked, so
+     * they agree. The mismatch only exists while the door is open, which means validating a
+     * scene exactly once on arrival cannot see any door the player opens afterwards, which is
+     * why a full castle sweep could produce no usable door evidence.
      *
      * <p>Off unless switched on: this is the check that keeps Route B honest, not a gameplay
      * feature. What it reports becomes rows in transport-overrides.tsv.
@@ -328,6 +356,7 @@ public class DrewsHelperPlugin extends Plugin
         if (!config().validateMapData() || collisionMap == null)
         {
             lastValidatedSceneKey = null;
+            lastValidationTick = 0;
             return;
         }
 
@@ -335,11 +364,13 @@ public class DrewsHelperPlugin extends Plugin
         int baseY = client.getBaseY();
         int plane = client.getPlane();
         String sceneKey = baseX + ":" + baseY + ":" + plane;
-        if (sceneKey.equals(lastValidatedSceneKey))
+        if (sceneKey.equals(lastValidatedSceneKey)
+            && tickCounter - lastValidationTick < VALIDATION_REVALIDATE_TICKS)
         {
             return;
         }
         lastValidatedSceneKey = sceneKey;
+        lastValidationTick = tickCounter;
 
         CollisionData[] collision = client.getCollisionMaps();
         if (collision == null || plane < 0 || plane >= collision.length
@@ -370,6 +401,7 @@ public class DrewsHelperPlugin extends Plugin
                 weBlockGameAllows++;
             }
         }
+        writeValidationMismatches(report);
         log.info("DREW_MAP_VALIDATE scene {} tiles={} mismatches={} ({} we block but the game allows)",
             sceneKey, report.getTilesChecked(), report.getMismatches().size(), weBlockGameAllows);
 
@@ -389,6 +421,58 @@ public class DrewsHelperPlugin extends Plugin
                 log.info("DREW_MAP_VALIDATE   ... {} more suppressed",
                     weBlockGameAllows - printed);
                 break;
+            }
+        }
+    }
+
+    private void writeValidationMismatches(DrewsHelperMapValidator.Report report)
+    {
+        List<String> lines = new ArrayList<>();
+        Set<String> pendingLines = new HashSet<>();
+        for (DrewsHelperMapValidator.Mismatch mismatch : report.getMismatches())
+        {
+            if (mismatch.getKind() != DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN)
+            {
+                continue;
+            }
+
+            String line = "DREW_MAP_VALIDATE   " + mismatch.toString();
+            if (emittedValidationLines.contains(line) || !pendingLines.add(line))
+            {
+                continue;
+            }
+
+            if (emittedValidationLines.size() + lines.size() >= MAX_VALIDATION_ROWS_WRITTEN)
+            {
+                if (!validationWriteLimitWarned)
+                {
+                    validationWriteLimitWarned = true;
+                    log.warn("DREW_MAP_VALIDATE reached {} unique proof rows; suppressing additional rows",
+                        MAX_VALIDATION_ROWS_WRITTEN);
+                }
+                break;
+            }
+
+            lines.add(line);
+        }
+
+        if (lines.isEmpty())
+        {
+            return;
+        }
+
+        try
+        {
+            Files.write(new File(RuneLite.RUNELITE_DIR, "drews-map-validate.txt").toPath(),
+                lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            emittedValidationLines.addAll(lines);
+        }
+        catch (IOException ex)
+        {
+            if (!validationFileWriteWarned)
+            {
+                validationFileWriteWarned = true;
+                log.warn("Drew's Helper: could not write map validation proof rows", ex);
             }
         }
     }

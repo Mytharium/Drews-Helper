@@ -903,3 +903,41 @@ See parked item 21. Nothing about the ranked queue was disproven or confirmed.
     install is not a safe test path. Use `run-drews-helper-dev.bat` instead - it runs
     `gradlew run`, which loads the plugin through ExternalPluginManager.loadBuiltin and
     cannot be clobbered by the hub.
+
+## 2026-08-10 addendum 2 - first real Route A capture, and the three things that ate it
+
+The Falador Castle sweep was re-run through run-drews-helper-dev.bat and it WORKED. Our
+plugin was loaded, the validator fired, and it found genuine mismatches for the first time:
+
+    scene 2912:3328:0   tiles=10609  mismatches=2924  (1321 we block but the game allows)
+    scene 2936:3288:0   tiles=10609  mismatches=2882  (1345 we block but the game allows)
+
+2,666 real we-block-game-allows edges. Only 50 survived to the proof file, and 0 of those
+matched a ranked candidate. Three separate causes, all now addressed:
+
+1. The 25-row-per-scene log cap. MAX_VALIDATION_ROWS_LOGGED prints in scene iteration
+   order, which is sorted by scene-x - so the 50 rows we recovered were all at x=2913-2914
+   and x=2937-2939, the westernmost sliver of each scene. Falador Castle sits near x=2960,
+   so every castle door was inside the 2,616 suppressed rows. The cap did not just lose
+   data, it lost it in a spatially biased way, which is worse than losing it at random.
+
+2. A closed door is not a mismatch. The live client says blocked and our map says blocked -
+   they agree. The mismatch only exists while the door is OPEN. The validator ran once, on
+   the tick you arrived, so opening every door afterwards changed nothing it could see.
+
+3. Dev-run output never reaches client.log. See D-0124.
+
+Fix shipped: the validator now writes every OURS_BLOCKS_LIVE_OPEN row, uncapped and
+de-duplicated, to %USERPROFILE%\.runelite\drews-map-validate.txt, and re-validates the
+current scene every 100 ticks so doors opened after arrival are picked up. The file is
+truncated on plugin start, so it is one file per session.
+
+Still unknown: only plane 0 scenes ever logged a summary line, despite the sweep covering
+the second and top floors. Either the upper floors genuinely had zero mismatches, or they
+were not validated. The uncapped file will settle it on the next run.
+
+Note on parked item 21: the hub-clobber problem is real but does NOT affect dev runs.
+run-drews-helper-dev.bat loads the plugin via ExternalPluginManager.loadBuiltin, which is
+immune to the hub sync. Confirmed: the deployed hub jar was still the stock Skretzo build
+(0 drewshelper classes) during a run in which our validator produced 2,666 mismatches.
+Item 21 therefore only bites when playing through the official launcher.

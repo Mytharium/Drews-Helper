@@ -477,3 +477,24 @@ D-0123 (2026-08-10) - The Falador Castle proof run of item 2 is void, not negati
   run-drews-helper-dev.bat. Note also that the three target rows are plane 2, the castle
   upper floor - the validator only checks the player's current plane, so the run has to
   physically go upstairs.
+
+D-0124 (2026-08-10) - Dev-run plugin output goes to the GRADLE DAEMON LOG, not client.log.
+  src\test\resources\logback-test.xml sits on the classpath the `run` task uses, and it
+  overrides the logback config shipped inside runelite-client.jar. The dev client therefore
+  logs to the console only, and gradle captures that console into
+  %USERPROFILE%\.gradle\daemon\<ver>\daemon-<pid>.out.log. `client.log` stays frozen at
+  whatever the last launcher-run client wrote, which makes a perfectly good dev session look
+  like it never happened. Search the daemon logs by mtime, not client.log.
+
+D-0125 (2026-08-10) - Validator now writes uncapped proof rows to a file and re-validates.
+  DrewsHelperPlugin: added writeValidationMismatches, which appends every
+  OURS_BLOCKS_LIVE_OPEN row as "DREW_MAP_VALIDATE   <x,y,plane D KIND>" to
+  RUNELITE_DIR\drews-map-validate.txt - the exact shape the cachetools proof parser already
+  reads. Session-scoped de-duplication (emittedValidationLines) means a re-validation only
+  appends what is genuinely new, so a door opened mid-session shows up as a handful of rows
+  rather than re-emitting thousands. Guarded at MAX_VALIDATION_ROWS_WRITTEN = 50000 with a
+  warn-once, all IO in try/catch so a disk error can never kill the game tick, and the file
+  is deleted in startUp so each session is clean. The scene gate now also expires after
+  VALIDATION_REVALIDATE_TICKS = 100 (~60s). The 25-row console cap is deliberately
+  unchanged - the file is the evidence path now, the console is just for eyeballing.
+  Build green, 168 tests, 0 failures.

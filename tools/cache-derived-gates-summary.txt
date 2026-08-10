@@ -46,9 +46,8 @@ means the rows are not safe to merge blind.
   2-16 steps                   : 60
 
 === ROUTE A LIVE PROOF ===
-  proof source files          : none
-  expected file               : tools/route-a-live-mismatches.txt or .tsv
-  accepted input              : raw DREW_MAP_VALIDATE mismatch lines, or x<TAB>y<TAB>plane<TAB>dir
+  proof source files          : tools\route-a-live-mismatches.txt
+  proof edges parsed          : 50
   review crossings proven     : 0
   proven rows (both ways)     : 0
   transport-overrides.tsv     : untouched by this task

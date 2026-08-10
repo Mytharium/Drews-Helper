@@ -1309,3 +1309,22 @@ through run-drews-helper-dev.bat.
   normal, and measure someone else's plugin. This burned a full proof run on 2026-08-10.
   Corollary for C2: never ask for a test result to be pasted back when the artefact is
   readable over SSH - read the log directly and check this first.
+
+D-0112 (2026-08-10) - A closed door can never be Route A evidence.
+  Rule: when hunting door/gate evidence with Validate Map Data, the door must be OPEN at
+  the moment the scene is validated. A shut door is agreement, not a mismatch: live says
+  blocked, our map says blocked.
+  Why: this is not a bug in the validator, it is what the validator measures. It means
+  "walk the building and open every door" only works if the scene is re-validated after the
+  doors are open - which is why validation now repeats on an interval instead of firing once
+  on arrival. It also means a door that is normally shut will only ever be provable by
+  someone standing there with it open.
+
+D-0113 (2026-08-10) - Never sample validator output; capture all of it.
+  Rule: evidence intended to be matched against a candidate list must be complete. A cap
+  that truncates in iteration order produces a spatially sorted sample, and matching that
+  against a world-wide candidate list yields zero hits while looking like a clean negative.
+  Why: 2,666 real mismatches were reduced to the first 25 per scene, all clustered on the
+  west edge, and the generator honestly reported "0 proven". The data was fine; the
+  sampling destroyed it. If output must be bounded, bound it randomly or by region, and say
+  in the output what was dropped.
