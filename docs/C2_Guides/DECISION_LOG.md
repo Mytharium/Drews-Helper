@@ -1464,3 +1464,39 @@ D-0122 (2026-08-11) - The straightness yardstick is CERTIFIED. A self-check must
       56 - 20 = 36. The 20 old failures were EXACTLY the pairs whose straight line was blocked.
   Every trueExcessTurns distribution is byte-identical across the two runs, proving the change was
   gate-only with no metric drift.
+
+D-0123 (2026-08-11) - NEVER compare a DERIVED edge against ground truth. Only N and E.
+
+  In the live capture each tile stores only its own NORTH and EAST blocked bits. South and West
+  are DERIVED from the neighbour (S of T = N of T.y-1, W of T = E of T.x-1). Comparing them
+  counts the same physical edge twice AND lets a neighbouring object decide this tile verdict.
+  That is exactly what produced the false locType 9 result on 2026-08-11: S/W read 100% blocked
+  on every orientation, which looked like a 1,281-placement win and was an artifact.
+  Every edge comparison from here compares N and E only. If a measurement seems to need S/W,
+  it is measuring the neighbour tile and should be restated.
+
+D-0124 (2026-08-11) - Write the interpretation rule into the code BEFORE the run, and make it
+  two-part: effect size AND coverage.
+
+  Practice adopted after four hypotheses were tested in one session. The rule text is emitted
+  into the report ABOVE the numbers and the thresholds are hard-coded named constants, so a
+  conclusion cannot be fitted to data that has already been seen.
+
+  The two-part requirement is the load-bearing half and was learned the hard way. The border
+  hypothesis passed its effect-size test at 4.01x (needed 3x) and would have printed CONFIRMED
+  on a single-criterion rule - but it covered only 31.9% of the edges it claimed to explain
+  (needed 40%), so it correctly printed INCONCLUSIVE. A large effect on a small slice is not an
+  explanation. Pair every ratio test with a share-of-population test.
+
+  Corollary: always print the denominator and an explicit VACUOUS line. A gate that qualifies
+  zero cases reports "0 failures" and proves nothing while looking identical to success.
+
+D-0125 (2026-08-11) - When a tile appears in several observation windows, score it by the BEST
+  observation it ever received, never the nearest boundary.
+
+  The capture holds 13 overlapping 104x104 scenes; 69,448 of 148,662 compared edges (47%) sit in
+  more than one. Measuring distance-to-scene-border by the NEAREST containing scene would have
+  put 9,822 edges in the outermost ring instead of 3,952 - inflating the border attribution ~2.5x
+  and manufacturing the CONFIRMED verdict that was being looked for.
+  Compute both min and max, use MAX for the verdict, and print both so any disagreement is
+  visible rather than silently collapsed.

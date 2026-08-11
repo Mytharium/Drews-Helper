@@ -1,6 +1,51 @@
 # Next Work
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-11.
+
+## NEXT SESSION - START HERE (written 2026-08-11 06:40, collision/routing track)
+
+Do these in order. Everything below is measured; nothing is a guess.
+
+1. COMMIT the working tree first. Three files dirty at session close:
+   CollisionMapBuilder.java, tools/collision-map-v2-report.txt, CHANGELOG_AGENT_NOTES.md.
+   HEAD was 33eb4f8.
+
+2. SHIP THE BORDER-RING EXCLUSION. Exclude maxBorderDistance rings 0-2 from the
+   dangerous-direction comparison. This is earned: ring 0 is 89.4% dangerous against a 15.4%
+   interior, a 4.01x separation. It removes ~7,200 false dangerous edges.
+   THIS IS A MEASUREMENT FIX, NOT A MAP FIX - it changes what the comparison counts, not what
+   the builder blocks. Do not touch shapeFor or any blocking rule.
+   Re-run buildCollisionMapV2 afterwards. The remaining number is the FIRST dangerous count
+   worth quoting to anyone.
+
+3. THEN CHASE THE DEEP-INTERIOR RISE. After step 2 there will still be ~12,500 unexplained
+   edges at border distance >= 5, and the rate RISES again in the deep interior (15.44% at 20+
+   vs 11.30% at 10-19). That non-monotonic shape is the open question.
+   First hypothesis to test: building interiors / upper floors. Falador castle sits deep inside
+   its scene and region 46_52 is the only one captured at 100% on all three planes, so the
+   plane-1 and plane-2 rows are the natural split. As always: pre-state the rule, two-part
+   (effect size AND share), constants hard-coded before the run.
+
+4. OWED FROM 2026-08-11, small: unit tests for waypointPositionIndex (index 0..4 for
+   waypoint1Position..waypoint5Position, -1 for colour keys / null / empty / waypoint9Position).
+   They were written by the worker into a file outside the staging set and never shipped.
+
+5. OWED, small and real: the ignored-locType door gap. 30 dangerous edges sit on locType 10
+   placements that have an open-style action but that shapeFor() skips entirely, so no edge is
+   written at all. Genuine defect, 30 edges, its own ticket.
+
+DO NOT REOPEN without new evidence - all measured and closed this session:
+  - terrain completeness (<=20.6% explainable, 79.4% of gap tiles have a blank byte)
+  - locType 9 N/E unblocking (neighbour-clean split refuted it on 389 tiles)
+  - the door-classification gap as an EXPLANATION for the 28k (it is 0.2%)
+  - orientation 3 as a danger (EXONERATED at half the surrounding rate - do not revert it)
+  - SHAPE route ranking (closed on A/B: worsened 249 pairs, improved 14)
+
+STILL PARKED, deliberately: terrain bit 4 (real 44x signal, ~10% of the gap, needs its own
+proof run) and locType 9 orientation-3 N/E (312 clean tiles at ~38% vs 26.6% baseline - only
++12pp, weak, small prize).
+
+IN-GAME WORK NEEDED FROM MYTHARIUM: none currently. The last capture covers what is needed.
 
 ## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
 

@@ -47,6 +47,20 @@ proof-edge comparison:
 
 dangerous-direction pass:
   live capture: C:\Users\drews\.runelite\drews-live-flags.txt
+  border histogram interpretation rule:
+    BORDER   = maxBorderDistance 0..2
+    INTERIOR = maxBorderDistance >= 20
+    - CONFIRMED (border artifact): rate(BORDER) >= 3x rate(INTERIOR) AND BORDER holds >= 40% of all
+      DANGEROUS_UNEXPLAINED. Then the comparison needs a margin on ALL FOUR sides and the 28k
+      headline is not a defect count.
+    - REFUTED: rate(BORDER) < 1.5x rate(INTERIOR). Then the border is not the cause and there are
+      genuinely tens of thousands of wrongly-passable edges, which is a serious map defect.
+    - INCONCLUSIVE: anything between 1.5x and 3x, or fewer than 500 compared edges in INTERIOR.
+      Print INCONCLUSIVE explicitly rather than picking a side.
+  dangerous split interpretation rule:
+    - if DANGEROUS_UNEXPLAINED is under ~10% of DANGEROUS, the 28k headline was essentially all confound and the map is not carrying thousands of routing bugs.
+    - if door-capable-on-ignored-locType is the largest single locType group, the builder has a door-classification gap and that is the actionable defect, NOT the raw DANGEROUS count.
+    - if DANGEROUS_UNEXPLAINED stays large and is not concentrated on any locType, then the dangerous edges are real and need their own investigation.
   interpretation rule:
     orientation 3 is IMPLICATED only if BOTH: dangerousRateOrient3 >= 3x dangerousRateAll AND at least 30 dangerous edges land on orient-3 tiles. Below 30 the sample is too small to conclude either way and the report must say so rather than read noise.
     if dangerousRateOrient3 is at or below dangerousRateAll, orientation 3 is EXONERATED: it is no worse than the map average and the rule stays.
@@ -57,7 +71,9 @@ dangerous-direction pass:
   live duplicate rows: 0
   live duplicate row conflicts: 0
   live conflicting north observations: 7180
+  live conflicting north tiles: 5783
   live conflicting east observations: 7138
+  live conflicting east tiles: 5828
   comparedEdges: 148662
   outsideBuiltRegions: 0
   DANGEROUS: 28122
@@ -65,6 +81,61 @@ dangerous-direction pass:
   AGREE_BLOCKED: 15432
   AGREE_OPEN: 102411
   OVERBLOCK: 2602
+  dangerous split:
+    DANGEROUS_DOOR_CAPABLE: 52 (0.2% of DANGEROUS)
+    DANGEROUS_CONFLICTED: 5516 (19.6% of DANGEROUS)
+    DANGEROUS_UNEXPLAINED: 22554 (80.2% of DANGEROUS)
+    DANGEROUS_BOTH is NOT a bucket - door-capable wins before conflicted (overlap assigned to DANGEROUS_DOOR_CAPABLE: 13)
+    DANGEROUS split assertion: DANGEROUS_DOOR_CAPABLE + DANGEROUS_CONFLICTED + DANGEROUS_UNEXPLAINED == DANGEROUS: OK (28122 == 28122)
+    DANGEROUS_DOOR_CAPABLE locType histogram:
+      locType 10 (shapeFor IGNORED): 30
+      locType 0 (shapeFor HANDLED): 22
+    door-capable on IGNORED locType: 30 (57.7% of DANGEROUS_DOOR_CAPABLE)
+    largest door-capable locType group ignored by shapeFor: true
+    example DANGEROUS_UNEXPLAINED edges:
+      2888,3272,0 N
+      2888,3272,0 E
+      2888,3273,0 N
+      2888,3273,0 E
+      2888,3274,0 N
+      2888,3274,0 E
+      2888,3275,0 N
+      2888,3275,0 E
+      2888,3276,0 N
+      2888,3276,0 E
+      2888,3277,0 N
+      2888,3277,0 E
+      2888,3278,0 N
+      2888,3278,0 E
+      2888,3279,0 N
+      2888,3279,0 E
+      2888,3280,0 N
+      2888,3280,0 E
+      2888,3281,0 N
+      2888,3281,0 E
+  border histogram verdict: INCONCLUSIVE
+  compared edges with NO containing block on their plane: 0
+  compared edges where minBorderDistance != maxBorderDistance: 69448
+  maxBorderDistance border histogram:
+    bucket comparedEdges DANGEROUS dangerousRate DANGEROUS_UNEXPLAINED
+    0 3952 3534 0.894231 (89.423%) 3530
+    1 3904 1890 0.484119 (48.412%) 1866
+    2 3856 1831 0.474844 (47.484%) 1799
+    3 3808 1843 0.483981 (48.398%) 1794
+    4 3760 1122 0.298404 (29.840%) 1064
+    5-9 18080 2069 0.114436 (11.444%) 1619
+    10-19 32626 3686 0.112977 (11.298%) 2804
+    20+ 78676 12147 0.154393 (15.439%) 8078
+  minBorderDistance border histogram:
+    bucket comparedEdges DANGEROUS dangerousRate DANGEROUS_UNEXPLAINED
+    0 9822 6156 0.626756 (62.676%) 4190
+    1 9426 3534 0.374920 (37.492%) 2433
+    2 9030 3426 0.379402 (37.940%) 2410
+    3 8324 3322 0.399087 (39.909%) 2345
+    4 7696 2020 0.262474 (26.247%) 1532
+    5-9 34154 3406 0.099725 (9.972%) 3399
+    10-19 43752 3672 0.083928 (8.393%) 3663
+    20+ 26458 2586 0.097740 (9.774%) 2582
   dangerousRateAll: 0.189167 (18.917%)
   orient-3 tile count: 738
   orient-3 compared-edge count: 422
@@ -137,6 +208,8 @@ build statistics:
   locType1 orientation-3 placements: 738
   locType1 invalid-orientation fallbacks: 0
   ignored-locType count: 74395
+  door-capable placement tiles: 502
+  door-capable placement tile collisions: 0
   terrain-blocked count: 21504
   bridge-branch count: 673
   out-of-region neighbour skips: 696

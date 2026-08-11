@@ -1351,3 +1351,159 @@ D-0158 (2026-08-11) - Dangerous-direction pass built and run. ORIENTATION 3 IS E
   placement, and by whether the tile had conflicting observations. Those two filters should be
   applied before the number is quoted anywhere. Same discipline as the locType 9 neighbour-clean
   split, which turned a headline 1,281-placement "win" into nothing once the confound was removed.
+
+D-0159 (2026-08-11) - DANGEROUS split by cause. MY DOOR HYPOTHESIS WAS WRONG. A sharper lead
+  replaced it and it is NOT yet proven.
+
+  RESULT, splitting the 28,122 DANGEROUS edges (assertion printed OK, 28122 == 28122):
+      DANGEROUS_DOOR_CAPABLE      52   (0.2%)
+      DANGEROUS_CONFLICTED     5,516   (19.6%)
+      DANGEROUS_UNEXPLAINED   22,554   (80.2%)
+  Door-capable locType histogram: locType 10 (IGNORED by shapeFor) 30, locType 0 (HANDLED) 22.
+  So "door-capable on IGNORED locType" is 57.7% OF 52 - the ignored-locType gap is real but the
+  entire door population is 0.2% of the problem. It explains nothing.
+
+  I PREDICTED the 312-door-edge count meant a door-classification gap accounting for a large
+  share of the 28k. It does not. 52 edges. That prediction is dead and should not be revived;
+  the ignored-locType door gap is a genuine but tiny defect worth its own small ticket, nothing
+  more.
+
+  CONFLICTS are real but partial: 5,516 edges, 19.6%, from 5,783 north-conflicted and 5,828
+  east-conflicted tiles. Those are doors opening and closing during the walk. Correctly excused.
+  Axis separation held - a north edge is only excused by a north conflict.
+
+  THE NEW LEAD, evidence-backed but UNPROVEN. Every example DANGEROUS_UNEXPLAINED edge sits at
+  x=2888, y=3272..3286, every N and every E. And 2888:3272:0 is EXACTLY a scene base from the
+  capture scene list. So the unexplained edges cluster on the WEST column and SOUTH row of a
+  loaded scene - the scene ORIGIN corner.
+
+  Hypothesis: the client marks the outer border of the loaded 104x104 scene as blocked because
+  it has no data beyond it, not because a wall exists. v2 correctly says passable, live says
+  blocked, and the edge lands in DANGEROUS. This is the SAME CLASS of artifact the covered bound
+  already guards - but the covered bound only excludes the NORTH row and EAST column (those edges
+  need a neighbour that is off-scene). It does nothing about the WEST column and SOUTH row, whose
+  own flags are border-affected.
+
+  THE DISCRIMINATING TEST, for whoever picks this up: bucket the DANGEROUS rate by Chebyshev
+  distance from the nearest scene border. Pre-state the rule before running it:
+    - if the rate is concentrated in the first few rings and falls off sharply toward the scene
+      interior, the border artifact is confirmed, the comparison needs a margin on ALL FOUR
+      sides, and the 28k headline collapses the way the locType 9 headline did.
+    - if the rate is roughly flat across distance, the border is NOT the cause and there are
+      genuinely ~22k wrongly-passable edges, which is a serious map defect needing real work.
+  Do not quote 28,122 or 22,554 as a defect count until that comes back.
+
+  METHOD NOTE: this is the third time tonight a confident structural hypothesis died on contact
+  with a measurement - SHAPE ranking, the locType 9 neighbour confound, and now doors. In all
+  three the measurement was cheap and the hypothesis was expensive to act on. The pattern worth
+  keeping is not the hypotheses, it is that each one was written down as a falsifiable split with
+  its interpretation fixed in code BEFORE the run.
+
+D-0160 (2026-08-11) - Border-distance histogram. Verdict INCONCLUSIVE, and that is the correct
+  answer: the border effect is REAL and large, but it explains only about a third.
+
+  maxBorderDistance (the primary metric - best observation a tile ever got):
+      bucket   comparedEdges   DANGEROUS   rate      DANGEROUS_UNEXPLAINED
+      0             3,952        3,534    89.42%          3,530
+      1             3,904        1,890    48.41%          1,866
+      2             3,856        1,831    47.48%          1,799
+      3             3,808        1,843    48.40%          1,794
+      4             3,760        1,122    29.84%          1,064
+      5-9          18,080        2,069    11.44%          1,619
+      10-19        32,626        3,686    11.30%          2,804
+      20+          78,676       12,147    15.44%          8,078
+
+  THE BORDER ARTIFACT IS REAL. The outermost ring is 89.4% dangerous against a 15.4% interior -
+  a 5.8x effect, and rings 0-4 are all elevated (29-89%) against an ~11% mid-field. That is not
+  subtle and it is not noise. The mechanism stands: the client marks the outer border of the
+  loaded scene as blocked because it has no data past it, and the existing covered bound only
+  guards the north row and east column, leaving west and south exposed.
+
+  BUT THE VERDICT IS INCONCLUSIVE, BY THE RULE I FIXED BEFORE THE RUN, and it is right to be:
+      rate test:  BORDER(0-2) = 7,255/11,712 = 61.9% vs INTERIOR 15.44% = 4.01x   PASS (>= 3x)
+      share test: BORDER(0-2) holds 7,195 of 22,554 UNEXPLAINED = 31.9%           FAIL (< 40%)
+  The effect size is overwhelming; the coverage is not. Rings 0-4 together still only account
+  for 10,053 of 22,554 unexplained (44.6%). Roughly 12,500 unexplained edges sit at distance 5
+  or more and the border cannot explain them.
+
+  A SECOND ANOMALY worth chasing, visible only because the buckets were printed: the deep
+  interior (20+) has a HIGHER dangerous rate (15.44%) than the mid-field 5-9 (11.44%) and 10-19
+  (11.30%). If the border were the only artifact the curve should fall monotonically and flatten.
+  It does not - it rises again in the deep interior. Something is concentrated far from scene
+  edges. Building interiors are the obvious candidate (Falador castle sits deep inside its
+  scene), but that is a hypothesis, not a finding.
+
+  THE MIN-VS-MAX CHOICE WAS MATERIAL, not pedantry. 69,448 of 148,662 compared edges (47%) have
+  minBorderDistance != maxBorderDistance, because tiles sit inside several of the 13 scenes at
+  once. Using min would have put 9,822 edges in ring 0 instead of 3,952 - inflating the border
+  attribution roughly 2.5x and manufacturing the CONFIRMED verdict I was expecting. Always use
+  the best observation a tile ever received, and print both so the disagreement is visible.
+
+  WHAT IS ACTIONABLE NOW: excluding rings 0-2 from the comparison is justified on the rate
+  evidence alone (4x separation) and would remove ~7,200 false dangerous edges. That is a fix to
+  the MEASUREMENT, not to the map, and it should be done before any dangerous count is quoted.
+  It does not close the question - about 12,500 edges would remain.
+
+  METHOD NOTE: this is the fourth structural hypothesis tested tonight and the first to come
+  back partially true. The pre-stated two-part rule is what made that visible - a single
+  rate test would have printed CONFIRMED at 4x and I would have declared the 28k dead. The
+  share test caught that a big effect on a small slice is not an explanation.
+
+SESSION CLOSE 2026-08-11 (overnight, ~02:00-06:40). Drew's Helper collision/routing.
+
+  SHIPPED AND VERIFIED
+    - Straightness yardstick CERTIFIED. Self-check gate rewritten from an assumption to a proof
+      (walk the constant-direction line with the BFS own canMove). 20 failures -> 0, and the
+      turn distributions came out byte-identical, proving gate-only change with no metric drift.
+      Honest headline: 12 avoidable turns out of 32, not the retired "63% of routes over-turn".
+    - Backlog #6 closed: v2 zip builds into gitignored build/ and is untracked. D-0121.
+    - locType 1 orientation rule holds. The 2,248-edge proof passed, and the fresh 13,148-edge
+      proof puts v2 at 74.5% of known over-blocking FIXED (was 66.1% on the smaller sample).
+    - Five waypoint coordinate text boxes shipped into the plugin config (x,y,plane, blank
+      clears, snaps to standable like a right-click). 177 tests green.
+    - Fleet-wide SCP space-path truncation reported to Architect with a clean A/B.
+
+  MEASURED AND CLOSED NEGATIVE - four hypotheses tested, three dead, one partial
+    1. Terrain completeness: <=20.6% explainable. 79.4% of gap tiles carry a BLANK terrain byte.
+       Dead as a lever. (I had named it the biggest lever the night before. It was not.)
+    2. locType 9 N/E "win": REFUTED by the neighbour-clean split. On 389 clean tiles S/W hold at
+       99.7% and N/E are 47-90% blocked. The all-four rule was right. Nothing shipped.
+    3. Door-classification gap: REFUTED. 52 of 28,122 dangerous edges are door-capable (0.2%).
+       The ignored-locType part is real but tiny (30 edges on locType 10) - its own small ticket.
+    4. Scene-border artifact: PARTIAL / INCONCLUSIVE by the pre-stated rule. Effect is real and
+       large (ring 0 = 89.4% dangerous vs 15.4% interior, 4.01x) but covers only 31.9% of the
+       unexplained edges. This is the first confound with a FIX attached rather than a retraction.
+
+  ORIENTATION 3 EXONERATED. 738 tiles, 422 compared edges, 42 dangerous = 9.953% against an
+  18.917% surrounding rate - roughly HALF. The warning written into CollisionMapBuilder lines
+  92-100 ("first thing to revert if the proof numbers worsen") is measured and does not hold.
+  Do not revert it.
+
+  WHERE THE 28,122 DANGEROUS EDGES ACTUALLY STAND (nothing here is a quotable defect count yet):
+      DANGEROUS_DOOR_CAPABLE       52   0.2%    real, tiny
+      DANGEROUS_CONFLICTED      5,516  19.6%    doors opened/closed mid-walk, correctly excused
+      DANGEROUS_UNEXPLAINED    22,554  80.2%    of which ~7,200 sit in border rings 0-2
+  And 18.917% is NOT a map-wide rate: 74,331 unique covered tiles x 2 = 148,662 = comparedEdges
+  exactly, so the population is selected for "live blocks something here".
+
+  SECOND ANOMALY, UNCHASED. The deep interior (border distance 20+) has a HIGHER dangerous rate
+  (15.44%) than the mid-field (11.44% at 5-9, 11.30% at 10-19). If the border were the only
+  artifact the curve should fall and flatten; instead it rises again. Building interiors are the
+  obvious candidate since Falador castle sits deep inside its scene. Hypothesis, not a finding.
+
+  CAPTURE. Mytharium ran the six-region route plus all three castle floors: 881,752 bytes,
+  55,077 rows, 13 scenes. Four regions 100% on the ground; 46_52 (the castle) 100% on ALL three
+  planes. Waypoint 1 was unreachable and he stood nearby - cost 45_52 ~12% of ground tiles,
+  immaterial. Old capture parked as drews-live-flags.PARKED_20260811_032617.txt.
+
+  MY ERRORS THIS SESSION, recorded so they are not repeated:
+    - I sent Mytharium in-game for a proof the instrument does not persist. The validator
+      DETECTS OURS_OPEN_LIVE_BLOCKS and both sinks discard it (plugin lines 427 and 501). Read
+      what a tool WRITES, not just what it computes, before designing a capture around it.
+    - I called doors my prime suspect on a plausibility argument (312 door edges across 24
+      regions "must" be wrong). It was 0.2%.
+    - I named terrain the biggest remaining lever the previous night; it measured out smallest.
+    - A CODEX_EXPECT_MARKER false FAIL was my brief authoring fault - the marker must appear in
+      EVERY listed expected path. Use one path per marker.
+    - Codex unit tests for waypointPositionIndex never shipped because their file was not in my
+      staging set. Stage every file the brief implies, including tests. STILL OWED.

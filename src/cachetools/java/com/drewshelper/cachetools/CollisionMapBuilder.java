@@ -77,7 +77,25 @@ public final class CollisionMapBuilder
     private static final String LIVE_FLAGS_ARG = "--live-flags";
     private static final int STILL_BLOCKED_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_EXAMPLE_LIMIT = 30;
+    private static final int DANGEROUS_UNEXPLAINED_EXAMPLE_LIMIT = 20;
     private static final int ORIENT3_DANGEROUS_SAMPLE_FLOOR = 30;
+    private static final int BORDER_MAX_DISTANCE = 2;
+    private static final int INTERIOR_MIN_DISTANCE = 20;
+    private static final double BORDER_CONFIRMED_RATE_MULTIPLIER = 3.0;
+    private static final double BORDER_REFUTED_RATE_MULTIPLIER = 1.5;
+    private static final double BORDER_CONFIRMED_UNEXPLAINED_SHARE = 0.40;
+    private static final long BORDER_INTERIOR_COMPARED_EDGE_FLOOR = 500L;
+
+    private static final BorderDistanceBucket[] BORDER_DISTANCE_BUCKETS = {
+        new BorderDistanceBucket("0", 0, 0),
+        new BorderDistanceBucket("1", 1, 1),
+        new BorderDistanceBucket("2", 2, 2),
+        new BorderDistanceBucket("3", 3, 3),
+        new BorderDistanceBucket("4", 4, 4),
+        new BorderDistanceBucket("5-9", 5, 9),
+        new BorderDistanceBucket("10-19", 10, 19),
+        new BorderDistanceBucket("20+", 20, Integer.MAX_VALUE)
+    };
 
     private static final Pattern LIVE_SCENE_HEADER = Pattern.compile(
         "^DREW_LIVE_FLAGS\\s+scene\\s+(-?\\d+):(-?\\d+):(-?\\d+)\\s+size=(\\d+)\\s+covered=(\\d+)\\s*$"
@@ -520,16 +538,35 @@ public final class CollisionMapBuilder
             stats.locType1Orientation3TileKeys.add(tileKey(x, y, plane));
         }
 
+        boolean openable = firstOpenStyleAction(def) != null;
+        if (openable)
+        {
+            /*
+             * This runs before shapeFor() so ignored locTypes are measured without changing any
+             * edge-writing rule. Multiple open-style placements on the same tile keep the earliest
+             * sorted locType, because the attribution needs a stable single cause.
+             */
+            recordDoorCapablePlacement(stats, x, y, plane, location.getType());
+        }
+
         Direction[] shape = shapeFor(location.getType(), location.getOrientation(), stats);
         if (shape.length == 0)
         {
             return;
         }
 
-        boolean openable = firstOpenStyleAction(def) != null;
         for (Direction direction : shape)
         {
             bits.markEdge(x, y, plane, direction, openable, stats);
+        }
+    }
+
+    private static void recordDoorCapablePlacement(BuildStats stats, int x, int y, int plane, int locType)
+    {
+        Integer previous = stats.doorCapableLocTypeByTile.putIfAbsent(tileKey(x, y, plane), locType);
+        if (previous != null)
+        {
+            stats.doorCapableTileCollisions++;
         }
     }
 
@@ -550,6 +587,25 @@ public final class CollisionMapBuilder
             default:
                 stats.ignoredLocTypePlacements++;
                 return EmptyDirectionArray.HOLDER;
+        }
+    }
+
+    private static boolean shapeForHandlesLocType(int locType)
+    {
+        /*
+         * Deliberately mirrors the shapeFor() locType cases without calling shapeFor(), because the
+         * report must not mutate BuildStats just to label a histogram row.
+         */
+        switch (locType)
+        {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 9:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -842,19 +898,62 @@ public final class CollisionMapBuilder
             }
 
             boolean orient3 = result.stats.locType1Orientation3TileKeys.contains(tile.key());
-            compareLiveEdge(comparison, region, tile, 'N', tile.northBlocked, orient3);
-            compareLiveEdge(comparison, region, tile, 'E', tile.eastBlocked, orient3);
+            BorderDistances borderDistances = borderDistancesFor(live, tile);
+            compareLiveEdge(
+                comparison,
+                result.stats,
+                region,
+                tile,
+                'N',
+                tile.northBlocked,
+                orient3,
+                borderDistances
+            );
+            compareLiveEdge(
+                comparison,
+                result.stats,
+                region,
+                tile,
+                'E',
+                tile.eastBlocked,
+                orient3,
+                borderDistances
+            );
         }
         return comparison;
     }
 
+    private static BorderDistances borderDistancesFor(LiveCapture live, LiveTile tile)
+    {
+        int minBorderDistance = Integer.MAX_VALUE;
+        int maxBorderDistance = Integer.MIN_VALUE;
+        for (LiveSceneBlockGeometry block : live.sceneBlockGeometries)
+        {
+            if (!block.contains(tile.x, tile.y, tile.plane))
+            {
+                continue;
+            }
+
+            int distance = block.borderDistance(tile.x, tile.y);
+            minBorderDistance = Math.min(minBorderDistance, distance);
+            maxBorderDistance = Math.max(maxBorderDistance, distance);
+        }
+        if (minBorderDistance == Integer.MAX_VALUE)
+        {
+            return BorderDistances.notContained();
+        }
+        return new BorderDistances(minBorderDistance, maxBorderDistance);
+    }
+
     private static void compareLiveEdge(
         DangerousDirectionComparison comparison,
+        BuildStats stats,
         BuiltRegion region,
         LiveTile tile,
         char direction,
         boolean liveBlocked,
-        boolean orient3
+        boolean orient3,
+        BorderDistances borderDistances
     )
     {
         comparison.comparedEdges++;
@@ -863,12 +962,15 @@ public final class CollisionMapBuilder
             comparison.orient3ComparedEdges++;
         }
 
+        boolean dangerous = false;
+        boolean dangerousUnexplained = false;
         boolean passable = region.bits.isPassable(tile.x, tile.y, tile.plane, direction);
         boolean door = region.bits.isDoor(tile.x, tile.y, tile.plane, direction);
         if (liveBlocked)
         {
             if (passable)
             {
+                dangerous = true;
                 comparison.dangerous++;
                 if (orient3)
                 {
@@ -881,6 +983,8 @@ public final class CollisionMapBuilder
                             + " " + direction + " orient3=" + orient3
                     );
                 }
+                dangerousUnexplained = splitDangerousEdge(comparison, stats, tile, direction)
+                    == DangerousSplit.UNEXPLAINED;
             }
             else if (door)
             {
@@ -890,10 +994,8 @@ public final class CollisionMapBuilder
             {
                 comparison.agreeBlocked++;
             }
-            return;
         }
-
-        if (passable)
+        else if (passable)
         {
             comparison.agreeOpen++;
         }
@@ -901,6 +1003,90 @@ public final class CollisionMapBuilder
         {
             comparison.overblock++;
         }
+
+        recordBorderHistogramEdge(comparison, borderDistances, dangerous, dangerousUnexplained);
+    }
+
+    private static DangerousSplit splitDangerousEdge(
+        DangerousDirectionComparison comparison,
+        BuildStats stats,
+        LiveTile tile,
+        char direction
+    )
+    {
+        long key = tile.key();
+        Integer doorCapableLocType = stats.doorCapableLocTypeByTile.get(key);
+        boolean conflicted = dangerousAxisConflicted(comparison.live, key, direction);
+        if (doorCapableLocType != null)
+        {
+            comparison.dangerousDoorCapable++;
+            if (conflicted)
+            {
+                comparison.dangerousDoorCapableAndConflicted++;
+            }
+            comparison.dangerousDoorCapableByLocType.merge(doorCapableLocType, 1L, Long::sum);
+            if (!shapeForHandlesLocType(doorCapableLocType))
+            {
+                comparison.dangerousDoorCapableIgnoredLocType++;
+            }
+            return DangerousSplit.DOOR_CAPABLE;
+        }
+
+        if (conflicted)
+        {
+            comparison.dangerousConflicted++;
+            return DangerousSplit.CONFLICTED;
+        }
+
+        comparison.dangerousUnexplained++;
+        if (comparison.dangerousUnexplainedExamples.size() < DANGEROUS_UNEXPLAINED_EXAMPLE_LIMIT)
+        {
+            comparison.dangerousUnexplainedExamples.add(
+                tile.x + "," + tile.y + "," + tile.plane + " " + direction
+            );
+        }
+        return DangerousSplit.UNEXPLAINED;
+    }
+
+    private static void recordBorderHistogramEdge(
+        DangerousDirectionComparison comparison,
+        BorderDistances borderDistances,
+        boolean dangerous,
+        boolean dangerousUnexplained
+    )
+    {
+        if (!borderDistances.contained)
+        {
+            comparison.noContainingBlockComparedEdges++;
+            return;
+        }
+        if (borderDistances.minBorderDistance != borderDistances.maxBorderDistance)
+        {
+            comparison.disagreeingBorderDistanceComparedEdges++;
+        }
+        comparison.minBorderDistanceHistogram.record(
+            borderDistances.minBorderDistance,
+            dangerous,
+            dangerousUnexplained
+        );
+        comparison.maxBorderDistanceHistogram.record(
+            borderDistances.maxBorderDistance,
+            dangerous,
+            dangerousUnexplained
+        );
+    }
+
+    private static boolean dangerousAxisConflicted(LiveCapture live, long key, char direction)
+    {
+        if (direction == 'N')
+        {
+            return live.conflictingNorthTileKeys.contains(key);
+        }
+        if (direction == 'E')
+        {
+            return live.conflictingEastTileKeys.contains(key);
+        }
+        throw new IllegalArgumentException("Unhandled dangerous direction " + direction);
     }
 
     private static String buildReport(
@@ -982,6 +1168,7 @@ public final class CollisionMapBuilder
             return;
         }
 
+        appendBorderHistogramInterpretationRule(report);
         appendDangerousInterpretationRule(report, comparison);
         double dangerousRateAll = rate(comparison.dangerous, comparison.comparedEdges);
         double dangerousRateOrient3 = rate(comparison.dangerousOrient3, comparison.orient3ComparedEdges);
@@ -995,8 +1182,12 @@ public final class CollisionMapBuilder
             .append(comparison.live.duplicateRowConflicts).append('\n');
         report.append("  live conflicting north observations: ")
             .append(comparison.live.conflictingNorthObservations).append('\n');
+        report.append("  live conflicting north tiles: ")
+            .append(comparison.live.conflictingNorthTileKeys.size()).append('\n');
         report.append("  live conflicting east observations: ")
             .append(comparison.live.conflictingEastObservations).append('\n');
+        report.append("  live conflicting east tiles: ")
+            .append(comparison.live.conflictingEastTileKeys.size()).append('\n');
         report.append("  comparedEdges: ").append(comparison.comparedEdges).append('\n');
         report.append("  outsideBuiltRegions: ").append(comparison.outsideBuiltRegions).append('\n');
         report.append("  DANGEROUS: ").append(comparison.dangerous).append('\n');
@@ -1004,6 +1195,8 @@ public final class CollisionMapBuilder
         report.append("  AGREE_BLOCKED: ").append(comparison.agreeBlocked).append('\n');
         report.append("  AGREE_OPEN: ").append(comparison.agreeOpen).append('\n');
         report.append("  OVERBLOCK: ").append(comparison.overblock).append('\n');
+        appendDangerousSplit(report, comparison);
+        appendBorderHistograms(report, comparison);
         report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
         report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
         report.append("  orient-3 compared-edge count: ")
@@ -1028,11 +1221,214 @@ public final class CollisionMapBuilder
         }
     }
 
+    private static void appendBorderHistogramInterpretationRule(StringBuilder report)
+    {
+        report.append("  border histogram interpretation rule:").append('\n');
+        report.append("    BORDER   = maxBorderDistance 0..2").append('\n');
+        report.append("    INTERIOR = maxBorderDistance >= 20").append('\n');
+        report.append("    - CONFIRMED (border artifact): rate(BORDER) >= 3x rate(INTERIOR) AND BORDER holds >= 40% of all").append('\n');
+        report.append("      DANGEROUS_UNEXPLAINED. Then the comparison needs a margin on ALL FOUR sides and the 28k").append('\n');
+        report.append("      headline is not a defect count.").append('\n');
+        report.append("    - REFUTED: rate(BORDER) < 1.5x rate(INTERIOR). Then the border is not the cause and there are").append('\n');
+        report.append("      genuinely tens of thousands of wrongly-passable edges, which is a serious map defect.").append('\n');
+        report.append("    - INCONCLUSIVE: anything between 1.5x and 3x, or fewer than 500 compared edges in INTERIOR.").append('\n');
+        report.append("      Print INCONCLUSIVE explicitly rather than picking a side.").append('\n');
+    }
+
+    private static void appendBorderHistograms(
+        StringBuilder report,
+        DangerousDirectionComparison comparison
+    )
+    {
+        report.append("  border histogram verdict: ")
+            .append(borderHistogramVerdict(comparison))
+            .append('\n');
+        report.append("  compared edges with NO containing block on their plane: ")
+            .append(comparison.noContainingBlockComparedEdges).append('\n');
+        if (comparison.noContainingBlockComparedEdges != 0)
+        {
+            report.append("  NO CONTAINING BLOCK ON PLANE - BORDER ATTRIBUTION IS BROKEN").append('\n');
+        }
+        report.append("  compared edges where minBorderDistance != maxBorderDistance: ")
+            .append(comparison.disagreeingBorderDistanceComparedEdges).append('\n');
+        appendBorderHistogram(report, "maxBorderDistance", comparison.maxBorderDistanceHistogram);
+        appendBorderHistogram(report, "minBorderDistance", comparison.minBorderDistanceHistogram);
+    }
+
+    private static String borderHistogramVerdict(DangerousDirectionComparison comparison)
+    {
+        BorderHistogram histogram = comparison.maxBorderDistanceHistogram;
+        if (histogram.bucketedComparedEdges == 0)
+        {
+            return "INCONCLUSIVE - BORDER HISTOGRAM VACUOUS - zero compared edges bucketed";
+        }
+
+        long borderComparedEdges = histogram.comparedEdges(BORDER_MAX_DISTANCE);
+        long borderDangerousUnexplained = histogram.dangerousUnexplained(BORDER_MAX_DISTANCE);
+        long interiorComparedEdges = histogram.comparedEdgesAtOrAbove(INTERIOR_MIN_DISTANCE);
+        double borderRate = rate(histogram.dangerous(BORDER_MAX_DISTANCE), borderComparedEdges);
+        double interiorRate = rate(histogram.dangerousAtOrAbove(INTERIOR_MIN_DISTANCE), interiorComparedEdges);
+        double borderUnexplainedShare = rate(borderDangerousUnexplained, comparison.dangerousUnexplained);
+
+        if (interiorComparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            return "INCONCLUSIVE - fewer than "
+                + BORDER_INTERIOR_COMPARED_EDGE_FLOOR
+                + " compared edges in INTERIOR";
+        }
+        if (borderRate >= interiorRate * BORDER_CONFIRMED_RATE_MULTIPLIER
+            && borderUnexplainedShare >= BORDER_CONFIRMED_UNEXPLAINED_SHARE)
+        {
+            return "CONFIRMED (border artifact)";
+        }
+        if (borderRate < interiorRate * BORDER_REFUTED_RATE_MULTIPLIER)
+        {
+            return "REFUTED";
+        }
+        return "INCONCLUSIVE";
+    }
+
+    private static void appendBorderHistogram(
+        StringBuilder report,
+        String distanceLabel,
+        BorderHistogram histogram
+    )
+    {
+        report.append("  ").append(distanceLabel).append(" border histogram:").append('\n');
+        if (histogram.bucketedComparedEdges == 0)
+        {
+            report.append("    BORDER HISTOGRAM VACUOUS - zero compared edges bucketed").append('\n');
+        }
+        report.append("    bucket comparedEdges DANGEROUS dangerousRate DANGEROUS_UNEXPLAINED").append('\n');
+        for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+        {
+            BorderDistanceBucket bucket = BORDER_DISTANCE_BUCKETS[i];
+            BorderBucketCounts counts = histogram.counts[i];
+            report.append("    ").append(bucket.label)
+                .append(' ').append(counts.comparedEdges)
+                .append(' ').append(counts.dangerous)
+                .append(' ').append(formatRate(rate(counts.dangerous, counts.comparedEdges)))
+                .append(' ').append(counts.dangerousUnexplained)
+                .append('\n');
+        }
+    }
+
+    private static void appendDangerousSplit(StringBuilder report, DangerousDirectionComparison comparison)
+    {
+        long splitTotal = comparison.dangerousSplitTotal();
+        report.append("  dangerous split:").append('\n');
+        if (comparison.dangerous == 0)
+        {
+            report.append("    DANGEROUS SPLIT VACUOUS - zero dangerous edges to split").append('\n');
+        }
+        report.append("    DANGEROUS_DOOR_CAPABLE: ").append(comparison.dangerousDoorCapable)
+            .append(" (").append(percent(comparison.dangerousDoorCapable, comparison.dangerous))
+            .append(" of DANGEROUS)").append('\n');
+        report.append("    DANGEROUS_CONFLICTED: ").append(comparison.dangerousConflicted)
+            .append(" (").append(percent(comparison.dangerousConflicted, comparison.dangerous))
+            .append(" of DANGEROUS)").append('\n');
+        report.append("    DANGEROUS_UNEXPLAINED: ").append(comparison.dangerousUnexplained)
+            .append(" (").append(percent(comparison.dangerousUnexplained, comparison.dangerous))
+            .append(" of DANGEROUS)").append('\n');
+        report.append("    DANGEROUS_BOTH is NOT a bucket - door-capable wins before conflicted ")
+            .append("(overlap assigned to DANGEROUS_DOOR_CAPABLE: ")
+            .append(comparison.dangerousDoorCapableAndConflicted).append(")").append('\n');
+        report.append("    DANGEROUS split assertion: DANGEROUS_DOOR_CAPABLE + ")
+            .append("DANGEROUS_CONFLICTED + DANGEROUS_UNEXPLAINED == DANGEROUS: ")
+            .append(splitTotal == comparison.dangerous ? "OK" : "FAIL")
+            .append(" (").append(splitTotal).append(" == ").append(comparison.dangerous)
+            .append(")").append('\n');
+        appendDangerousDoorCapableHistogram(report, comparison);
+        appendDangerousUnexplainedExamples(report, comparison);
+    }
+
+    private static void appendDangerousDoorCapableHistogram(
+        StringBuilder report,
+        DangerousDirectionComparison comparison
+    )
+    {
+        report.append("    DANGEROUS_DOOR_CAPABLE locType histogram:").append('\n');
+        if (comparison.dangerousDoorCapableByLocType.isEmpty())
+        {
+            report.append("      (none)").append('\n');
+        }
+        else
+        {
+            List<Map.Entry<Integer, Long>> entries = new ArrayList<>(
+                comparison.dangerousDoorCapableByLocType.entrySet());
+            entries.sort((left, right) ->
+            {
+                int byCount = Long.compare(right.getValue(), left.getValue());
+                if (byCount != 0)
+                {
+                    return byCount;
+                }
+                return Integer.compare(left.getKey(), right.getKey());
+            });
+            for (Map.Entry<Integer, Long> entry : entries)
+            {
+                report.append("      locType ").append(entry.getKey()).append(" (shapeFor ")
+                    .append(shapeForHandlesLocType(entry.getKey()) ? "HANDLED" : "IGNORED")
+                    .append("): ").append(entry.getValue()).append('\n');
+            }
+        }
+        report.append("    door-capable on IGNORED locType: ")
+            .append(comparison.dangerousDoorCapableIgnoredLocType)
+            .append(" (")
+            .append(percent(comparison.dangerousDoorCapableIgnoredLocType, comparison.dangerousDoorCapable))
+            .append(" of DANGEROUS_DOOR_CAPABLE)").append('\n');
+        report.append("    largest door-capable locType group ignored by shapeFor: ")
+            .append(largestDangerousDoorCapableLocTypeIgnored(comparison)).append('\n');
+    }
+
+    private static boolean largestDangerousDoorCapableLocTypeIgnored(DangerousDirectionComparison comparison)
+    {
+        Integer largestLocType = null;
+        long largestCount = Long.MIN_VALUE;
+        for (Map.Entry<Integer, Long> entry : comparison.dangerousDoorCapableByLocType.entrySet())
+        {
+            if (entry.getValue() > largestCount
+                || (entry.getValue() == largestCount && largestLocType != null
+                    && entry.getKey() < largestLocType))
+            {
+                largestLocType = entry.getKey();
+                largestCount = entry.getValue();
+            }
+        }
+        return largestLocType != null && !shapeForHandlesLocType(largestLocType);
+    }
+
+    private static void appendDangerousUnexplainedExamples(
+        StringBuilder report,
+        DangerousDirectionComparison comparison
+    )
+    {
+        report.append("    example DANGEROUS_UNEXPLAINED edges:").append('\n');
+        if (comparison.dangerousUnexplainedExamples.isEmpty())
+        {
+            report.append("      (none)").append('\n');
+        }
+        else
+        {
+            for (String example : comparison.dangerousUnexplainedExamples)
+            {
+                report.append("      ").append(example).append('\n');
+            }
+        }
+    }
+
     private static void appendDangerousInterpretationRule(
         StringBuilder report,
         DangerousDirectionComparison comparison
     )
     {
+        report.append("  dangerous split interpretation rule:").append('\n');
+        report.append("    - if DANGEROUS_UNEXPLAINED is under ~10% of DANGEROUS, the 28k headline was essentially all "
+            + "confound and the map is not carrying thousands of routing bugs.").append('\n');
+        report.append("    - if door-capable-on-ignored-locType is the largest single locType group, the builder has a "
+            + "door-classification gap and that is the actionable defect, NOT the raw DANGEROUS count.").append('\n');
+        report.append("    - if DANGEROUS_UNEXPLAINED stays large and is not concentrated on any locType, then the "
+            + "dangerous edges are real and need their own investigation.").append('\n');
         report.append("  interpretation rule:").append('\n');
         if (comparison.comparedEdges == 0)
         {
@@ -1104,6 +1500,10 @@ public final class CollisionMapBuilder
         report.append("  locType1 invalid-orientation fallbacks: ")
             .append(stats.locType1InvalidOrientationFallbacks).append('\n');
         report.append("  ignored-locType count: ").append(stats.ignoredLocTypePlacements).append('\n');
+        report.append("  door-capable placement tiles: ")
+            .append(stats.doorCapableLocTypeByTile.size()).append('\n');
+        report.append("  door-capable placement tile collisions: ")
+            .append(stats.doorCapableTileCollisions).append('\n');
         report.append("  terrain-blocked count: ").append(stats.terrainBlockedTiles).append('\n');
         report.append("  bridge-branch count: ").append(stats.bridgeBranchTiles).append('\n');
         report.append("  out-of-region neighbour skips: ").append(stats.outOfRegionNeighbourSkips).append('\n');
@@ -1244,7 +1644,7 @@ public final class CollisionMapBuilder
             throw new IOException("Live flag row plane does not match scene at line " + lineNumber
                 + ": row plane=" + plane + ", scene plane=" + block.plane);
         }
-        if (!block.contains(x, y))
+        if (!block.contains(x, y, plane))
         {
             throw new IOException("Live flag row outside exclusive covered bound at line " + lineNumber
                 + ": " + x + "," + y + "," + plane + " not inside " + block.summary());
@@ -1286,6 +1686,12 @@ public final class CollisionMapBuilder
         }
 
         capture.sceneBlocks++;
+        capture.sceneBlockGeometries.add(new LiveSceneBlockGeometry(
+            block.baseX,
+            block.baseY,
+            block.plane,
+            block.covered
+        ));
         capture.coveredTileObservations += (long) block.covered * block.covered;
         int maxXExclusive = block.baseX + block.covered;
         int maxYExclusive = block.baseY + block.covered;
@@ -1486,6 +1892,13 @@ public final class CollisionMapBuilder
         WEST
     }
 
+    private enum DangerousSplit
+    {
+        DOOR_CAPABLE,
+        CONFLICTED,
+        UNEXPLAINED
+    }
+
     private static final class EmptyDirectionArray
     {
         private static final Direction[] HOLDER = new Direction[0];
@@ -1536,11 +1949,13 @@ public final class CollisionMapBuilder
         private final TreeMap<Integer, Long> placementsByLocType = new TreeMap<>();
         private final long[] locType1PlacementsByOrientation = new long[LOC_TYPE_1_EDGES_BY_ORIENTATION.length];
         private final Set<Long> locType1Orientation3TileKeys = new HashSet<>();
+        private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
 
         private long locType1EdgesBlockedTotal;
         private long locType1Orientation3Placements;
         private long locType1InvalidOrientationFallbacks;
         private long ignoredLocTypePlacements;
+        private long doorCapableTileCollisions;
         private long terrainBlockedTiles;
         private long bridgeBranchTiles;
         private long outOfRegionNeighbourSkips;
@@ -1851,6 +2266,9 @@ public final class CollisionMapBuilder
     private static final class LiveCapture
     {
         private final Map<Long, LiveTile> tiles = new TreeMap<>();
+        private final Set<Long> conflictingNorthTileKeys = new HashSet<>();
+        private final Set<Long> conflictingEastTileKeys = new HashSet<>();
+        private final List<LiveSceneBlockGeometry> sceneBlockGeometries = new ArrayList<>();
 
         private long sceneBlocks;
         private long rowsParsed;
@@ -1881,10 +2299,11 @@ public final class CollisionMapBuilder
             this.lineNumber = lineNumber;
         }
 
-        private boolean contains(int x, int y)
+        private boolean contains(int x, int y, int plane)
         {
             // covered is exclusive: the final included tile is base + covered - 1.
-            return x >= baseX && x < baseX + covered
+            return this.plane == plane
+                && x >= baseX && x < baseX + covered
                 && y >= baseY && y < baseY + covered;
         }
 
@@ -1894,6 +2313,198 @@ public final class CollisionMapBuilder
                 + " size=" + size
                 + " covered=" + covered
                 + " line=" + lineNumber;
+        }
+    }
+
+    private static final class LiveSceneBlockGeometry
+    {
+        private final int baseX;
+        private final int baseY;
+        private final int plane;
+        private final int covered;
+
+        private LiveSceneBlockGeometry(int baseX, int baseY, int plane, int covered)
+        {
+            this.baseX = baseX;
+            this.baseY = baseY;
+            this.plane = plane;
+            this.covered = covered;
+        }
+
+        private boolean contains(int x, int y, int plane)
+        {
+            // Plane is part of containment; overlapping scenes on other floors are not observations.
+            return this.plane == plane
+                && x >= baseX && x < baseX + covered
+                && y >= baseY && y < baseY + covered;
+        }
+
+        private int borderDistance(int x, int y)
+        {
+            int sx = x - baseX;
+            int sy = y - baseY;
+            int farX = covered - 1 - sx;
+            int farY = covered - 1 - sy;
+            return Math.min(Math.min(sx, sy), Math.min(farX, farY));
+        }
+    }
+
+    private static final class BorderDistances
+    {
+        private final boolean contained;
+        private final int minBorderDistance;
+        private final int maxBorderDistance;
+
+        private BorderDistances(int minBorderDistance, int maxBorderDistance)
+        {
+            this.contained = true;
+            this.minBorderDistance = minBorderDistance;
+            this.maxBorderDistance = maxBorderDistance;
+        }
+
+        private BorderDistances()
+        {
+            this.contained = false;
+            this.minBorderDistance = -1;
+            this.maxBorderDistance = -1;
+        }
+
+        private static BorderDistances notContained()
+        {
+            return new BorderDistances();
+        }
+    }
+
+    private static final class BorderDistanceBucket
+    {
+        private final String label;
+        private final int minDistance;
+        private final int maxDistance;
+
+        private BorderDistanceBucket(String label, int minDistance, int maxDistance)
+        {
+            this.label = label;
+            this.minDistance = minDistance;
+            this.maxDistance = maxDistance;
+        }
+
+        private boolean contains(int distance)
+        {
+            return distance >= minDistance && distance <= maxDistance;
+        }
+    }
+
+    private static final class BorderBucketCounts
+    {
+        private long comparedEdges;
+        private long dangerous;
+        private long dangerousUnexplained;
+    }
+
+    private static final class BorderHistogram
+    {
+        private final BorderBucketCounts[] counts = new BorderBucketCounts[BORDER_DISTANCE_BUCKETS.length];
+
+        private long bucketedComparedEdges;
+
+        private BorderHistogram()
+        {
+            for (int i = 0; i < counts.length; i++)
+            {
+                counts[i] = new BorderBucketCounts();
+            }
+        }
+
+        private void record(int distance, boolean dangerous, boolean dangerousUnexplained)
+        {
+            BorderBucketCounts bucket = counts[bucketIndex(distance)];
+            bucket.comparedEdges++;
+            bucketedComparedEdges++;
+            if (dangerous)
+            {
+                bucket.dangerous++;
+            }
+            if (dangerousUnexplained)
+            {
+                bucket.dangerousUnexplained++;
+            }
+        }
+
+        private long comparedEdges(int maxDistance)
+        {
+            long total = 0L;
+            for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+            {
+                if (BORDER_DISTANCE_BUCKETS[i].minDistance <= maxDistance)
+                {
+                    total += counts[i].comparedEdges;
+                }
+            }
+            return total;
+        }
+
+        private long dangerous(int maxDistance)
+        {
+            long total = 0L;
+            for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+            {
+                if (BORDER_DISTANCE_BUCKETS[i].minDistance <= maxDistance)
+                {
+                    total += counts[i].dangerous;
+                }
+            }
+            return total;
+        }
+
+        private long dangerousUnexplained(int maxDistance)
+        {
+            long total = 0L;
+            for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+            {
+                if (BORDER_DISTANCE_BUCKETS[i].minDistance <= maxDistance)
+                {
+                    total += counts[i].dangerousUnexplained;
+                }
+            }
+            return total;
+        }
+
+        private long comparedEdgesAtOrAbove(int minDistance)
+        {
+            long total = 0L;
+            for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+            {
+                if (BORDER_DISTANCE_BUCKETS[i].maxDistance >= minDistance)
+                {
+                    total += counts[i].comparedEdges;
+                }
+            }
+            return total;
+        }
+
+        private long dangerousAtOrAbove(int minDistance)
+        {
+            long total = 0L;
+            for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+            {
+                if (BORDER_DISTANCE_BUCKETS[i].maxDistance >= minDistance)
+                {
+                    total += counts[i].dangerous;
+                }
+            }
+            return total;
+        }
+
+        private int bucketIndex(int distance)
+        {
+            for (int i = 0; i < BORDER_DISTANCE_BUCKETS.length; i++)
+            {
+                if (BORDER_DISTANCE_BUCKETS[i].contains(distance))
+                {
+                    return i;
+                }
+            }
+            throw new IllegalArgumentException("Border distance does not fit a bucket: " + distance);
         }
     }
 
@@ -1932,10 +2543,12 @@ public final class CollisionMapBuilder
             if (northSeen && northBlocked != north)
             {
                 capture.conflictingNorthObservations++;
+                capture.conflictingNorthTileKeys.add(key());
             }
             if (eastSeen && eastBlocked != east)
             {
                 capture.conflictingEastObservations++;
+                capture.conflictingEastTileKeys.add(key());
             }
             northSeen = true;
             eastSeen = true;
@@ -2011,10 +2624,21 @@ public final class CollisionMapBuilder
         private final boolean skipped;
         private final String skipReason;
         private final List<String> dangerousExamples = new ArrayList<>();
+        private final List<String> dangerousUnexplainedExamples = new ArrayList<>();
+        private final TreeMap<Integer, Long> dangerousDoorCapableByLocType = new TreeMap<>();
+        private final BorderHistogram minBorderDistanceHistogram = new BorderHistogram();
+        private final BorderHistogram maxBorderDistanceHistogram = new BorderHistogram();
 
         private long comparedEdges;
         private long outsideBuiltRegions;
+        private long noContainingBlockComparedEdges;
+        private long disagreeingBorderDistanceComparedEdges;
         private long dangerous;
+        private long dangerousDoorCapable;
+        private long dangerousConflicted;
+        private long dangerousUnexplained;
+        private long dangerousDoorCapableAndConflicted;
+        private long dangerousDoorCapableIgnoredLocType;
         private long doorShut;
         private long agreeBlocked;
         private long agreeOpen;
@@ -2042,6 +2666,11 @@ public final class CollisionMapBuilder
         private static DangerousDirectionComparison skipped(Path liveFlagsFile, String skipReason)
         {
             return new DangerousDirectionComparison(liveFlagsFile, skipReason);
+        }
+
+        private long dangerousSplitTotal()
+        {
+            return dangerousDoorCapable + dangerousConflicted + dangerousUnexplained;
         }
     }
 }
