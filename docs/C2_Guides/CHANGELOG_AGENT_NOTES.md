@@ -1292,3 +1292,62 @@ D-0157 (2026-08-11) - Fresh Falador capture: 74.5% of known over-blocking now fi
   have read the writer before writing the route, the same way reading the trigger first is what
   caught the default-off Validate Map Data gate. Check what a tool PERSISTS, not just what it
   computes, before designing a capture around it.
+
+D-0158 (2026-08-11) - Dangerous-direction pass built and run. ORIENTATION 3 IS EXONERATED.
+  A much larger finding surfaced alongside it and is NOT yet trustworthy as an absolute number.
+
+  WHAT IT DOES. Post-build read-only pass in CollisionMapBuilder comparing the built v2 bits
+  against the live capture, classifying every compared edge into exactly one bucket:
+      DANGEROUS      v2 passable AND live blocked   <- router plans through a wall (D-0120)
+      DOOR_SHUT      v2 door     AND live blocked   <- NOT dangerous, door was simply closed
+      AGREE_BLOCKED / AGREE_OPEN / OVERBLOCK
+  Two design choices that matter:
+    - Only NORTH and EAST are compared. S/W are derived from the neighbour tile, so comparing
+      them would count the same physical edge twice and let a neighbour contaminate this tile.
+      That exact confound produced a false locType 9 result earlier the same night.
+    - The covered bound is EXCLUSIVE. The final row/column has no neighbour to consult and was
+      never measured; treating absence there as passable would invent a ring of false truth.
+  The 3x factor and the 30-edge sample floor are hard-coded constants, fixed before the run, and
+  the interpretation rule is printed into the report above the verdict.
+
+  RESULT:
+      comparedEdges          148,662        outsideBuiltRegions    0
+      DANGEROUS               28,122        DOOR_SHUT             95
+      AGREE_BLOCKED           15,432        AGREE_OPEN       102,411        OVERBLOCK   2,602
+      dangerousRateAll        18.917%
+      orient-3 tile count        738        orient-3 compared edges    422
+      orient-3 dangerous          42        dangerousRateOrient3    9.953%
+      verdict: EXONERATED - no worse than the map average, the rule stays
+
+  ORIENTATION 3 VERDICT STANDS. Its danger rate is roughly HALF the surrounding rate, on a
+  like-for-like population, and the absolute count is 42 edges across 738 placements. The
+  D-0120 concern recorded in the CollisionMapBuilder comment at lines 92-100 - that unblocking
+  those edges would route players into walls - is measured and does not hold. Do not revert it.
+
+  DO NOT QUOTE 18.917% AS A MAP-WIDE DANGER RATE. The arithmetic gives the reason away:
+  live unique covered tiles 74,331 x 2 edges = 148,662 = comparedEdges EXACTLY. The pass
+  iterated only tiles PRESENT IN THE CAPTURE FILE, and the dump only writes a row when a tile
+  has at least one blocked edge. So the population is selected for "live blocks something here".
+  The rate is therefore inflated by construction. The COUNT (28,122) is real; the RATE is not a
+  map-wide figure.
+
+  The orientation-3 COMPARISON survives that bias because both rates are drawn from the same
+  selected population, and a tile with no live-blocked edge cannot contribute to the numerator
+  either way. Excluding those tiles changes both rates equally.
+
+  TWO REASONS 28,122 IS ALSO AN OVERSTATEMENT, both measurable and neither yet measured:
+    1. DOORS. v2 wrote only 312 door edges in 24 regions and DOOR_SHUT came back at just 95.
+       Falador castle alone should produce more than that. A door v2 failed to classify as a
+       door, standing closed at capture time, lands in DANGEROUS and is not a routing bug.
+    2. OBSERVATION CONFLICTS. The capture reports 7,180 conflicting north observations and
+       7,138 east - the same tile seen with different states in different scenes, which is what
+       doors opening and closing during the walk looks like. That is ~14k conflicted
+       observations against 28k dangerous edges; the overlap is unmeasured.
+  The example DANGEROUS rows are also a contiguous run down x=2888 (every N and E from y=3272
+  to y=3286), which reads like a systematic block rather than scattered errors and deserves
+  looking at directly before anyone treats the number as a bug count.
+
+  NEXT STEP IF THIS IS PURSUED: split DANGEROUS by whether the tile carries a door-capable
+  placement, and by whether the tile had conflicting observations. Those two filters should be
+  applied before the number is quoted anywhere. Same discipline as the locType 9 neighbour-clean
+  split, which turned a headline 1,281-placement "win" into nothing once the confound was removed.

@@ -19,12 +19,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
@@ -71,7 +74,17 @@ public final class CollisionMapBuilder
     private static final String DEFAULT_ZIP = "build/collision-map-v2.zip";
     private static final String PROOF_FILE = "tools/route-a-live-mismatches.txt";
     private static final String REPORT_FILE = "tools/collision-map-v2-report.txt";
+    private static final String LIVE_FLAGS_ARG = "--live-flags";
     private static final int STILL_BLOCKED_EXAMPLE_LIMIT = 30;
+    private static final int DANGEROUS_EXAMPLE_LIMIT = 30;
+    private static final int ORIENT3_DANGEROUS_SAMPLE_FLOOR = 30;
+
+    private static final Pattern LIVE_SCENE_HEADER = Pattern.compile(
+        "^DREW_LIVE_FLAGS\\s+scene\\s+(-?\\d+):(-?\\d+):(-?\\d+)\\s+size=(\\d+)\\s+covered=(\\d+)\\s*$"
+    );
+    private static final Pattern LIVE_DATA_ROW = Pattern.compile(
+        "^(-?\\d+),(-?\\d+),(-?\\d+)\\s+([01])([01])\\s*$"
+    );
 
     /*
      * Measured shape table: derived by LocTypeShapeProbe over 558,894 tiles against a 22% null
@@ -140,7 +153,16 @@ public final class CollisionMapBuilder
             writeZip(request.outputZip, result.regions);
             String roundTrip = verifyRoundTrip(request.outputZip, result.regions);
             Comparison comparison = compareProofEdges(proofEdges, result.regions);
-            String report = buildReport(cacheDir, project, request, result, roundTrip, comparison);
+            DangerousDirectionComparison dangerousComparison = compareDangerousDirections(request.liveFlagsFile, result);
+            String report = buildReport(
+                cacheDir,
+                project,
+                request,
+                result,
+                roundTrip,
+                comparison,
+                dangerousComparison
+            );
 
             Path reportFile = project.resolve(REPORT_FILE);
             Files.createDirectories(reportFile.getParent());
@@ -159,17 +181,51 @@ public final class CollisionMapBuilder
         List<ProofEdge> proofEdges
     ) throws IOException
     {
-        Path outputZip = args.length == 0 ? project.resolve(DEFAULT_ZIP) : resolve(project, args[0]);
-        if (args.length <= 1)
+        Path outputZip = project.resolve(DEFAULT_ZIP);
+        int selectorStart = 0;
+        if (args.length > 0 && !isLiveFlagsArg(args[0]))
         {
-            TreeSet<Integer> regions = defaultProofRegions(proofEdges);
-            return new BuildRequest(outputZip, false, regions, true);
+            outputZip = resolve(project, args[0]);
+            selectorStart = 1;
         }
 
-        String selector = joinRegionSelector(args);
+        Path liveFlagsFile = defaultLiveFlagsFile();
+        List<String> selectorArgs = new ArrayList<>();
+        for (int i = selectorStart; i < args.length; i++)
+        {
+            String arg = args[i];
+            if (LIVE_FLAGS_ARG.equals(arg))
+            {
+                if (i + 1 >= args.length)
+                {
+                    throw new IOException(LIVE_FLAGS_ARG + " requires a path");
+                }
+                liveFlagsFile = resolve(project, args[++i]);
+                continue;
+            }
+            if (arg.startsWith(LIVE_FLAGS_ARG + "="))
+            {
+                String value = arg.substring((LIVE_FLAGS_ARG + "=").length());
+                if (value.isEmpty())
+                {
+                    throw new IOException(LIVE_FLAGS_ARG + " requires a non-empty path");
+                }
+                liveFlagsFile = resolve(project, value);
+                continue;
+            }
+            selectorArgs.add(arg);
+        }
+
+        if (selectorArgs.isEmpty())
+        {
+            TreeSet<Integer> regions = defaultProofRegions(proofEdges);
+            return new BuildRequest(outputZip, liveFlagsFile, false, regions, true);
+        }
+
+        String selector = joinRegionSelector(selectorArgs);
         if ("all".equalsIgnoreCase(selector.trim()))
         {
-            return new BuildRequest(outputZip, true, Collections.emptySet(), false);
+            return new BuildRequest(outputZip, liveFlagsFile, true, Collections.emptySet(), false);
         }
 
         TreeSet<Integer> regions = parseRegionIds(selector);
@@ -177,7 +233,17 @@ public final class CollisionMapBuilder
         {
             throw new IOException("No region ids parsed from selector: " + selector);
         }
-        return new BuildRequest(outputZip, false, regions, false);
+        return new BuildRequest(outputZip, liveFlagsFile, false, regions, false);
+    }
+
+    private static boolean isLiveFlagsArg(String arg)
+    {
+        return LIVE_FLAGS_ARG.equals(arg) || arg.startsWith(LIVE_FLAGS_ARG + "=");
+    }
+
+    private static Path defaultLiveFlagsFile()
+    {
+        return Paths.get(System.getProperty("user.home"), ".runelite", "drews-live-flags.txt");
     }
 
     private static Path resolve(Path project, String value)
@@ -190,16 +256,16 @@ public final class CollisionMapBuilder
         return project.resolve(path).normalize();
     }
 
-    private static String joinRegionSelector(String[] args)
+    private static String joinRegionSelector(List<String> args)
     {
         StringBuilder selector = new StringBuilder();
-        for (int i = 1; i < args.length; i++)
+        for (String arg : args)
         {
             if (selector.length() > 0)
             {
                 selector.append(' ');
             }
-            selector.append(args[i]);
+            selector.append(arg);
         }
         return selector.toString();
     }
@@ -447,14 +513,19 @@ public final class CollisionMapBuilder
             return;
         }
 
+        int x = baseX + location.getPosition().getX();
+        int y = baseY + location.getPosition().getY();
+        if (location.getType() == 1 && location.getOrientation() == 3)
+        {
+            stats.locType1Orientation3TileKeys.add(tileKey(x, y, plane));
+        }
+
         Direction[] shape = shapeFor(location.getType(), location.getOrientation(), stats);
         if (shape.length == 0)
         {
             return;
         }
 
-        int x = baseX + location.getPosition().getX();
-        int y = baseY + location.getPosition().getY();
         boolean openable = firstOpenStyleAction(def) != null;
         for (Direction direction : shape)
         {
@@ -733,13 +804,113 @@ public final class CollisionMapBuilder
         return comparison;
     }
 
+    private static DangerousDirectionComparison compareDangerousDirections(
+        Path liveFlagsFile,
+        BuildResult result
+    )
+        throws IOException
+    {
+        if (!Files.exists(liveFlagsFile))
+        {
+            return DangerousDirectionComparison.skipped(
+                liveFlagsFile,
+                "DANGEROUS PASS SKIPPED - live capture file missing: " + liveFlagsFile
+            );
+        }
+        if (!Files.isRegularFile(liveFlagsFile))
+        {
+            throw new IOException("Live flag capture is not a regular file: " + liveFlagsFile);
+        }
+
+        LiveCapture live = parseLiveCapture(liveFlagsFile);
+        Map<Integer, BuiltRegion> byRegionId = new HashMap<>();
+        for (BuiltRegion region : result.regions.values())
+        {
+            byRegionId.put(region.regionId, region);
+        }
+
+        DangerousDirectionComparison comparison = new DangerousDirectionComparison(liveFlagsFile, live);
+        comparison.orient3TileCount = result.stats.locType1Orientation3TileKeys.size();
+        for (LiveTile tile : live.tiles.values())
+        {
+            int regionId = regionIdForTile(tile.x, tile.y);
+            BuiltRegion region = regionId < 0 ? null : byRegionId.get(regionId);
+            if (region == null || !region.bits.contains(tile.x, tile.y, tile.plane))
+            {
+                comparison.outsideBuiltRegions++;
+                continue;
+            }
+
+            boolean orient3 = result.stats.locType1Orientation3TileKeys.contains(tile.key());
+            compareLiveEdge(comparison, region, tile, 'N', tile.northBlocked, orient3);
+            compareLiveEdge(comparison, region, tile, 'E', tile.eastBlocked, orient3);
+        }
+        return comparison;
+    }
+
+    private static void compareLiveEdge(
+        DangerousDirectionComparison comparison,
+        BuiltRegion region,
+        LiveTile tile,
+        char direction,
+        boolean liveBlocked,
+        boolean orient3
+    )
+    {
+        comparison.comparedEdges++;
+        if (orient3)
+        {
+            comparison.orient3ComparedEdges++;
+        }
+
+        boolean passable = region.bits.isPassable(tile.x, tile.y, tile.plane, direction);
+        boolean door = region.bits.isDoor(tile.x, tile.y, tile.plane, direction);
+        if (liveBlocked)
+        {
+            if (passable)
+            {
+                comparison.dangerous++;
+                if (orient3)
+                {
+                    comparison.dangerousOrient3++;
+                }
+                if (comparison.dangerousExamples.size() < DANGEROUS_EXAMPLE_LIMIT)
+                {
+                    comparison.dangerousExamples.add(
+                        tile.x + "," + tile.y + "," + tile.plane
+                            + " " + direction + " orient3=" + orient3
+                    );
+                }
+            }
+            else if (door)
+            {
+                comparison.doorShut++;
+            }
+            else
+            {
+                comparison.agreeBlocked++;
+            }
+            return;
+        }
+
+        if (passable)
+        {
+            comparison.agreeOpen++;
+        }
+        else
+        {
+            comparison.overblock++;
+        }
+    }
+
     private static String buildReport(
         File cacheDir,
         Path project,
         BuildRequest request,
         BuildResult result,
         String roundTrip,
-        Comparison comparison
+        Comparison comparison,
+        DangerousDirectionComparison dangerousComparison
     )
     {
         StringBuilder report = new StringBuilder();
@@ -766,6 +937,8 @@ public final class CollisionMapBuilder
         report.append(roundTrip).append('\n');
         report.append('\n');
         appendProofComparison(report, comparison);
+        report.append('\n');
+        appendDangerousDirectionComparison(report, dangerousComparison);
         report.append('\n');
         appendBuildStats(report, result.stats);
         return report.toString();
@@ -794,6 +967,113 @@ public final class CollisionMapBuilder
                 report.append("    ").append(example).append('\n');
             }
         }
+    }
+
+    private static void appendDangerousDirectionComparison(
+        StringBuilder report,
+        DangerousDirectionComparison comparison
+    )
+    {
+        report.append("dangerous-direction pass:").append('\n');
+        report.append("  live capture: ").append(comparison.liveFlagsFile).append('\n');
+        if (comparison.skipped)
+        {
+            report.append("  ").append(comparison.skipReason).append('\n');
+            return;
+        }
+
+        appendDangerousInterpretationRule(report, comparison);
+        double dangerousRateAll = rate(comparison.dangerous, comparison.comparedEdges);
+        double dangerousRateOrient3 = rate(comparison.dangerousOrient3, comparison.orient3ComparedEdges);
+        report.append("  live scene blocks: ").append(comparison.live.sceneBlocks).append('\n');
+        report.append("  live rows parsed: ").append(comparison.live.rowsParsed).append('\n');
+        report.append("  live covered tile observations: ")
+            .append(comparison.live.coveredTileObservations).append('\n');
+        report.append("  live unique covered tiles: ").append(comparison.live.tiles.size()).append('\n');
+        report.append("  live duplicate rows: ").append(comparison.live.duplicateRows).append('\n');
+        report.append("  live duplicate row conflicts: ")
+            .append(comparison.live.duplicateRowConflicts).append('\n');
+        report.append("  live conflicting north observations: ")
+            .append(comparison.live.conflictingNorthObservations).append('\n');
+        report.append("  live conflicting east observations: ")
+            .append(comparison.live.conflictingEastObservations).append('\n');
+        report.append("  comparedEdges: ").append(comparison.comparedEdges).append('\n');
+        report.append("  outsideBuiltRegions: ").append(comparison.outsideBuiltRegions).append('\n');
+        report.append("  DANGEROUS: ").append(comparison.dangerous).append('\n');
+        report.append("  DOOR_SHUT: ").append(comparison.doorShut).append('\n');
+        report.append("  AGREE_BLOCKED: ").append(comparison.agreeBlocked).append('\n');
+        report.append("  AGREE_OPEN: ").append(comparison.agreeOpen).append('\n');
+        report.append("  OVERBLOCK: ").append(comparison.overblock).append('\n');
+        report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
+        report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
+        report.append("  orient-3 compared-edge count: ")
+            .append(comparison.orient3ComparedEdges).append('\n');
+        report.append("  orient-3 dangerous edges: ").append(comparison.dangerousOrient3).append('\n');
+        report.append("  dangerousRateOrient3: ")
+            .append(formatRate(dangerousRateOrient3)).append('\n');
+        report.append("  interpretation result: ")
+            .append(dangerousInterpretation(comparison, dangerousRateAll, dangerousRateOrient3))
+            .append('\n');
+        report.append("  example DANGEROUS edges:").append('\n');
+        if (comparison.dangerousExamples.isEmpty())
+        {
+            report.append("    (none)").append('\n');
+        }
+        else
+        {
+            for (String example : comparison.dangerousExamples)
+            {
+                report.append("    ").append(example).append('\n');
+            }
+        }
+    }
+
+    private static void appendDangerousInterpretationRule(
+        StringBuilder report,
+        DangerousDirectionComparison comparison
+    )
+    {
+        report.append("  interpretation rule:").append('\n');
+        if (comparison.comparedEdges == 0)
+        {
+            report.append("    DANGEROUS PASS VACUOUS - zero edges compared, proves nothing").append('\n');
+        }
+        report.append("    orientation 3 is IMPLICATED only if BOTH: ");
+        report.append("dangerousRateOrient3 >= 3x dangerousRateAll AND at least ");
+        report.append("30 dangerous edges land on orient-3 tiles. ");
+        report.append("Below 30 the sample is too small to conclude either way and ");
+        report.append("the report must say so rather than read noise.").append('\n');
+        report.append("    if dangerousRateOrient3 is at or below dangerousRateAll, ");
+        report.append("orientation 3 is EXONERATED: it is no worse than the map average ");
+        report.append("and the rule stays.").append('\n');
+    }
+
+    private static String dangerousInterpretation(
+        DangerousDirectionComparison comparison,
+        double dangerousRateAll,
+        double dangerousRateOrient3
+    )
+    {
+        if (comparison.comparedEdges == 0)
+        {
+            return "DANGEROUS PASS VACUOUS - zero edges compared, proves nothing";
+        }
+        if (dangerousRateOrient3 <= dangerousRateAll)
+        {
+            return "orientation 3 is EXONERATED: it is no worse than the map average and the rule stays";
+        }
+        if (comparison.dangerousOrient3 < ORIENT3_DANGEROUS_SAMPLE_FLOOR)
+        {
+            return "orientation 3 sample is too small to conclude either way: fewer than "
+                + ORIENT3_DANGEROUS_SAMPLE_FLOOR + " dangerous edges land on orient-3 tiles";
+        }
+        if (dangerousRateOrient3 >= dangerousRateAll * 3.0)
+        {
+            return "orientation 3 is IMPLICATED: dangerousRateOrient3 is at least 3x dangerousRateAll "
+                + "and at least " + ORIENT3_DANGEROUS_SAMPLE_FLOOR
+                + " dangerous edges land on orient-3 tiles";
+        }
+        return "orientation 3 is not implicated: its dangerous rate is above average but below the 3x rule";
     }
 
     private static void appendBuildStats(StringBuilder report, BuildStats stats)
@@ -854,6 +1134,178 @@ public final class CollisionMapBuilder
             return "0.0%";
         }
         return String.format(Locale.ROOT, "%.1f%%", count * 100.0 / total);
+    }
+
+    private static double rate(long count, long total)
+    {
+        if (total == 0)
+        {
+            return 0.0;
+        }
+        return count / (double) total;
+    }
+
+    private static String formatRate(double rate)
+    {
+        return String.format(Locale.ROOT, "%.6f (%.3f%%)", rate, rate * 100.0);
+    }
+
+    private static LiveCapture parseLiveCapture(Path liveFlagsFile) throws IOException
+    {
+        if (Files.size(liveFlagsFile) == 0)
+        {
+            throw new IOException("Live flag capture is empty: " + liveFlagsFile);
+        }
+
+        LiveCapture capture = new LiveCapture();
+        LiveSceneBlock current = null;
+        List<String> lines = Files.readAllLines(liveFlagsFile, StandardCharsets.UTF_8);
+        for (int i = 0; i < lines.size(); i++)
+        {
+            int lineNumber = i + 1;
+            String line = lines.get(i).trim();
+            if (line.isEmpty())
+            {
+                continue;
+            }
+
+            Matcher header = LIVE_SCENE_HEADER.matcher(line);
+            if (header.matches())
+            {
+                finishLiveSceneBlock(capture, current);
+                current = parseLiveSceneHeader(header, lineNumber);
+                continue;
+            }
+
+            Matcher row = LIVE_DATA_ROW.matcher(line);
+            if (row.matches())
+            {
+                if (current == null)
+                {
+                    throw new IOException("Live flag data row before first scene header at line " + lineNumber);
+                }
+                addLiveDataRow(capture, current, row, lineNumber);
+                continue;
+            }
+
+            throw new IOException("Unrecognized live flag line " + lineNumber + ": " + line);
+        }
+
+        finishLiveSceneBlock(capture, current);
+        if (capture.sceneBlocks == 0)
+        {
+            throw new IOException("Live flag capture contains no scene headers: " + liveFlagsFile);
+        }
+        return capture;
+    }
+
+    private static LiveSceneBlock parseLiveSceneHeader(Matcher header, int lineNumber) throws IOException
+    {
+        int baseX = parseLiveInt(header.group(1), "scene baseX", lineNumber);
+        int baseY = parseLiveInt(header.group(2), "scene baseY", lineNumber);
+        int plane = parseLiveInt(header.group(3), "scene plane", lineNumber);
+        int size = parseLiveInt(header.group(4), "scene size", lineNumber);
+        int covered = parseLiveInt(header.group(5), "scene covered", lineNumber);
+
+        if (size <= 0)
+        {
+            throw new IOException("Scene size must be positive at line " + lineNumber + ": " + size);
+        }
+        if (covered <= 0 || covered > size)
+        {
+            throw new IOException("Scene covered bound must be in 1..size at line " + lineNumber
+                + ": covered=" + covered + ", size=" + size);
+        }
+        if (plane < 0 || plane >= PLANE_COUNT)
+        {
+            throw new IOException("Scene plane outside 0.." + (PLANE_COUNT - 1)
+                + " at line " + lineNumber + ": " + plane);
+        }
+
+        return new LiveSceneBlock(baseX, baseY, plane, size, covered, lineNumber);
+    }
+
+    private static void addLiveDataRow(
+        LiveCapture capture,
+        LiveSceneBlock block,
+        Matcher row,
+        int lineNumber
+    )
+        throws IOException
+    {
+        int x = parseLiveInt(row.group(1), "row x", lineNumber);
+        int y = parseLiveInt(row.group(2), "row y", lineNumber);
+        int plane = parseLiveInt(row.group(3), "row plane", lineNumber);
+        boolean north = "1".equals(row.group(4));
+        boolean east = "1".equals(row.group(5));
+
+        if (plane != block.plane)
+        {
+            throw new IOException("Live flag row plane does not match scene at line " + lineNumber
+                + ": row plane=" + plane + ", scene plane=" + block.plane);
+        }
+        if (!block.contains(x, y))
+        {
+            throw new IOException("Live flag row outside exclusive covered bound at line " + lineNumber
+                + ": " + x + "," + y + "," + plane + " not inside " + block.summary());
+        }
+        if (!north && !east)
+        {
+            throw new IOException("Live flag data row has no blocked edge at line " + lineNumber);
+        }
+
+        capture.rowsParsed++;
+        StoredLiveEdges previous = block.rows.put(tileKey(x, y, plane), new StoredLiveEdges(north, east));
+        if (previous != null)
+        {
+            capture.duplicateRows++;
+            if (previous.north != north || previous.east != east)
+            {
+                capture.duplicateRowConflicts++;
+            }
+        }
+    }
+
+    private static int parseLiveInt(String value, String label, int lineNumber) throws IOException
+    {
+        try
+        {
+            return Integer.parseInt(value);
+        }
+        catch (NumberFormatException e)
+        {
+            throw new IOException("Invalid " + label + " at line " + lineNumber + ": " + value, e);
+        }
+    }
+
+    private static void finishLiveSceneBlock(LiveCapture capture, LiveSceneBlock block)
+    {
+        if (block == null)
+        {
+            return;
+        }
+
+        capture.sceneBlocks++;
+        capture.coveredTileObservations += (long) block.covered * block.covered;
+        int maxXExclusive = block.baseX + block.covered;
+        int maxYExclusive = block.baseY + block.covered;
+        for (int x = block.baseX; x < maxXExclusive; x++)
+        {
+            for (int y = block.baseY; y < maxYExclusive; y++)
+            {
+                long key = tileKey(x, y, block.plane);
+                StoredLiveEdges row = block.rows.get(key);
+                boolean north = row != null && row.north;
+                boolean east = row != null && row.east;
+                LiveTile tile = capture.tiles.get(key);
+                if (tile == null)
+                {
+                    tile = new LiveTile(x, y, block.plane);
+                    capture.tiles.put(key, tile);
+                }
+                tile.observe(north, east, capture);
+            }
+        }
     }
 
     private static List<ProofEdge> parseProofEdges(Path proofFile) throws IOException
@@ -1004,6 +1456,23 @@ public final class CollisionMapBuilder
         return (regionX << 8) | regionY;
     }
 
+    private static int regionIdForTile(int x, int y)
+    {
+        int regionX = Math.floorDiv(x, REGION_SIZE);
+        int regionY = Math.floorDiv(y, REGION_SIZE);
+        if (regionX < MIN_REGION_X || regionX > MAX_REGION_X
+            || regionY < MIN_REGION_Y || regionY > MAX_REGION_Y)
+        {
+            return -1;
+        }
+        return regionId(regionX, regionY);
+    }
+
+    private static long tileKey(int x, int y, int plane)
+    {
+        return (((long) x) << 34) | (((long) y) << 4) | (plane & 0xFL);
+    }
+
     private static String formatRegionId(int regionId)
     {
         return regionId + " (" + (regionId >> 8) + "_" + (regionId & 0xFF) + ")";
@@ -1029,18 +1498,21 @@ public final class CollisionMapBuilder
     private static final class BuildRequest
     {
         private final Path outputZip;
+        private final Path liveFlagsFile;
         private final boolean allRegions;
         private final Set<Integer> regionIds;
         private final boolean defaultedRegions;
 
         private BuildRequest(
             Path outputZip,
+            Path liveFlagsFile,
             boolean allRegions,
             Set<Integer> regionIds,
             boolean defaultedRegions
         )
         {
             this.outputZip = outputZip;
+            this.liveFlagsFile = liveFlagsFile;
             this.allRegions = allRegions;
             this.regionIds = regionIds;
             this.defaultedRegions = defaultedRegions;
@@ -1063,6 +1535,7 @@ public final class CollisionMapBuilder
     {
         private final TreeMap<Integer, Long> placementsByLocType = new TreeMap<>();
         private final long[] locType1PlacementsByOrientation = new long[LOC_TYPE_1_EDGES_BY_ORIENTATION.length];
+        private final Set<Long> locType1Orientation3TileKeys = new HashSet<>();
 
         private long locType1EdgesBlockedTotal;
         private long locType1Orientation3Placements;
@@ -1375,6 +1848,107 @@ public final class CollisionMapBuilder
         }
     }
 
+    private static final class LiveCapture
+    {
+        private final Map<Long, LiveTile> tiles = new TreeMap<>();
+
+        private long sceneBlocks;
+        private long rowsParsed;
+        private long coveredTileObservations;
+        private long duplicateRows;
+        private long duplicateRowConflicts;
+        private long conflictingNorthObservations;
+        private long conflictingEastObservations;
+    }
+
+    private static final class LiveSceneBlock
+    {
+        private final int baseX;
+        private final int baseY;
+        private final int plane;
+        private final int size;
+        private final int covered;
+        private final int lineNumber;
+        private final Map<Long, StoredLiveEdges> rows = new TreeMap<>();
+
+        private LiveSceneBlock(int baseX, int baseY, int plane, int size, int covered, int lineNumber)
+        {
+            this.baseX = baseX;
+            this.baseY = baseY;
+            this.plane = plane;
+            this.size = size;
+            this.covered = covered;
+            this.lineNumber = lineNumber;
+        }
+
+        private boolean contains(int x, int y)
+        {
+            // covered is exclusive: the final included tile is base + covered - 1.
+            return x >= baseX && x < baseX + covered
+                && y >= baseY && y < baseY + covered;
+        }
+
+        private String summary()
+        {
+            return baseX + ":" + baseY + ":" + plane
+                + " size=" + size
+                + " covered=" + covered
+                + " line=" + lineNumber;
+        }
+    }
+
+    private static final class StoredLiveEdges
+    {
+        private final boolean north;
+        private final boolean east;
+
+        private StoredLiveEdges(boolean north, boolean east)
+        {
+            this.north = north;
+            this.east = east;
+        }
+    }
+
+    private static final class LiveTile
+    {
+        private final int x;
+        private final int y;
+        private final int plane;
+
+        private boolean northSeen;
+        private boolean eastSeen;
+        private boolean northBlocked;
+        private boolean eastBlocked;
+
+        private LiveTile(int x, int y, int plane)
+        {
+            this.x = x;
+            this.y = y;
+            this.plane = plane;
+        }
+
+        private void observe(boolean north, boolean east, LiveCapture capture)
+        {
+            if (northSeen && northBlocked != north)
+            {
+                capture.conflictingNorthObservations++;
+            }
+            if (eastSeen && eastBlocked != east)
+            {
+                capture.conflictingEastObservations++;
+            }
+            northSeen = true;
+            eastSeen = true;
+            northBlocked = north;
+            eastBlocked = east;
+        }
+
+        private long key()
+        {
+            return tileKey(x, y, plane);
+        }
+    }
+
     private static final class ProofEdge
     {
         private final int x;
@@ -1427,6 +2001,47 @@ public final class CollisionMapBuilder
         private long insideBuiltRegions()
         {
             return passableInV2 + doorInV2 + stillBlockedInV2;
+        }
+    }
+
+    private static final class DangerousDirectionComparison
+    {
+        private final Path liveFlagsFile;
+        private final LiveCapture live;
+        private final boolean skipped;
+        private final String skipReason;
+        private final List<String> dangerousExamples = new ArrayList<>();
+
+        private long comparedEdges;
+        private long outsideBuiltRegions;
+        private long dangerous;
+        private long doorShut;
+        private long agreeBlocked;
+        private long agreeOpen;
+        private long overblock;
+        private long orient3TileCount;
+        private long orient3ComparedEdges;
+        private long dangerousOrient3;
+
+        private DangerousDirectionComparison(Path liveFlagsFile, LiveCapture live)
+        {
+            this.liveFlagsFile = liveFlagsFile;
+            this.live = live;
+            this.skipped = false;
+            this.skipReason = "";
+        }
+
+        private DangerousDirectionComparison(Path liveFlagsFile, String skipReason)
+        {
+            this.liveFlagsFile = liveFlagsFile;
+            this.live = new LiveCapture();
+            this.skipped = true;
+            this.skipReason = skipReason;
+        }
+
+        private static DangerousDirectionComparison skipped(Path liveFlagsFile, String skipReason)
+        {
+            return new DangerousDirectionComparison(liveFlagsFile, skipReason);
         }
     }
 }

@@ -45,6 +45,64 @@ proof-edge comparison:
     3171,3448,0 N
     3172,3447,0 E
 
+dangerous-direction pass:
+  live capture: C:\Users\drews\.runelite\drews-live-flags.txt
+  interpretation rule:
+    orientation 3 is IMPLICATED only if BOTH: dangerousRateOrient3 >= 3x dangerousRateAll AND at least 30 dangerous edges land on orient-3 tiles. Below 30 the sample is too small to conclude either way and the report must say so rather than read noise.
+    if dangerousRateOrient3 is at or below dangerousRateAll, orientation 3 is EXONERATED: it is no worse than the map average and the rule stays.
+  live scene blocks: 13
+  live rows parsed: 55064
+  live covered tile observations: 137917
+  live unique covered tiles: 74331
+  live duplicate rows: 0
+  live duplicate row conflicts: 0
+  live conflicting north observations: 7180
+  live conflicting east observations: 7138
+  comparedEdges: 148662
+  outsideBuiltRegions: 0
+  DANGEROUS: 28122
+  DOOR_SHUT: 95
+  AGREE_BLOCKED: 15432
+  AGREE_OPEN: 102411
+  OVERBLOCK: 2602
+  dangerousRateAll: 0.189167 (18.917%)
+  orient-3 tile count: 738
+  orient-3 compared-edge count: 422
+  orient-3 dangerous edges: 42
+  dangerousRateOrient3: 0.099526 (9.953%)
+  interpretation result: orientation 3 is EXONERATED: it is no worse than the map average and the rule stays
+  example DANGEROUS edges:
+    2888,3272,0 N orient3=false
+    2888,3272,0 E orient3=false
+    2888,3273,0 N orient3=false
+    2888,3273,0 E orient3=false
+    2888,3274,0 N orient3=false
+    2888,3274,0 E orient3=false
+    2888,3275,0 N orient3=false
+    2888,3275,0 E orient3=false
+    2888,3276,0 N orient3=false
+    2888,3276,0 E orient3=false
+    2888,3277,0 N orient3=false
+    2888,3277,0 E orient3=false
+    2888,3278,0 N orient3=false
+    2888,3278,0 E orient3=false
+    2888,3279,0 N orient3=false
+    2888,3279,0 E orient3=false
+    2888,3280,0 N orient3=false
+    2888,3280,0 E orient3=false
+    2888,3281,0 N orient3=false
+    2888,3281,0 E orient3=false
+    2888,3282,0 N orient3=false
+    2888,3282,0 E orient3=false
+    2888,3283,0 N orient3=false
+    2888,3283,0 E orient3=false
+    2888,3284,0 N orient3=false
+    2888,3284,0 E orient3=false
+    2888,3285,0 N orient3=false
+    2888,3285,0 E orient3=false
+    2888,3286,0 N orient3=false
+    2888,3286,0 E orient3=false
+
 build statistics:
   regions built: 24
   placements by locType:
