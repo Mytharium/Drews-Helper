@@ -878,3 +878,103 @@ D-0143 (2026-08-11) - #24 NOT SHIPPED. SHAPE ranking measured WORSE than CLIENT.
   NEXT: the A/B harness (probe measuring both modes on 594 pairs, plus the offender-sort fix
   from D-0140) is the instrument that can settle the re-weight properly. Until it has run, the
   live route stays on CLIENT.
+
+D-0144 (2026-08-11) - The 30-minute SSH cap is HALF implemented. Measured, not assumed.
+  Mytharium had Architect raise the SSH ceiling from 5 to 30 minutes and asked for confirmation.
+  Two independent ceilings exist and only one moved:
+
+    RAISED   the lcl-ssh server timeout cap, 300000 -> 1800000 ms. The tool schema now
+             advertises max 1800s, and this session is running the patched server.
+    NOT      /mnt/lcl/c2/ssh-watchdog.sh. The file on disk reads MAX_AGE=1800, but the RUNNING
+    RAISED   process is PID 122, root-owned, etimes 200,818s (~56 hours) - it has never
+             restarted. Its log still prints "(age: NNNNs > 300s)", which is the live value
+             bash parsed into memory on 2026-08-08. Editing the file cannot reach a running
+             process, and C2 is uid 1001 with no sudo, so it stays 300 until a container restart.
+
+  Practical consequence: a BLOCKING ssh_exec still dies at roughly 300-360s regardless of the
+  server cap. Anything longer must be detached on the remote host and polled.
+
+D-0145 (2026-08-11) - Download truncation FIXED and verified end to end.
+  The conditional scp -O patch works. Re-downloaded the 928,448-byte live capture:
+      remote bytes 928448   sha256 A5246A17F461897C...
+      local  bytes 928448   sha256 A5246A17F461897C...   MATCH
+      57,993 lines, all 14 scene headers present.
+  Previously this exact file came down at 204,800 bytes twice. The 200 KiB ceiling is gone on
+  this path. Keep verifying size+hash after every transfer anyway - that rule stands regardless.
+
+D-0146 (2026-08-11) - DETACHING A LONG JOB ON WINDOWS: only Task Scheduler survives.
+  Three mechanisms tried against the same job, in order:
+    1. cmd  start /b            - dies when the SSH session closes. No log, no java process.
+    2. PowerShell Start-Process - same. Still a child of the session tree.
+    3. Task Scheduler           - WORKS. Register-ScheduledTask + Start-ScheduledTask, principal
+                                  New-ScheduledTaskPrincipal -LogonType Interactive.
+                                  Verified state=Running, log growing, 3 fresh java processes.
+  Windows OpenSSH tears down the session process tree on disconnect, so anything parented to the
+  session goes with it. The scheduler service is a different parent, which is why it survives.
+  Pattern: write a .bat that runs the job and writes a DONE marker with the exit code, register
+  it as a one-shot task, start it, then poll the marker with short SSH calls.
+
+D-0147 (2026-08-11) - Truncated-file audit. This lane has NO gap; older Fort Stewart work might.
+  Eleven distinct local files sit at exactly 204,800 bytes, dated 2026-06-12 to 2026-08-05:
+      ace_paks/circulation.pak, ace_paks/breathing.pak, tccc_data.pak, tccc_data2.pak,
+      gtt_heightmap.asc, analysis/wb-index.txt, analysis/rhs-cp01.rdb, analysis/rhs-statusquo.rdb,
+      medlog_0135.log, med0703_diag.txt, m320_live/M320.xob
+  (Three more under workspace/xfer-test are deliberate control artefacts from the truncation
+  investigation and are correct at that size.)
+
+  THE COLLISION-MAP WORK IS CLEAN, and this is provable rather than reassuring: the live capture
+  was never analysed from a downloaded copy. Every read happened ON mythpc - the grid renders ran
+  through PowerShell in place, and LiveFlagCrossTab read the file on the remote disk. Its report
+  says "rows parsed: 57979" and "scenes found: 14"; the full file is 57,993 lines with 14 scene
+  headers, and 57993 - 14 = 57979 exactly. A truncated read would have produced 12,792 rows and
+  3 scenes. The arithmetic closes, so no conclusion in items 2, 3 or 24 rests on partial data.
+
+  AT RISK, and worth re-checking before being relied on again: the ACE/TCCC medical paks. The
+  recorded conclusion that the Breathing and Circulation paks are "real and rich" was drawn from
+  files that are exactly 204,800 bytes. That conclusion may have been formed on a fraction of
+  each pak. The sources are NOT at either Workbench addons root on mythpc, so regathering needs
+  the original location identified first - do not assume the earlier read was complete.
+
+D-0148 (2026-08-11) - FULL A/B COMPLETE. SHAPE ranking is decisively worse. #24 stays closed.
+  Ran the both-mode probe detached via Task Scheduler, 352 pairs where BOTH modes solved:
+
+      CLIENT   mean excessTurns 5.41   median 3.00   zero-excess 71   max 33
+      SHAPE    mean excessTurns 11.33  median 11.00  zero-excess 36   max 38
+
+      SHAPE worsened   249 pairs
+      SHAPE improved    14 pairs
+      unchanged         89 pairs
+
+  SHAPE roughly DOUBLES the mean and nearly quadruples the median. It loses on 249 pairs and
+  wins on 14. The two-route sample in D-0143 was not a fluke - this confirms it at scale.
+  RouteRankingMode.SHAPE must not be wired into the live route. Item 24 is closed on evidence.
+
+  Correctness gate PASSED: SHAPE-LONGER count = 0. Neither mode ever produced a longer route,
+  so this really is purely about shape, not distance. clientOnlySolved and shapeOnlySolved were
+  both 0, so every measured pair is a true like-for-like comparison.
+
+  Sort fix verified: the offender list now leads with excessTurns=33, which is the maximum. The
+  self-check guard did not fire.
+
+D-0149 (2026-08-11) - CORRECTION to D-0140: excessTurns overstates the ABSOLUTE problem.
+  Reading the newly-correct offender rows exposed a bias in my own metric that the earlier
+  summary did not account for. The top offender:
+
+      start 3250,3210,0  ->  end 3250,3230,0   displacement 0/20   BUT clientSteps = 79
+
+  A 20-tile displacement taking 79 steps is a route going the long way around a building. Its
+  33 "excess" turns are mostly OBSTACLE-FORCED, not wasted - minimumDirectionChanges is computed
+  for open ground (0 or 1), which is simply the wrong yardstick once walls are involved.
+
+  So the earlier headline - "63% of routes take more direction changes than necessary" - is
+  overstated as a measure of how much turning is avoidable. Many of those turns are the route
+  correctly navigating geometry.
+
+  What survives, and it is the part that actually mattered: the A/B COMPARISON is unaffected.
+  Both modes face identical obstacles on identical pairs, so CLIENT 5.41 vs SHAPE 11.33 is a
+  clean apples-to-apples result. The relative number is trustworthy; the absolute one is not.
+
+  For any future attempt at the straightness problem, the metric needs an obstacle-aware
+  baseline - compare against the minimum turns achievable ON THIS MAP between those two tiles,
+  not against open-ground minimum. Until that exists, do not quote absolute excessTurns as
+  evidence of how bad routing is.
