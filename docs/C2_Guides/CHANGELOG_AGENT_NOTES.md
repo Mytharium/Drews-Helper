@@ -631,3 +631,51 @@ D-0135 (2026-08-10) - CollisionMapBuilder: v2 built, and it works.
   ONE COMPILE FIX APPLIED: ProofEdge.regionId() called the outer two-arg regionId(x, y)
   unqualified. The nested no-arg method shadows it, so it resolved to itself and would not
   compile. Qualified as CollisionMapBuilder.regionId(...) with a comment.
+
+D-0136 (2026-08-10) - DIAGNOSED, NOT FIXED: the checkerboard route is a dead tie-break field.
+  Reported by Mytharium on the Lumbridge castle roof and again on the Lumbridge bridge. Traced
+  to the A* itself, and it is NOT a collision-data problem - v2 is not wired into the loader,
+  so the router was running entirely on the old v1 map during his run.
+
+  Chain of evidence:
+    1. The engine supports all four diagonals (canMoveNorthEast / NorthWest / SouthEast /
+       SouthWest at DrewsHelperWalkingRouteEngine lines 1284-1296).
+    2. Every step costs the same: relax(predecessor, distance + 1, ...) at lines 712 and 739.
+       A diagonal step costs 1, exactly like a cardinal step - which is correct for OSRS, where
+       a diagonal move takes one tick.
+    3. Therefore a straight run and a zigzag between the same two tiles have IDENTICAL cost and
+       identical remaining distance. They tie completely.
+    4. SearchNode.compareTo (line 2130) breaks ties in this order:
+           priority -> remaining -> preferencePenalty -> sequence
+       "sequence" is insertion order, which is arbitrary with respect to straightness.
+    5. A "turns" counter EXISTS and is maintained correctly - incremented at lines 821-823
+       whenever the direction changes, stored on the node at line 2110 - and is NEVER
+       COMPARED. It was clearly built for exactly this and then not wired in.
+
+  Why it looks like a checkerboard rather than a zigzag: consecutive tiles of a diagonal run
+  touch only at their corners, so filling each step's tile draws a checkerboard.
+
+  Important: the path is NOT longer. Every zigzag tile is a legitimate one-tick move, so the
+  route is genuinely optimal in ticks - it is the presentation and the follow-along experience
+  that suffer, not the ETA.
+
+  Proposed fix (NOT APPLIED - awaiting Mytharium's call): insert turns into the tie-break chain
+  ahead of sequence. It cannot lengthen a route, because it only ever chooses between paths
+  that already tie on cost and remaining distance, and the field is already computed so there
+  is no extra work per node.
+
+D-0137 (2026-08-10) - Live ground truth captured, and it is substantial.
+  drews-live-flags.txt: 57,993 rows, 928 KB, 14 scenes, planes 0/1/2 at BOTH castles plus the
+  Lumbridge-to-Varrock corridor. Scene keys: 2896:3392:0, 2904:3352:0, 2912:3312:0/1/2,
+  3168:3168:0/1/2, 3208:3176:0, 3192:3216:0, 3184:3256:0, 3152:3296:0, 3160:3336:0, 3160:3376:0.
+  The dump mechanism works exactly as designed - one block per scene key, all three planes
+  captured without the minute-long waits the old mismatch capture needed.
+
+  Spot reads confirm the data is sane and readable:
+    - Lumbridge upper floor (plane 2) shows dense, structured interior walls.
+    - The Lum bridge crossing appears as a clean fully-passable east-west corridor at y=3225,
+      sandwiched between solid water rows - exactly the shape a bridge should have. This is the
+      ground truth needed to verify the terrain and bridge conventions flagged in D-0135.
+
+  Tooling note: the file is 928 KB and lcl-ssh downloads truncate at ~200 KB, so it must be
+  processed ON mythpc, never pulled whole. tools/grid rendering is done in place for this reason.
