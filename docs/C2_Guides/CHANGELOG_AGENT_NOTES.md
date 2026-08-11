@@ -978,3 +978,50 @@ D-0149 (2026-08-11) - CORRECTION to D-0140: excessTurns overstates the ABSOLUTE 
   baseline - compare against the minimum turns achievable ON THIS MAP between those two tiles,
   not against open-ground minimum. Until that exists, do not quote absolute excessTurns as
   evidence of how bad routing is.
+
+D-0150 (2026-08-11) - locType 1 measured rule shipped into the builder. Proof PASSES.
+  Replaced the D-0120 UNKNOWN placeholder (block all four edges) with the rule LiveFlagCrossTab
+  measured against the live client capture:
+
+      orient 0 -> {NORTH}            orient 1 -> {NORTH, EAST}
+      orient 2 -> {EAST}             orient 3 -> {}  (blocks nothing)
+
+  An out-of-range orientation falls back to blocking all four and is counted, because an unknown
+  orientation is genuinely unknown - it does not silently become an empty edge set.
+
+  PROOF RESULT, 2,248 edges, 6 auto-derived Falador regions:
+
+      metric                  before    after
+      passable in v2            1466     1485    (+19)
+      door in v2                  10       10
+      still blocked in v2        772      753    (-19)
+      outside built regions        0        0
+      ROUND TRIP OK 6 regions, mutual-exclusion assert intact
+
+  still-blocked went DOWN and nothing regressed. That is the pass condition.
+
+  READ THE HEADLINE CAREFULLY - 19 edges understates the change. The proof file is 2,248
+  specific edges; the map covers 177,000+. What actually moved:
+
+      locType 1 placements        909  (orient0 259, orient1 210, orient2 228, orient3 212)
+      edges blocked BEFORE      3,636  (909 placements x 4 edges each)
+      edges blocked AFTER         907
+      invalid-orientation fallbacks  0
+
+  That is 2,729 fewer wrongly-blocked edges across six regions - a 75% cut in locType-1
+  over-blocking. The proof file barely samples those tiles, which is why it only sees 19. The
+  routing benefit is real and much larger than the proof delta; do not quote 19 as the size of
+  the win, and do not quote 2,729 as proven either. One is measured on ground truth, the other
+  is a count of what the rule changed.
+
+  THE RISKY PART HELD. Orientation 3 now blocks nothing on 212 placements, which moves edges
+  from blocked to passable - the dangerous direction under D-0120. If that were wrong,
+  still-blocked would have stayed flat while new routing-through-walls errors appeared. Instead
+  still-blocked strictly decreased. That is consistent with the measurement (15-18% vs a ~25%
+  baseline, i.e. measured-open) but it is NOT proof against a live client; the honest check is a
+  fresh capture in those regions. Flagged, not claimed.
+
+  STILL OPEN: 753 edges. Expected remaining contributors, in order - locType 9 diagonals that
+  block whole tiles, doors standing open when the capture was taken, and the terrain rule, which
+  D-0142 measured as precise (95.9%) but INCOMPLETE (it misses 65% of tiles the client blocks on
+  all four edges). Terrain completeness is now the largest untouched lever, not locType 1.

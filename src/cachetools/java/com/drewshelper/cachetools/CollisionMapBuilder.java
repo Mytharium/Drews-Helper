@@ -89,10 +89,22 @@ public final class CollisionMapBuilder
         {Direction.EAST, Direction.SOUTH},
         {Direction.SOUTH, Direction.WEST}
     };
-    private static final Direction[] LOC_TYPE_9_EDGES = {
-        Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
+    /*
+     * LiveFlagCrossTab measured locType 1 over 1,408 single-placement tiles. The selected peaks are
+     * 61-66% against a ~25% null baseline, a 35-40pp lift, which is real but markedly weaker than
+     * locType 0's 97-99%; locType 1 probably covers more than one underlying shape. Orientation 3
+     * blocking nothing moves those edges from blocked to PASSABLE, which is the dangerous direction
+     * under D-0120 because a wrongly-passable edge makes the router plan through a wall. It is
+     * justified only because 15-18% is below the null baseline, measured-open rather than unknown.
+     * If the proof numbers worsen, this is the first thing to revert.
+     */
+    private static final Direction[][] LOC_TYPE_1_EDGES_BY_ORIENTATION = {
+        {Direction.NORTH},
+        {Direction.NORTH, Direction.EAST},
+        {Direction.EAST},
+        {}
     };
-    private static final Direction[] LOC_TYPE_1_UNKNOWN_EDGES = {
+    private static final Direction[] LOC_TYPE_9_EDGES = {
         Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
     };
 
@@ -457,8 +469,7 @@ public final class CollisionMapBuilder
             case 0:
                 return oneEdgeByOrientation(LOC_TYPE_0_EDGES_BY_ORIENTATION, orientation);
             case 1:
-                stats.unknownLocType1Placements++;
-                return LOC_TYPE_1_UNKNOWN_EDGES;
+                return locType1EdgesByOrientation(orientation, stats);
             case 2:
                 return twoEdgesByOrientation(orientation);
             case 3:
@@ -469,6 +480,26 @@ public final class CollisionMapBuilder
                 stats.ignoredLocTypePlacements++;
                 return EmptyDirectionArray.HOLDER;
         }
+    }
+
+    private static Direction[] locType1EdgesByOrientation(int orientation, BuildStats stats)
+    {
+        if (orientation < 0 || orientation >= LOC_TYPE_1_EDGES_BY_ORIENTATION.length)
+        {
+            stats.locType1InvalidOrientationFallbacks++;
+            stats.locType1EdgesBlockedTotal += LOC_TYPE_9_EDGES.length;
+            return LOC_TYPE_9_EDGES;
+        }
+
+        stats.locType1PlacementsByOrientation[orientation]++;
+        if (orientation == 3)
+        {
+            stats.locType1Orientation3Placements++;
+        }
+
+        Direction[] edges = LOC_TYPE_1_EDGES_BY_ORIENTATION[orientation];
+        stats.locType1EdgesBlockedTotal += edges.length;
+        return edges;
     }
 
     private static Direction[] oneEdgeByOrientation(Direction[] table, int orientation)
@@ -782,7 +813,16 @@ public final class CollisionMapBuilder
                     .append(entry.getValue()).append('\n');
             }
         }
-        report.append("  unknown-locType-1 count: ").append(stats.unknownLocType1Placements).append('\n');
+        for (int orientation = 0; orientation < stats.locType1PlacementsByOrientation.length; orientation++)
+        {
+            report.append("  locType1-orient").append(orientation).append(" placements: ")
+                .append(stats.locType1PlacementsByOrientation[orientation]).append('\n');
+        }
+        report.append("  locType1 edges blocked total: ").append(stats.locType1EdgesBlockedTotal).append('\n');
+        report.append("  locType1 orientation-3 placements: ")
+            .append(stats.locType1Orientation3Placements).append('\n');
+        report.append("  locType1 invalid-orientation fallbacks: ")
+            .append(stats.locType1InvalidOrientationFallbacks).append('\n');
         report.append("  ignored-locType count: ").append(stats.ignoredLocTypePlacements).append('\n');
         report.append("  terrain-blocked count: ").append(stats.terrainBlockedTiles).append('\n');
         report.append("  bridge-branch count: ").append(stats.bridgeBranchTiles).append('\n');
@@ -1022,8 +1062,11 @@ public final class CollisionMapBuilder
     private static final class BuildStats
     {
         private final TreeMap<Integer, Long> placementsByLocType = new TreeMap<>();
+        private final long[] locType1PlacementsByOrientation = new long[LOC_TYPE_1_EDGES_BY_ORIENTATION.length];
 
-        private long unknownLocType1Placements;
+        private long locType1EdgesBlockedTotal;
+        private long locType1Orientation3Placements;
+        private long locType1InvalidOrientationFallbacks;
         private long ignoredLocTypePlacements;
         private long terrainBlockedTiles;
         private long bridgeBranchTiles;

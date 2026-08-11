@@ -1451,3 +1451,40 @@ Needs Validate Map Data ON and a few stops of about ten seconds each. The dump f
 scene key, on that scene's first validation, so arriving somewhere new is enough - no standing
 around for a minute like the mismatch capture needed. Bridges and upper floors are worth
 including specifically because they are the least verified part of the builder.
+
+## PARKED: regather the 200 KiB-truncated files
+
+Mytharium asked for this to be queued behind "once Weylin updates the cutoff from 5 minutes".
+CORRECTION, and it changes the trigger: those are two unrelated ceilings.
+
+  - The 200 KiB TRUNCATION was a download-path bug (scp falling back to SFTP). It is ALREADY
+    FIXED by the conditional -O patch and verified byte-perfect on a 928,448-byte file with a
+    matching SHA. Downloads work correctly RIGHT NOW.
+  - The 5-MINUTE CUTOFF is the ssh-watchdog kill age. It only limits how long a single blocking
+    SSH call may run. It has nothing to do with file size.
+
+So regathering is NOT waiting on Weylin. It is waiting on something else entirely: the SOURCES
+cannot be located. Searched on mythpc and found nothing - no addons directory under My Games at
+all, and no pak matching breathing/circulation/tccc under either Workbench root.
+
+THE INVENTORY (11 distinct files at exactly 204,800 bytes, 2026-06-12 to 2026-08-05):
+    ace_paks/circulation.pak      ace_paks/breathing.pak
+    tccc_data.pak                 tccc_data2.pak
+    gtt_heightmap.asc             analysis/wb-index.txt
+    analysis/rhs-cp01.rdb         analysis/rhs-statusquo.rdb
+    medlog_0135.log               med0703_diag.txt
+    m320_live/M320.xob            (this one is MacKelnuts lane, not Fort Stewart)
+Three more under workspace/xfer-test are deliberate control artefacts and are correct at that size.
+
+WHAT IS ACTUALLY AT RISK: the recorded conclusion that the ACE Breathing and Circulation paks
+are "real and rich" was formed from files that are exactly 204,800 bytes, so it may rest on a
+fraction of each pak. Treat it as unverified until the paks are re-read from a located source.
+
+WHAT IS NOT AT RISK: nothing in the collision-map work. That was never analysed from a
+downloaded copy - every read happened on mythpc, and the cross-tab reported 57,979 rows across
+14 scenes, which is exactly 57,993 file lines minus 14 scene headers. A truncated read would
+have yielded 12,792 rows and 3 scenes. The arithmetic closes.
+
+TO ACTUALLY CLOSE THIS, in order: (1) identify where each file originally came from - host and
+path - since that was never recorded; (2) confirm the source still exists; (3) re-download and
+verify size+hash against the remote. Step 1 is the blocker, not any infrastructure limit.

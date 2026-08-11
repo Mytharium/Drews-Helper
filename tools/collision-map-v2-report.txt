@@ -8,11 +8,11 @@ ROUND TRIP OK 6 regions
 
 proof-edge comparison:
   proof edges parsed: 2248
-  passable in v2: 1466
+  passable in v2: 1485
   door in v2: 10
-  still blocked in v2: 772
+  still blocked in v2: 753
   outside built regions: 0
-  percentage fixed: 65.7%
+  percentage fixed: 66.5%
   example still-blocked edges:
     2931,3292,0 N
     2931,3292,0 E
@@ -42,8 +42,8 @@ proof-edge comparison:
     2947,3300,0 E
     2947,3303,0 N
     2947,3303,0 E
-    2947,3383,0 N
     2948,3299,0 E
+    2948,3302,0 N
 
 build statistics:
   regions built: 6
@@ -71,11 +71,17 @@ build statistics:
     20: 37
     21: 157
     22: 11926
-  unknown-locType-1 count: 909
+  locType1-orient0 placements: 259
+  locType1-orient1 placements: 210
+  locType1-orient2 placements: 228
+  locType1-orient3 placements: 212
+  locType1 edges blocked total: 907
+  locType1 orientation-3 placements: 212
+  locType1 invalid-orientation fallbacks: 0
   ignored-locType count: 17465
   terrain-blocked count: 4909
   bridge-branch count: 48
-  out-of-region neighbour skips: 181
-  total edges made passable: 177424
-  door edges written: 85
+  out-of-region neighbour skips: 150
+  total edges made passable: 179313
+  door edges written: 86
   terrain note: tile-setting floor blocking and bridge lowering are implemented as a convention not yet verified against this project's ground truth.
