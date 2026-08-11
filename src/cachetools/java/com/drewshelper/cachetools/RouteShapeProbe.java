@@ -9,9 +9,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,6 +37,19 @@ public final class RouteShapeProbe
     private static final int TOP_OFFENDER_LIMIT = 15;
     private static final int CONTROL_LIMIT = 5;
     private static final int SHAPE_LONGER_EXAMPLE_LIMIT = 10;
+    private static final int BASELINE_STATE_CAP = 500_000;
+    private static final int NO_INCOMING_DIRECTION = 8;
+    private static final long COORD_MASK = (1L << 21) - 1L;
+    private static final DirectionStep[] DIRECTION_STEPS = {
+        new DirectionStep(-1, 0),
+        new DirectionStep(1, 0),
+        new DirectionStep(0, -1),
+        new DirectionStep(0, 1),
+        new DirectionStep(-1, -1),
+        new DirectionStep(1, -1),
+        new DirectionStep(-1, 1),
+        new DirectionStep(1, 1)
+    };
 
     private RouteShapeProbe()
     {
@@ -48,7 +63,7 @@ public final class RouteShapeProbe
 
         DrewsHelperCollisionMap map = DrewsHelperCollisionMap.loadDefault();
         DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(map);
-        ProbeResult result = probe(engine, boxes);
+        ProbeResult result = probe(map, engine, boxes);
         String report = buildReport(boxes, result);
 
         Files.createDirectories(outFile.getParent());
@@ -97,7 +112,11 @@ public final class RouteShapeProbe
         }
     }
 
-    private static ProbeResult probe(DrewsHelperWalkingRouteEngine engine, List<SearchBox> boxes)
+    private static ProbeResult probe(
+        DrewsHelperCollisionMap map,
+        DrewsHelperWalkingRouteEngine engine,
+        List<SearchBox> boxes
+    )
     {
         ProbeResult result = new ProbeResult();
 
@@ -157,8 +176,30 @@ public final class RouteShapeProbe
                     continue;
                 }
 
-                RouteMeasurement clientMeasurement = measure(pair, clientRoute.getPath());
-                RouteMeasurement shapeMeasurement = measure(pair, shapeRoute.getPath());
+                BaselineResult baseline = baselineForPair(map, pair);
+                if (baseline.isUnreachable())
+                {
+                    result.baselineUnreachable++;
+                    boxResult.baselineUnreachable++;
+                    continue;
+                }
+                if (baseline.isUnresolved())
+                {
+                    result.baselineUnresolved++;
+                    boxResult.baselineUnresolved++;
+                    continue;
+                }
+
+                RouteMeasurement clientMeasurement = measure(
+                    pair,
+                    clientRoute.getPath(),
+                    baseline.minTurnsAmongShortestPaths
+                );
+                RouteMeasurement shapeMeasurement = measure(
+                    pair,
+                    shapeRoute.getPath(),
+                    baseline.minTurnsAmongShortestPaths
+                );
                 boxResult.solved++;
                 result.addMeasuredPair(clientMeasurement, shapeMeasurement);
             }
@@ -256,12 +297,221 @@ public final class RouteShapeProbe
         return values;
     }
 
-    private static RouteMeasurement measure(CandidatePair pair, List<WorldPoint> path)
+    private static BaselineResult baselineForPair(DrewsHelperCollisionMap map, CandidatePair pair)
+    {
+        DistanceField distanceField = buildDistanceField(map, pair);
+        if (distanceField.unresolved)
+        {
+            return BaselineResult.unresolved();
+        }
+
+        Integer startDistance = distanceField.distance(pair.start);
+        if (startDistance == null)
+        {
+            return BaselineResult.unreachable();
+        }
+
+        return minTurnsAmongShortestPaths(map, pair, distanceField, startDistance);
+    }
+
+    private static DistanceField buildDistanceField(DrewsHelperCollisionMap map, CandidatePair pair)
+    {
+        Map<Long, Integer> distances = new HashMap<>();
+        ArrayDeque<Tile> queue = new ArrayDeque<>();
+        Tile end = Tile.from(pair.end);
+        long startKey = tileKey(pair.start);
+        distances.put(end.key, 0);
+        queue.addLast(end);
+
+        if (end.key == startKey)
+        {
+            return DistanceField.resolved(distances);
+        }
+
+        while (!queue.isEmpty())
+        {
+            Tile tile = queue.removeFirst();
+            int nextDistance = distances.get(tile.key) + 1;
+            for (DirectionStep direction : DIRECTION_STEPS)
+            {
+                int previousX = tile.x - direction.dx;
+                int previousY = tile.y - direction.dy;
+                if (!canMove(map, previousX, previousY, tile.plane, direction))
+                {
+                    continue;
+                }
+
+                long previousKey = tileKey(previousX, previousY, tile.plane);
+                if (distances.containsKey(previousKey))
+                {
+                    continue;
+                }
+                if (distances.size() >= BASELINE_STATE_CAP)
+                {
+                    return DistanceField.unresolved();
+                }
+
+                distances.put(previousKey, nextDistance);
+                if (previousKey == startKey)
+                {
+                    return DistanceField.resolved(distances);
+                }
+                queue.addLast(new Tile(previousX, previousY, tile.plane, previousKey));
+            }
+        }
+
+        return DistanceField.resolved(distances);
+    }
+
+    private static BaselineResult minTurnsAmongShortestPaths(
+        DrewsHelperCollisionMap map,
+        CandidatePair pair,
+        DistanceField distanceField,
+        int startDistance
+    )
+    {
+        Map<Long, Integer> bestTurns = new HashMap<>();
+        ArrayDeque<TurnState> queue = new ArrayDeque<>();
+        Tile start = Tile.from(pair.start);
+        long endKey = tileKey(pair.end);
+        TurnState initial = new TurnState(start.x, start.y, start.plane, start.key, NO_INCOMING_DIRECTION);
+        bestTurns.put(turnStateKey(start.key, NO_INCOMING_DIRECTION), 0);
+        queue.addFirst(initial);
+
+        while (!queue.isEmpty())
+        {
+            TurnState state = queue.removeFirst();
+            long stateKey = turnStateKey(state.tileKey, state.incomingDirection);
+            Integer currentTurns = bestTurns.get(stateKey);
+            if (currentTurns == null)
+            {
+                continue;
+            }
+            if (state.tileKey == endKey)
+            {
+                return BaselineResult.resolved(currentTurns);
+            }
+
+            Integer currentDistance = distanceField.distance(state.tileKey);
+            if (currentDistance == null)
+            {
+                continue;
+            }
+
+            for (int directionIndex = 0; directionIndex < DIRECTION_STEPS.length; directionIndex++)
+            {
+                DirectionStep direction = DIRECTION_STEPS[directionIndex];
+                int nextX = state.x + direction.dx;
+                int nextY = state.y + direction.dy;
+                long nextTileKey = tileKey(nextX, nextY, state.plane);
+                Integer nextDistance = distanceField.distance(nextTileKey);
+                if (nextDistance == null || nextDistance != currentDistance - 1)
+                {
+                    continue;
+                }
+                if (!canMove(map, state.x, state.y, state.plane, direction))
+                {
+                    continue;
+                }
+
+                int extraTurn = state.incomingDirection == NO_INCOMING_DIRECTION
+                    || state.incomingDirection == directionIndex ? 0 : 1;
+                int nextTurns = currentTurns + extraTurn;
+                long nextStateKey = turnStateKey(nextTileKey, directionIndex);
+                Integer previousBest = bestTurns.get(nextStateKey);
+                if (previousBest != null && previousBest <= nextTurns)
+                {
+                    continue;
+                }
+                if (previousBest == null && bestTurns.size() >= BASELINE_STATE_CAP)
+                {
+                    return BaselineResult.unresolved();
+                }
+
+                bestTurns.put(nextStateKey, nextTurns);
+                TurnState nextState = new TurnState(nextX, nextY, state.plane, nextTileKey, directionIndex);
+                if (extraTurn == 0)
+                {
+                    queue.addFirst(nextState);
+                }
+                else
+                {
+                    queue.addLast(nextState);
+                }
+            }
+        }
+
+        return startDistance == 0 ? BaselineResult.resolved(0) : BaselineResult.unresolved();
+    }
+
+    private static boolean canMove(
+        DrewsHelperCollisionMap map,
+        int x,
+        int y,
+        int plane,
+        DirectionStep direction
+    )
+    {
+        if (direction.dx == 0)
+        {
+            return direction.dy > 0
+                ? map.canMoveNorth(x, y, plane)
+                : map.canMoveSouth(x, y, plane);
+        }
+        if (direction.dy == 0)
+        {
+            return direction.dx > 0
+                ? map.canMoveEast(x, y, plane)
+                : map.canMoveWest(x, y, plane);
+        }
+
+        /*
+         * The map owns diagonal legality. Calling its diagonal methods keeps the baseline aligned
+         * with the route engine instead of assuming source-tile cardinal exits are enough.
+         */
+        if (direction.dx > 0 && direction.dy > 0)
+        {
+            return map.canMoveNorthEast(x, y, plane);
+        }
+        if (direction.dx > 0)
+        {
+            return map.canMoveSouthEast(x, y, plane);
+        }
+        if (direction.dy > 0)
+        {
+            return map.canMoveNorthWest(x, y, plane);
+        }
+        return map.canMoveSouthWest(x, y, plane);
+    }
+
+    private static long tileKey(WorldPoint point)
+    {
+        return tileKey(point.getX(), point.getY(), point.getPlane());
+    }
+
+    private static long tileKey(int x, int y, int plane)
+    {
+        return ((long) (plane & 0xf) << 42)
+            | (((long) x & COORD_MASK) << 21)
+            | ((long) y & COORD_MASK);
+    }
+
+    private static long turnStateKey(long tileKey, int incomingDirection)
+    {
+        return (tileKey << 4) | (incomingDirection & 0xf);
+    }
+
+    private static RouteMeasurement measure(
+        CandidatePair pair,
+        List<WorldPoint> path,
+        int minTurnsAmongShortestPaths
+    )
     {
         List<StepDelta> deltas = stepDeltas(path);
         int actualDirectionChanges = actualDirectionChanges(deltas);
-        int minimumDirectionChanges = minimumDirectionChanges(pair.start, pair.end);
-        int excessTurns = actualDirectionChanges - minimumDirectionChanges;
+        int openGroundMinimumDirectionChanges = minimumDirectionChanges(pair.start, pair.end);
+        int openGroundExcessTurns = actualDirectionChanges - openGroundMinimumDirectionChanges;
+        int trueExcessTurns = actualDirectionChanges - minTurnsAmongShortestPaths;
         int longestAlternationRun = longestAlternationRun(deltas);
         int longestPureDiagonalRun = longestPureDiagonalRun(deltas);
 
@@ -269,8 +519,10 @@ public final class RouteShapeProbe
             pair,
             deltas.size(),
             actualDirectionChanges,
-            minimumDirectionChanges,
-            excessTurns,
+            openGroundMinimumDirectionChanges,
+            openGroundExcessTurns,
+            minTurnsAmongShortestPaths,
+            trueExcessTurns,
             longestAlternationRun,
             longestPureDiagonalRun,
             formatDeltas(deltas)
@@ -393,8 +645,11 @@ public final class RouteShapeProbe
         report.append("boxes: ").append(formatBoxes(boxes)).append('\n');
         report.append("pointStride: ").append(POINT_STRIDE)
             .append(" maxPairsPerBox: ").append(MAX_PAIRS_PER_BOX)
-            .append(" maxTotalPairs: ").append(MAX_TOTAL_PAIRS).append('\n');
+            .append(" maxTotalPairs: ").append(MAX_TOTAL_PAIRS)
+            .append(" baselineStateCapPerPass: ").append(BASELINE_STATE_CAP).append('\n');
         report.append("Caveat: SHAPE uses solveWithShapeRankingWithoutLocalWalkingOverrides, which also disables local walking overrides; this comparison varies shape ranking and local-walking override handling together.")
+            .append('\n');
+        report.append("Note: trueExcessTurns is the trustworthy figure; the open-ground excessTurns number is retained only to show the bias.")
             .append('\n');
         if (result.hitGlobalCap)
         {
@@ -415,7 +670,9 @@ public final class RouteShapeProbe
                 .append(" solved=").append(boxResult.solved)
                 .append(" clientOnlySolved=").append(boxResult.clientOnlySolved)
                 .append(" shapeOnlySolved=").append(boxResult.shapeOnlySolved)
-                .append(" neitherSolved=").append(boxResult.neitherSolved).append('\n');
+                .append(" neitherSolved=").append(boxResult.neitherSolved)
+                .append(" baselineUnreachable=").append(boxResult.baselineUnreachable)
+                .append(" BASELINE_UNRESOLVED=").append(boxResult.baselineUnresolved).append('\n');
         }
         report.append('\n');
 
@@ -427,13 +684,22 @@ public final class RouteShapeProbe
         report.append("  clientOnlySolved: ").append(result.clientOnlySolved).append('\n');
         report.append("  shapeOnlySolved: ").append(result.shapeOnlySolved).append('\n');
         report.append("  neitherSolved: ").append(result.neitherSolved).append('\n');
+        report.append("  baselineUnreachableSkipped: ").append(result.baselineUnreachable).append('\n');
+        report.append("  BASELINE_UNRESOLVED skipped: ").append(result.baselineUnresolved).append('\n');
+        report.append('\n');
+
+        appendBaselineDiagnostics(report, result);
         report.append('\n');
 
         report.append("Excess turns distributions").append('\n');
-        report.append("  excessTurnsDistribution: CLIENT ")
-            .append(formatDistribution(result.excessDistribution))
+        report.append("  trueExcessTurnsDistribution: CLIENT ")
+            .append(formatDistribution(result.trueExcessDistribution))
             .append(" | SHAPE ")
-            .append(formatDistribution(result.shapeExcessDistribution)).append('\n');
+            .append(formatDistribution(result.shapeTrueExcessDistribution)).append('\n');
+        report.append("  openGroundExcessTurnsDistribution: CLIENT ")
+            .append(formatDistribution(result.openGroundExcessDistribution))
+            .append(" | SHAPE ")
+            .append(formatDistribution(result.shapeOpenGroundExcessDistribution)).append('\n');
         report.append('\n');
 
         appendModeAggregates(report, result);
@@ -445,7 +711,8 @@ public final class RouteShapeProbe
         appendStepCountCheck(report, result);
         report.append('\n');
 
-        report.append("Top ").append(TOP_OFFENDER_LIMIT).append(" offenders by CLIENT excessTurns").append('\n');
+        report.append("Top ").append(TOP_OFFENDER_LIMIT)
+            .append(" offenders by CLIENT trueExcessTurns").append('\n');
         List<RouteMeasurement> offenders = sortedOffenders(result.measurements);
         if (offenderSortBroken(offenders, result.measurements))
         {
@@ -458,7 +725,7 @@ public final class RouteShapeProbe
         report.append('\n');
 
         report.append("Top ").append(CONTROL_LIMIT)
-            .append(" CLIENT zero-excess routes by pure diagonal run").append('\n');
+            .append(" CLIENT zero-true-excess routes by pure diagonal run").append('\n');
         List<RouteMeasurement> controls = sortedControls(result.measurements);
         appendRouteList(report, controls, CONTROL_LIMIT, true);
         report.append('\n');
@@ -470,27 +737,69 @@ public final class RouteShapeProbe
     private static void appendModeAggregates(StringBuilder report, ProbeResult result)
     {
         report.append("Mode aggregates").append('\n');
-        appendModeAggregateLine(report, "CLIENT", excessStats(result.measurements));
-        appendModeAggregateLine(report, "SHAPE", excessStats(result.shapeMeasurements));
+        appendModeAggregateLine(
+            report,
+            "CLIENT",
+            trueExcessStats(result.measurements),
+            openGroundExcessStats(result.measurements)
+        );
+        appendModeAggregateLine(
+            report,
+            "SHAPE",
+            trueExcessStats(result.shapeMeasurements),
+            openGroundExcessStats(result.shapeMeasurements)
+        );
     }
 
-    private static void appendModeAggregateLine(StringBuilder report, String mode, ExcessStats stats)
+    private static void appendModeAggregateLine(
+        StringBuilder report,
+        String mode,
+        ExcessStats trueStats,
+        ExcessStats openGroundStats
+    )
     {
         report.append("  ").append(mode)
-            .append(" pairsMeasured=").append(stats.pairsMeasured)
-            .append(" meanExcessTurns=").append(formatDecimal(stats.meanExcessTurns))
-            .append(" medianExcessTurns=").append(formatDecimal(stats.medianExcessTurns))
-            .append(" countExcessTurnsEq0=").append(stats.zeroExcessTurns)
-            .append(" countExcessTurnsGt0=").append(stats.positiveExcessTurns)
-            .append(" maxExcessTurns=").append(stats.maxExcessTurns).append('\n');
+            .append(" pairsMeasured=").append(trueStats.pairsMeasured)
+            .append(" trueMean=").append(formatDecimal(trueStats.meanExcessTurns))
+            .append(" trueMedian=").append(formatDecimal(trueStats.medianExcessTurns))
+            .append(" trueCountEq0=").append(trueStats.zeroExcessTurns)
+            .append(" trueCountGt0=").append(trueStats.positiveExcessTurns)
+            .append(" trueMax=").append(trueStats.maxExcessTurns)
+            .append(" openGroundMean=").append(formatDecimal(openGroundStats.meanExcessTurns))
+            .append(" openGroundMedian=").append(formatDecimal(openGroundStats.medianExcessTurns))
+            .append(" openGroundCountEq0=").append(openGroundStats.zeroExcessTurns)
+            .append(" openGroundCountGt0=").append(openGroundStats.positiveExcessTurns)
+            .append(" openGroundMax=").append(openGroundStats.maxExcessTurns).append('\n');
     }
 
     private static void appendPairComparison(StringBuilder report, ProbeResult result)
     {
         report.append("Per-pair comparison").append('\n');
-        report.append("  SHAPE worsened: ").append(result.shapeWorsened).append('\n');
-        report.append("  SHAPE improved: ").append(result.shapeImproved).append('\n');
-        report.append("  unchanged: ").append(result.shapeUnchanged).append('\n');
+        report.append("  SHAPE worsened trueExcessTurns: ").append(result.shapeWorsened).append('\n');
+        report.append("  SHAPE improved trueExcessTurns: ").append(result.shapeImproved).append('\n');
+        report.append("  unchanged trueExcessTurns: ").append(result.shapeUnchanged).append('\n');
+        report.append("  SHAPE worsened openGroundExcessTurns: ").append(result.shapeOpenGroundWorsened).append('\n');
+        report.append("  SHAPE improved openGroundExcessTurns: ").append(result.shapeOpenGroundImproved).append('\n');
+        report.append("  unchanged openGroundExcessTurns: ").append(result.shapeOpenGroundUnchanged).append('\n');
+    }
+
+    private static void appendBaselineDiagnostics(StringBuilder report, ProbeResult result)
+    {
+        report.append("Baseline diagnostics").append('\n');
+        report.append("  openGroundSelfCheckPairsChecked: ")
+            .append(result.openGroundSelfCheckPairsChecked).append('\n');
+        report.append("  BASELINE SELF-CHECK FAILED count: ")
+            .append(result.openGroundSelfCheckFailures.size()).append('\n');
+        for (String failure : result.openGroundSelfCheckFailures)
+        {
+            report.append("  ").append(failure).append('\n');
+        }
+        report.append("  BASELINE BUG negativeTrueExcessTurns count: ")
+            .append(result.baselineBugs.size()).append('\n');
+        for (String bug : result.baselineBugs)
+        {
+            report.append("  ").append(bug).append('\n');
+        }
     }
 
     private static void appendStepCountCheck(StringBuilder report, ProbeResult result)
@@ -509,12 +818,66 @@ public final class RouteShapeProbe
         }
     }
 
+    private static void recordBaselineDiagnostics(ProbeResult result, RoutePairMeasurement routePair)
+    {
+        recordBaselineBug(result, "CLIENT", routePair.client);
+        recordBaselineBug(result, "SHAPE", routePair.shape);
+
+        if (!openGroundSelfCheckApplies(routePair.client)
+            && !openGroundSelfCheckApplies(routePair.shape))
+        {
+            return;
+        }
+
+        result.openGroundSelfCheckPairsChecked++;
+        if (routePair.client.minTurnsAmongShortestPaths != 0)
+        {
+            result.openGroundSelfCheckFailures.add(
+                "BASELINE SELF-CHECK FAILED start=" + formatPoint(routePair.client.pair.start)
+                    + " end=" + formatPoint(routePair.client.pair.end)
+                    + " displacement=" + routePair.client.displacement()
+                    + " clientSteps=" + routePair.client.stepCount
+                    + " shapeSteps=" + routePair.shape.stepCount
+                    + " minTurnsAmongShortestPaths=" + routePair.client.minTurnsAmongShortestPaths
+            );
+        }
+    }
+
+    private static void recordBaselineBug(ProbeResult result, String mode, RouteMeasurement measurement)
+    {
+        if (measurement.trueExcessTurns >= 0)
+        {
+            return;
+        }
+
+        result.baselineBugs.add(
+            "BASELINE BUG mode=" + mode
+                + " start=" + formatPoint(measurement.pair.start)
+                + " end=" + formatPoint(measurement.pair.end)
+                + " displacement=" + measurement.displacement()
+                + " steps=" + measurement.stepCount
+                + " actualDirectionChanges=" + measurement.actualDirectionChanges
+                + " minTurnsAmongShortestPaths=" + measurement.minTurnsAmongShortestPaths
+                + " trueExcessTurns=" + measurement.trueExcessTurns
+        );
+    }
+
+    private static boolean openGroundSelfCheckApplies(RouteMeasurement measurement)
+    {
+        int dx = measurement.pair.end.getX() - measurement.pair.start.getX();
+        int dy = measurement.pair.end.getY() - measurement.pair.start.getY();
+        int absDx = Math.abs(dx);
+        int absDy = Math.abs(dy);
+        boolean pureStraightOrDiagonal = dx == 0 || dy == 0 || absDx == absDy;
+        return pureStraightOrDiagonal && measurement.stepCount == Math.max(absDx, absDy);
+    }
+
     private static List<RouteMeasurement> sortedOffenders(List<RouteMeasurement> measurements)
     {
         List<RouteMeasurement> sorted = new ArrayList<>(measurements);
         // Reverse each descending key independently; chaining .reversed() flips the whole prefix.
         sorted.sort(Comparator
-            .comparingInt(RouteMeasurement::excessTurnsValue).reversed()
+            .comparingInt(RouteMeasurement::trueExcessTurnsValue).reversed()
             .thenComparing(Comparator.comparingInt(RouteMeasurement::longestAlternationRunValue).reversed())
             .thenComparing(Comparator.comparingInt(RouteMeasurement::actualDirectionChangesValue).reversed())
             .thenComparing(Comparator.comparingInt(RouteMeasurement::stepCountValue).reversed())
@@ -530,7 +893,7 @@ public final class RouteShapeProbe
         List<RouteMeasurement> controls = new ArrayList<>();
         for (RouteMeasurement measurement : measurements)
         {
-            if (measurement.excessTurns == 0 && measurement.longestPureDiagonalRun > 0)
+            if (measurement.trueExcessTurns == 0 && measurement.longestPureDiagonalRun > 0)
             {
                 controls.add(measurement);
             }
@@ -557,9 +920,9 @@ public final class RouteShapeProbe
             return false;
         }
 
-        int firstExcessTurns = offenders.get(0).excessTurns;
-        int lastExcessTurns = offenders.get(offenders.size() - 1).excessTurns;
-        int maxExcessTurns = maxExcessTurns(measurements);
+        int firstExcessTurns = offenders.get(0).trueExcessTurns;
+        int lastExcessTurns = offenders.get(offenders.size() - 1).trueExcessTurns;
+        int maxExcessTurns = maxTrueExcessTurns(measurements);
         return firstExcessTurns < lastExcessTurns || firstExcessTurns != maxExcessTurns;
     }
 
@@ -569,20 +932,20 @@ public final class RouteShapeProbe
         List<RouteMeasurement> measurements
     )
     {
-        int firstExcessTurns = offenders.isEmpty() ? 0 : offenders.get(0).excessTurns;
-        int lastExcessTurns = offenders.isEmpty() ? 0 : offenders.get(offenders.size() - 1).excessTurns;
-        report.append("  OFFENDER SORT BROKEN firstExcessTurns=").append(firstExcessTurns)
-            .append(" lastExcessTurns=").append(lastExcessTurns)
-            .append(" maxExcessTurns=").append(maxExcessTurns(measurements))
+        int firstExcessTurns = offenders.isEmpty() ? 0 : offenders.get(0).trueExcessTurns;
+        int lastExcessTurns = offenders.isEmpty() ? 0 : offenders.get(offenders.size() - 1).trueExcessTurns;
+        report.append("  OFFENDER SORT BROKEN firstTrueExcessTurns=").append(firstExcessTurns)
+            .append(" lastTrueExcessTurns=").append(lastExcessTurns)
+            .append(" maxTrueExcessTurns=").append(maxTrueExcessTurns(measurements))
             .append(" measurements=").append(measurements.size()).append('\n');
     }
 
-    private static int maxExcessTurns(List<RouteMeasurement> measurements)
+    private static int maxTrueExcessTurns(List<RouteMeasurement> measurements)
     {
         int maxExcessTurns = Integer.MIN_VALUE;
         for (RouteMeasurement measurement : measurements)
         {
-            maxExcessTurns = Math.max(maxExcessTurns, measurement.excessTurns);
+            maxExcessTurns = Math.max(maxExcessTurns, measurement.trueExcessTurns);
         }
         return measurements.isEmpty() ? 0 : maxExcessTurns;
     }
@@ -611,10 +974,13 @@ public final class RouteShapeProbe
                 .append(" displacement=").append(clientRoute.displacement())
                 .append(" clientSteps=").append(routePair.client.stepCount)
                 .append(" shapeSteps=").append(routePair.shape.stepCount)
-                .append(" clientExcessTurns=").append(routePair.client.excessTurns)
-                .append(" shapeExcessTurns=").append(routePair.shape.excessTurns)
+                .append(" minTurnsAmongShortestPaths=").append(routePair.client.minTurnsAmongShortestPaths)
                 .append(" clientActualDirectionChanges=").append(routePair.client.actualDirectionChanges)
                 .append(" shapeActualDirectionChanges=").append(routePair.shape.actualDirectionChanges)
+                .append(" clientTrueExcessTurns=").append(routePair.client.trueExcessTurns)
+                .append(" shapeTrueExcessTurns=").append(routePair.shape.trueExcessTurns)
+                .append(" clientOpenGroundExcessTurns=").append(routePair.client.openGroundExcessTurns)
+                .append(" shapeOpenGroundExcessTurns=").append(routePair.shape.openGroundExcessTurns)
                 .append('\n');
             report.append("     clientDeltas=").append(routePair.client.deltas).append('\n');
             report.append("     shapeDeltas=").append(routePair.shape.deltas).append('\n');
@@ -659,8 +1025,10 @@ public final class RouteShapeProbe
                 .append(" displacement=").append(route.displacement())
                 .append(" steps=").append(route.stepCount)
                 .append(" actualDirectionChanges=").append(route.actualDirectionChanges)
-                .append(" minimumDirectionChanges=").append(route.minimumDirectionChanges)
-                .append(" excessTurns=").append(route.excessTurns)
+                .append(" minTurnsAmongShortestPaths=").append(route.minTurnsAmongShortestPaths)
+                .append(" trueExcessTurns=").append(route.trueExcessTurns)
+                .append(" openGroundMinimumDirectionChanges=").append(route.openGroundMinimumDirectionChanges)
+                .append(" openGroundExcessTurns=").append(route.openGroundExcessTurns)
                 .append(" longestAlternationRun=").append(route.longestAlternationRun);
             if (includePureDiagonalRun)
             {
@@ -696,7 +1064,17 @@ public final class RouteShapeProbe
         return String.join(", ", parts);
     }
 
-    private static ExcessStats excessStats(List<RouteMeasurement> measurements)
+    private static ExcessStats trueExcessStats(List<RouteMeasurement> measurements)
+    {
+        return excessStats(measurements, true);
+    }
+
+    private static ExcessStats openGroundExcessStats(List<RouteMeasurement> measurements)
+    {
+        return excessStats(measurements, false);
+    }
+
+    private static ExcessStats excessStats(List<RouteMeasurement> measurements, boolean useTrueExcessTurns)
     {
         if (measurements.isEmpty())
         {
@@ -710,7 +1088,9 @@ public final class RouteShapeProbe
         List<Integer> values = new ArrayList<>();
         for (RouteMeasurement measurement : measurements)
         {
-            int excessTurns = measurement.excessTurns;
+            int excessTurns = useTrueExcessTurns
+                ? measurement.trueExcessTurns
+                : measurement.openGroundExcessTurns;
             values.add(excessTurns);
             total += excessTurns;
             if (excessTurns == 0)
@@ -761,19 +1141,21 @@ public final class RouteShapeProbe
         int positiveExcess = 0;
         int zeroExcessDiagonal = 0;
         int maxExcess = Integer.MIN_VALUE;
+        int maxOpenGroundExcess = Integer.MIN_VALUE;
         int maxZeroExcessDiagonalRun = 0;
         for (RouteMeasurement measurement : result.measurements)
         {
-            if (measurement.excessTurns > 0)
+            if (measurement.trueExcessTurns > 0)
             {
                 positiveExcess++;
             }
-            if (measurement.excessTurns == 0 && measurement.longestPureDiagonalRun > 0)
+            if (measurement.trueExcessTurns == 0 && measurement.longestPureDiagonalRun > 0)
             {
                 zeroExcessDiagonal++;
                 maxZeroExcessDiagonalRun = Math.max(maxZeroExcessDiagonalRun, measurement.longestPureDiagonalRun);
             }
-            maxExcess = Math.max(maxExcess, measurement.excessTurns);
+            maxExcess = Math.max(maxExcess, measurement.trueExcessTurns);
+            maxOpenGroundExcess = Math.max(maxOpenGroundExcess, measurement.openGroundExcessTurns);
         }
 
         String dominant;
@@ -791,17 +1173,148 @@ public final class RouteShapeProbe
         }
 
         return String.format(Locale.ROOT,
-            "Summary: In the measured CLIENT sample, %s: %d routes had excessTurns > 0, %d routes had excessTurns == 0 with a pure diagonal run, maxExcessTurns=%d, maxZeroExcessPureDiagonalRun=%d.",
+            "Summary: In the measured CLIENT sample, %s: %d routes had trueExcessTurns > 0, "
+                + "%d routes had trueExcessTurns == 0 with a pure diagonal run, "
+                + "maxTrueExcessTurns=%d, maxOpenGroundExcessTurns=%d, "
+                + "maxZeroExcessPureDiagonalRun=%d.",
             dominant,
             positiveExcess,
             zeroExcessDiagonal,
             maxExcess,
+            maxOpenGroundExcess,
             maxZeroExcessDiagonalRun);
     }
 
     private static String formatPoint(WorldPoint point)
     {
         return point.getX() + "," + point.getY() + "," + point.getPlane();
+    }
+
+    private static final class DirectionStep
+    {
+        private final int dx;
+        private final int dy;
+
+        private DirectionStep(int dx, int dy)
+        {
+            this.dx = dx;
+            this.dy = dy;
+        }
+    }
+
+    private static final class Tile
+    {
+        private final int x;
+        private final int y;
+        private final int plane;
+        private final long key;
+
+        private Tile(int x, int y, int plane, long key)
+        {
+            this.x = x;
+            this.y = y;
+            this.plane = plane;
+            this.key = key;
+        }
+
+        private static Tile from(WorldPoint point)
+        {
+            return new Tile(point.getX(), point.getY(), point.getPlane(), RouteShapeProbe.tileKey(point));
+        }
+    }
+
+    private static final class TurnState
+    {
+        private final int x;
+        private final int y;
+        private final int plane;
+        private final long tileKey;
+        private final int incomingDirection;
+
+        private TurnState(int x, int y, int plane, long tileKey, int incomingDirection)
+        {
+            this.x = x;
+            this.y = y;
+            this.plane = plane;
+            this.tileKey = tileKey;
+            this.incomingDirection = incomingDirection;
+        }
+    }
+
+    private static final class DistanceField
+    {
+        private final Map<Long, Integer> distances;
+        private final boolean unresolved;
+
+        private DistanceField(Map<Long, Integer> distances, boolean unresolved)
+        {
+            this.distances = distances;
+            this.unresolved = unresolved;
+        }
+
+        private static DistanceField resolved(Map<Long, Integer> distances)
+        {
+            return new DistanceField(distances, false);
+        }
+
+        private static DistanceField unresolved()
+        {
+            return new DistanceField(Collections.emptyMap(), true);
+        }
+
+        private Integer distance(WorldPoint point)
+        {
+            return distance(RouteShapeProbe.tileKey(point));
+        }
+
+        private Integer distance(long key)
+        {
+            return distances.get(key);
+        }
+    }
+
+    private static final class BaselineResult
+    {
+        private final int minTurnsAmongShortestPaths;
+        private final BaselineStatus status;
+
+        private BaselineResult(int minTurnsAmongShortestPaths, BaselineStatus status)
+        {
+            this.minTurnsAmongShortestPaths = minTurnsAmongShortestPaths;
+            this.status = status;
+        }
+
+        private static BaselineResult resolved(int minTurnsAmongShortestPaths)
+        {
+            return new BaselineResult(minTurnsAmongShortestPaths, BaselineStatus.RESOLVED);
+        }
+
+        private static BaselineResult unreachable()
+        {
+            return new BaselineResult(0, BaselineStatus.UNREACHABLE);
+        }
+
+        private static BaselineResult unresolved()
+        {
+            return new BaselineResult(0, BaselineStatus.UNRESOLVED);
+        }
+
+        private boolean isUnreachable()
+        {
+            return status == BaselineStatus.UNREACHABLE;
+        }
+
+        private boolean isUnresolved()
+        {
+            return status == BaselineStatus.UNRESOLVED;
+        }
+    }
+
+    private enum BaselineStatus
+    {
+        RESOLVED,
+        UNREACHABLE,
+        UNRESOLVED
     }
 
     private static final class SearchBox
@@ -897,8 +1410,10 @@ public final class RouteShapeProbe
         private final CandidatePair pair;
         private final int stepCount;
         private final int actualDirectionChanges;
-        private final int minimumDirectionChanges;
-        private final int excessTurns;
+        private final int openGroundMinimumDirectionChanges;
+        private final int openGroundExcessTurns;
+        private final int minTurnsAmongShortestPaths;
+        private final int trueExcessTurns;
         private final int longestAlternationRun;
         private final int longestPureDiagonalRun;
         private final String deltas;
@@ -907,8 +1422,10 @@ public final class RouteShapeProbe
             CandidatePair pair,
             int stepCount,
             int actualDirectionChanges,
-            int minimumDirectionChanges,
-            int excessTurns,
+            int openGroundMinimumDirectionChanges,
+            int openGroundExcessTurns,
+            int minTurnsAmongShortestPaths,
+            int trueExcessTurns,
             int longestAlternationRun,
             int longestPureDiagonalRun,
             String deltas
@@ -917,8 +1434,10 @@ public final class RouteShapeProbe
             this.pair = pair;
             this.stepCount = stepCount;
             this.actualDirectionChanges = actualDirectionChanges;
-            this.minimumDirectionChanges = minimumDirectionChanges;
-            this.excessTurns = excessTurns;
+            this.openGroundMinimumDirectionChanges = openGroundMinimumDirectionChanges;
+            this.openGroundExcessTurns = openGroundExcessTurns;
+            this.minTurnsAmongShortestPaths = minTurnsAmongShortestPaths;
+            this.trueExcessTurns = trueExcessTurns;
             this.longestAlternationRun = longestAlternationRun;
             this.longestPureDiagonalRun = longestPureDiagonalRun;
             this.deltas = deltas;
@@ -929,9 +1448,9 @@ public final class RouteShapeProbe
             return (pair.end.getX() - pair.start.getX()) + "/" + (pair.end.getY() - pair.start.getY());
         }
 
-        private int excessTurnsValue()
+        private int trueExcessTurnsValue()
         {
-            return excessTurns;
+            return trueExcessTurns;
         }
 
         private int longestAlternationRunValue()
@@ -1023,6 +1542,8 @@ public final class RouteShapeProbe
         private int clientOnlySolved;
         private int shapeOnlySolved;
         private int neitherSolved;
+        private int baselineUnreachable;
+        private int baselineUnresolved;
 
         private BoxResult(SearchBox box)
         {
@@ -1037,16 +1558,26 @@ public final class RouteShapeProbe
         private final List<RouteMeasurement> shapeMeasurements = new ArrayList<>();
         private final List<RoutePairMeasurement> routePairs = new ArrayList<>();
         private final List<RoutePairMeasurement> shapeLongerExamples = new ArrayList<>();
-        private final Map<Integer, Integer> excessDistribution = new TreeMap<>();
-        private final Map<Integer, Integer> shapeExcessDistribution = new TreeMap<>();
+        private final List<String> baselineBugs = new ArrayList<>();
+        private final List<String> openGroundSelfCheckFailures = new ArrayList<>();
+        private final Map<Integer, Integer> trueExcessDistribution = new TreeMap<>();
+        private final Map<Integer, Integer> shapeTrueExcessDistribution = new TreeMap<>();
+        private final Map<Integer, Integer> openGroundExcessDistribution = new TreeMap<>();
+        private final Map<Integer, Integer> shapeOpenGroundExcessDistribution = new TreeMap<>();
         private int attempted;
         private int solved;
         private int clientOnlySolved;
         private int shapeOnlySolved;
         private int neitherSolved;
+        private int baselineUnreachable;
+        private int baselineUnresolved;
+        private int openGroundSelfCheckPairsChecked;
         private int shapeImproved;
         private int shapeWorsened;
         private int shapeUnchanged;
+        private int shapeOpenGroundImproved;
+        private int shapeOpenGroundWorsened;
+        private int shapeOpenGroundUnchanged;
         private int differentStepCounts;
         private int shapeLonger;
         private boolean hitGlobalCap;
@@ -1059,14 +1590,16 @@ public final class RouteShapeProbe
             measurements.add(clientMeasurement);
             shapeMeasurements.add(shapeMeasurement);
             routePairs.add(routePair);
-            excessDistribution.merge(clientMeasurement.excessTurns, 1, Integer::sum);
-            shapeExcessDistribution.merge(shapeMeasurement.excessTurns, 1, Integer::sum);
+            trueExcessDistribution.merge(clientMeasurement.trueExcessTurns, 1, Integer::sum);
+            shapeTrueExcessDistribution.merge(shapeMeasurement.trueExcessTurns, 1, Integer::sum);
+            openGroundExcessDistribution.merge(clientMeasurement.openGroundExcessTurns, 1, Integer::sum);
+            shapeOpenGroundExcessDistribution.merge(shapeMeasurement.openGroundExcessTurns, 1, Integer::sum);
 
-            if (shapeMeasurement.excessTurns < clientMeasurement.excessTurns)
+            if (shapeMeasurement.trueExcessTurns < clientMeasurement.trueExcessTurns)
             {
                 shapeImproved++;
             }
-            else if (shapeMeasurement.excessTurns > clientMeasurement.excessTurns)
+            else if (shapeMeasurement.trueExcessTurns > clientMeasurement.trueExcessTurns)
             {
                 shapeWorsened++;
             }
@@ -1074,6 +1607,21 @@ public final class RouteShapeProbe
             {
                 shapeUnchanged++;
             }
+
+            if (shapeMeasurement.openGroundExcessTurns < clientMeasurement.openGroundExcessTurns)
+            {
+                shapeOpenGroundImproved++;
+            }
+            else if (shapeMeasurement.openGroundExcessTurns > clientMeasurement.openGroundExcessTurns)
+            {
+                shapeOpenGroundWorsened++;
+            }
+            else
+            {
+                shapeOpenGroundUnchanged++;
+            }
+
+            RouteShapeProbe.recordBaselineDiagnostics(this, routePair);
 
             if (shapeMeasurement.stepCount != clientMeasurement.stepCount)
             {

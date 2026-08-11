@@ -68,7 +68,7 @@ public final class CollisionMapBuilder
     private static final int FLAG_NORTH_DOOR = 2;
     private static final int FLAG_EAST_DOOR = 3;
 
-    private static final String DEFAULT_ZIP = "collision-map-v2.zip";
+    private static final String DEFAULT_ZIP = "build/collision-map-v2.zip";
     private static final String PROOF_FILE = "tools/route-a-live-mismatches.txt";
     private static final String REPORT_FILE = "tools/collision-map-v2-report.txt";
     private static final int STILL_BLOCKED_EXAMPLE_LIMIT = 30;

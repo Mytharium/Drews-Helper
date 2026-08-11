@@ -1,11 +1,12 @@
 Route shape probe
 boxes: 3200,3200,3240,3240,2 3220,3210,3260,3240,0
-pointStride: 10 maxPairsPerBox: 300 maxTotalPairs: 1800
+pointStride: 10 maxPairsPerBox: 300 maxTotalPairs: 1800 baselineStateCapPerPass: 500000
 Caveat: SHAPE uses solveWithShapeRankingWithoutLocalWalkingOverrides, which also disables local walking overrides; this comparison varies shape ranking and local-walking override handling together.
+Note: trueExcessTurns is the trustworthy figure; the open-ground excessTurns number is retained only to show the bias.
 
 Box counts
-  3200,3200,3240,3240,2 candidatePairs=300 attempted=300 solved=246 clientOnlySolved=0 shapeOnlySolved=0 neitherSolved=54
-  3220,3210,3260,3240,0 candidatePairs=300 attempted=300 solved=106 clientOnlySolved=0 shapeOnlySolved=0 neitherSolved=194
+  3200,3200,3240,3240,2 candidatePairs=300 attempted=300 solved=246 clientOnlySolved=0 shapeOnlySolved=0 neitherSolved=54 baselineUnreachable=0 BASELINE_UNRESOLVED=0
+  3220,3210,3260,3240,0 candidatePairs=300 attempted=300 solved=106 clientOnlySolved=0 shapeOnlySolved=0 neitherSolved=194 baselineUnreachable=0 BASELINE_UNRESOLVED=0
 
 Totals
   pairsAttempted: 600
@@ -15,81 +16,112 @@ Totals
   clientOnlySolved: 0
   shapeOnlySolved: 0
   neitherSolved: 248
+  baselineUnreachableSkipped: 0
+  BASELINE_UNRESOLVED skipped: 0
+
+Baseline diagnostics
+  openGroundSelfCheckPairsChecked: 56
+  BASELINE SELF-CHECK FAILED count: 20
+  BASELINE SELF-CHECK FAILED start=3200,3200,2 end=3240,3200,2 displacement=40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3200,3230,2 end=3240,3230,2 displacement=40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3210,3200,2 end=3210,3240,2 displacement=0/40 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3210,3240,2 end=3210,3200,2 displacement=0/-40 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3240,3200,2 end=3200,3200,2 displacement=-40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3240,3230,2 end=3200,3230,2 displacement=-40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3200,3230,2 end=3230,3230,2 displacement=30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3210,3200,2 end=3210,3230,2 displacement=0/30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3210,3200,2 end=3240,3200,2 displacement=30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3210,3230,2 end=3210,3200,2 displacement=0/-30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3230,3210,2 end=3230,3240,2 displacement=0/30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3230,3230,2 end=3200,3230,2 displacement=-30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3230,3240,2 end=3230,3210,2 displacement=0/-30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3240,3200,2 end=3210,3200,2 displacement=-30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
+  BASELINE SELF-CHECK FAILED start=3230,3230,0 end=3260,3230,0 displacement=30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=6
+  BASELINE SELF-CHECK FAILED start=3260,3230,0 end=3230,3230,0 displacement=-30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=6
+  BASELINE SELF-CHECK FAILED start=3220,3210,0 end=3220,3230,0 displacement=0/20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=4
+  BASELINE SELF-CHECK FAILED start=3220,3230,0 end=3220,3210,0 displacement=0/-20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=4
+  BASELINE SELF-CHECK FAILED start=3230,3210,0 end=3230,3230,0 displacement=0/20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=2
+  BASELINE SELF-CHECK FAILED start=3230,3230,0 end=3230,3210,0 displacement=0/-20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=2
+  BASELINE BUG negativeTrueExcessTurns count: 0
 
 Excess turns distributions
-  excessTurnsDistribution: CLIENT 0=71, 1=13, 2=48, 3=46, 4=38, 5=24, 6=24, 7=9, 8=16, 9=5, 10=7, 11=5, 12=8, 13=5, 14=4, 15=4, 16=3, 19=3, 20=2, 23=2, 24=3, 25=3, 26=1, 27=1, 28=2, 29=2, 31=1, 33=2 | SHAPE 0=36, 2=2, 3=17, 4=28, 5=13, 6=31, 7=7, 8=16, 9=13, 10=12, 11=18, 12=15, 13=9, 14=14, 15=10, 16=19, 17=6, 18=42, 19=6, 20=2, 21=5, 22=3, 24=4, 25=3, 26=3, 27=1, 28=1, 30=2, 31=5, 32=4, 34=2, 36=1, 38=2
+  trueExcessTurnsDistribution: CLIENT 0=105, 1=71, 2=65, 3=45, 4=20, 5=18, 6=7, 7=8, 8=8, 9=1, 10=3, 12=1 | SHAPE 0=50, 1=10, 2=33, 3=23, 4=21, 5=24, 6=14, 7=18, 8=14, 9=16, 10=14, 11=13, 12=18, 13=8, 14=15, 15=6, 16=6, 17=6, 18=33, 22=1, 23=1, 24=2, 29=1, 31=1, 32=1, 34=1, 37=2
+  openGroundExcessTurnsDistribution: CLIENT 0=71, 1=13, 2=48, 3=46, 4=38, 5=24, 6=24, 7=9, 8=16, 9=5, 10=7, 11=5, 12=8, 13=5, 14=4, 15=4, 16=3, 19=3, 20=2, 23=2, 24=3, 25=3, 26=1, 27=1, 28=2, 29=2, 31=1, 33=2 | SHAPE 0=36, 2=2, 3=17, 4=28, 5=13, 6=31, 7=7, 8=16, 9=13, 10=12, 11=18, 12=15, 13=9, 14=14, 15=10, 16=19, 17=6, 18=42, 19=6, 20=2, 21=5, 22=3, 24=4, 25=3, 26=3, 27=1, 28=1, 30=2, 31=5, 32=4, 34=2, 36=1, 38=2
 
 Mode aggregates
-  CLIENT pairsMeasured=352 meanExcessTurns=5.41 medianExcessTurns=3.00 countExcessTurnsEq0=71 countExcessTurnsGt0=281 maxExcessTurns=33
-  SHAPE pairsMeasured=352 meanExcessTurns=11.33 medianExcessTurns=11.00 countExcessTurnsEq0=36 countExcessTurnsGt0=316 maxExcessTurns=38
+  CLIENT pairsMeasured=352 trueMean=2.04 trueMedian=1.50 trueCountEq0=105 trueCountGt0=247 trueMax=12 openGroundMean=5.41 openGroundMedian=3.00 openGroundCountEq0=71 openGroundCountGt0=281 openGroundMax=33
+  SHAPE pairsMeasured=352 trueMean=7.96 trueMedian=7.00 trueCountEq0=50 trueCountGt0=302 trueMax=37 openGroundMean=11.33 openGroundMedian=11.00 openGroundCountEq0=36 openGroundCountGt0=316 openGroundMax=38
 
 Per-pair comparison
-  SHAPE worsened: 249
-  SHAPE improved: 14
-  unchanged: 89
+  SHAPE worsened trueExcessTurns: 249
+  SHAPE improved trueExcessTurns: 14
+  unchanged trueExcessTurns: 89
+  SHAPE worsened openGroundExcessTurns: 249
+  SHAPE improved openGroundExcessTurns: 14
+  unchanged openGroundExcessTurns: 89
 
 Step-count check
   correctnessGate: SHAPE must not make routes longer
   differentStepCounts: 0
   SHAPE-LONGER count: 0
 
-Top 15 offenders by CLIENT excessTurns
-  1. start=3250,3210,0 end=3250,3230,0 displacement=0/20 clientSteps=79 shapeSteps=79 clientExcessTurns=33 shapeExcessTurns=32 clientActualDirectionChanges=33 shapeActualDirectionChanges=32
-     clientDeltas=0/1 -1/1 0/1 0/1 0/1 0/1 -1/0 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-     shapeDeltas=0/1 -1/1 0/1 0/1 0/1 0/1 -1/0 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/0 1/0 1/1 1/0 1/0 1/1 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 -1/-1 0/-1 1/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  2. start=3250,3230,0 end=3250,3210,0 displacement=0/-20 clientSteps=79 shapeSteps=79 clientExcessTurns=33 shapeExcessTurns=32 clientActualDirectionChanges=33 shapeActualDirectionChanges=32
-     clientDeltas=0/1 0/1 0/1 0/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/1 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1
-     shapeDeltas=0/1 0/1 0/1 0/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 0/-1 -1/-1 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 1/-1 1/-1 0/-1 -1/-1 0/-1 1/-1 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1
-  3. start=3240,3210,0 end=3250,3230,0 displacement=10/20 clientSteps=75 shapeSteps=75 clientExcessTurns=31 shapeExcessTurns=31 clientActualDirectionChanges=32 shapeActualDirectionChanges=32
+Top 15 offenders by CLIENT trueExcessTurns
+  1. start=3240,3210,0 end=3250,3230,0 displacement=10/20 clientSteps=75 shapeSteps=75 minTurnsAmongShortestPaths=20 clientActualDirectionChanges=32 shapeActualDirectionChanges=32 clientTrueExcessTurns=12 shapeTrueExcessTurns=12 clientOpenGroundExcessTurns=31 shapeOpenGroundExcessTurns=31
      clientDeltas=0/1 0/1 0/1 0/1 1/0 1/0 1/1 0/1 0/1 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
      shapeDeltas=0/1 0/1 0/1 0/1 1/0 1/0 1/1 0/1 0/1 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/1 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  4. start=3220,3230,0 end=3250,3230,0 displacement=30/0 clientSteps=82 shapeSteps=82 clientExcessTurns=29 shapeExcessTurns=28 clientActualDirectionChanges=29 shapeActualDirectionChanges=28
-     clientDeltas=1/0 1/-1 1/-1 1/-1 1/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 1/0 1/0 1/-1 1/0 1/0 1/0 1/0 1/0 1/1 1/1 1/1 1/1 1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-     shapeDeltas=1/0 1/-1 1/-1 1/-1 1/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 1/0 1/0 1/-1 1/0 1/0 1/0 0/1 0/1 1/1 1/1 1/1 1/1 1/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  5. start=3250,3230,0 end=3220,3210,0 displacement=-30/-20 clientSteps=79 shapeSteps=79 clientExcessTurns=29 shapeExcessTurns=36 clientActualDirectionChanges=30 shapeActualDirectionChanges=37
+  2. start=3250,3210,0 end=3250,3230,0 displacement=0/20 clientSteps=79 shapeSteps=79 minTurnsAmongShortestPaths=23 clientActualDirectionChanges=33 shapeActualDirectionChanges=32 clientTrueExcessTurns=10 shapeTrueExcessTurns=9 clientOpenGroundExcessTurns=33 shapeOpenGroundExcessTurns=32
+     clientDeltas=0/1 -1/1 0/1 0/1 0/1 0/1 -1/0 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
+     shapeDeltas=0/1 -1/1 0/1 0/1 0/1 0/1 -1/0 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/0 1/0 1/1 1/0 1/0 1/1 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 -1/-1 0/-1 1/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
+  3. start=3240,3210,0 end=3260,3240,0 displacement=20/30 clientSteps=50 shapeSteps=50 minTurnsAmongShortestPaths=10 clientActualDirectionChanges=20 shapeActualDirectionChanges=22 clientTrueExcessTurns=10 shapeTrueExcessTurns=12 clientOpenGroundExcessTurns=19 shapeOpenGroundExcessTurns=21
+     clientDeltas=0/1 0/1 0/1 0/1 1/0 1/0 1/1 0/1 0/1 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/0 1/0 1/1 1/0 1/0 1/1 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1
+     shapeDeltas=0/1 0/1 0/1 0/1 1/0 1/0 1/1 1/1 -1/1 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1
+  4. start=3250,3230,0 end=3250,3210,0 displacement=0/-20 clientSteps=79 shapeSteps=79 minTurnsAmongShortestPaths=23 clientActualDirectionChanges=33 shapeActualDirectionChanges=32 clientTrueExcessTurns=10 shapeTrueExcessTurns=9 clientOpenGroundExcessTurns=33 shapeOpenGroundExcessTurns=32
+     clientDeltas=0/1 0/1 0/1 0/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/1 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1
+     shapeDeltas=0/1 0/1 0/1 0/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 0/-1 -1/-1 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 1/-1 1/-1 0/-1 -1/-1 0/-1 1/-1 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1
+  5. start=3250,3230,0 end=3220,3210,0 displacement=-30/-20 clientSteps=79 shapeSteps=79 minTurnsAmongShortestPaths=21 clientActualDirectionChanges=30 shapeActualDirectionChanges=37 clientTrueExcessTurns=9 shapeTrueExcessTurns=16 clientOpenGroundExcessTurns=29 shapeOpenGroundExcessTurns=36
      clientDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/-1 -1/0 -1/0 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 0/-1 0/-1
      shapeDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 0/1 0/1 0/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 0/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 0/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/0 0/-1 0/-1
-  6. start=3220,3210,0 end=3250,3230,0 displacement=30/20 clientSteps=79 shapeSteps=79 clientExcessTurns=28 shapeExcessTurns=34 clientActualDirectionChanges=29 shapeActualDirectionChanges=35
+  6. start=3220,3230,0 end=3250,3230,0 displacement=30/0 clientSteps=82 shapeSteps=82 minTurnsAmongShortestPaths=21 clientActualDirectionChanges=29 shapeActualDirectionChanges=28 clientTrueExcessTurns=8 shapeTrueExcessTurns=7 clientOpenGroundExcessTurns=29 shapeOpenGroundExcessTurns=28
+     clientDeltas=1/0 1/-1 1/-1 1/-1 1/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 1/0 1/0 1/-1 1/0 1/0 1/0 1/0 1/0 1/1 1/1 1/1 1/1 1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
+     shapeDeltas=1/0 1/-1 1/-1 1/-1 1/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 1/0 1/0 1/-1 1/0 1/0 1/0 0/1 0/1 1/1 1/1 1/1 1/1 1/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
+  7. start=3220,3210,0 end=3250,3230,0 displacement=30/20 clientSteps=79 shapeSteps=79 minTurnsAmongShortestPaths=21 clientActualDirectionChanges=29 shapeActualDirectionChanges=35 clientTrueExcessTurns=8 shapeTrueExcessTurns=14 clientOpenGroundExcessTurns=28 shapeOpenGroundExcessTurns=34
      clientDeltas=0/1 0/1 1/0 1/1 1/1 1/1 1/1 1/1 1/0 1/0 1/1 1/0 1/0 1/0 1/0 1/1 1/1 1/1 1/1 1/1 1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
      shapeDeltas=0/1 0/1 1/0 1/1 1/1 1/1 1/1 1/1 1/0 1/0 1/1 1/0 1/0 1/0 1/0 1/1 1/1 1/1 1/1 1/1 1/1 0/1 0/1 1/0 1/-1 1/0 1/0 1/1 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1 -1/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  7. start=3250,3230,0 end=3220,3230,0 displacement=-30/0 clientSteps=82 shapeSteps=82 clientExcessTurns=28 shapeExcessTurns=30 clientActualDirectionChanges=28 shapeActualDirectionChanges=30
-     clientDeltas=0/1 -1/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/0 -1/0 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 0/-1 0/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 0/1 0/1 0/1 0/1 0/1
-     shapeDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 0/-1 0/-1 -1/0 -1/0 -1/0 -1/1 -1/0 -1/0 0/1 0/1 0/1 0/1 0/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/0
-  8. start=3250,3230,0 end=3220,3240,0 displacement=-30/10 clientSteps=75 shapeSteps=75 clientExcessTurns=27 shapeExcessTurns=25 clientActualDirectionChanges=28 shapeActualDirectionChanges=26
-     clientDeltas=0/1 0/1 -1/1 -1/0 -1/0 0/1 -1/1 -1/1 -1/1 -1/1 0/1 0/1 -1/1 -1/1 -1/1 1/1 0/1 0/1 0/1 0/1 0/1 1/1 1/1 1/1 0/1 0/1 0/1 0/1 -1/1 1/1 0/1 0/1 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 1/0 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/-1 0/-1 -1/-1 -1/0 -1/0 0/-1 -1/-1 -1/0 -1/0 -1/-1 -1/-1
-     shapeDeltas=-1/1 0/1 0/1 -1/0 -1/0 -1/1 -1/1 -1/1 -1/1 0/1 0/1 0/1 -1/1 -1/1 -1/1 1/1 0/1 0/1 0/1 0/1 0/1 1/1 1/1 1/1 0/1 0/1 0/1 0/1 -1/1 1/1 0/1 0/1 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/-1 1/-1 1/0 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/-1 0/-1 -1/0 -1/0 0/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/0
-  9. start=3250,3230,0 end=3230,3220,0 displacement=-20/-10 clientSteps=68 shapeSteps=68 clientExcessTurns=26 shapeExcessTurns=27 clientActualDirectionChanges=27 shapeActualDirectionChanges=28
-     clientDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/0 0/1
-     shapeDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 0/-1 0/-1 -1/-1 -1/0 -1/0 -1/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/0 0/1
-  10. start=3230,3210,0 end=3250,3230,0 displacement=20/20 clientSteps=72 shapeSteps=72 clientExcessTurns=25 shapeExcessTurns=31 clientActualDirectionChanges=25 shapeActualDirectionChanges=31
-     clientDeltas=1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-     shapeDeltas=1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/-1 1/0 1/0 1/0 1/0 1/1 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1 -1/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  11. start=3230,3230,0 end=3250,3230,0 displacement=20/0 clientSteps=65 shapeSteps=65 clientExcessTurns=25 shapeExcessTurns=24 clientActualDirectionChanges=25 shapeActualDirectionChanges=24
+  8. start=3230,3230,0 end=3250,3230,0 displacement=20/0 clientSteps=65 shapeSteps=65 minTurnsAmongShortestPaths=17 clientActualDirectionChanges=25 shapeActualDirectionChanges=24 clientTrueExcessTurns=8 shapeTrueExcessTurns=7 clientOpenGroundExcessTurns=25 shapeOpenGroundExcessTurns=24
      clientDeltas=1/0 1/-1 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
      shapeDeltas=1/0 1/-1 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  12. start=3240,3220,0 end=3250,3230,0 displacement=10/10 clientSteps=62 shapeSteps=62 clientExcessTurns=25 shapeExcessTurns=31 clientActualDirectionChanges=25 shapeActualDirectionChanges=31
+  9. start=3260,3240,0 end=3220,3240,0 displacement=-40/0 clientSteps=51 shapeSteps=51 minTurnsAmongShortestPaths=11 clientActualDirectionChanges=19 shapeActualDirectionChanges=16 clientTrueExcessTurns=8 shapeTrueExcessTurns=5 clientOpenGroundExcessTurns=19 shapeOpenGroundExcessTurns=16
+     clientDeltas=0/-1 -1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 0/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 0/1 -1/1 -1/1 -1/1 -1/1 -1/0 -1/1 -1/1 -1/0 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1
+     shapeDeltas=-1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/0 -1/1 -1/1 -1/1 -1/1 -1/1 -1/0
+  10. start=3250,3210,0 end=3260,3240,0 displacement=10/30 clientSteps=54 shapeSteps=54 minTurnsAmongShortestPaths=13 clientActualDirectionChanges=21 shapeActualDirectionChanges=21 clientTrueExcessTurns=8 shapeTrueExcessTurns=8 clientOpenGroundExcessTurns=20 shapeOpenGroundExcessTurns=20
+     clientDeltas=0/1 -1/1 0/1 0/1 0/1 0/1 -1/0 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/0 1/0 1/1 1/0 1/0 1/1 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1
+     shapeDeltas=0/1 -1/1 0/1 0/1 0/1 0/1 -1/0 0/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 0/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/0 1/0 1/1 1/0 1/0 1/1 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1
+  11. start=3260,3240,0 end=3250,3210,0 displacement=-10/-30 clientSteps=54 shapeSteps=54 minTurnsAmongShortestPaths=13 clientActualDirectionChanges=21 shapeActualDirectionChanges=22 clientTrueExcessTurns=8 shapeTrueExcessTurns=9 clientOpenGroundExcessTurns=20 shapeOpenGroundExcessTurns=21
+     clientDeltas=0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/1 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1
+     shapeDeltas=0/-1 0/-1 -1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 0/-1 -1/-1 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 1/-1 1/-1 0/-1 -1/-1 0/-1 1/-1 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1
+  12. start=3260,3230,0 end=3250,3210,0 displacement=-10/-20 clientSteps=44 shapeSteps=44 minTurnsAmongShortestPaths=12 clientActualDirectionChanges=20 shapeActualDirectionChanges=17 clientTrueExcessTurns=8 shapeTrueExcessTurns=5 clientOpenGroundExcessTurns=19 shapeOpenGroundExcessTurns=16
+     clientDeltas=-1/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/1 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1
+     shapeDeltas=-1/-1 -1/-1 -1/-1 -1/-1 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 1/-1 1/-1 0/-1 -1/-1 0/-1 1/-1 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 1/-1 0/-1
+  13. start=3220,3230,0 end=3250,3210,0 displacement=30/-20 clientSteps=41 shapeSteps=41 minTurnsAmongShortestPaths=8 clientActualDirectionChanges=16 shapeActualDirectionChanges=22 clientTrueExcessTurns=8 shapeTrueExcessTurns=14 clientOpenGroundExcessTurns=15 shapeOpenGroundExcessTurns=21
+     clientDeltas=1/0 1/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1 1/-1 1/-1 1/0 1/0 1/-1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/-1 1/0 1/-1 1/0 1/0 1/1 1/0 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 0/-1 1/-1
+     shapeDeltas=1/0 1/-1 1/-1 1/-1 1/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 1/0 1/0 1/-1 1/0 1/0 1/0 1/1 1/0 1/0 1/0 1/-1 1/-1 1/0 1/-1 1/-1 1/1 1/0 1/-1 1/0 1/0 1/1 1/0 0/-1 1/0 0/-1 -1/-1 0/-1 0/-1 1/-1 1/-1
+  14. start=3230,3210,0 end=3250,3230,0 displacement=20/20 clientSteps=72 shapeSteps=72 minTurnsAmongShortestPaths=18 clientActualDirectionChanges=25 shapeActualDirectionChanges=31 clientTrueExcessTurns=7 shapeTrueExcessTurns=13 clientOpenGroundExcessTurns=25 shapeOpenGroundExcessTurns=31
+     clientDeltas=1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
+     shapeDeltas=1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/-1 1/0 1/0 1/0 1/0 1/1 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1 -1/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
+  15. start=3240,3220,0 end=3250,3230,0 displacement=10/10 clientSteps=62 shapeSteps=62 minTurnsAmongShortestPaths=18 clientActualDirectionChanges=25 shapeActualDirectionChanges=31 clientTrueExcessTurns=7 shapeTrueExcessTurns=13 clientOpenGroundExcessTurns=25 shapeOpenGroundExcessTurns=31
      clientDeltas=1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
      shapeDeltas=1/1 0/1 -1/1 -1/1 0/1 0/1 1/0 1/-1 1/0 1/0 1/0 1/0 1/1 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1 -1/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  13. start=3230,3220,0 end=3250,3230,0 displacement=20/10 clientSteps=68 shapeSteps=68 clientExcessTurns=24 shapeExcessTurns=25 clientActualDirectionChanges=25 shapeActualDirectionChanges=26
-     clientDeltas=0/-1 1/0 1/0 1/0 1/0 1/1 1/1 1/1 1/1 1/1 0/1 0/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 0/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-     shapeDeltas=0/-1 1/0 1/0 0/1 0/1 1/1 1/1 1/1 1/1 1/0 1/0 1/1 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/0 1/1 1/0 1/0 1/0 1/1 1/0 1/1 0/1 1/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 -1/0 -1/0 -1/0 -1/-1 0/-1 0/-1 0/-1 1/0 0/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/-1 -1/-1 -1/0 0/-1 0/-1 0/-1 0/-1
-  14. start=3250,3230,0 end=3230,3230,0 displacement=-20/0 clientSteps=65 shapeSteps=65 clientExcessTurns=24 shapeExcessTurns=26 clientActualDirectionChanges=24 shapeActualDirectionChanges=26
-     clientDeltas=0/1 -1/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/1 -1/1 -1/1
-     shapeDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 -1/1 -1/1 -1/1 -1/0
-  15. start=3250,3230,0 end=3230,3210,0 displacement=-20/-20 clientSteps=72 shapeSteps=72 clientExcessTurns=24 shapeExcessTurns=31 clientActualDirectionChanges=24 shapeActualDirectionChanges=31
-     clientDeltas=-1/1 0/1 0/1 1/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 -1/1 0/1 1/1 1/1 1/0 1/0 1/0 0/-1 1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1
-     shapeDeltas=0/1 0/1 0/1 0/1 1/0 1/1 1/1 1/0 1/0 0/1 0/1 0/1 0/1 -1/0 0/1 0/1 0/1 1/1 1/0 1/0 1/0 1/-1 0/-1 0/-1 1/-1 -1/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 0/-1 -1/-1 0/-1 -1/-1 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/1 -1/0 -1/0 -1/0 -1/-1 -1/0 -1/0 -1/0 -1/0 -1/1 -1/0 0/-1 0/-1 1/-1 1/-1 0/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1
 
-Top 5 CLIENT zero-excess routes by pure diagonal run
-  1. start=3200,3240,2 end=3240,3220,2 displacement=40/-20 steps=40 actualDirectionChanges=1 minimumDirectionChanges=1 excessTurns=0 longestAlternationRun=1 longestPureDiagonalRun=20
+Top 5 CLIENT zero-true-excess routes by pure diagonal run
+  1. start=3200,3240,2 end=3230,3210,2 displacement=30/-30 steps=33 actualDirectionChanges=3 minTurnsAmongShortestPaths=3 trueExcessTurns=0 openGroundMinimumDirectionChanges=0 openGroundExcessTurns=3 longestAlternationRun=1 longestPureDiagonalRun=26
+     deltas=1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 0/-1 0/-1 0/-1 1/0 1/0 1/0 1/-1
+  2. start=3210,3210,2 end=3240,3240,2 displacement=30/30 steps=33 actualDirectionChanges=3 minTurnsAmongShortestPaths=3 trueExcessTurns=0 openGroundMinimumDirectionChanges=0 openGroundExcessTurns=3 longestAlternationRun=1 longestPureDiagonalRun=26
+     deltas=1/1 1/0 1/0 1/0 0/1 0/1 0/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1
+  3. start=3230,3210,2 end=3200,3240,2 displacement=-30/30 steps=33 actualDirectionChanges=3 minTurnsAmongShortestPaths=3 trueExcessTurns=0 openGroundMinimumDirectionChanges=0 openGroundExcessTurns=3 longestAlternationRun=1 longestPureDiagonalRun=26
+     deltas=-1/1 -1/0 -1/0 -1/0 0/1 0/1 0/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1
+  4. start=3240,3240,2 end=3210,3210,2 displacement=-30/-30 steps=33 actualDirectionChanges=3 minTurnsAmongShortestPaths=3 trueExcessTurns=0 openGroundMinimumDirectionChanges=0 openGroundExcessTurns=3 longestAlternationRun=1 longestPureDiagonalRun=26
+     deltas=-1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 -1/-1 0/-1 0/-1 0/-1 -1/0 -1/0 -1/0 -1/-1
+  5. start=3200,3240,2 end=3240,3220,2 displacement=40/-20 steps=40 actualDirectionChanges=1 minTurnsAmongShortestPaths=1 trueExcessTurns=0 openGroundMinimumDirectionChanges=1 openGroundExcessTurns=0 longestAlternationRun=1 longestPureDiagonalRun=20
      deltas=1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1
-  2. start=3220,3200,2 end=3200,3240,2 displacement=-20/40 steps=40 actualDirectionChanges=1 minimumDirectionChanges=1 excessTurns=0 longestAlternationRun=1 longestPureDiagonalRun=20
-     deltas=0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1
-  3. start=3220,3200,2 end=3240,3240,2 displacement=20/40 steps=40 actualDirectionChanges=1 minimumDirectionChanges=1 excessTurns=0 longestAlternationRun=1 longestPureDiagonalRun=20
-     deltas=0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1 1/1
-  4. start=3240,3200,2 end=3220,3240,2 displacement=-20/40 steps=40 actualDirectionChanges=1 minimumDirectionChanges=1 excessTurns=0 longestAlternationRun=1 longestPureDiagonalRun=20
-     deltas=0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 0/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1 -1/1
-  5. start=3210,3240,2 end=3240,3220,2 displacement=30/-20 steps=30 actualDirectionChanges=1 minimumDirectionChanges=1 excessTurns=0 longestAlternationRun=1 longestPureDiagonalRun=20
-     deltas=1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/0 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1 1/-1
 
-Summary: In the measured CLIENT sample, excess-turn routes dominate: 281 routes had excessTurns > 0, 43 routes had excessTurns == 0 with a pure diagonal run, maxExcessTurns=33, maxZeroExcessPureDiagonalRun=20.
+Summary: In the measured CLIENT sample, excess-turn routes dominate: 247 routes had trueExcessTurns > 0, 77 routes had trueExcessTurns == 0 with a pure diagonal run, maxTrueExcessTurns=12, maxOpenGroundExcessTurns=33, maxZeroExcessPureDiagonalRun=26.

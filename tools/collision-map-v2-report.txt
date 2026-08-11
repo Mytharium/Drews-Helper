@@ -1,7 +1,7 @@
 collision map v2 build
 cache: C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
 project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
-output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\collision-map-v2.zip
+output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\build\collision-map-v2.zip
 report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\collision-map-v2-report.txt
 region selector: defaulted from proof file to 11571 (45_51), 11572 (45_52), 11827 (46_51), 11828 (46_52), 12083 (47_51), 12084 (47_52)
 ROUND TRIP OK 6 regions

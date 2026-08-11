@@ -1408,3 +1408,28 @@ D-0120 (2026-08-10) - An UNKNOWN edge in the v2 collision map defaults to BLOCKE
   This is a floor, not a resting place. UNKNOWN edges are to be resolved with live ground
   truth, and the builder must count and report them every run so the number stays visible
   instead of quietly becoming permanent.
+
+D-0121 (2026-08-11) - Backlog #6 resolved: generated map data is tracked when it SHIPS, not before.
+  Approved by Mytharium 2026-08-11.
+
+  The framing "generated artifacts do not belong in git" is WRONG for this file, and checking how
+  v1 is handled is what settled it:
+      src/main/resources/collision-map.zip   938,345 bytes   TRACKED
+  v1 is not a build artifact - it is the map the plugin loads at runtime, so it must be in git.
+  v2 will need exactly the same treatment. The real question is not "is it generated" but "is it
+  shipped yet", and right now it is not: it holds six regions of experimental output and is
+  regenerated on every builder run.
+
+  RULE, two phases:
+    While experimental - the builder writes to build/collision-map-v2.zip. build/ is already in
+    .gitignore, so no tracked binary churns. DEFAULT_ZIP in CollisionMapBuilder carries this.
+    At ship time - when the full 2,936-region rebuild passes the proof and the loader switches to
+    v2, move the output to src/main/resources/collision-map-v2.zip and track it deliberately in
+    one clean commit, exactly as v1 is tracked.
+
+  Applied: DEFAULT_ZIP changed to build/collision-map-v2.zip (writeZip already creates the parent
+  directory, so no other change was needed); git rm --cached on the stale root copy and the loose
+  file removed, since it regenerates in about seven seconds and an untracked binary at the repo
+  root would sit in git status forever.
+  Verified after: build/collision-map-v2.zip 5,498 bytes, v1 untouched at 938,345, no untracked
+  zip in git status, ROUND TRIP OK 6 regions, still-blocked 753 (unchanged - no regression).
