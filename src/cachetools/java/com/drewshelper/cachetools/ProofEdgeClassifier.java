@@ -57,6 +57,12 @@ public final class ProofEdgeClassifier
     private static final int[] WALL_LOC_TYPES = {0, 1, 2, 3, 9};
 
     /**
+     * Proven OSRS orientation-to-compass mapping. Orientation is read only as a placement fact so
+     * this diagnostic can test whether a wall faces the crossed proof edge.
+     */
+    private static final char[] DIRECTION_BY_ORIENTATION = {'W', 'N', 'E', 'S'};
+
+    /**
      * The cache stores map archives unencrypted, so a zero key means "do not decrypt" and
      * everything parses. This is deliberate, not a placeholder.
      */
@@ -176,12 +182,32 @@ public final class ProofEdgeClassifier
                 classification.openableEdges++;
                 addBreakdown(classification.openableObjects, edgeWalls.wallObjects, true);
                 addDefinitionStats(classification.openableDefinitionStats, edgeWalls.wallObjects);
+                if (hasFacingOpenableWall(edgeWalls.wallObjects))
+                {
+                    classification.openableFacingEdges++;
+                    addPlacementStats(classification.openableFacingPlacementStats, edgeWalls.wallObjects);
+                }
+                else
+                {
+                    classification.openableNotFacingEdges++;
+                    addPlacementStats(classification.openableNotFacingPlacementStats, edgeWalls.wallObjects);
+                }
             }
             else
             {
                 classification.solidEdges++;
                 addBreakdown(classification.solidObjects, edgeWalls.wallObjects, false);
                 addDefinitionStats(classification.solidDefinitionStats, edgeWalls.wallObjects);
+                if (hasFacingNonOpenableWall(edgeWalls.wallObjects))
+                {
+                    classification.solidFacingEdges++;
+                    addPlacementStats(classification.solidFacingPlacementStats, edgeWalls.wallObjects);
+                }
+                else
+                {
+                    classification.solidNotFacingEdges++;
+                    addPlacementStats(classification.solidNotFacingPlacementStats, edgeWalls.wallObjects);
+                }
                 if (allWallPlacementsHaveInteractTypeZero(edgeWalls.wallObjects))
                 {
                     classification.solidInteractTypeZeroEdges++;
@@ -233,6 +259,10 @@ public final class ProofEdgeClassifier
                     location.getId(),
                     name,
                     openStyleAction,
+                    location.getType(),
+                    location.getOrientation(),
+                    tile.nearTile,
+                    wallFacesCrossedEdge(edge, tile.nearTile, location.getOrientation()),
                     def == null ? null : def.getInteractType(),
                     def == null ? null : def.getBlockingMask(),
                     def == null ? null : def.getWallOrDoor(),
@@ -249,6 +279,30 @@ public final class ProofEdgeClassifier
         for (WallObject wallObject : wallObjects)
         {
             if (wallObject.openStyleAction != null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasFacingOpenableWall(List<WallObject> wallObjects)
+    {
+        for (WallObject wallObject : wallObjects)
+        {
+            if (wallObject.openStyleAction != null && wallObject.facesCrossedEdge)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasFacingNonOpenableWall(List<WallObject> wallObjects)
+    {
+        for (WallObject wallObject : wallObjects)
+        {
+            if (wallObject.openStyleAction == null && wallObject.facesCrossedEdge)
             {
                 return true;
             }
@@ -283,6 +337,22 @@ public final class ProofEdgeClassifier
     }
 
     /**
+     * Counts placement fields for orientation split caveats. These are placement counts rather
+     * than edge counts because locType and invalid orientation are properties of individual locs.
+     */
+    private static void addPlacementStats(PlacementStats stats, List<WallObject> wallObjects)
+    {
+        for (WallObject wallObject : wallObjects)
+        {
+            increment(stats.locTypes, String.valueOf(wallObject.locType));
+            if (!isValidOrientation(wallObject.orientation))
+            {
+                increment(stats.invalidOrientations, String.valueOf(wallObject.orientation));
+            }
+        }
+    }
+
+    /**
      * Records declared object-definition fields without treating them as collision truth. The
      * point of this report is to expose the cache data behind each bucket, not to invent another
      * blocking classifier.
@@ -311,6 +381,28 @@ public final class ProofEdgeClassifier
     private static String formatFieldValue(Boolean value)
     {
         return value == null ? "(missing definition)" : String.valueOf(value);
+    }
+
+    private static boolean wallFacesCrossedEdge(Edge edge, boolean nearTile, int orientation)
+    {
+        if (!isValidOrientation(orientation))
+        {
+            return false;
+        }
+
+        char placementDirection = DIRECTION_BY_ORIENTATION[orientation];
+        char requiredDirection = nearTile ? edge.direction : oppositeForFarTile(edge.direction);
+        return placementDirection == requiredDirection;
+    }
+
+    private static boolean isValidOrientation(int orientation)
+    {
+        return orientation >= 0 && orientation < DIRECTION_BY_ORIENTATION.length;
+    }
+
+    private static char oppositeForFarTile(char direction)
+    {
+        return direction == 'N' ? 'S' : 'W';
     }
 
     /**
@@ -382,6 +474,8 @@ public final class ProofEdgeClassifier
 
     private static String buildReport(Classification classification)
     {
+        validateOrientationSplits(classification);
+
         StringBuilder report = new StringBuilder();
         report.append("proof edges parsed: ").append(classification.parsedEdges).append('\n');
         report.append("inside cache regions: ").append(classification.classifiedEdges).append('\n');
@@ -410,7 +504,31 @@ public final class ProofEdgeClassifier
             classification.solidDefinitionStats);
         report.append('\n');
         appendInteractTypeZeroHypothesis(report, classification);
+        report.append('\n');
+        appendOrientationSplit(report, classification);
+        report.append('\n');
+        appendSolidLocTypeDistributions(report, classification);
+        report.append('\n');
+        appendInvalidOrientationCounts(report, classification);
+        report.append('\n');
+        appendOrientationCaveat(report, classification);
+        report.append('\n');
+        appendOrientationConclusion(report, classification);
         return report.toString();
+    }
+
+    private static void validateOrientationSplits(Classification classification)
+    {
+        if (classification.openableFacingEdges + classification.openableNotFacingEdges
+            != classification.openableEdges)
+        {
+            throw new IllegalStateException("OPENABLE orientation split does not match total");
+        }
+        if (classification.solidFacingEdges + classification.solidNotFacingEdges
+            != classification.solidEdges)
+        {
+            throw new IllegalStateException("SOLID orientation split does not match total");
+        }
     }
 
     private static void appendBucket(StringBuilder report, String name, int count, int total)
@@ -552,6 +670,172 @@ public final class ProofEdgeClassifier
         report.append("scenery; near zero points to a decode disagreement.").append('\n');
     }
 
+    private static void appendOrientationSplit(StringBuilder report, Classification classification)
+    {
+        report.append("orientation-facing split (edge counts):").append('\n');
+        appendSplitBucket(report, "OPENABLE_FACING", classification.openableFacingEdges,
+            classification.openableEdges, "OPENABLE");
+        appendSplitBucket(report, "OPENABLE_NOT_FACING", classification.openableNotFacingEdges,
+            classification.openableEdges, "OPENABLE");
+        appendSplitBucket(report, "SOLID_FACING", classification.solidFacingEdges,
+            classification.solidEdges, "SOLID");
+        appendSplitBucket(report, "SOLID_NOT_FACING", classification.solidNotFacingEdges,
+            classification.solidEdges, "SOLID");
+        report.append("  Mapping used: orientation 0=W, 1=N, 2=E, 3=S. Invalid orientation ");
+        report.append("values are counted below and never assumed to face the edge.").append('\n');
+    }
+
+    private static void appendSplitBucket(
+        StringBuilder report,
+        String name,
+        int count,
+        int parentTotal,
+        String parentName
+    )
+    {
+        report.append("  ").append(String.format(Locale.ROOT, "%-20s", name))
+            .append(" ").append(count)
+            .append(" (").append(percent(count, parentTotal))
+            .append(" of ").append(parentName).append(")").append('\n');
+    }
+
+    private static void appendSolidLocTypeDistributions(
+        StringBuilder report,
+        Classification classification
+    )
+    {
+        report.append("locType distribution by SOLID orientation split (wall placements):").append('\n');
+        appendDistribution(report, "SOLID_FACING", classification.solidFacingPlacementStats.locTypes);
+        appendDistribution(report, "SOLID_NOT_FACING",
+            classification.solidNotFacingPlacementStats.locTypes);
+    }
+
+    private static void appendInvalidOrientationCounts(
+        StringBuilder report,
+        Classification classification
+    )
+    {
+        report.append("invalid orientation values by orientation split (wall placements):").append('\n');
+        appendDistribution(report, "OPENABLE_FACING",
+            classification.openableFacingPlacementStats.invalidOrientations);
+        appendDistribution(report, "OPENABLE_NOT_FACING",
+            classification.openableNotFacingPlacementStats.invalidOrientations);
+        appendDistribution(report, "SOLID_FACING",
+            classification.solidFacingPlacementStats.invalidOrientations);
+        appendDistribution(report, "SOLID_NOT_FACING",
+            classification.solidNotFacingPlacementStats.invalidOrientations);
+    }
+
+    private static void appendOrientationCaveat(
+        StringBuilder report,
+        Classification classification
+    )
+    {
+        report.append("orientation caveat:").append('\n');
+        report.append("  This facing test is rigorous only for locType 0 straight walls. ");
+        report.append("locTypes 1, 2, 3 and 9 are corners or diagonals, where one orientation value ");
+        report.append("does not fully describe every blocked side.").append('\n');
+        appendLocTypeReading(report, "SOLID_FACING",
+            classification.solidFacingPlacementStats.locTypes);
+        appendLocTypeReading(report, "SOLID_NOT_FACING",
+            classification.solidNotFacingPlacementStats.locTypes);
+    }
+
+    private static void appendLocTypeReading(
+        StringBuilder report,
+        String bucketName,
+        Map<String, Integer> locTypes
+    )
+    {
+        Map.Entry<String, Integer> dominant = dominantEntry(locTypes);
+        int total = totalCount(locTypes);
+        if (dominant == null)
+        {
+            report.append("  ").append(bucketName).append(": no wall placements to assess.")
+                .append('\n');
+            return;
+        }
+
+        report.append("  ").append(bucketName).append(": locType ").append(dominant.getKey())
+            .append(" is ").append(dominant.getValue()).append("/")
+            .append(total).append(" placements. ");
+        if (dominant.getValue() * 2 <= total)
+        {
+            report.append("No single locType dominates, so keep the shape caveat attached.");
+        }
+        else if ("0".equals(dominant.getKey()))
+        {
+            report.append("That bucket is dominated by straight walls, so the facing test is sound there.");
+        }
+        else if ("9".equals(dominant.getKey()))
+        {
+            report.append("That bucket is dominated by locType 9, so treat its facing number as caveated.");
+        }
+        else
+        {
+            report.append("That bucket is dominated by a corner or diagonal type, so treat it as caveated.");
+        }
+        report.append('\n');
+    }
+
+    private static Map.Entry<String, Integer> dominantEntry(Map<String, Integer> counts)
+    {
+        Map.Entry<String, Integer> dominant = null;
+        for (Map.Entry<String, Integer> entry : counts.entrySet())
+        {
+            if (dominant == null
+                || entry.getValue() > dominant.getValue()
+                || entry.getValue().equals(dominant.getValue())
+                    && entry.getKey().compareTo(dominant.getKey()) < 0)
+            {
+                dominant = entry;
+            }
+        }
+        return dominant;
+    }
+
+    private static int totalCount(Map<String, Integer> counts)
+    {
+        int total = 0;
+        for (int count : counts.values())
+        {
+            total += count;
+        }
+        return total;
+    }
+
+    private static void appendOrientationConclusion(
+        StringBuilder report,
+        Classification classification
+    )
+    {
+        report.append("orientation conclusion:").append('\n');
+        int difference = Math.abs(classification.solidFacingEdges - classification.solidNotFacingEdges);
+        if (classification.solidEdges == 0 || difference * 10 <= classification.solidEdges)
+        {
+            report.append("  SOLID_FACING and SOLID_NOT_FACING are roughly even (")
+                .append(classification.solidFacingEdges).append(" vs ")
+                .append(classification.solidNotFacingEdges).append("), so this is partly ");
+            report.append("orientation and partly something else; it needs another look.").append('\n');
+        }
+        else if (classification.solidNotFacingEdges > classification.solidFacingEdges)
+        {
+            report.append("  SOLID_NOT_FACING dominates (")
+                .append(classification.solidNotFacingEdges).append("/")
+                .append(classification.solidEdges).append(" SOLID edges), so the classifier was ");
+            report.append("blind to orientation, most SOLID is walls facing elsewhere, and the rebuild case ");
+            report.append("is unaffected or stronger.").append('\n');
+        }
+        else
+        {
+            report.append("  SOLID_FACING dominates (")
+                .append(classification.solidFacingEdges).append("/")
+                .append(classification.solidEdges).append(" SOLID edges), so this is a real ");
+            report.append("disagreement between the cache decode and the live client, and no rebuilt map ");
+            report.append("should ship until it is explained.").append('\n');
+        }
+    }
+
     private static void appendReading(StringBuilder report, Classification classification)
     {
         report.append("reading: ");
@@ -566,9 +850,9 @@ public final class ProofEdgeClassifier
         }
         else
         {
-            report.append("SOLID is ").append(classification.solidEdges).append(", so those edges are a decode ");
-            report.append("disagreement with the live client and the rebuild is not yet trustworthy until that ");
-            report.append("bucket is understood.");
+            report.append("SOLID is ").append(classification.solidEdges).append(", so those edges are the ");
+            report.append("orientation hypothesis test below: either true blockers, or wall placements ");
+            report.append("facing other sides of the two tiles.");
         }
         report.append('\n');
     }
@@ -679,13 +963,21 @@ public final class ProofEdgeClassifier
         private final Map<String, ObjectBreakdown> solidObjects = new HashMap<>();
         private final DefinitionStats openableDefinitionStats = new DefinitionStats();
         private final DefinitionStats solidDefinitionStats = new DefinitionStats();
+        private final PlacementStats openableFacingPlacementStats = new PlacementStats();
+        private final PlacementStats openableNotFacingPlacementStats = new PlacementStats();
+        private final PlacementStats solidFacingPlacementStats = new PlacementStats();
+        private final PlacementStats solidNotFacingPlacementStats = new PlacementStats();
         private final List<String> nothingExamples = new ArrayList<>();
 
         private int classifiedEdges;
         private int missingRegionEdges;
         private int nothingEdges;
         private int openableEdges;
+        private int openableFacingEdges;
+        private int openableNotFacingEdges;
         private int solidEdges;
+        private int solidFacingEdges;
+        private int solidNotFacingEdges;
         private int solidInteractTypeZeroEdges;
 
         private Classification(int parsedEdges)
@@ -721,11 +1013,21 @@ public final class ProofEdgeClassifier
         private final Map<String, Integer> blocksProjectiles = new HashMap<>();
     }
 
+    private static final class PlacementStats
+    {
+        private final Map<String, Integer> locTypes = new HashMap<>();
+        private final Map<String, Integer> invalidOrientations = new HashMap<>();
+    }
+
     private static final class WallObject
     {
         private final int objectId;
         private final String name;
         private final String openStyleAction;
+        private final int locType;
+        private final int orientation;
+        private final boolean nearTile;
+        private final boolean facesCrossedEdge;
         private final Integer interactType;
         private final Integer blockingMask;
         private final Integer wallOrDoor;
@@ -735,6 +1037,10 @@ public final class ProofEdgeClassifier
             int objectId,
             String name,
             String openStyleAction,
+            int locType,
+            int orientation,
+            boolean nearTile,
+            boolean facesCrossedEdge,
             Integer interactType,
             Integer blockingMask,
             Integer wallOrDoor,
@@ -744,6 +1050,10 @@ public final class ProofEdgeClassifier
             this.objectId = objectId;
             this.name = name;
             this.openStyleAction = openStyleAction;
+            this.locType = locType;
+            this.orientation = orientation;
+            this.nearTile = nearTile;
+            this.facesCrossedEdge = facesCrossedEdge;
             this.interactType = interactType;
             this.blockingMask = blockingMask;
             this.wallOrDoor = wallOrDoor;
@@ -769,14 +1079,14 @@ public final class ProofEdgeClassifier
         private List<Tile> tiles()
         {
             List<Tile> tiles = new ArrayList<>(2);
-            tiles.add(new Tile(x, y, plane));
+            tiles.add(new Tile(x, y, plane, true));
             if (direction == 'N')
             {
-                tiles.add(new Tile(x, y + 1, plane));
+                tiles.add(new Tile(x, y + 1, plane, false));
             }
             else
             {
-                tiles.add(new Tile(x + 1, y, plane));
+                tiles.add(new Tile(x + 1, y, plane, false));
             }
             return tiles;
         }
@@ -792,12 +1102,14 @@ public final class ProofEdgeClassifier
         private final int x;
         private final int y;
         private final int plane;
+        private final boolean nearTile;
 
-        private Tile(int x, int y, int plane)
+        private Tile(int x, int y, int plane, boolean nearTile)
         {
             this.x = x;
             this.y = y;
             this.plane = plane;
+            this.nearTile = nearTile;
         }
 
         private int regionId()

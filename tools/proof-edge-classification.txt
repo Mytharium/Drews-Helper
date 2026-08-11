@@ -38,7 +38,7 @@ example NOTHING edges:
   2929,3367,0 N
   2929,3367,0 E
 
-reading: NOTHING edges are places where the proof edge has no cache wall placement on either tile, so those are rebuild wins if the shipped map is stale. OPENABLE edges are the door-aware prize because the cache sees an Open/Close wall object there. SOLID is 787, so those edges are a decode disagreement with the live client and the rebuild is not yet trustworthy until that bucket is understood.
+reading: NOTHING edges are places where the proof edge has no cache wall placement on either tile, so those are rebuild wins if the shipped map is stale. OPENABLE edges are the door-aware prize because the cache sees an Open/Close wall object there. SOLID is 787, so those edges are the orientation hypothesis test below: either true blockers, or wall placements facing other sides of the two tiles.
 
 object definition fields in OPENABLE bucket:
   interactType:
@@ -67,3 +67,42 @@ object definition fields in SOLID bucket:
 interactType == 0 hypothesis:
   SOLID edges where EVERY wall placement on the edge has interactType == 0: 7
   Reading guide: close to the SOLID bucket count above points to non-blocking scenery; near zero points to a decode disagreement.
+
+orientation-facing split (edge counts):
+  OPENABLE_FACING      10 (58.8% of OPENABLE)
+  OPENABLE_NOT_FACING  7 (41.2% of OPENABLE)
+  SOLID_FACING         294 (37.4% of SOLID)
+  SOLID_NOT_FACING     493 (62.6% of SOLID)
+  Mapping used: orientation 0=W, 1=N, 2=E, 3=S. Invalid orientation values are counted below and never assumed to face the edge.
+
+locType distribution by SOLID orientation split (wall placements):
+  SOLID_FACING:
+    9 -> 228
+    1 -> 119
+    3 -> 62
+    0 -> 35
+    2 -> 3
+  SOLID_NOT_FACING:
+    9 -> 298
+    0 -> 279
+    1 -> 117
+    3 -> 19
+    2 -> 10
+
+invalid orientation values by orientation split (wall placements):
+  OPENABLE_FACING:
+    (none)
+  OPENABLE_NOT_FACING:
+    (none)
+  SOLID_FACING:
+    (none)
+  SOLID_NOT_FACING:
+    (none)
+
+orientation caveat:
+  This facing test is rigorous only for locType 0 straight walls. locTypes 1, 2, 3 and 9 are corners or diagonals, where one orientation value does not fully describe every blocked side.
+  SOLID_FACING: locType 9 is 228/447 placements. That bucket is dominated by locType 9, so treat its facing number as caveated.
+  SOLID_NOT_FACING: locType 9 is 298/723 placements. No single locType dominates, so keep the shape caveat attached.
+
+orientation conclusion:
+  SOLID_NOT_FACING dominates (493/787 SOLID edges), so the classifier was blind to orientation, most SOLID is walls facing elsewhere, and the rebuild case is unaffected or stronger.

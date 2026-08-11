@@ -554,3 +554,13 @@ D-0131 (2026-08-10) - ProofEdgeClassifier: measured what the cache says about ev
   cache. Writes tools/proof-edge-classification.txt. Ran clean on the real 226 MB cache in 6s.
   The generated report's own closing paragraph overstates the SOLID finding as a decode
   disagreement - see 02_NEXT_WORK for why that reading is premature.
+
+D-0132 (2026-08-10) - Orientation-facing split resolves most of the SOLID bucket.
+  ProofEdgeClassifier now records each wall placement's locType and orientation, tracks which
+  of the two tiles it came from, and tests whether it faces the crossed edge (near tile: same
+  direction; far tile: opposite). Mapping copied from AccessPointRowGenerator, not re-derived.
+  Result: SOLID_NOT_FACING 493 vs SOLID_FACING 294; OPENABLE_FACING 10 vs OPENABLE_NOT_FACING
+  7; zero invalid orientations. 92% of SOLID_FACING placements are locType 9/1/3 corners and
+  diagonals where the test is not rigorous, leaving ~35 locType-0 placements genuinely
+  unexplained. The test's own false-negative rate on confirmed doors is 41%, which is recorded
+  in the report rather than hidden. Ran clean on the real cache; build green, 171 tests.

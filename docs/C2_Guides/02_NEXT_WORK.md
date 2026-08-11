@@ -1222,3 +1222,53 @@ Expected outcome if the hypothesis holds: SOLID collapses hard, most of it movin
 NOTHING, and the rebuild case gets stronger rather than weaker. If SOLID survives an
 orientation filter, then there IS a real decode disagreement and no rebuilt map should ship
 until it is understood.
+
+## Item 3 - SOLID explained. The rebuild case survives. (2026-08-10)
+
+Added an orientation-facing filter to the classifier, using the mapping already proved against
+the Falador gate: orientation 0=W, 1=N, 2=E, 3=S. A placement on the near tile faces the
+crossed edge when its direction equals the crossing; on the far tile when it equals the
+opposite. Zero invalid orientation values in the whole dataset, so the inputs are clean.
+
+    OPENABLE_FACING       10  (58.8% of OPENABLE)
+    OPENABLE_NOT_FACING    7  (41.2%)
+    SOLID_FACING         294  (37.4% of SOLID)
+    SOLID_NOT_FACING     493  (62.6%)
+
+The hypothesis holds: nearly two thirds of SOLID is wall placements facing a different side of
+the tile from the one the player walked through. The classifier was blind to orientation, and
+that blindness manufactured most of the bucket.
+
+### But read the residual before trusting it
+
+The 294 SOLID_FACING edges are NOT 294 mysteries. Their locType mix:
+
+    SOLID_FACING placements    9 -> 228    1 -> 119    3 -> 62    0 -> 35    2 -> 3
+
+The facing test is rigorous ONLY for locType 0, a straight wall on one side of a tile.
+locTypes 1, 3 and 9 are corners and diagonals, where a single orientation value does not
+describe every side the shape blocks. 412 of the 447 SOLID_FACING placements - 92% - are those
+shapes. Measured by the only instrument that is actually valid here, the genuinely unexplained
+population is on the order of 35 straight-wall placements out of the original 787 edges.
+
+### The instrument measured its own error rate, and it is high
+
+OPENABLE_NOT_FACING is 7 of 17. Those are CONFIRMED doors - proven in game, already promoted
+into transport-overrides.tsv and visibly routed through - and the facing test says 41% of them
+do not face the edge they demonstrably open onto.
+
+So the facing test is a blunt instrument with a measured ~41% false-negative rate on
+known-good data. The 62.6% figure carries that error bar: some of the 493 are facing walls the
+test got wrong, and some of the 294 are not really facing. Do not quote 62.6% as precise. The
+direction is what is trustworthy, not the decimal.
+
+This is also a warning for the v2 builder: DO NOT build the door bit on a naive
+orientation-equals-direction test. It would miss roughly two in five real doors. The builder
+needs per-locType blocking shapes, or live-client confirmation, or both.
+
+### Where item 3 stands now
+
+NOTHING 1444 (64.2%) plus SOLID_NOT_FACING 493 (22.0%) = 1,937 of 2,248 proof edges, 86%,
+are consistent with "the shipped map is simply wrong and a rebuild fixes it". Nothing found so
+far argues against rebuilding. Proceed to the v2 builder per D-0117, with the caveat above
+about how the door bit must be derived.
