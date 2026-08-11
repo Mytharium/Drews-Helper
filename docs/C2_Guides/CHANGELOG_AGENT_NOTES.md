@@ -679,3 +679,202 @@ D-0137 (2026-08-10) - Live ground truth captured, and it is substantial.
 
   Tooling note: the file is 928 KB and lcl-ssh downloads truncate at ~200 KB, so it must be
   processed ON mythpc, never pulled whole. tools/grid rendering is done in place for this reason.
+
+D-0138 (2026-08-10) - Turn tie-break SHIPPED, but it does NOT explain the reported checkerboard.
+  Read this whole entry before believing the headline. The change is real and safe; the
+  diagnosis it came from was only half right, and the half that was wrong matters.
+
+  WHAT SHIPPED
+  "turns" is now compared in both places that previously fell through to insertion order:
+    - SearchNode.compareTo, ahead of the sequence tie-break (queue ordering)
+    - isBetterPathToSamePointThan, ahead of the sequence tie-break (which stored path wins)
+  Placement is deliberate and must not be raised. In isBetterPathToSamePointThan it sits BELOW
+  compareClientMovePreference, which exists to make the drawn route match the path the game
+  client actually walks. Straightening a line the client would not walk would make the overlay
+  lie about where the player is going. Only the arbitrary insertion-order tie is replaced, so
+  the change cannot lengthen a route and cannot override a deliberate preference.
+  177 tests pass, including all eight path-shape / client-matching tests:
+  keepsStraightAxisRouteStraight, keepsDiagonalWhenAxesAreTied,
+  prefersPrimaryAxisForwardBeforeDiagonalProgress, prefersClientCardinalForkWhenSameLengthPathRejoins,
+  matchesLiveClientForkTowardSoutheastWaypoints, clientStyleRankingWorksWithLoadedTransportGraph,
+  appliesTargetAwareLocalOverridesForRepeatedLiveForks,
+  shapeRankingShadowExposesDistinctSameLengthRandomChainRoute.
+
+  WHAT COULD NOT BE PROVEN - and this corrects D-0136
+  D-0136 stated the unused turns field was the cause of the checkerboard. That was a plausible
+  reading of the comparator, not a demonstrated cause, and the attempt to demonstrate it FAILED:
+    - A two-tile corridor repro (the shape of a bridge deck) was written and passes.
+    - The engine change was then reverted with git checkout and the test re-run.
+    - It STILL PASSED. The existing client-move-preference logic already resolves that shape.
+  So there is no evidence the turn tie-break changes anything the player sees. The corridor test
+  was kept, with its javadoc rewritten to say exactly this, because the property is worth
+  pinning - but it is NOT a regression test for the tie-break and must never be cited as one.
+
+  THE MORE LIKELY EXPLANATION, from the tests themselves
+  keepsDiagonalWhenAxesAreTied asserts that (0,0) -> (3,3) produces (1,1), (2,2), (3,3) - a pure
+  diagonal run, and it predates this work. A diagonal step covers both axes in one tick, so when
+  a destination is offset on both axes a diagonal run is not merely allowed, it is the ONLY
+  optimal path. Consecutive tiles of a diagonal run touch only at their corners, so filling each
+  step's tile draws exactly a checkerboard.
+  If that is what was reported - and the evidence points that way - then the route is correct and
+  cannot be straightened without making it strictly longer. The problem would be one of
+  RENDERING, not routing: the overlay should join diagonal steps so the path reads as continuous
+  instead of as disconnected squares. That is a change to DrewsHelperRouteTileOverlay, not to the
+  A*, and it has not been made or authorised.
+
+  HOW TO SETTLE IT: capture the actual solved path for a route that shows the pattern and read
+  its per-step deltas. A consistent 1/1, 1/1, 1/1 is a correct diagonal run. An alternating
+  1/1, 1/-1, 1/1 is a genuine weave. Those are different bugs with different fixes, and no
+  further change should be made until it is known which one this is.
+
+D-0139 (2026-08-10) - The ~200 KiB transfer cap is REAL, and it SUCCEEDS while truncating.
+  Measured, not assumed. Downloading the 928,448-byte drews-live-flags.txt through ssh_download
+  produced exactly 204,800 bytes - 200 KiB to the byte - twice, deterministically, cut
+  mid-line, and the tool reported "Downloaded ..." with no warning of any kind.
+
+  The silent success is the actual hazard, well beyond the size limit. Any analysis run over a
+  downloaded file is at risk of being computed on the first 22% of the data and reported with
+  full confidence. The 57,993-row capture would have arrived as 12,792 rows and 3 of 14 scenes,
+  and nothing would have said so.
+
+  It is NOT in the lcl-ssh MCP server. That server (310 lines) shells out to plain scp via
+  buildScpArgs and applies only a timeout; there is no byte limit in it, and runCommand only
+  buffers stdout/stderr, not the transferred file. The local filesystem is not the cause either
+  - writing and copying a 900,000-byte file in the same directory works. The cap is therefore
+  enforced above the server, in fleet infrastructure this project does not own.
+
+  STANDING RULE until it is raised: never trust a downloaded file's completeness. Either
+  process the file in place on the remote host, or compare the local byte count against the
+  remote one before using it. Compression is a practical workaround for text - this dataset
+  compresses about 6:1, so the full 928 KB would gzip to roughly 150 KB and fit under the cap.
+
+D-0140 (2026-08-10) - VERDICT: the checkerboard is ROUTING, not drawing. Measured.
+  New RouteShapeProbe (task probeRouteShape) searches routes on the real shipped map and scores
+  each by excessTurns = actualDirectionChanges - minimumDirectionChanges, where the minimum is 0
+  for a pure straight or pure diagonal displacement (dx==0, dy==0 or |dx|==|dy|) and 1 otherwise.
+  That formula is the whole discriminator: a long diagonal run has excessTurns 0 and merely
+  DRAWS as a checkerboard, whereas a genuine zigzag shows excess.
+
+  Result over 980 attempted / 594 solved pairs in two boxes (Lumbridge upper floor, Lum bridge):
+      excessTurns: 0=219  1=18  2=68  3=81  4=47  5=29  6=29  7=12  8=19  9=6  10=8 ...
+                   ... 25=3  27=1  28=2  29=2  31=1  33=2
+      375 of 594 routes (63%) have excessTurns > 0.  maxExcessTurns = 33.
+      99 routes are excessTurns == 0 WITH a pure diagonal run - the genuinely-fine case.
+  Mytharium was right and the earlier "probably a correct diagonal run" reading was wrong. Both
+  cases exist, but over-turning dominates almost two to one.
+
+  KNOWN DEFECT IN THE PROBE, do not cite its top-15 block: the "Top 15 routes by excessTurns"
+  section prints routes with excessTurns == 0, so its ordering is broken. The distribution and
+  the summary line come from independent counters and ARE trustworthy. Consequence: we have the
+  verdict but NOT yet a per-step delta string for an actual offender, which was the specific
+  artefact requested. Fix the sort before quoting any example route.
+
+D-0141 (2026-08-10) - The straightening fix already exists in the engine, unused.
+  DrewsHelperWalkingRouteEngine has two ranking modes. Every real solve uses
+  RouteRankingMode.CLIENT (lines 263, 272, 351, 360). RouteRankingMode.SHAPE is referenced by
+  exactly one method, solveWithShapeRankingWithoutLocalWalkingOverrides (line 140), which is a
+  diagnostic/shadow entry point used only by tests.
+
+  Under CLIENT, isBetterShortestStep returns false immediately (line 572) and the loop breaks
+  after the first legal candidate (lines 537-540) - the first legal step in a fixed move order
+  wins at every tile, with no shape consideration at all.
+  Under SHAPE, steps are scored:
+      shapeStepScore = lineError * 10 + reversePenalty * 10 + turnPenalty * 2 + preferencePenalty
+  where lineError is perpendicular distance from the straight start->target line (cross product
+  over the major axis) and turnPenalty flags a direction change. That is precisely a
+  hug-the-straight-line, penalise-turns ranker - exactly the requested behaviour, already built.
+
+  THIS ALSO EXPLAINS D-0138. The turns tie-break added to the A* comparator tested inert because
+  the visible path is not the raw A* path: it is rebuilt afterwards by this ranking pass. The
+  comparator was the wrong lever. That was an honest miss and this is the correction.
+
+  NOT CHANGED. Switching the visible route to SHAPE is not a one-line swap: the only existing
+  SHAPE entry point ALSO disables local walking overrides, and CLIENT mode exists deliberately to
+  mirror what the game client walks. Needs Mytharium's call plus a proper A/B before shipping.
+
+D-0142 (2026-08-10) - Live cross-tab: terrain rule VERIFIED, locType 1 SOLVED, bridge still open.
+  New LiveFlagCrossTab (task crossTabLiveFlags) reads the 57,979-row live capture (14 scenes) and
+  cross-tabs it against the cache. Null baseline over no-wall covered tiles is ~25-27% per edge.
+
+  POSITIVE CONTROL PASSES, so the harness can be trusted. locType 0 against LIVE data:
+      orient 0 -> W 96.9%    orient 1 -> N 98.4%
+      orient 2 -> E 99.0%    orient 3 -> S 97.5%      (all other edges 22-30%)
+  Cleaner than the 93% the old-map probe gave, because live data carries no missing-region noise.
+  This independently re-confirms DIRECTION_BY_ORIENTATION = {W, N, E, S} from a third source.
+
+  Q1 locType 1 - it DOES have a directional signal, which the old-map probe could not see
+  (that probe reported a flat 76-79% and we carried it as UNKNOWN under D-0120):
+      orient 0   N 66.3%   E 17.5%   S 17.6%   W 15.8%     -> N
+      orient 1   N 64.7%   E 63.8%   S 20.8%   W 21.4%     -> N + E
+      orient 2   N 18.2%   E 61.0%   S 20.1%   W 19.1%     -> E
+      orient 3   N 17.5%   E 17.8%   S 15.4%   W 15.5%     -> nothing above baseline
+      1,408 single-placement tiles.
+  Read it as a direction, not a certainty: the peaks are 61-66% against a ~25% baseline, a solid
+  35-40pp lift but well short of locType 0's 70pp. locType 1 probably covers more than one
+  underlying shape. Adopting this would replace blocking all four edges on 909 placements in the
+  six proof regions alone, so it is the single biggest lever on the 772 still-blocked edges.
+
+  Q2 terrain floor-blocking - VERIFIED, and this was explicitly unproven before:
+      6,938 covered tiles marked blocked by the rule
+      live agreement: N 91.8%  E 91.7%  S 100.0%  W 100.0%
+      lift vs baseline: +65.2 / +65.0 / +74.4 / +74.4 pp
+      overall edge agreement 26,518/27,665 = 95.9%
+  The rule is PRECISE. But it is NOT COMPLETE, and the reverse direction says so loudly:
+      live blocks all four edges on 16,801 covered tiles; 10,926 of them (65.0%) are not marked
+      by the terrain rule, and 10,116 of those carry no wall placement at all.
+  That is the dangerous direction - the router believing it can walk where the client cannot.
+  Precision is solved; coverage is not. Do not read 95.9% as "terrain is done".
+
+  Q2 bridge convention - STILL UNVERIFIED, zero usable samples:
+      bridge-branch source tiles 132,865, but covered marks 0, and 69,065 negative-plane skips.
+  Nothing in this capture exercised it. The large negative-plane skip count is itself suspicious:
+  the branch computes realPlane = z - 1 and most hits are at plane 0, which is discarded. Worth
+  checking whether the convention is being applied at the wrong plane before trusting it at all.
+
+D-0143 (2026-08-11) - #24 NOT SHIPPED. SHAPE ranking measured WORSE than CLIENT. Do not switch.
+  Mytharium authorised switching the live route to RouteRankingMode.SHAPE. The switch was NOT
+  made, because measuring it first showed it would have made his complaint worse, not better.
+
+  THE MEASUREMENT. Both modes solved for the same two routes, using coordinates already known
+  good (they come from matchesLiveClientForkTowardSoutheastWaypoints, which asserts READY at 32
+  and 38 tiles). Step counts were identical in every case, so this is purely about shape:
+
+    (2942,3243) -> (2962,3214), 32 steps both modes
+      CLIENT turns=7   0/-1 x7, 1/-1 run, 1/0 x3, 1/-1 run
+      SHAPE  turns=18  0/-1 1/-1 1/-1 0/-1 1/-1 1/-1 0/-1 0/-1 0/-1 1/-1 1/-1 0/-1 0/-1 1/-1 ...
+
+    (2942,3243) -> (2951,3208), 38 steps both modes
+      CLIENT turns=7
+      SHAPE  turns=11
+
+  SHAPE more than doubled the direction changes on the first route. Its delta string is the
+  textbook checkerboard - exactly the artefact being complained about.
+
+  WHY, and this is the useful part. shapeStepScore is:
+      lineError * 10 + reversePenalty * 10 + turnPenalty * 2 + preferencePenalty
+  lineError is perpendicular distance from the straight start-to-target line, and it outweighs
+  the turn penalty five to one. But a STAIRCASE TRACKS A DIAGONAL LINE MORE TIGHTLY THAN AN
+  L-SHAPE DOES. So minimising line error actively PRODUCES the zigzag. The ranker named "SHAPE"
+  optimises for the wrong shape. That was not obvious from reading it - it read like exactly the
+  right fix - and only running it revealed the inversion.
+
+  RE-WEIGHT EXPERIMENT (run, then fully reverted - it is NOT in the tree). Flipping the weights
+  to turn-dominant, turnPenalty * 10 + reversePenalty * 10 + lineError * 1:
+      route 1: CLIENT 7 -> 5 turns   (improved, and the deltas are clean runs)
+      route 2: CLIENT 7 -> 8 turns   (worse)
+  Promising but NOT a clean win on a two-route sample, and it broke a test that asserts SHAPE
+  produces a distinct route. It needs the full 594-pair A/B before anyone considers shipping it.
+  Two routes is not evidence; it is a hint.
+
+  STATE: engine weights restored byte-for-byte, temporary diagnostic test removed, turns
+  tie-break from D-0138 still present, 177 tests 0 failures, diff unchanged at 293 insertions
+  across the same 4 files. Nothing from this experiment reached the tree.
+
+  STANDING LESSON, and it is the third time this pattern has paid: a mechanism that reads like
+  the obvious fix is not evidence that it fixes anything. The turns tie-break (D-0138) read
+  right and was inert. SHAPE ranking read right and is actively harmful. Measure the change
+  against ground truth BEFORE switching live behaviour, every time.
+
+  NEXT: the A/B harness (probe measuring both modes on 594 pairs, plus the offender-sort fix
+  from D-0140) is the instrument that can settle the re-weight properly. Until it has run, the
+  live route stays on CLIENT.

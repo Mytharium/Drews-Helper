@@ -39,6 +39,11 @@ dependencies {
     testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
 
     cachetoolsImplementation group: 'net.runelite', name: 'cache', version: runeLiteVersion
+    // RouteShapeProbe drives the real routing engine, whose API speaks WorldPoint. That type
+    // lives in the client artifact, which cachetools did not previously need. This is scoped to
+    // the cachetools source set only - main still takes the client as compileOnly and nothing in
+    // main can see cachetools, so the shipped jar is unaffected either way.
+    cachetoolsImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
 }
 
 group = 'com.drewshelper'
@@ -105,6 +110,20 @@ tasks.register('probeLocTypeShapes', JavaExec) {
     description = 'Measure locType/orientation wall edge blocking against the shipped collision map.'
     classpath = sourceSets.cachetools.runtimeClasspath
     mainClass = 'com.drewshelper.cachetools.LocTypeShapeProbe'
+}
+
+tasks.register('crossTabLiveFlags', JavaExec) {
+    group = 'drewshelper'
+    description = 'Cross-tabulate live client collision flags against cache terrain and wall placements.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.LiveFlagCrossTab'
+}
+
+tasks.register('probeRouteShape', JavaExec) {
+    group = 'drewshelper'
+    description = 'Measure solved route shapes for excess turns and diagonal rendering controls.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.RouteShapeProbe'
 }
 
 tasks.register('buildCollisionMapV2', JavaExec) {

@@ -1,0 +1,92 @@
+live flag cross-tab
+live capture: C:\Users\drews\.runelite\drews-live-flags.txt
+cache: C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
+project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
+report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\live-flag-crosstab.txt
+
+input summary:
+  rows parsed: 57979
+  scene headers: 14
+  scenes found: 14
+  covered tile observations: 148526
+  covered tiles unique: 100974
+  duplicate data rows: 0
+  duplicate row conflicts: 0
+  overlapping live N/E conflicts: 9717 (N=4912, E=4805)
+
+cache and exclusion summary:
+  cache regions loaded: 2936
+  cache regions missing: 62600
+  map regions loaded: 2936
+  loc regions loaded: 2936
+  covered tiles inside cache regions: 100974
+  covered tiles outside any cache region: 0
+  wall placements seen: 836033
+  wall placements covered: 10081
+  wall placements excluded uncovered: 825952
+  wall placements skipped invalid plane: 0
+  covered openable wall placements: 170
+  no-wall covered tiles: 90914
+  single-wall covered tiles: 10039
+  multi-wall covered tiles excluded from locType tables: 21 tiles / 42 placements
+  terrain rule source tiles: 4175936
+  terrain rule covered marks: 6938
+  terrain rule covered unique tiles: 6938
+  terrain rule tiles excluded uncovered: 4168998
+  bridge-branch source tiles: 132865
+  bridge-branch negative-plane skips: 69065
+  bridge-branch covered marks: 0
+  bridge-branch covered unique tiles: 0
+  duplicate terrain covered marks: 0
+  duplicate bridge covered marks: 0
+
+null baseline over covered tiles with no wall placement:
+  group           group    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  no-wall                  90914        0 24174/90914    26.6% 24274/90914    26.7% 23081/90278    25.6% 23047/90111    25.6%
+  derived-edge skips in baseline: N=0, E=0, S=636, W=803
+  Percentages below should be read against this baseline.
+
+Q1 locType 1 single-placement live edge rates:
+  group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  orient 0                   371        0     246/371    66.3%      65/371    17.5%      65/369    17.6%      58/366    15.8%
+  orient 1                   343        0     222/343    64.7%     219/343    63.8%      71/341    20.8%      73/341    21.4%
+  orient 2                   346        0      63/346    18.2%     211/346    61.0%      69/343    20.1%      65/341    19.1%
+  orient 3                   348        0      61/348    17.5%      62/348    17.8%      53/345    15.4%      53/343    15.5%
+  combined                  1408        0    592/1408    42.0%    557/1408    39.6%    258/1398    18.5%    249/1391    17.9%
+  derived-edge skips in this table: N=0, E=0, S=10, W=17
+
+locType 0 positive control: expected orientation peaks are {0:W, 1:N, 2:E, 3:S}. If locType 0 does not come out clean against live data, the harness itself is wrong and the locType 1 numbers cannot be trusted.
+locType 0 single-placement live edge rates:
+  group        expected    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  orient 0            W     1691       50    449/1691    26.6%    405/1691    24.0%    398/1683    23.6%   1613/1664    96.9%
+  orient 1            N     1595       47   1569/1595    98.4%    446/1595    28.0%    365/1593    22.9%    382/1587    24.1%
+  orient 2            E     1678       35    507/1678    30.2%   1661/1678    99.0%    448/1668    26.9%    434/1668    26.0%
+  orient 3            S     1735       37    426/1735    24.6%    526/1735    30.3%   1664/1706    97.5%    468/1729    27.1%
+  combined        mixed     6699      169   2951/6699    44.1%   3038/6699    45.4%   2875/6650    43.2%   2897/6648    43.6%
+  derived-edge skips in this table: N=0, E=0, S=49, W=51
+
+Q2 terrain floor-blocking rule:
+  group          sample    tiles N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  terrain           all     6938   6370/6938    91.8%   6359/6938    91.7%   6909/6909   100.0%   6880/6880   100.0%
+  lift vs null baseline: N=+65.2pp, E=+65.0pp, S=+74.4pp, W=+74.4pp
+  derived-edge skips in this sample: N=0, E=0, S=29, W=58
+  terrain agreement: edges 26518/27665 (95.9%); all-four live 5875/6851 (85.8%)
+  terrain sample count: 6938 covered unique tiles
+
+Q2 bridge branch using plane-1 convention:
+  bridge sample count: 0 covered unique tiles; source branch tiles=132865, negative-plane skips=69065
+  bridge sample is small; read the counts before the percentages.
+  group          sample    tiles N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  bridge        plane-1        0         0/0     0.0%         0/0     0.0%         0/0     0.0%         0/0     0.0%
+  lift vs null baseline: N=-26.6pp, E=-26.7pp, S=-25.6pp, W=-25.6pp
+  derived-edge skips in this sample: N=0, E=0, S=0, W=0
+  bridge agreement: edges 0/0 (0.0%); all-four live 0/0 (0.0%)
+
+Q2 reverse terrain miss direction:
+  covered cache tiles checked: 100974
+  skipped because S/W neighbour was uncovered: 1603
+  tiles with all four live edges usable: 99371
+  live blocks all four edges: 16801
+  live-all-four tiles not terrain-marked: 10926 of 16801 (65.0%)
+  no-wall subset of live-all-four not terrain-marked: 10116
+  with-wall subset of live-all-four not terrain-marked: 810

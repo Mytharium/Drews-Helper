@@ -2147,6 +2147,18 @@ public final class DrewsHelperWalkingRouteEngine
                 return byPreferencePenalty;
             }
 
+            // Prefer the straighter path once everything above has tied. A diagonal step and
+            // a cardinal step both cost 1, so a zigzag and a straight run tie exactly on cost
+            // and on remaining distance; without this the winner was insertion order, which is
+            // arbitrary with respect to straightness, and the route rendered as a checkerboard.
+            // This sits BELOW every deliberate preference above it, so it only ever replaces a
+            // coin flip - it cannot make a route longer.
+            int byTurns = Integer.compare(turns, other.turns);
+            if (byTurns != 0)
+            {
+                return byTurns;
+            }
+
             return Long.compare(sequence, other.sequence);
         }
 
@@ -2166,6 +2178,16 @@ public final class DrewsHelperWalkingRouteEngine
             if (preferencePenalty != other.preferencePenalty)
             {
                 return preferencePenalty < other.preferencePenalty;
+            }
+
+            // Same reasoning as compareTo, and the position is deliberate: this sits BELOW
+            // compareClientMovePreference, which exists to make the drawn route match the path
+            // the game client actually walks. That must keep winning - straightening a line the
+            // client would not walk would make the overlay lie. Only the arbitrary
+            // insertion-order tie is replaced here.
+            if (turns != other.turns)
+            {
+                return turns < other.turns;
             }
 
             return sequence < other.sequence;

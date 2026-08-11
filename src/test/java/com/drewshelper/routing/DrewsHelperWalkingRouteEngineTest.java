@@ -714,6 +714,107 @@ public class DrewsHelperWalkingRouteEngineTest
         return false;
     }
 
+    /**
+     * A two-tile-wide corridor, where running straight along one row and weaving between both
+     * rows cost exactly the same number of ticks - a diagonal step is one tick just like a
+     * cardinal one. Pins the behaviour that such a tie resolves to the straight run.
+     *
+     * <p>HONEST LIMITATION, do not mistake this for a regression test of the turn tie-break:
+     * this case passes both with and WITHOUT it, verified by reverting the engine and
+     * re-running. The existing client-move-preference logic already resolves this shape. It is
+     * kept because the property is worth pinning, not because it reproduces anything.
+     */
+    @Test
+    public void doesNotWeaveAlongATwoTileCorridor() throws Exception
+    {
+        DrewsHelperWalkingRouteEngine engine =
+            new DrewsHelperWalkingRouteEngine(new CorridorMovementMap());
+
+        DrewsHelperRouteSnapshot route = engine.solve(
+            new WorldPoint(0, 0, 0),
+            Arrays.asList(new WorldPoint(12, 0, 0))
+        );
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertEquals(12, route.getWalkingDistance());
+
+        List<WorldPoint> path = route.getPath();
+        int rowChanges = 0;
+        for (int index = 1; index < path.size(); index++)
+        {
+            if (path.get(index).getY() != path.get(index - 1).getY())
+            {
+                rowChanges++;
+            }
+        }
+
+        assertEquals(
+            "a tie between straight and weaving must resolve to straight",
+            0,
+            rowChanges
+        );
+    }
+
+    /**
+     * Two walkable rows and nothing else, so a route east can either run along one row or
+     * weave between the two for the same cost.
+     */
+    private static final class CorridorMovementMap implements DrewsHelperMovementMap
+    {
+        private static boolean inCorridor(int y)
+        {
+            return y == 0 || y == 1;
+        }
+
+        @Override
+        public boolean canMoveNorth(int x, int y, int plane)
+        {
+            return inCorridor(y) && inCorridor(y + 1);
+        }
+
+        @Override
+        public boolean canMoveSouth(int x, int y, int plane)
+        {
+            return inCorridor(y) && inCorridor(y - 1);
+        }
+
+        @Override
+        public boolean canMoveEast(int x, int y, int plane)
+        {
+            return inCorridor(y);
+        }
+
+        @Override
+        public boolean canMoveWest(int x, int y, int plane)
+        {
+            return inCorridor(y);
+        }
+
+        @Override
+        public boolean canMoveNorthEast(int x, int y, int plane)
+        {
+            return inCorridor(y) && inCorridor(y + 1);
+        }
+
+        @Override
+        public boolean canMoveNorthWest(int x, int y, int plane)
+        {
+            return inCorridor(y) && inCorridor(y + 1);
+        }
+
+        @Override
+        public boolean canMoveSouthEast(int x, int y, int plane)
+        {
+            return inCorridor(y) && inCorridor(y - 1);
+        }
+
+        @Override
+        public boolean canMoveSouthWest(int x, int y, int plane)
+        {
+            return inCorridor(y) && inCorridor(y - 1);
+        }
+    }
+
     private static final class OpenMovementMap implements DrewsHelperMovementMap
     {
         @Override
