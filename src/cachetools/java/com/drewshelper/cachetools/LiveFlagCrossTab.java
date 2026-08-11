@@ -455,40 +455,46 @@ public final class LiveFlagCrossTab
                 for (int localY = 0; localY < REGION_SIZE; localY++)
                 {
                     int tileSetting = terrain.getTileSetting(plane, localX, localY) & 0xFF;
-                    if ((tileSetting & 1) == 0)
-                    {
-                        continue;
-                    }
 
                     /*
                      * This is the exact unverified bridge convention from CollisionMapBuilder.
                      * The cross-tab's job is to measure it, not improve or reinterpret it.
                      */
                     boolean bridge = (terrain.getTileSetting(1, localX, localY) & 2) != 0;
-                    if (bridge)
+                    if ((tileSetting & 1) != 0 && bridge)
                     {
                         scan.bridgeBranchSourceTiles++;
                     }
                     int realPlane = bridge ? plane - 1 : plane;
                     if (realPlane < 0)
                     {
-                        if (bridge)
+                        if ((tileSetting & 1) != 0 && bridge)
                         {
                             scan.bridgeBranchNegativePlaneTiles++;
                         }
                         continue;
                     }
 
-                    scan.terrainRuleSourceTiles++;
                     int x = baseX + localX;
                     int y = baseY + localY;
-                    if (!live.isCovered(x, y, realPlane))
+                    long key = tileKey(x, y, realPlane);
+                    boolean covered = live.isCovered(x, y, realPlane);
+                    if (covered)
+                    {
+                        scan.tileSettingByTile.putIfAbsent(key, tileSetting);
+                    }
+                    if ((tileSetting & 1) == 0)
+                    {
+                        continue;
+                    }
+
+                    scan.terrainRuleSourceTiles++;
+                    if (!covered)
                     {
                         scan.skippedUncoveredTerrainTiles++;
                         continue;
                     }
 
-                    long key = tileKey(x, y, realPlane);
                     scan.terrainRuleCoveredMarks++;
                     if (!scan.terrainBlockedTiles.add(key))
                     {
@@ -559,7 +565,8 @@ public final class LiveFlagCrossTab
             {
                 tab.bridge.add(liveEdges);
             }
-            tab.reverse.add(liveEdges, terrainBlocked, placements.isEmpty());
+            tab.reverse.add(liveEdges, terrainBlocked, placements.isEmpty(),
+                cache.tileSettingByTile.get(tile.key()));
         }
 
         return tab;
@@ -761,6 +768,99 @@ public final class LiveFlagCrossTab
             .append(tab.reverse.liveAllFourWithoutTerrainNoWallTiles).append('\n');
         report.append("  with-wall subset of live-all-four not terrain-marked: ")
             .append(tab.reverse.liveAllFourWithoutTerrainWithWallTiles).append('\n');
+        report.append('\n');
+
+        appendTileSettingBitsReport(report, tab.reverse);
+    }
+
+    private static void appendTileSettingBitsReport(StringBuilder report, ReverseTerrainStats stats)
+    {
+        long targetObserved = stats.targetTileSettingObserved();
+        long controlObserved = stats.controlTileSettingObserved();
+
+        report.append("Q3 terrain completeness - tileSetting bits").append('\n');
+        report.append("  target total: ").append(stats.liveAllFourWithoutTerrainNoWallTiles)
+            .append("; with tileSetting: ").append(targetObserved)
+            .append("; missing tileSetting: ").append(stats.targetMissingTileSetting)
+            .append('\n');
+        report.append("  control total: ").append(stats.controlZeroBlockedNoWallTiles)
+            .append("; with tileSetting: ").append(controlObserved)
+            .append("; missing tileSetting: ").append(stats.controlMissingTileSetting)
+            .append('\n');
+        if (targetObserved == 0)
+        {
+            report.append("TERRAIN BITS VACUOUS - no target tiles carried a tileSetting").append('\n');
+        }
+        report.append("  per-bit set counts:").append('\n');
+        for (int bit = 0; bit < 8; bit++)
+        {
+            long targetCount = stats.targetTileSettingBitCounts[bit];
+            long controlCount = stats.controlTileSettingBitCounts[bit];
+            double delta = ratePoints(targetCount, targetObserved)
+                - ratePoints(controlCount, controlObserved);
+            report.append(String.format(Locale.ROOT,
+                "  bit %d: target %d (%s) | control %d (%s) | delta %spp",
+                bit,
+                targetCount,
+                percent(targetCount, targetObserved),
+                controlCount,
+                percent(controlCount, controlObserved),
+                formatSignedPoints(delta)))
+                .append('\n');
+        }
+        appendTileSettingTopValues(report, "target", stats.targetTileSettingCounts, targetObserved);
+        appendTileSettingTopValues(report, "control", stats.controlTileSettingCounts, controlObserved);
+    }
+
+    private static void appendTileSettingTopValues(
+        StringBuilder report,
+        String label,
+        Map<Integer, Long> counts,
+        long total
+    )
+    {
+        report.append("  ").append(label)
+            .append(" exact tileSetting byte values (top 15):").append('\n');
+        report.append("    byte          count      pct").append('\n');
+
+        List<Map.Entry<Integer, Long>> entries = new ArrayList<>(counts.entrySet());
+        entries.sort((left, right) ->
+        {
+            int byCount = Long.compare(right.getValue(), left.getValue());
+            if (byCount != 0)
+            {
+                return byCount;
+            }
+            return Integer.compare(left.getKey(), right.getKey());
+        });
+
+        int rows = Math.min(15, entries.size());
+        if (rows == 0)
+        {
+            report.append("    (none)").append('\n');
+            return;
+        }
+        for (int index = 0; index < rows; index++)
+        {
+            Map.Entry<Integer, Long> entry = entries.get(index);
+            String byteLabel = String.format(Locale.ROOT, "0x%02X (%d)", entry.getKey(),
+                entry.getKey());
+            report.append(String.format(Locale.ROOT,
+                "    %-10s %8d %8s",
+                byteLabel,
+                entry.getValue(),
+                percent(entry.getValue(), total)))
+                .append('\n');
+        }
+    }
+
+    private static double ratePoints(long count, long total)
+    {
+        if (total == 0)
+        {
+            return 0.0;
+        }
+        return count * 100.0 / total;
     }
 
     private static void appendStatsHeader(StringBuilder report, String secondColumn, boolean includeOpenable)
@@ -1166,6 +1266,7 @@ public final class LiveFlagCrossTab
         private final Set<Integer> presentRegionIds = new HashSet<>();
         private final Set<Long> coveredCacheTiles = new HashSet<>();
         private final Map<Long, List<WallPlacement>> wallPlacementsByTile = new HashMap<>();
+        private final Map<Long, Integer> tileSettingByTile = new HashMap<>();
         private final Set<Long> terrainBlockedTiles = new HashSet<>();
         private final Set<Long> bridgeBranchTiles = new HashSet<>();
 
@@ -1402,8 +1503,20 @@ public final class LiveFlagCrossTab
         private long liveAllFourWithoutTerrainTiles;
         private long liveAllFourWithoutTerrainNoWallTiles;
         private long liveAllFourWithoutTerrainWithWallTiles;
+        private final Map<Integer, Long> targetTileSettingCounts = new HashMap<>();
+        private final Map<Integer, Long> controlTileSettingCounts = new HashMap<>();
+        private final long[] targetTileSettingBitCounts = new long[8];
+        private final long[] controlTileSettingBitCounts = new long[8];
+        private long targetMissingTileSetting;
+        private long controlMissingTileSetting;
+        private long controlZeroBlockedNoWallTiles;
 
-        private void add(BlockedEdges liveEdges, boolean terrainBlocked, boolean noWallPlacement)
+        private void add(
+            BlockedEdges liveEdges,
+            boolean terrainBlocked,
+            boolean noWallPlacement,
+            Integer tileSetting
+        )
         {
             coveredCacheTiles++;
             if (!liveEdges.allUsable())
@@ -1413,6 +1526,11 @@ public final class LiveFlagCrossTab
             }
 
             allFourUsableTiles++;
+            if (noWallPlacement && liveEdges.blockedUsableCount() == 0)
+            {
+                controlZeroBlockedNoWallTiles++;
+                addControlTileSetting(tileSetting);
+            }
             if (!liveEdges.allBlocked())
             {
                 return;
@@ -1428,11 +1546,58 @@ public final class LiveFlagCrossTab
             if (noWallPlacement)
             {
                 liveAllFourWithoutTerrainNoWallTiles++;
+                addTargetTileSetting(tileSetting);
             }
             else
             {
                 liveAllFourWithoutTerrainWithWallTiles++;
             }
+        }
+
+        private void addTargetTileSetting(Integer tileSetting)
+        {
+            if (tileSetting == null)
+            {
+                targetMissingTileSetting++;
+                return;
+            }
+            addTileSetting(targetTileSettingCounts, targetTileSettingBitCounts, tileSetting);
+        }
+
+        private void addControlTileSetting(Integer tileSetting)
+        {
+            if (tileSetting == null)
+            {
+                controlMissingTileSetting++;
+                return;
+            }
+            addTileSetting(controlTileSettingCounts, controlTileSettingBitCounts, tileSetting);
+        }
+
+        private static void addTileSetting(
+            Map<Integer, Long> counts,
+            long[] bitCounts,
+            int tileSetting
+        )
+        {
+            counts.put(tileSetting, counts.getOrDefault(tileSetting, 0L) + 1L);
+            for (int bit = 0; bit < 8; bit++)
+            {
+                if ((tileSetting & (1 << bit)) != 0)
+                {
+                    bitCounts[bit]++;
+                }
+            }
+        }
+
+        private long targetTileSettingObserved()
+        {
+            return liveAllFourWithoutTerrainNoWallTiles - targetMissingTileSetting;
+        }
+
+        private long controlTileSettingObserved()
+        {
+            return controlZeroBlockedNoWallTiles - controlMissingTileSetting;
         }
     }
 

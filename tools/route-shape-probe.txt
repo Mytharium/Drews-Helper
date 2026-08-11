@@ -20,28 +20,9 @@ Totals
   BASELINE_UNRESOLVED skipped: 0
 
 Baseline diagnostics
-  openGroundSelfCheckPairsChecked: 56
-  BASELINE SELF-CHECK FAILED count: 20
-  BASELINE SELF-CHECK FAILED start=3200,3200,2 end=3240,3200,2 displacement=40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3200,3230,2 end=3240,3230,2 displacement=40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3210,3200,2 end=3210,3240,2 displacement=0/40 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3210,3240,2 end=3210,3200,2 displacement=0/-40 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3240,3200,2 end=3200,3200,2 displacement=-40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3240,3230,2 end=3200,3230,2 displacement=-40/0 clientSteps=40 shapeSteps=40 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3200,3230,2 end=3230,3230,2 displacement=30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3210,3200,2 end=3210,3230,2 displacement=0/30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3210,3200,2 end=3240,3200,2 displacement=30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3210,3230,2 end=3210,3200,2 displacement=0/-30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3230,3210,2 end=3230,3240,2 displacement=0/30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3230,3230,2 end=3200,3230,2 displacement=-30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3230,3240,2 end=3230,3210,2 displacement=0/-30 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3240,3200,2 end=3210,3200,2 displacement=-30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=1
-  BASELINE SELF-CHECK FAILED start=3230,3230,0 end=3260,3230,0 displacement=30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=6
-  BASELINE SELF-CHECK FAILED start=3260,3230,0 end=3230,3230,0 displacement=-30/0 clientSteps=30 shapeSteps=30 minTurnsAmongShortestPaths=6
-  BASELINE SELF-CHECK FAILED start=3220,3210,0 end=3220,3230,0 displacement=0/20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=4
-  BASELINE SELF-CHECK FAILED start=3220,3230,0 end=3220,3210,0 displacement=0/-20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=4
-  BASELINE SELF-CHECK FAILED start=3230,3210,0 end=3230,3230,0 displacement=0/20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=2
-  BASELINE SELF-CHECK FAILED start=3230,3230,0 end=3230,3210,0 displacement=0/-20 clientSteps=20 shapeSteps=20 minTurnsAmongShortestPaths=2
+  openGroundSelfCheckPairsChecked: 36
+  openGroundSelfCheckStraightLineBlocked: 114
+  BASELINE SELF-CHECK FAILED count: 0
   BASELINE BUG negativeTrueExcessTurns count: 0
 
 Excess turns distributions

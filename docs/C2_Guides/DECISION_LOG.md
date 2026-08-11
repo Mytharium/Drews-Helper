@@ -1433,3 +1433,34 @@ D-0121 (2026-08-11) - Backlog #6 resolved: generated map data is tracked when it
   root would sit in git status forever.
   Verified after: build/collision-map-v2.zip 5,498 bytes, v1 untouched at 938,345, no untracked
   zip in git status, ROUND TRIP OK 6 regions, still-blocked 753 (unchanged - no regression).
+
+D-0122 (2026-08-11) - The straightness yardstick is CERTIFIED. A self-check must prove its
+  premise, not assume it.
+
+  The first gate assumed: "steps == max(|dx|,|dy|) means no obstacle interfered, so the baseline
+  must be 0". That is FALSE. For a 40/0 displacement every step must advance x, but dy is free, so
+  (1,1),(1,-1),(1,1)... is also exactly 40 steps. Equal step count proves only that a
+  minimal-LENGTH path exists - it says nothing about whether the STRAIGHT one is walkable.
+  It produced 20 false failures out of 56 checked.
+
+  Proven against the live capture rather than argued. For pair 3200,3200,2 -> 3240,3200,2 the row
+  y=3200 is blocked at x=3226-3227 (east) and x=3228-3233 (solid), so minTurns=1 was CORRECT and
+  the gate was the broken part. v1 over-blocks relative to live, so if live blocks it, v1 does too.
+
+  THE RULE NOW: the gate walks the constant-direction line with the same canMove() the BFS uses.
+  If that walk is legal for max(|dx|,|dy|) steps then it IS a shortest path (nothing beats the
+  Chebyshev distance) AND it has zero direction changes, therefore minTurnsAmongShortestPaths MUST
+  be 0. That is a certification with no assumption left in it. openGroundSelfCheckApplies takes the
+  map and no longer references stepCount at all.
+
+  ANTI-VACUOUS GUARD - this matters as much as the check. A gate that qualifies zero pairs reports
+  "0 failures" and proves NOTHING, which would look identical to success. So the probe now prints
+  openGroundSelfCheckStraightLineBlocked, and prints BASELINE SELF-CHECK VACUOUS when zero pairs
+  qualify. Never read a 0-failure gate without reading its pairsChecked count.
+
+  RESULT - the arithmetic closes exactly, which is what makes this trustworthy:
+      before:  56 checked, 20 FAILED
+      after:   36 checked,  0 FAILED, 114 excluded because the straight line was blocked
+      56 - 20 = 36. The 20 old failures were EXACTLY the pairs whose straight line was blocked.
+  Every trueExcessTurns distribution is byte-identical across the two runs, proving the change was
+  gate-only with no metric drift.

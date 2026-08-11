@@ -90,3 +90,30 @@ Q2 reverse terrain miss direction:
   live-all-four tiles not terrain-marked: 10926 of 16801 (65.0%)
   no-wall subset of live-all-four not terrain-marked: 10116
   with-wall subset of live-all-four not terrain-marked: 810
+
+Q3 terrain completeness - tileSetting bits
+  target total: 10116; with tileSetting: 10116; missing tileSetting: 0
+  control total: 56343; with tileSetting: 56343; missing tileSetting: 0
+  per-bit set counts:
+  bit 0: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
+  bit 1: target 81 (0.8%) | control 178 (0.3%) | delta +0.5pp
+  bit 2: target 885 (8.7%) | control 1542 (2.7%) | delta +6.0pp
+  bit 3: target 98 (1.0%) | control 36 (0.1%) | delta +0.9pp
+  bit 4: target 1023 (10.1%) | control 131 (0.2%) | delta +9.9pp
+  bit 5: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
+  bit 6: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
+  bit 7: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
+  target exact tileSetting byte values (top 15):
+    byte          count      pct
+    0x00 (0)       8029    79.4%
+    0x10 (16)      1023    10.1%
+    0x04 (4)        885     8.7%
+    0x08 (8)         98     1.0%
+    0x02 (2)         81     0.8%
+  control exact tileSetting byte values (top 15):
+    byte          count      pct
+    0x00 (0)      54456    96.7%
+    0x04 (4)       1542     2.7%
+    0x02 (2)        178     0.3%
+    0x10 (16)       131     0.2%
+    0x08 (8)         36     0.1%

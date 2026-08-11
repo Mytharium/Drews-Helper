@@ -201,7 +201,7 @@ public final class RouteShapeProbe
                     baseline.minTurnsAmongShortestPaths
                 );
                 boxResult.solved++;
-                result.addMeasuredPair(clientMeasurement, shapeMeasurement);
+                result.addMeasuredPair(map, clientMeasurement, shapeMeasurement);
             }
         }
 
@@ -788,6 +788,12 @@ public final class RouteShapeProbe
         report.append("Baseline diagnostics").append('\n');
         report.append("  openGroundSelfCheckPairsChecked: ")
             .append(result.openGroundSelfCheckPairsChecked).append('\n');
+        report.append("  openGroundSelfCheckStraightLineBlocked: ")
+            .append(result.openGroundSelfCheckStraightLineBlocked).append('\n');
+        if (result.openGroundSelfCheckPairsChecked == 0)
+        {
+            report.append("  BASELINE SELF-CHECK VACUOUS - zero pairs qualified, gate proved nothing").append('\n');
+        }
         report.append("  BASELINE SELF-CHECK FAILED count: ")
             .append(result.openGroundSelfCheckFailures.size()).append('\n');
         for (String failure : result.openGroundSelfCheckFailures)
@@ -818,14 +824,23 @@ public final class RouteShapeProbe
         }
     }
 
-    private static void recordBaselineDiagnostics(ProbeResult result, RoutePairMeasurement routePair)
+    private static void recordBaselineDiagnostics(
+        DrewsHelperCollisionMap map,
+        ProbeResult result,
+        RoutePairMeasurement routePair
+    )
     {
         recordBaselineBug(result, "CLIENT", routePair.client);
         recordBaselineBug(result, "SHAPE", routePair.shape);
 
-        if (!openGroundSelfCheckApplies(routePair.client)
-            && !openGroundSelfCheckApplies(routePair.shape))
+        boolean clientSelfCheckApplies = openGroundSelfCheckApplies(map, routePair.client);
+        boolean shapeSelfCheckApplies = openGroundSelfCheckApplies(map, routePair.shape);
+        if (!clientSelfCheckApplies && !shapeSelfCheckApplies)
         {
+            if (straightLineWalkIsBlocked(map, routePair.client))
+            {
+                result.openGroundSelfCheckStraightLineBlocked++;
+            }
             return;
         }
 
@@ -862,14 +877,108 @@ public final class RouteShapeProbe
         );
     }
 
-    private static boolean openGroundSelfCheckApplies(RouteMeasurement measurement)
+    private static boolean openGroundSelfCheckApplies(DrewsHelperCollisionMap map, RouteMeasurement measurement)
     {
         int dx = measurement.pair.end.getX() - measurement.pair.start.getX();
         int dy = measurement.pair.end.getY() - measurement.pair.start.getY();
         int absDx = Math.abs(dx);
         int absDy = Math.abs(dy);
-        boolean pureStraightOrDiagonal = dx == 0 || dy == 0 || absDx == absDy;
-        return pureStraightOrDiagonal && measurement.stepCount == Math.max(absDx, absDy);
+        if (measurement.pair.start.getPlane() != measurement.pair.end.getPlane())
+        {
+            return false;
+        }
+        if (!(dx == 0 || dy == 0 || absDx == absDy))
+        {
+            return false;
+        }
+
+        int steps = Math.max(absDx, absDy);
+        if (steps == 0)
+        {
+            return false;
+        }
+
+        DirectionStep direction = directionForDelta(Integer.signum(dx), Integer.signum(dy));
+        if (direction == null)
+        {
+            return false;
+        }
+
+        return straightLineWalkIsClear(
+            map,
+            measurement.pair.start.getX(),
+            measurement.pair.start.getY(),
+            measurement.pair.start.getPlane(),
+            direction,
+            steps
+        );
+    }
+
+    private static boolean straightLineWalkIsBlocked(DrewsHelperCollisionMap map, RouteMeasurement measurement)
+    {
+        int dx = measurement.pair.end.getX() - measurement.pair.start.getX();
+        int dy = measurement.pair.end.getY() - measurement.pair.start.getY();
+        int absDx = Math.abs(dx);
+        int absDy = Math.abs(dy);
+        if (measurement.pair.start.getPlane() != measurement.pair.end.getPlane())
+        {
+            return false;
+        }
+        if (!(dx == 0 || dy == 0 || absDx == absDy))
+        {
+            return false;
+        }
+
+        int steps = Math.max(absDx, absDy);
+        if (steps == 0)
+        {
+            return false;
+        }
+
+        DirectionStep direction = directionForDelta(Integer.signum(dx), Integer.signum(dy));
+        return direction != null && !straightLineWalkIsClear(
+            map,
+            measurement.pair.start.getX(),
+            measurement.pair.start.getY(),
+            measurement.pair.start.getPlane(),
+            direction,
+            steps
+        );
+    }
+
+    private static DirectionStep directionForDelta(int dx, int dy)
+    {
+        for (DirectionStep direction : DIRECTION_STEPS)
+        {
+            if (direction.dx == dx && direction.dy == dy)
+            {
+                return direction;
+            }
+        }
+        return null;
+    }
+
+    private static boolean straightLineWalkIsClear(
+        DrewsHelperCollisionMap map,
+        int startX,
+        int startY,
+        int plane,
+        DirectionStep direction,
+        int steps
+    )
+    {
+        int x = startX;
+        int y = startY;
+        for (int i = 0; i < steps; i++)
+        {
+            if (!canMove(map, x, y, plane, direction))
+            {
+                return false;
+            }
+            x += direction.dx;
+            y += direction.dy;
+        }
+        return true;
     }
 
     private static List<RouteMeasurement> sortedOffenders(List<RouteMeasurement> measurements)
@@ -1572,6 +1681,7 @@ public final class RouteShapeProbe
         private int baselineUnreachable;
         private int baselineUnresolved;
         private int openGroundSelfCheckPairsChecked;
+        private int openGroundSelfCheckStraightLineBlocked;
         private int shapeImproved;
         private int shapeWorsened;
         private int shapeUnchanged;
@@ -1583,7 +1693,11 @@ public final class RouteShapeProbe
         private boolean hitGlobalCap;
         private boolean interrupted;
 
-        private void addMeasuredPair(RouteMeasurement clientMeasurement, RouteMeasurement shapeMeasurement)
+        private void addMeasuredPair(
+            DrewsHelperCollisionMap map,
+            RouteMeasurement clientMeasurement,
+            RouteMeasurement shapeMeasurement
+        )
         {
             RoutePairMeasurement routePair = new RoutePairMeasurement(clientMeasurement, shapeMeasurement);
             solved++;
@@ -1621,7 +1735,7 @@ public final class RouteShapeProbe
                 shapeOpenGroundUnchanged++;
             }
 
-            RouteShapeProbe.recordBaselineDiagnostics(this, routePair);
+            RouteShapeProbe.recordBaselineDiagnostics(map, this, routePair);
 
             if (shapeMeasurement.stepCount != clientMeasurement.stepCount)
             {

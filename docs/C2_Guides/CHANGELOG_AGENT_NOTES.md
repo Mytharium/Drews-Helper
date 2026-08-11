@@ -1025,3 +1025,65 @@ D-0150 (2026-08-11) - locType 1 measured rule shipped into the builder. Proof PA
   block whole tiles, doors standing open when the capture was taken, and the terrain rule, which
   D-0142 measured as precise (95.9%) but INCOMPLETE (it misses 65% of tiles the client blocks on
   all four edges). Terrain completeness is now the largest untouched lever, not locType 1.
+
+D-0151 (2026-08-11) - Yardstick self-check fixed and PASSED. Straightness numbers are now quotable.
+
+  See D-0122 for the rule. Gate output after the fix:
+
+      openGroundSelfCheckPairsChecked:         36
+      openGroundSelfCheckStraightLineBlocked: 114
+      BASELINE SELF-CHECK FAILED count:         0
+      BASELINE BUG negativeTrueExcessTurns:     0
+      baselineUnreachable 0 - BASELINE_UNRESOLVED 0 - clientOnlySolved 0 - shapeOnlySolved 0
+
+  CERTIFIED NUMBERS (CLIENT mode, obstacle-aware baseline):
+
+      trueExcessTurns   0=105  1=71  2=65  3=45  4=20  5=18  6=7  7=8  8=8  9=1  10=3  12=1
+      openGround        0=71   1=13  2=48  3=46  4=38  5=24 ...  max 33
+
+  Worst case drops 33 -> 12 once obstacle-forced turns are removed from the count. Roughly two
+  thirds of the old "excess" was geometry, not waste - this confirms the D-0148 correction with a
+  real instrument instead of an argument.
+
+  Worked example, offender #1:
+      3240,3210 -> 3250,3230   displacement 10/20   75 steps
+      minTurnsAmongShortestPaths = 20   <- forced by the building it threads
+      actualDirectionChanges     = 32
+      trueExcessTurns            = 12   (the open-ground metric said 31)
+  20 turns are unavoidable, 12 are ours. That is the honest target for any future straightness
+  work, and it replaces the retired "63% of routes over-turn" figure entirely.
+
+  #24 stays closed on the better metric too: SHAPE worsened 249, improved 14, max blows out to 37.
+
+  METHOD NOTE worth keeping: the gate caught a real problem even though the gate was the broken
+  part. It forced a specific pair to be checked against ground truth instead of a number being
+  trusted. A self-check that never fires is worse than none.
+
+## D-0152 - Terrain completeness measured (tileSetting bit histogram)
+Added a Q3 section to LiveFlagCrossTab: it records the raw tileSetting per covered
+tile (putIfAbsent BEFORE the bit-0 filter, so there is no selection bias) and buckets
+two sets - TARGET (live blocks all four AND not terrain-marked AND no wall) against
+CONTROL (live blocks zero edges AND no wall). Anti-vacuous guard included.
+RESULT: target 10116 / control 56343; missing tileSetting 0 in BOTH (non-vacuous).
+  bit 4 (0x10): target 10.1% vs control 0.2%   delta +9.9pp   ~44x enrichment
+  bit 2 (0x04): target  8.7% vs control 2.7%   delta +6.0pp   ~3.2x
+  bit 3 (0x08): target  1.0% vs control 0.1%   delta +0.9pp   ~10x
+  bit 1 (0x02): target  0.8% vs control 0.3%   delta +0.5pp   ~2.7x
+  bits 5/6/7: zero in both sets.
+DECISIVE NEGATIVE: 79.4% of target tiles carry tileSetting 0x00 (blank). At most
+20.6% of the completeness gap is explainable from the terrain byte at all, so the
+terrain byte is NOT where the remaining gap lives. No rule auto-selected, by design.
+NOTE: the terrain rule marks on (tileSetting AND 1) != 0 - the code SKIPS when bit 0
+is clear. Earlier shorthand had this inverted. bit 0 reading 0% in both sets is
+definitional, not a defect.
+
+## D-0153 - lcl-ssh truncation fix is INCOMPLETE for space-containing paths
+Post-restart A/B on mythpc - same file, same host, same session:
+  C:/Users/drews/c2tmp/spacefree_test.pak   -> 453682 bytes, SHA MATCH
+  C:/Users/.../My Games/.../data.pak        -> 204800 bytes, TRUNCATED
+The -O legacy-SCP flag is applied conditionally so it does not regress paths that
+contain spaces; that branch still rides SFTP and still cuts at exactly 204800.
+WORKAROUND: stage to a space-free path on the remote, then download.
+Recovered and byte-verified through that route: breathing.pak 12110937,
+circulation.pak 7311819, tccc data.pak 453682, rhs-statusquo.rdb 815471,
+rhs-cp01.rdb 563256.
