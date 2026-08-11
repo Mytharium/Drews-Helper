@@ -1272,3 +1272,104 @@ NOTHING 1444 (64.2%) plus SOLID_NOT_FACING 493 (22.0%) = 1,937 of 2,248 proof ed
 are consistent with "the shipped map is simply wrong and a rebuild fixes it". Nothing found so
 far argues against rebuilding. Proceed to the v2 builder per D-0117, with the caveat above
 about how the door bit must be derived.
+
+## Item 3 - shape-derived door bit chosen. Measure the shapes BEFORE building. (2026-08-10)
+
+Mytharium chose the shape-derived door bit over seeding from the known-openable list, on the
+explicit grounds of doing it right rather than quickly (D-0119).
+
+Shape-derived means the builder needs a rule per placement: given a locType and an
+orientation, WHICH tile edges does this placement block? That table is the foundation of the
+whole v2 map - every flag written depends on it.
+
+### Why the table gets measured, not written from memory
+
+This project has now been wrong twice by assuming what cache fields mean:
+  - D-0119/item 1: interactType, blockingMask and wallOrDoor were assumed to separate gates
+    from chests. They overlapped completely.
+  - D-0118: the same three fields were assumed to encode blocking. Confirmed doors and
+    unexplained SOLID edges turned out identical on all of them.
+Both were caught only because they were measured. A hand-written locType table would be the
+third assumption, and this one would be baked into 2,936 regions of shipped data.
+
+Also relevant: the facing test used in D-0132 has a measured 41% false-negative rate on
+confirmed doors. A naive "orientation equals direction" rule is already known to be wrong.
+The real rule must differ per locType, and locTypes 1, 3 and 9 are 92% of the residual.
+
+### The derivation
+
+LocTypeShapeProbe cross-tabulates every wall placement in the cache against what the SHIPPED
+collision map blocks on each of that tile's four edges, grouped by (locType, orientation).
+Output per group: how often each of N/E/S/W is blocked, plus a sample count.
+
+The shipped map is used only as a TEACHER FOR SHAPE, never as a source of truth for coverage.
+That distinction matters: we already measured it wrong on ~14% of edges, and it is missing
+323 regions entirely. But it was produced from this same cache by a working toolchain, so
+wherever it does have data its shape rules should be structurally right. The ~14% error
+becomes noise, and it shows up directly in the per-rule percentages.
+
+ACCEPTANCE: a rule is only usable if its blocked-rate is decisively high AND its sample count
+is large. Anything landing near 50% is the same non-signal the item 2 control caught (65% vs
+a 40% perpendicular baseline was judged not good enough to ship, and that judgement stands).
+Rules that do not clear the bar get carried into the builder as UNKNOWN and resolved by live
+validation, not guessed.
+
+## Item 3 - THE SHAPE TABLE, MEASURED (2026-08-10). This is what the builder uses.
+
+LocTypeShapeProbe cross-tabulated 558,894 single-placement wall tiles in covered regions
+against the shipped map's four edge flags. 275,173 placements were correctly skipped for
+sitting in regions the shipped map does not have - without that filter every rule would have
+read ~100% blocked, because an absent region returns all-false and false means blocked.
+
+NULL BASELINE over 250,000 no-wall tiles: N 22.2%  E 22.2%  S 22.4%  W 22.5%.
+Every number below is read against that 22%.
+
+### The derived table
+
+locType 0 - STRAIGHT WALL, one edge. Confirms DIRECTION_BY_ORIENTATION independently:
+    orient 0 -> W 93.5%      orient 1 -> N 93.3%
+    orient 2 -> E 93.2%      orient 3 -> S 94.0%
+    ~80,000 samples each. Secondary directions sit at 54-65%, which is neighbouring-wall
+    correlation, not the rule. The peak-to-secondary gap is ~30pp and unambiguous.
+
+locType 2 - CORNER, two adjacent edges. This is a genuinely NEW rule we did not have:
+    orient 0 -> N 93.7% + W 93.8%   (NW corner)
+    orient 1 -> N 94.0% + E 94.0%   (NE corner)
+    orient 2 -> E 93.0% + S 93.2%   (SE corner)
+    orient 3 -> S 93.4% + W 93.4%   (SW corner)
+    ~3,800 samples each, and the other two directions drop to 51-55%. Very clean.
+
+locType 3 - one edge, SAME mapping as locType 0, slightly weaker but cleaner separation:
+    orient 0 -> W 88.2%      orient 1 -> N 87.6%
+    orient 2 -> E 87.8%      orient 3 -> S 88.1%
+    ~4,300 samples each, and the non-blocked directions fall to 33-48% - closer to baseline
+    than locType 0 manages.
+
+locType 9 - DIAGONAL, blocks the whole tile. Orientation is irrelevant:
+    all four directions 94.6-95.0% at every orientation, ~24,500 samples each.
+
+locType 1 - DOES NOT CLEAR. Carry as UNKNOWN.
+    All four directions sit flat at 76-79% at every orientation, ~23,000 samples each.
+    It clearly blocks something - 78% against a 22% baseline is not nothing - but orientation
+    carries NO directional signal for it. The builder must not derive a direction from
+    orientation for locType 1. Resolve it with live validation, do not guess.
+
+### The door signature falls straight out of this
+
+Openable locType 0 placements peak on the SAME direction as solid ones, but at ~60% instead
+of ~93%:
+    orient 0 -> W 63.3%   orient 1 -> N 64.3%   orient 2 -> E 59.2%   orient 3 -> S 64.0%
+
+That ~33pp deficit is the door bit in raw form: roughly a third of doors were standing OPEN
+when the shipped map was built, so the map recorded those edges as passable. Same shape rule,
+different observed state. This is exactly the ambiguity v2 removes by storing "blocked by an
+openable" as its own bit rather than collapsing it into blocked/not-blocked.
+
+### One correction to the probe's own output
+
+The report's "rules that clear the bar" section uses a +30pp-over-baseline threshold, and by
+that measure it lists all four directions as clearing for locType 0. That is too permissive -
+the secondary directions are wall-clustering correlation, not blocking. The correct reading is
+the PEAK against its own secondaries, not lift over the null baseline. The raw table is
+unambiguous to a human; the auto-selection heuristic is not. Trust the table, not that
+section, and do not wire the heuristic into the builder.

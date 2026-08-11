@@ -1,0 +1,95 @@
+locType shape probe
+cache: C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
+project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
+
+totals:
+  shipped-map regions: 1524
+  cache regions loaded: 2936
+  covered cache regions sampled: 1511
+  placements seen: 836033
+  sampled: 558894
+  skipped-uncovered-region: 275173
+  skipped-multiple-placements: 1966 placements across 983 tiles
+
+null baseline over no-wall tiles:
+  sampling: deterministic random rejection sample from covered cache regions; cap=250000, seed=0x5A17E5EED, regions=1511, attempts=257201, rejected-wall-tiles=5809, rejected-duplicates=1392
+  samples          N%       E%       S%       W%
+      250000    22.2%    22.2%    22.4%    22.5%
+
+main table:
+  locType  orient openable  samples       N%       E%       S%       W%
+        0       0       no    80694    56.2%    64.6%    55.0%    93.5%
+        0       0      yes      781    36.9%    15.2%    34.1%    63.3%
+        0       1       no    84598    93.3%    54.7%    63.1%    53.7%
+        0       1      yes      778    64.3%    37.0%    16.1%    35.2%
+        0       2       no    80530    55.3%    93.2%    56.6%    64.8%
+        0       2      yes      665    34.0%    59.2%    33.7%    17.3%
+        0       3       no    85674    63.5%    54.0%    94.0%    55.3%
+        0       3      yes      766    17.0%    39.3%    64.0%    37.6%
+        1       0       no    23197    78.9%    76.4%    76.1%    78.8%
+        1       0      yes       47    74.5%    40.4%    42.6%    72.3%
+        1       1       no    23504    79.3%    79.1%    76.6%    76.3%
+        1       1      yes       44    79.5%    75.0%    38.6%    38.6%
+        1       2       no    23087    76.3%    78.9%    79.1%    76.5%
+        1       2      yes       42    35.7%    73.8%    71.4%    35.7%
+        1       3       no    23576    76.1%    76.2%    79.4%    78.7%
+        1       3      yes       44    43.2%    40.9%    72.7%    77.3%
+        2       0       no     3809    93.7%    55.4%    53.2%    93.8%
+        2       1       no     3865    94.0%    94.0%    54.0%    52.5%
+        2       2       no     3743    51.6%    93.0%    93.2%    53.5%
+        2       3       no     3781    53.8%    52.4%    93.4%    93.4%
+        3       0       no     4418    48.2%    36.8%    35.8%    88.2%
+        3       1       no     4317    87.6%    47.2%    34.2%    33.6%
+        3       2       no     4283    34.4%    87.8%    48.2%    35.7%
+        3       3       no     4210    38.6%    37.3%    88.1%    48.8%
+        9       0       no    24546    94.8%    94.6%    94.6%    94.7%
+        9       0      yes       53    88.7%    90.6%    88.7%    90.6%
+        9       1       no    24778    94.9%    94.9%    94.7%    94.7%
+        9       1      yes       43    93.0%    93.0%    93.0%    93.0%
+        9       2       no    24188    94.6%    94.7%    94.7%    94.6%
+        9       2      yes       42    90.5%    88.1%    88.1%    88.1%
+        9       3       no    24752    94.8%    94.8%    95.0%    94.9%
+        9       3      yes       39    94.9%    94.9%    94.9%    94.9%
+
+rules that clear the bar:
+  thresholds: samples >= 100; a direction clears when its blocked-rate is at least 30.0 percentage points above that same direction in the null baseline.
+  locType 0 orient 0 openable no samples 80694; clear directions: N=56.2% (lift +33.9pp), E=64.6% (lift +42.4pp), S=55.0% (lift +32.6pp), W=93.5% (lift +71.0pp)
+  locType 0 orient 0 openable yes samples 781; clear directions: W=63.3% (lift +40.8pp)
+  locType 0 orient 1 openable no samples 84598; clear directions: N=93.3% (lift +71.0pp), E=54.7% (lift +32.5pp), S=63.1% (lift +40.6pp), W=53.7% (lift +31.2pp)
+  locType 0 orient 1 openable yes samples 778; clear directions: N=64.3% (lift +42.0pp)
+  locType 0 orient 2 openable no samples 80530; clear directions: N=55.3% (lift +33.1pp), E=93.2% (lift +71.0pp), S=56.6% (lift +34.1pp), W=64.8% (lift +42.3pp)
+  locType 0 orient 2 openable yes samples 665; clear directions: E=59.2% (lift +37.0pp)
+  locType 0 orient 3 openable no samples 85674; clear directions: N=63.5% (lift +41.2pp), E=54.0% (lift +31.8pp), S=94.0% (lift +71.6pp), W=55.3% (lift +32.8pp)
+  locType 0 orient 3 openable yes samples 766; clear directions: S=64.0% (lift +41.5pp)
+  locType 1 orient 0 openable no samples 23197; clear directions: N=78.9% (lift +56.7pp), E=76.4% (lift +54.2pp), S=76.1% (lift +53.7pp), W=78.8% (lift +56.3pp)
+  locType 1 orient 1 openable no samples 23504; clear directions: N=79.3% (lift +57.1pp), E=79.1% (lift +56.8pp), S=76.6% (lift +54.2pp), W=76.3% (lift +53.8pp)
+  locType 1 orient 2 openable no samples 23087; clear directions: N=76.3% (lift +54.1pp), E=78.9% (lift +56.6pp), S=79.1% (lift +56.7pp), W=76.5% (lift +54.0pp)
+  locType 1 orient 3 openable no samples 23576; clear directions: N=76.1% (lift +53.9pp), E=76.2% (lift +54.0pp), S=79.4% (lift +57.0pp), W=78.7% (lift +56.2pp)
+  locType 2 orient 0 openable no samples 3809; clear directions: N=93.7% (lift +71.5pp), E=55.4% (lift +33.2pp), S=53.2% (lift +30.7pp), W=93.8% (lift +71.3pp)
+  locType 2 orient 1 openable no samples 3865; clear directions: N=94.0% (lift +71.8pp), E=94.0% (lift +71.8pp), S=54.0% (lift +31.6pp), W=52.5% (lift +30.1pp)
+  locType 2 orient 2 openable no samples 3743; clear directions: E=93.0% (lift +70.8pp), S=93.2% (lift +70.7pp), W=53.5% (lift +31.0pp)
+  locType 2 orient 3 openable no samples 3781; clear directions: N=53.8% (lift +31.6pp), E=52.4% (lift +30.1pp), S=93.4% (lift +71.0pp), W=93.4% (lift +70.9pp)
+  locType 3 orient 0 openable no samples 4418; clear directions: W=88.2% (lift +65.7pp)
+  locType 3 orient 1 openable no samples 4317; clear directions: N=87.6% (lift +65.4pp)
+  locType 3 orient 2 openable no samples 4283; clear directions: E=87.8% (lift +65.6pp)
+  locType 3 orient 3 openable no samples 4210; clear directions: S=88.1% (lift +65.6pp)
+  locType 9 orient 0 openable no samples 24546; clear directions: N=94.8% (lift +72.6pp), E=94.6% (lift +72.4pp), S=94.6% (lift +72.2pp), W=94.7% (lift +72.2pp)
+  locType 9 orient 1 openable no samples 24778; clear directions: N=94.9% (lift +72.7pp), E=94.9% (lift +72.7pp), S=94.7% (lift +72.2pp), W=94.7% (lift +72.2pp)
+  locType 9 orient 2 openable no samples 24188; clear directions: N=94.6% (lift +72.4pp), E=94.7% (lift +72.5pp), S=94.7% (lift +72.3pp), W=94.6% (lift +72.1pp)
+  locType 9 orient 3 openable no samples 24752; clear directions: N=94.8% (lift +72.5pp), E=94.8% (lift +72.6pp), S=95.0% (lift +72.6pp), W=94.9% (lift +72.5pp)
+
+rules that do NOT clear the bar, so the builder must treat them as UNKNOWN:
+  locType 1 orient 0 openable yes samples 47; best N=74.5% vs baseline 22.2% (lift +52.2pp); sample count below threshold
+  locType 1 orient 1 openable yes samples 44; best N=79.5% vs baseline 22.2% (lift +57.3pp); sample count below threshold
+  locType 1 orient 2 openable yes samples 42; best E=73.8% vs baseline 22.2% (lift +51.6pp); sample count below threshold
+  locType 1 orient 3 openable yes samples 44; best W=77.3% vs baseline 22.5% (lift +54.8pp); sample count below threshold
+  locType 9 orient 0 openable yes samples 53; best E=90.6% vs baseline 22.2% (lift +68.3pp); sample count below threshold
+  locType 9 orient 1 openable yes samples 43; best N=93.0% vs baseline 22.2% (lift +70.8pp); sample count below threshold
+  locType 9 orient 2 openable yes samples 42; best N=90.5% vs baseline 22.2% (lift +68.3pp); sample count below threshold
+  locType 9 orient 3 openable yes samples 39; best N=94.9% vs baseline 22.2% (lift +72.7pp); sample count below threshold
+
+plain-English reading:
+  Clean locTypes: 0, 1, 2, 3, 9.
+  Mixed locTypes: none.
+  Unknown locTypes: none.
+  Openable vs solid: matched in 0/4 comparable pairs and differed in 4: locType 0 orient 0 solid=NESW openable=W; locType 0 orient 1 solid=NESW openable=N; locType 0 orient 2 solid=NESW openable=E; locType 0 orient 3 solid=NESW openable=S.

@@ -564,3 +564,17 @@ D-0132 (2026-08-10) - Orientation-facing split resolves most of the SOLID bucket
   diagonals where the test is not rigorous, leaving ~35 locType-0 placements genuinely
   unexplained. The test's own false-negative rate on confirmed doors is 41%, which is recorded
   in the report rather than hidden. Ran clean on the real cache; build green, 171 tests.
+
+D-0133 (2026-08-10) - LocTypeShapeProbe: the collision shape table, derived from data.
+  New cachetools diagnostic plus the probeLocTypeShapes task. Cross-tabs (locType, orientation,
+  openable) against the shipped map's four edge flags, over single-placement tiles in covered
+  regions only, with a 250,000-tile no-wall null baseline at ~22%.
+  Three guards make the result trustworthy and all three were required: uncovered regions
+  excluded (an absent region reads as fully blocked and would have forced every rule to 100%),
+  multi-placement tiles excluded (a blocked edge cannot be attributed to one of two placements),
+  and a null baseline so an absolute percentage means something.
+  Results: locType 0 and 3 are single-edge on {0:W,1:N,2:E,3:S}; locType 2 is a two-edge corner;
+  locType 9 blocks the whole tile with orientation irrelevant; locType 1 shows no directional
+  signal at all and is carried as UNKNOWN. Openable placements peak on the same direction at
+  ~60% vs ~93%, which is the open-door state showing through.
+  Nothing about the expected answer was hard-coded - the table is the output, not the input.

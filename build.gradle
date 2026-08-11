@@ -99,3 +99,10 @@ tasks.register('classifyProofEdges', JavaExec) {
     classpath = sourceSets.cachetools.runtimeClasspath
     mainClass = 'com.drewshelper.cachetools.ProofEdgeClassifier'
 }
+
+tasks.register('probeLocTypeShapes', JavaExec) {
+    group = 'drewshelper'
+    description = 'Measure locType/orientation wall edge blocking against the shipped collision map.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.LocTypeShapeProbe'
+}

@@ -1380,3 +1380,17 @@ D-0118 (2026-08-10) - interactType, blockingMask and wallOrDoor do NOT encode tr
   a traversability field, whatever its name suggests.
   What to use instead: placement geometry - locType and orientation - plus live collision data
   from the validator. That combination is what actually worked for both item 1 and item 2.
+
+D-0119 (2026-08-10) - STANDING PREFERENCE: do it right, not fast.
+  Mytharium, in his own words: "My goal is to do things right, not quickly."
+  This is a standing instruction for the whole project, not a comment on one task. When a
+  correct-but-slower route and a quick-but-partial route both exist, take the correct one and
+  say why. Do not offer speed as the headline trade unless he asks for it.
+  In practice that means: measure before building, derive rules from data instead of memory,
+  prove a change on ground truth before shipping it widely, and prefer the approach that
+  covers the whole problem class over the one that covers today's example.
+  Concrete application: for item 3's door bit he chose the shape-derived method over seeding
+  from the known-openable list, explicitly on these grounds, even though seeding lands sooner.
+  Corollary already learned the hard way: "quick" has repeatedly turned out to be slower here.
+  The 25-row log cap, the getImpostor crash and the killed background job each cost a full
+  test cycle. Careful has been the fast path on this project.
