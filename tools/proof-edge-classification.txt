@@ -1,0 +1,41 @@
+proof edges parsed: 2248
+inside cache regions: 2248
+missing cache-region edges: 0
+classified edges: 2248
+
+bucket counts (percent of classified edges):
+  NOTHING  1444 (64.2%)
+  OPENABLE 17 (0.8%)
+  SOLID    787 (35.0%)
+
+top 15 object names in OPENABLE bucket:
+  12  Castle door  ids: 24059=3, 24060=3, 24062=3, 24064=3
+  4  Door  ids: 24058=2, 8695=1, 24057=1
+  1  Guild Door  ids: 14910=1
+
+top 15 object names in SOLID bucket:
+  878  null  ids: 24029=103, 24175=84, 24176=81, 24191=67, 23994=48, 24035=47, 24026=46, 24013=45, 24242=36, 814=33, 24186=31, 23997=20, +46 more ids
+
+example NOTHING edges:
+  2929,3298,0 N
+  2929,3299,0 N
+  2929,3299,0 E
+  2929,3300,0 N
+  2929,3300,0 E
+  2929,3301,0 N
+  2929,3301,0 E
+  2929,3312,0 N
+  2929,3316,0 N
+  2929,3322,0 N
+  2929,3349,0 N
+  2929,3350,0 N
+  2929,3350,0 E
+  2929,3351,0 N
+  2929,3351,0 E
+  2929,3365,0 N
+  2929,3366,0 N
+  2929,3366,0 E
+  2929,3367,0 N
+  2929,3367,0 E
+
+reading: NOTHING edges are places where the proof edge has no cache wall placement on either tile, so those are rebuild wins if the shipped map is stale. OPENABLE edges are the door-aware prize because the cache sees an Open/Close wall object there. SOLID is 787, so those edges are a decode disagreement with the live client and the rebuild is not yet trustworthy until that bucket is understood.

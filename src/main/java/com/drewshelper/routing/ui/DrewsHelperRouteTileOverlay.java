@@ -50,6 +50,8 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
     private static final int TILE_LABEL_HEIGHT = 40;
     /** Cap per-frame door outlines so very long routes cannot flood scene rendering. */
     private static final int MAX_DOOR_HIGHLIGHTS = 64;
+    /** How far to either side of the crossed edge a single doorway is allowed to extend. */
+    private static final int MAX_DOORWAY_WIDTH = 3;
     /** OSRS wall-orientation bits carried by wall objects on their tile. */
     static final int WALL_WEST = 1;
     static final int WALL_NORTH = 2;
@@ -205,27 +207,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
                 continue;
             }
 
-            int edgeX = from.getX();
-            int edgeY = from.getY();
-            int edgeBit = bit;
-            // Key on the southern/western tile plus the north/east wall bit so either
-            // travel direction hits the same physical edge.
-            if (bit == WALL_SOUTH)
-            {
-                edgeY = to.getY();
-                edgeBit = WALL_NORTH;
-            }
-            else if (bit == WALL_WEST)
-            {
-                edgeX = to.getX();
-                edgeBit = WALL_EAST;
-            }
-
-            long edgeKey = (((long) from.getPlane() & 0x3L) << 32)
-                | (((long) edgeX & 0x7FFFL) << 17)
-                | (((long) edgeY & 0x7FFFL) << 2)
-                | (edgeBit == WALL_NORTH ? 0L : 1L);
-            if (!outlinedEdges.add(edgeKey))
+            if (!outlinedEdges.add(doorEdgeKey(from, to, bit)))
             {
                 continue;
             }
@@ -248,6 +230,8 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
                     if (targetId >= 0 && drawInteractable(graphics, from, targetId))
                     {
                         outlines++;
+                        outlines += outlineDoorwayLeaves(graphics, from, to, bit, false,
+                            outlinedEdges, MAX_DOOR_HIGHLIGHTS - outlines);
                         continue;
                     }
                 }
@@ -259,6 +243,8 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
                 && drawDoorWallObject(graphics, fromWall))
             {
                 outlines++;
+                outlines += outlineDoorwayLeaves(graphics, from, to, bit, false,
+                    outlinedEdges, MAX_DOOR_HIGHLIGHTS - outlines);
                 continue;
             }
 
@@ -269,6 +255,8 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
                 && drawDoorWallObject(graphics, toWall))
             {
                 outlines++;
+                outlines += outlineDoorwayLeaves(graphics, from, to, bit, false,
+                    outlinedEdges, MAX_DOOR_HIGHLIGHTS - outlines);
                 continue;
             }
 
@@ -276,8 +264,87 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
             if (fromWall != null && drawDoorWallObject(graphics, fromWall))
             {
                 outlines++;
+                outlines += outlineDoorwayLeaves(graphics, from, to, bit, true,
+                    outlinedEdges, MAX_DOOR_HIGHLIGHTS - outlines);
             }
         }
+    }
+
+    /**
+     * Outlines the remaining leaves of the doorway the route just crossed.
+     *
+     * <p>A route only ever crosses one tile edge, so a two-tile doorway lights one leaf and
+     * leaves the other dark. Both leaves open together, so both are part of the same crossing.
+     *
+     * <p>Walks outward along the wall - perpendicular to the step - and stops at the first tile
+     * with no leaf on it. A doorway is contiguous; carrying on past a gap would start lighting
+     * unrelated doors further down the same wall.
+     *
+     * @param lenient true when the primary leaf itself only matched with the orientation test
+     *     dropped. An open double door has BOTH leaves swung, so neither still records an
+     *     orientation across the path - but relaxing this unconditionally starts matching doors
+     *     on the perpendicular walls beside the opening.
+     * @return how many extra leaves were outlined
+     */
+    private int outlineDoorwayLeaves(Graphics2D graphics, WorldPoint from, WorldPoint to, int bit,
+        boolean lenient, Set<Long> outlinedEdges, int budget)
+    {
+        int runDx = doorwayRunDx(bit);
+        int runDy = doorwayRunDy(bit);
+        if ((runDx == 0 && runDy == 0) || budget <= 0)
+        {
+            return 0;
+        }
+
+        int drawn = 0;
+        for (int dir = -1; dir <= 1; dir += 2)
+        {
+            for (int step = 1; step <= MAX_DOORWAY_WIDTH && drawn < budget; step++)
+            {
+                int offsetX = runDx * step * dir;
+                int offsetY = runDy * step * dir;
+                WorldPoint leafFrom = from.dx(offsetX).dy(offsetY);
+                WorldPoint leafTo = to.dx(offsetX).dy(offsetY);
+
+                // Already outlined - the route crossed this edge too. The doorway is still
+                // contiguous here, so keep walking rather than stopping.
+                if (!outlinedEdges.add(doorEdgeKey(leafFrom, leafTo, bit)))
+                {
+                    continue;
+                }
+
+                if (!outlineDoorLeaf(graphics, leafFrom, leafTo, bit, lenient))
+                {
+                    break;
+                }
+                drawn++;
+            }
+        }
+        return drawn;
+    }
+
+    /** @return true when a door-like wall object sits on this edge and was outlined */
+    private boolean outlineDoorLeaf(Graphics2D graphics, WorldPoint from, WorldPoint to, int bit,
+        boolean lenient)
+    {
+        Tile fromTile = sceneTile(from);
+        WallObject fromWall = fromTile == null ? null : fromTile.getWallObject();
+        if (fromWall != null && ((fromWall.getOrientationA() | fromWall.getOrientationB()) & bit) != 0
+            && drawDoorWallObject(graphics, fromWall))
+        {
+            return true;
+        }
+
+        Tile toTile = sceneTile(to);
+        WallObject toWall = toTile == null ? null : toTile.getWallObject();
+        int oppositeBit = oppositeWallBit(bit);
+        if (toWall != null && ((toWall.getOrientationA() | toWall.getOrientationB()) & oppositeBit) != 0
+            && drawDoorWallObject(graphics, toWall))
+        {
+            return true;
+        }
+
+        return lenient && fromWall != null && drawDoorWallObject(graphics, fromWall);
     }
 
     private boolean drawDoorWallObject(Graphics2D graphics, WallObject wallObject)
@@ -664,6 +731,56 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
         if (bit == WALL_WEST)
         {
             return WALL_EAST;
+        }
+        return 0;
+    }
+
+    /**
+     * One key per physical tile edge, whichever way it is crossed.
+     *
+     * <p>Normalised onto the southern/western tile of the pair plus the north/east bit, so
+     * "north edge of A" and "south edge of B" collapse to the same key.
+     */
+    static long doorEdgeKey(WorldPoint from, WorldPoint to, int bit)
+    {
+        int edgeX = from.getX();
+        int edgeY = from.getY();
+        int edgeBit = bit;
+        if (bit == WALL_SOUTH)
+        {
+            edgeY = to.getY();
+            edgeBit = WALL_NORTH;
+        }
+        else if (bit == WALL_WEST)
+        {
+            edgeX = to.getX();
+            edgeBit = WALL_EAST;
+        }
+
+        return (((long) from.getPlane() & 0x3L) << 32)
+            | (((long) edgeX & 0x7FFFL) << 17)
+            | (((long) edgeY & 0x7FFFL) << 2)
+            | (edgeBit == WALL_NORTH ? 0L : 1L);
+    }
+
+    /**
+     * The axis a doorway runs along, which is perpendicular to the step that crosses it: cross a
+     * north or south edge and the wall runs east-west, so its other leaves are at x +/- 1.
+     */
+    static int doorwayRunDx(int bit)
+    {
+        if (bit == WALL_NORTH || bit == WALL_SOUTH)
+        {
+            return 1;
+        }
+        return 0;
+    }
+
+    static int doorwayRunDy(int bit)
+    {
+        if (bit == WALL_EAST || bit == WALL_WEST)
+        {
+            return 1;
         }
         return 0;
     }

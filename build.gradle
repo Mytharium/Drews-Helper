@@ -92,3 +92,10 @@ tasks.register('generateTransportRows', JavaExec) {
     classpath = sourceSets.cachetools.runtimeClasspath
     mainClass = 'com.drewshelper.cachetools.AccessPointRowGenerator'
 }
+
+tasks.register('classifyProofEdges', JavaExec) {
+    group = 'drewshelper'
+    description = 'Classify live mismatch proof edges against OSRS cache wall placements.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.ProofEdgeClassifier'
+}

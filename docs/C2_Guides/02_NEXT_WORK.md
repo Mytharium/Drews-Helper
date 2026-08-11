@@ -978,3 +978,200 @@ evidence, merged only after a set-diff regeneration - is now repeatable for anyw
     change whose destination tile the cache does not record. Capturing it needs the landing
     tile observed in game. Same shape as every staircase, ladder and cave entrance in the
     1478-ladder pile, so solving it once solves a large class.
+
+## 2026-08-10 addendum 4 - double doors, and the cache is not account-scoped
+
+Double-door highlighting now outlines every leaf of a doorway, not just the leaf whose tile
+the route steps through. See D-0128.
+
+### The cache question, settled with numbers
+
+Asked whether a new account has a smaller cache because it has been to fewer places. It does
+not, and the direction is the opposite of the worry:
+
+    object definitions                                 : 62,401
+    regions in the cache                               :  2,936
+    regions in our shipped collision map               :  1,524
+    regions the cache has that the shipped map has NOT :  1,425
+
+The OSRS cache is the game's asset store - every map region, object definition and model,
+downloaded from Jagex. It is identical for every account regardless of age or where the
+player has walked. Confirmed by counting access points in places a brand-new account cannot
+have visited:
+
+    Kourend / Zeah   623      Mount Karuulm   211
+    Fossil Island     23      Zanaris          12      Prifddinas   5
+
+So the cache is roughly TWICE the coverage of the shipped map, not less. Those 1,425 missing
+regions are exactly why routing refuses to plan into Zeah and Kourend, and they are the prize
+in item 3.
+
+## 2026-08-10 addendum 5 - item 3 scoped with real numbers
+
+Double-door highlighting CONFIRMED IN GAME on two different doorways: the Falador Castle
+double door and the Taverley Wall Gate. Both leaves outline. That closes the highlight work.
+
+### What item 3 is actually worth - measured, not estimated
+
+Diffed the shipped map's region set (the 1524 zip entries, named regionX_regionY) against
+every region that actually contains an access point:
+
+    access points in the cache dump          12,474  across 1,190 regions
+    regions already in the shipped map          867  (9,419 access points)
+    regions MISSING from the shipped map        323  (3,055 access points)
+      of those, surface (regionY <= 65)          80  (  640 access points)
+      of those, deep / instanced                243  (2,415 access points)
+
+This corrects the headline "1,425 regions missing". Most of those 1,425 contain no access
+point at all - empty terrain or instance space. The regions that carry real doors, gates and
+stairs and are missing number 323, and only 80 of those are surface world.
+
+The biggest missing surface cluster is x 1300-1800, y 2880-3260, and it is populated:
+
+    141 Staircase   106 Ladder   92 Door   10 Gangplank   8 Ship's ladder   3 Tightrope
+
+Gangplanks and ship's ladders mean a port; tightropes mean agility content. This is a real
+landmass the router currently has no data for at all.
+
+### The decision that has to be made BEFORE any rebuild
+
+A closed door is recorded in the cache as a blocking wall placement. Rebuilding to the same
+blocked/not-blocked format therefore does NOT fix a single door detour - a shut door stays a
+wall and item 2's prove-and-promote loop would be needed region by region forever.
+
+So item 3 forks at the start:
+  A. Rebuild to parity. Fixes coverage and wrong-wall errors. Doors unchanged.
+  B. Rebuild to a richer format that marks "blocked, but by an openable object". Bigger job,
+     format change, and the map itself would then know a door is a door - which retires most
+     of the manual override workflow.
+Do not start cutting code until this is chosen.
+
+### Proving a rebuild before shipping it
+
+We now have an oracle we did not have before: the 2,248-edge Route A proof file from the
+Falador sweep. Build the cache-derived map for those two scenes ONLY, re-run the validator
+against live collision, and compare mismatch counts to the shipped map's. If the rebuild does
+not lower the mismatch count on ground truth, it does not ship. Full rebuild only after that,
+and still under the tools/README.md subset acceptance test.
+
+## Item 3 - APPROVED DESIGN (2026-08-10). Read this before touching the collision map.
+
+Mytharium chose option B: rebuild the collision map to a door-aware format, and price opening
+a door at 1 tick. Both decisions are settled - do not re-litigate them.
+
+### What the current format actually is
+
+src/main/resources/collision-map.zip, one gzipped entry per region named regionX_regionY.
+Each entry is a DrewsHelperFlagMap: header of four ints (minX, minY, maxX, maxY) then a
+BitSet. DrewsHelperCollisionMap reads it with FLAG_COUNT = 2:
+
+    bit 0  NORTH passable      bit 1  EAST passable
+
+South and West are NOT stored - they are derived from the neighbour
+(canMoveSouth(x,y) == canMoveNorth(x,y-1)). Diagonals are derived from the four cardinals.
+The bit count per tile is already a parameter of the format, which is why this extension is
+cheap rather than a rewrite.
+
+### The door-aware format
+
+FLAG_COUNT 2 -> 4:
+
+    bit 0  NORTH passable          bit 2  NORTH blocked BY AN OPENABLE OBJECT
+    bit 1  EAST  passable          bit 3  EAST  blocked BY AN OPENABLE OBJECT
+
+South/West stay derived exactly as now. A door edge is NOT passable in the bit-0/1 sense -
+the two states are exclusive, which keeps every existing caller correct by default.
+
+Diagonal moves through a door are NOT allowed. You cannot corner-cut a doorway in game, and
+allowing it would produce routes that cannot be walked.
+
+VERSIONING - this is the trap. Bumping FLAG_COUNT changes the BitSet stride, so every
+existing region entry silently decodes as garbage. Ship the new data as a NEW resource
+name (collision-map-v2.zip) and have the loader prefer v2, falling back to the v1 resource at
+FLAG_COUNT 2. That keeps the old map working, lets us A/B the two, and makes the cutover an
+explicit decision instead of a silent corruption.
+
+### The cost model - already supported
+
+DrewsHelperWalkingRouteEngine is ALREADY cost-aware. Its own comment: plain steps cost 1 and
+a transport taking D ticks costs 2 * D - so the unit is HALF A TICK. addNeighbor takes
+stepCostUnits and applies Math.max(1, stepCostUnits).
+
+Therefore: 1 tick to open a door = +2 cost units. A door step costs 1 (the step) + 2 (the
+open) = 3. No new cost machinery is needed, only a new step source.
+
+Two call sites matter: the neighbour expansion (canMove check, around line 894) has to admit
+a door edge as a passable-but-dearer step, and DrewsHelperTraversableTiles.isTraversable has
+to count door edges - otherwise a tile whose only exit is a door stops being standable and
+waypoint snapping starts moving people.
+
+### First step is a measurement, not a rebuild
+
+Do NOT start by reimplementing OSRS collision. The question that decides everything is
+narrower, and we can answer it offline with the 2,248-edge proof file as the oracle:
+
+  For each proof edge - one the live game let Mytharium walk through and the shipped map
+  refuses - what does the CACHE say is on that edge?
+
+    nothing        -> the shipped map is simply wrong there; a rebuild fixes it
+    an openable    -> the door bit fixes it; this is the size of the door prize
+    a solid wall   -> our decode disagrees with the live client; investigate before trusting
+                      anything else in the rebuild
+
+That classification needs only the loc parsing CacheAccessPointDumper already does. It needs
+no game session, no format change, and no collision algorithm - and its answer sizes every
+remaining part of item 3.
+
+Upstream is no help for the builder itself: the Drew Shortest Path checkout CONSUMES
+collision-map.zip but contains no generator for it. All the inputs we need are already on the
+cachetools classpath though - RegionLoader, Region, ObjectManager, LocationsDefinition.
+
+## Item 3 - FIRST MEASUREMENT IS IN (2026-08-10). It changes the ordering.
+
+ProofEdgeClassifier ran against all 2,248 proof edges. Every one fell inside a region the
+cache has, so nothing was dropped:
+
+    NOTHING   1444  (64.2%)   no wall placement at all on either tile
+    OPENABLE    17  ( 0.8%)   an Open/Close wall object
+    SOLID      787  (35.0%)   a wall placement with no open action
+
+### What each bucket means
+
+NOTHING at 64% is the headline. On 1,444 edges the live client let the player walk, the cache
+agrees there is nothing there, and only our shipped map disagrees. Those are rebuild wins
+outright - no format change, no door bit, no proof loop. This is the strongest evidence yet
+that the shipped map is genuinely stale rather than merely incomplete.
+
+OPENABLE at 17 edges is a real and honest surprise. The whole door-aware case rested on doors
+being a big slice and in this sample they are not. The 17 break down as Castle door 12,
+Door 4, Guild Door 1 - i.e. exactly the Falador castle doors already promoted in item 2.
+IMPORTANT: this sample is biased and 17 is a FLOOR, not an estimate. A proof edge only exists
+if the door was standing OPEN when the scene was validated, and the only doors opened were the
+castle ones. World-wide the cache dump holds roughly 2,300 wall-mounted openables (353 Gate,
+1,793 Door, 188 Large door), each covering one or more edges, so the true door prize is on the
+order of a few thousand edges. Do not quote 17 as the size of the door problem, and do not
+quote "a few thousand" as measured either - neither number is proven yet.
+
+SOLID at 35% is NOT yet evidence of a decode problem, despite what the generated report says.
+Every one of the 878 placements in that bucket has name = null, and null-named objects in the
+OSRS cache are overwhelmingly non-interactive scenery - wall trims, arches, floor edging. The
+classifier was deliberately built to report placements and NOT to model blocking, so "a
+wall-type placement exists here" is not the same claim as "something blocks here". The
+hypothesis is that SOLID is mostly non-blocking decoration and the classifier is simply blind
+to that by design.
+
+### Next step, and it is small
+
+Add ONE field to the classifier: does the ObjectDefinition actually block? interactType and
+blockingMask are already read by CacheAccessPointDumper (they were measured during item 1),
+so this is a field lookup, not new decoding. Split SOLID into SOLID-BLOCKING and
+SOLID-DECORATION.
+
+If SOLID collapses into decoration as expected, the rebuild is trustworthy and NOTHING+SOLID
+together are ~99% rebuild wins. If a real SOLID-BLOCKING population survives, that is a
+genuine decode disagreement and it must be understood before any rebuilt map ships.
+
+Ordering consequence: the coverage/correctness rebuild is now the proven-large half and should
+lead. The door bit from D-0117 is still the right design and still rides along in the same
+format change - but it is no longer the part carrying most of the value, and the plan should
+not be sold that way.

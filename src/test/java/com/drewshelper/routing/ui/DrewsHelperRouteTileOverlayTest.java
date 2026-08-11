@@ -7,6 +7,7 @@ import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class DrewsHelperRouteTileOverlayTest
 {
@@ -65,5 +66,58 @@ public class DrewsHelperRouteTileOverlayTest
             DrewsHelperRouteTileOverlay.oppositeWallBit(DrewsHelperRouteTileOverlay.WALL_WEST)));
         assertEquals(0, DrewsHelperRouteTileOverlay.oppositeWallBit(0));
         assertEquals(0, DrewsHelperRouteTileOverlay.oppositeWallBit(16));
+    }
+
+    @Test
+    public void doorwayRunsPerpendicularToTheCrossing()
+    {
+        assertEquals(1, DrewsHelperRouteTileOverlay.doorwayRunDx(DrewsHelperRouteTileOverlay.WALL_NORTH));
+        assertEquals(1, DrewsHelperRouteTileOverlay.doorwayRunDx(DrewsHelperRouteTileOverlay.WALL_SOUTH));
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDy(DrewsHelperRouteTileOverlay.WALL_NORTH));
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDy(DrewsHelperRouteTileOverlay.WALL_SOUTH));
+
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDx(DrewsHelperRouteTileOverlay.WALL_EAST));
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDx(DrewsHelperRouteTileOverlay.WALL_WEST));
+        assertEquals(1, DrewsHelperRouteTileOverlay.doorwayRunDy(DrewsHelperRouteTileOverlay.WALL_EAST));
+        assertEquals(1, DrewsHelperRouteTileOverlay.doorwayRunDy(DrewsHelperRouteTileOverlay.WALL_WEST));
+
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDx(0));
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDy(0));
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDx(16));
+        assertEquals(0, DrewsHelperRouteTileOverlay.doorwayRunDy(16));
+    }
+
+    @Test
+    public void doorEdgeKeyIsTheSameFromEitherSide()
+    {
+        WorldPoint south = new WorldPoint(2960, 3334, 2);
+        WorldPoint north = new WorldPoint(2960, 3335, 2);
+        assertEquals(
+            DrewsHelperRouteTileOverlay.doorEdgeKey(south, north, DrewsHelperRouteTileOverlay.WALL_NORTH),
+            DrewsHelperRouteTileOverlay.doorEdgeKey(north, south, DrewsHelperRouteTileOverlay.WALL_SOUTH));
+
+        WorldPoint west = new WorldPoint(2964, 3338, 0);
+        WorldPoint east = new WorldPoint(2965, 3338, 0);
+        assertEquals(
+            DrewsHelperRouteTileOverlay.doorEdgeKey(west, east, DrewsHelperRouteTileOverlay.WALL_EAST),
+            DrewsHelperRouteTileOverlay.doorEdgeKey(east, west, DrewsHelperRouteTileOverlay.WALL_WEST));
+    }
+
+    @Test
+    public void doorEdgeKeySeparatesTheTwoLeavesOfADoorway()
+    {
+        // The whole double-door scan depends on these two edges being distinct keys.
+        long left = DrewsHelperRouteTileOverlay.doorEdgeKey(
+            new WorldPoint(2959, 3334, 2), new WorldPoint(2959, 3335, 2),
+            DrewsHelperRouteTileOverlay.WALL_NORTH);
+        long right = DrewsHelperRouteTileOverlay.doorEdgeKey(
+            new WorldPoint(2960, 3334, 2), new WorldPoint(2960, 3335, 2),
+            DrewsHelperRouteTileOverlay.WALL_NORTH);
+        assertNotEquals(left, right);
+
+        long otherPlane = DrewsHelperRouteTileOverlay.doorEdgeKey(
+            new WorldPoint(2959, 3334, 0), new WorldPoint(2959, 3335, 0),
+            DrewsHelperRouteTileOverlay.WALL_NORTH);
+        assertNotEquals(left, otherPlane);
     }
 }

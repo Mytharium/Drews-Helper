@@ -518,3 +518,39 @@ D-0127 (2026-08-10) - First cache-derived rows promoted into active routing.
   what the router actually loads (see D-0114). Verified with the README's own acceptance
   test: 12,275 edges before, 12,295 after, ZERO pre-existing edges lost, 20/20 new crossings
   present, and the original Taverley gate override still present as a regression canary.
+
+D-0128 (2026-08-10) - Every leaf of a doorway is highlighted, not just the one crossed.
+  drawDoorSteps only ever inspected edges the route physically crosses, so a two-tile doorway
+  lit one leaf and left the other dark - the second leaf sits on a tile the path never steps
+  on. Added outlineDoorwayLeaves, which walks outward along the wall axis (perpendicular to
+  the step, via the new pure helpers doorwayRunDx/doorwayRunDy) and outlines each contiguous
+  door-like leaf, stopping at the first tile with no leaf so it cannot run away down a wall of
+  unrelated doors. MAX_DOORWAY_WIDTH = 3 either side covers large gates.
+  The inline edge-key maths moved into a pure static doorEdgeKey so the neighbour scan keys
+  edges identically and the property is unit-tested. Leniency is inherited, not assumed: an
+  open double door has BOTH leaves swung so neither records an orientation across the path,
+  but the neighbour scan only drops the orientation test when the primary leaf itself was
+  found that way - dropping it unconditionally starts matching doors on the perpendicular
+  walls beside the opening. Build green, 171 tests (was 168), 0 failures.
+
+D-0129 (2026-08-10) - Double-door highlighting confirmed working in game.
+  Verified by Mytharium on the Falador Castle double door and independently on the Taverley
+  Wall Gate - both leaves outline in cyan. The outlineDoorwayLeaves walk generalises beyond
+  the one doorway it was written against, which was the open question.
+
+D-0130 (2026-08-10) - Item 3 scoped against the real region diff.
+  Compared the shipped collision map's 1,524 zip entries against the 1,190 regions that
+  contain access points: 867 covered, 323 missing (3,055 access points), of which only 80 are
+  surface regions holding 640 access points. The rest is dungeon and instance space. The
+  earlier "1,425 missing regions" figure counts empty terrain and overstates the prize.
+  Recorded because this number will otherwise be re-derived every time item 3 comes up.
+
+D-0131 (2026-08-10) - ProofEdgeClassifier: measured what the cache says about every proof edge.
+  New diagnostic in src/cachetools plus one gradle task, classifyProofEdges. Reads the 2,248
+  live-proven edges and asks the cache what sits on each one. Deliberately reports wall
+  PLACEMENTS and models no collision at all - the moment it starts modelling tile settings and
+  bridges it stops being a measurement and becomes a second implementation to debug.
+  Result: NOTHING 1444 (64.2%), OPENABLE 17 (0.8%), SOLID 787 (35.0%), zero edges outside the
+  cache. Writes tools/proof-edge-classification.txt. Ran clean on the real 226 MB cache in 6s.
+  The generated report's own closing paragraph overstates the SOLID finding as a decode
+  disagreement - see 02_NEXT_WORK for why that reading is premature.

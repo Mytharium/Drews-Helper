@@ -1347,3 +1347,25 @@ D-0115 (2026-08-10) - An exception in an overlay is invisible except as "nothing
   bad call takes out unrelated features that happen to be drawn later in the same method.
   Why: a full render-order feature (door outlines) looked like a logic bug for a whole test
   cycle when it was a one-line unguarded API call.
+
+D-0116 (2026-08-10) - Never report a background Codex job as "in flight".
+  Rule: work is either verified and shipped, or it is not started. Do not tell the user a fix
+  is building and will land shortly - either finish it inside the turn or say plainly that it
+  has not been done.
+  Why: a Codex job launched with run_in_background was killed by session teardown on
+  2026-08-10 with no completion record. It was reported as "building", so the user re-ran the
+  in-game test against unchanged code and reported the same bug back. That cost him a full
+  test cycle and made a fix that had never existed look like a fix that had failed.
+  Corollary: for edits of this size, do them inline. The Codex round trip is only worth it
+  when the work is large enough that the handoff cost is recovered.
+
+D-0117 (2026-08-10) - The collision map becomes door-aware, and a door costs 1 tick.
+  Decision: rebuild to a 4-flag format carrying "blocked by an openable object" alongside
+  "passable", and charge a door crossing 1 tick (= +2 cost units, since the router prices in
+  half-ticks and a D-tick transport already costs 2*D).
+  Why: rebuilding to the existing blocked/not-blocked format would fix coverage and wrong-wall
+  errors but would not fix a single door - a shut door is indistinguishable from a stone wall
+  in that format, so the manual prove-and-promote loop from item 2 would be needed region by
+  region forever. The door bit retires that loop. The tick is not free because opening really
+  does cost a tick, and a route that pretends otherwise will under-estimate every indoor ETA.
+  Chosen by Mytharium 2026-08-10 after being shown the measured cost of each option.
