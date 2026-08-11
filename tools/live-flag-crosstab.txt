@@ -65,6 +65,36 @@ locType 0 single-placement live edge rates:
   combined        mixed     6699      169   2951/6699    44.1%   3038/6699    45.4%   2875/6650    43.2%   2897/6648    43.6%
   derived-edge skips in this table: N=0, E=0, S=49, W=51
 
+Q4 locType 9 is the diagonal-wall shape. The builder currently blocks ALL FOUR edges on every locType 9 placement regardless of orientation, so this table decides whether that is over-blocking or simply correct. INTERPRETATION RULE, stated before the numbers: if all four edges sit far above the no-wall baseline on every orientation, the all-four rule is CORRECT and there is no win here - report that and stop. Only a per-orientation split, where some edges lift and others sit at baseline, justifies a narrower rule.
+Q4 locType 9 single-placement live edge rates:
+  group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  orient 0                   315        0      91/315    28.9%      79/315    25.1%     313/313   100.0%     310/310   100.0%
+  orient 1                   321        0     135/321    42.1%     140/321    43.6%     319/319   100.0%     318/318   100.0%
+  orient 2                   280        0      78/280    27.9%      89/280    31.8%     277/277   100.0%     275/275   100.0%
+  orient 3                   365        1     143/365    39.2%     140/365    38.4%     361/362    99.7%     359/360    99.7%
+  combined                  1281        1    447/1281    34.9%    448/1281    35.0%   1270/1271    99.9%   1262/1263    99.9%
+  derived-edge skips in this table: N=0, E=0, S=10, W=18
+
+Q5 splits Q4 on neighbour contamination. Q4 showed S and W blocked ~100% on EVERY orientation while N and E sat at baseline. That split is orientation-INVARIANT, which no real geometric rule can be - locType 0 peaks move with orientation. The suspected cause is that S and W are DERIVED from the neighbour tile, and diagonal walls are corner fillers that sit beside other walls. NEIGHBOUR-CLEAN below means neither the S (y-1) nor the W (x-1) neighbour carries any wall placement of its own.
+INTERPRETATION RULE, stated before the numbers: if S and W stay near 100% on the NEIGHBOUR-CLEAN table, the confound is refuted and locType 9 genuinely blocks S+W only - a narrower rule is then justified and must still pass the 2,248-edge proof. If S and W COLLAPSE toward the no-wall baseline once contaminated neighbours are removed, the confound is confirmed, the existing all-four rule is correct, and locType 9 closes as a dead lever. A clean-sample size below ~40 placements is too small to conclude either way - say so rather than reading noise.
+Q5a locType 9 NEIGHBOUR-CLEAN (no wall on S or W neighbour):
+  group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  orient 0                    22        0       15/22    68.2%       18/22    81.8%       20/20   100.0%       22/22   100.0%
+  orient 1                    40        0       36/40    90.0%       34/40    85.0%       40/40   100.0%       39/39   100.0%
+  orient 2                    15        0       12/15    80.0%       11/15    73.3%       15/15   100.0%       10/10   100.0%
+  orient 3                   312        1     120/312    38.5%     118/312    37.8%     308/309    99.7%     309/310    99.7%
+  combined                   389        1     183/389    47.0%     181/389    46.5%     383/384    99.7%     380/381    99.7%
+  derived-edge skips in this table: N=0, E=0, S=5, W=8
+
+Q5b locType 9 NEIGHBOUR-CONTAMINATED (wall on S and/or W neighbour):
+  group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
+  orient 0                   293        0      76/293    25.9%      61/293    20.8%     293/293   100.0%     288/288   100.0%
+  orient 1                   281        0      99/281    35.2%     106/281    37.7%     279/279   100.0%     279/279   100.0%
+  orient 2                   265        0      66/265    24.9%      78/265    29.4%     262/262   100.0%     265/265   100.0%
+  orient 3                    53        0       23/53    43.4%       22/53    41.5%       53/53   100.0%       50/50   100.0%
+  combined                   892        0     264/892    29.6%     267/892    29.9%     887/887   100.0%     882/882   100.0%
+  derived-edge skips in this table: N=0, E=0, S=5, W=10
+
 Q2 terrain floor-blocking rule:
   group          sample    tiles N block/use       N% E block/use       E% S block/use       S% W block/use       W%
   terrain           all     6938   6370/6938    91.8%   6359/6938    91.7%   6909/6909   100.0%   6880/6880   100.0%

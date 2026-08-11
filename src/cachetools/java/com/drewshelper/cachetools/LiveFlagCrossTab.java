@@ -549,6 +549,27 @@ public final class LiveFlagCrossTab
                 {
                     tab.locType0.add(placement, liveEdges);
                 }
+                else if (placement.locType == 9)
+                {
+                    tab.locType9.add(placement, liveEdges);
+                    // S and W are DERIVED from the neighbour tile (S of T = N of T.y-1,
+                    // W of T = E of T.x-1), so a wall on the neighbour blocks them for
+                    // reasons that have nothing to do with THIS placement. Diagonal walls
+                    // are corner fillers and sit next to other walls, so that confound is
+                    // expected to be common. Split the sample on it.
+                    boolean southNeighbourClean = !cache.wallPlacementsByTile
+                        .containsKey(tileKey(tile.x, tile.y - 1, tile.plane));
+                    boolean westNeighbourClean = !cache.wallPlacementsByTile
+                        .containsKey(tileKey(tile.x - 1, tile.y, tile.plane));
+                    if (southNeighbourClean && westNeighbourClean)
+                    {
+                        tab.locType9NeighbourClean.add(placement, liveEdges);
+                    }
+                    else
+                    {
+                        tab.locType9NeighbourContaminated.add(placement, liveEdges);
+                    }
+                }
             }
             else
             {
@@ -616,6 +637,39 @@ public final class LiveFlagCrossTab
             .append("cannot be trusted.").append('\n');
         appendLocTypeTable(report, "locType 0 single-placement live edge rates", "expected",
             tab.locType0, true);
+        report.append('\n');
+        report.append("Q4 locType 9 is the diagonal-wall shape. The builder currently blocks ")
+            .append("ALL FOUR edges on every locType 9 placement regardless of orientation, ")
+            .append("so this table decides whether that is over-blocking or simply correct. ")
+            .append("INTERPRETATION RULE, stated before the numbers: if all four edges sit ")
+            .append("far above the no-wall baseline on every orientation, the all-four rule ")
+            .append("is CORRECT and there is no win here - report that and stop. Only a ")
+            .append("per-orientation split, where some edges lift and others sit at ")
+            .append("baseline, justifies a narrower rule.").append('\n');
+        appendLocTypeTable(report, "Q4 locType 9 single-placement live edge rates", "UNKNOWN",
+            tab.locType9, false);
+        report.append('\n');
+        report.append("Q5 splits Q4 on neighbour contamination. Q4 showed S and W blocked ")
+            .append("~100% on EVERY orientation while N and E sat at baseline. That split is ")
+            .append("orientation-INVARIANT, which no real geometric rule can be - locType 0 ")
+            .append("peaks move with orientation. The suspected cause is that S and W are ")
+            .append("DERIVED from the neighbour tile, and diagonal walls are corner fillers ")
+            .append("that sit beside other walls. NEIGHBOUR-CLEAN below means neither the S ")
+            .append("(y-1) nor the W (x-1) neighbour carries any wall placement of its own.")
+            .append('\n')
+            .append("INTERPRETATION RULE, stated before the numbers: if S and W stay near ")
+            .append("100% on the NEIGHBOUR-CLEAN table, the confound is refuted and locType ")
+            .append("9 genuinely blocks S+W only - a narrower rule is then justified and must ")
+            .append("still pass the 2,248-edge proof. If S and W COLLAPSE toward the no-wall ")
+            .append("baseline once contaminated neighbours are removed, the confound is ")
+            .append("confirmed, the existing all-four rule is correct, and locType 9 closes ")
+            .append("as a dead lever. A clean-sample size below ~40 placements is too small ")
+            .append("to conclude either way - say so rather than reading noise.").append('\n');
+        appendLocTypeTable(report, "Q5a locType 9 NEIGHBOUR-CLEAN (no wall on S or W neighbour)",
+            "UNKNOWN", tab.locType9NeighbourClean, false);
+        report.append('\n');
+        appendLocTypeTable(report, "Q5b locType 9 NEIGHBOUR-CONTAMINATED (wall on S and/or W neighbour)",
+            "UNKNOWN", tab.locType9NeighbourContaminated, false);
         report.append('\n');
         appendTerrainReport(report, tab, cache);
         return report.toString();
@@ -1351,6 +1405,9 @@ public final class LiveFlagCrossTab
         private final DirectionStats baseline = new DirectionStats();
         private final LocTypeTable locType1 = new LocTypeTable();
         private final LocTypeTable locType0 = new LocTypeTable();
+        private final LocTypeTable locType9 = new LocTypeTable();
+        private final LocTypeTable locType9NeighbourClean = new LocTypeTable();
+        private final LocTypeTable locType9NeighbourContaminated = new LocTypeTable();
         private final TerrainAgreement terrain = new TerrainAgreement();
         private final TerrainAgreement bridge = new TerrainAgreement();
         private final ReverseTerrainStats reverse = new ReverseTerrainStats();

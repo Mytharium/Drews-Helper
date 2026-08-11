@@ -1087,3 +1087,109 @@ WORKAROUND: stage to a space-free path on the remote, then download.
 Recovered and byte-verified through that route: breathing.pak 12110937,
 circulation.pak 7311819, tccc data.pak 453682, rhs-statusquo.rdb 815471,
 rhs-cp01.rdb 563256.
+
+D-0154 (2026-08-11) - locType 9 measured. Strong signal, NO RULE SHIPPED - a confound must be
+  ruled out first. Approved by Mytharium as the next lever after terrain measured out at <=20.6%.
+
+  Builder state before this work: shapeFor() case 9 returns LOC_TYPE_9_EDGES = {N,E,S,W}, i.e.
+  block all four edges on every locType 9 placement, orientation ignored entirely. Note for
+  future readers: locType1EdgesByOrientation() also returns LOC_TYPE_9_EDGES as its
+  invalid-orientation fallback. That is NOT a bug - it is reusing the constant as "all four" -
+  but the name is misleading and cost a minute to rule out.
+
+  Added a Q4 locType 9 table to LiveFlagCrossTab (field, populate branch, report call - 3
+  anchors, 15 lines). The interpretation rule was written into the report text BEFORE the
+  numbers were seen, deliberately, so the conclusion could not be fitted to the data.
+
+  RESULT, 1,281 single-placement locType 9 tiles vs the no-wall baseline
+  (baseline N 26.6% E 26.7% S 25.6% W 25.6%):
+
+      orient 0  (315)   N 28.9%   E 25.1%   S 100.0%   W 100.0%
+      orient 1  (321)   N 42.1%   E 43.6%   S 100.0%   W 100.0%
+      orient 2  (280)   N 27.9%   E 31.8%   S 100.0%   W 100.0%
+      orient 3  (365)   N 39.2%   E 38.4%   S  99.7%   W  99.7%
+      combined (1281)   N 34.9%   E 35.0%   S  99.9%   W  99.9%
+
+  So: S and W are essentially ALWAYS blocked; N and E sit at or near baseline. That is a clean
+  split - but it is the WRONG KIND of split, and that is the whole finding.
+
+  WHY NO RULE WAS SHIPPED. The split is orientation-INVARIANT. All four orientations give the
+  same S+W answer. Orientation is what distinguishes one diagonal from another, so a genuine
+  geometric rule MUST vary with it - locType 0 does exactly that (orient0 -> W 96.9%,
+  orient1 -> N 98.4%, orient2 -> E 99.0%, orient3 -> S 97.5%). An N/E-versus-S/W split that
+  ignores orientation is a split along the MEASUREMENT AXIS, not along the geometry.
+
+  Two readings remain open and this table cannot separate them:
+    (a) REAL - locType 9 blocks S and W only. Then the all-four rule over-blocks N and E on
+        1,281 placements and there is a genuine win here.
+    (b) CONFOUND - and this is the one I would bet on. In the collision format S and W are
+        DERIVED from the neighbour tile (S of T = N of T.y-1, W of T = E of T.x-1). Diagonal
+        walls are corner fillers: they sit where two walls meet. If the S and W neighbours are
+        themselves wall tiles, the derived edges read blocked for reasons that have nothing to
+        do with the locType 9 object. The single-placement filter at crossTab() guards the
+        CENTRE tile only (placements.size() == 1 for that key) - it says nothing about
+        neighbours, so this confound passes straight through it.
+
+  Reading (b) also explains why N and E sit at baseline: those are read from the tile own flags
+  and are not contaminated by neighbours.
+
+  THE DISCRIMINATING TEST, for whoever picks this up: for each locType 9 tile, check whether the
+  S neighbour (y-1) and W neighbour (x-1) carry their own wall placements. Split the table into
+  neighbour-clean and neighbour-contaminated groups. If S/W stay ~100% on the neighbour-CLEAN
+  subset, reading (a) survives and a narrower rule is justified. If S/W collapse toward baseline
+  once contaminated neighbours are removed, the all-four rule is correct and locType 9 is closed
+  as a dead lever - the same honest outcome terrain gave.
+
+  DO NOT ship "block S and W only" off this table. Under D-0120 (UNKNOWN defaults to BLOCKED)
+  unblocking N and E on 1,281 placements is the dangerous direction: a wrongly-passable edge
+  makes the router plan through a wall and the player simply stops walking.
+
+D-0155 (2026-08-11) - locType 9 neighbour-clean split. MY CONFOUND HYPOTHESIS WAS REFUTED.
+  locType 9 largely CLOSES as a lever - the existing all-four rule is substantially correct.
+
+  D-0154 predicted that the Q4 result (S/W ~100%, N/E at baseline, orientation-invariant) was a
+  neighbour-derivation confound: S and W are derived from the neighbour tile, diagonal walls are
+  corner fillers, so neighbouring walls would inflate S/W. Q5 split the sample on exactly that.
+
+  Q5a NEIGHBOUR-CLEAN (neither S(y-1) nor W(x-1) neighbour carries any wall placement):
+      orient 0   (22)   N 68.2%   E 81.8%   S 100.0%   W 100.0%
+      orient 1   (40)   N 90.0%   E 85.0%   S 100.0%   W 100.0%
+      orient 2   (15)   N 80.0%   E 73.3%   S 100.0%   W 100.0%
+      orient 3  (312)   N 38.5%   E 37.8%   S  99.7%   W  99.7%
+      combined  (389)   N 47.0%   E 46.5%   S  99.7%   W  99.7%
+
+  Q5b NEIGHBOUR-CONTAMINATED (892 tiles): S 100.0%  W 100.0%  N 29.6%  E 29.9%
+  no-wall baseline: N 26.6%  E 26.7%  S 25.6%  W 25.6%
+
+  VERDICT 1 - THE CONFOUND IS DEAD. S and W hold at 99.7% on 389 neighbour-CLEAN tiles, far
+  above the ~40-tile floor the pre-stated rule required. Neighbour walls are NOT what was
+  producing the 100%. locType 9 genuinely blocks S and W. Blocking them is correct and must stay.
+
+  VERDICT 2 - AND THE SPLIT ALSO KILLED THE WIN. The interesting part is what the filter did to
+  N and E. On contaminated tiles N/E sit at baseline (29.6/29.9 vs 26.6/26.7). On CLEAN tiles
+  they jump to 47% combined, and for orientations 0/1/2 to 68-90%. So N and E ARE substantially
+  blocked on locType 9 after all - the Q4 reading of "N/E are free" was itself the artifact,
+  produced by the contaminated majority (892 of 1,281) swamping the clean sample.
+
+  So the honest position on the all-four rule: S/W proven correct; N/E supported on orientations
+  0/1/2 (68-90%, but n = 22/40/15, at or below the pre-stated floor - NOT conclusive on its own);
+  N/E weak on orientation 3 (38.5/37.8 vs 26.6 baseline, only +12pp, but n = 312 so the weakness
+  is real and not noise). Nothing here justifies unblocking any edge. Under D-0120 unblocking is
+  the dangerous direction, and +12pp is nowhere near the +70pp separation locType 0 gives.
+
+  ONE NARROW LEAD LEFT, deliberately not taken: orientation 3 alone, N and E, 312 clean tiles at
+  ~38%. That is the only cell with both a large sample and a low rate. If anyone revisits
+  locType 9, that is the single question - and it needs its own 2,248-edge proof run, not this
+  table. It is a small prize: 312 tiles x 2 edges in six regions.
+
+  STRUCTURAL NOTE worth keeping: the clean/contaminated split is wildly unbalanced by
+  orientation. Clean is 80% orientation 3 (312 of 389); contaminated is overwhelmingly
+  orientations 0/1/2. Orientation 3 diagonals evidently do not sit against S/W walls the way the
+  others do. Any future locType 9 sampling must not treat the orientations as interchangeable.
+
+  METHOD NOTE - I got this wrong and the measurement caught me. D-0154 argued that
+  orientation-invariance proved the result was an artifact. There WAS a confound distorting the
+  table, so the suspicion was worth acting on, but my conclusion (that the whole S/W signal was
+  false) was wrong. Splitting the sample was the right move and it refuted my own hypothesis in
+  both directions at once: the confound was not driving S/W, and it WAS hiding real N/E blocking.
+  Pre-stating the interpretation rule is what made this readable instead of arguable.
