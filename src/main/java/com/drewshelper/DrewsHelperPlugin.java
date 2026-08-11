@@ -579,6 +579,25 @@ public class DrewsHelperPlugin extends Plugin
 
         if (isWaypointPositionConfigKey(event.getKey()))
         {
+            // isWaypointPositionConfigKey only checks the prefix and suffix, so a key such as
+            // waypoint9Position passes it while resolving to -1. Indexing waypoints[-1] would
+            // throw inside an event handler, so the index is verified before it is used.
+            int index = waypointPositionIndex(event.getKey());
+            if (index >= 0)
+            {
+                WorldPoint decoded = WaypointPositionCodec.decode(
+                    configManager.getConfiguration(CONFIG_GROUP, event.getKey()));
+                if (decoded == null)
+                {
+                    waypoints[index] = null;
+                    waypointArmed[index] = false;
+                    syncWaypointMarker(index);
+                }
+                else if (!decoded.equals(waypoints[index]))
+                {
+                    setWaypoint(index, decoded);
+                }
+            }
             refreshWaypointMarkers();
             markRouteDirty();
         }
@@ -2766,6 +2785,29 @@ public class DrewsHelperPlugin extends Plugin
         return WAYPOINT_POSITION_KEY_PREFIX + (index + 1) + WAYPOINT_POSITION_KEY_SUFFIX;
     }
 
+    private static int waypointPositionIndex(String key)
+    {
+        if (key == null
+            || !key.startsWith(WAYPOINT_POSITION_KEY_PREFIX)
+            || !key.endsWith(WAYPOINT_POSITION_KEY_SUFFIX))
+        {
+            return -1;
+        }
+
+        try
+        {
+            int waypointNumber = Integer.parseInt(key.substring(
+                WAYPOINT_POSITION_KEY_PREFIX.length(),
+                key.length() - WAYPOINT_POSITION_KEY_SUFFIX.length()));
+            int waypointIndex = waypointNumber - 1;
+            return waypointIndex >= 0 && waypointIndex < MAX_WAYPOINTS ? waypointIndex : -1;
+        }
+        catch (NumberFormatException ex)
+        {
+            return -1;
+        }
+    }
+
     private static String waypointLabel(int index)
     {
         return WAYPOINT_TARGET_PREFIX + (index + 1);
@@ -2793,9 +2835,7 @@ public class DrewsHelperPlugin extends Plugin
 
     static boolean isWaypointPositionConfigKey(String key)
     {
-        return key != null
-            && key.startsWith(WAYPOINT_POSITION_KEY_PREFIX)
-            && key.endsWith(WAYPOINT_POSITION_KEY_SUFFIX);
+        return waypointPositionIndex(key) >= 0;
     }
 
     static boolean isWaypointColorConfigKey(String key)

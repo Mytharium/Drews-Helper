@@ -3,85 +3,85 @@ cache: C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
 project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
 output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\build\collision-map-v2.zip
 report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\collision-map-v2-report.txt
-region selector: defaulted from proof file to 11571 (45_51), 11572 (45_52), 11827 (46_51), 11828 (46_52), 12083 (47_51), 12084 (47_52)
-ROUND TRIP OK 6 regions
+region selector: defaulted from proof file to 11570 (45_50), 11571 (45_51), 11572 (45_52), 11573 (45_53), 11826 (46_50), 11827 (46_51), 11828 (46_52), 11829 (46_53), 11830 (46_54), 12082 (47_50), 12083 (47_51), 12084 (47_52), 12085 (47_53), 12086 (47_54), 12339 (48_51), 12340 (48_52), 12341 (48_53), 12342 (48_54), 12596 (49_52), 12597 (49_53), 12598 (49_54), 12852 (50_52), 12853 (50_53), 12854 (50_54)
+ROUND TRIP OK 24 regions
 
 proof-edge comparison:
-  proof edges parsed: 2248
-  passable in v2: 1485
-  door in v2: 10
-  still blocked in v2: 753
+  proof edges parsed: 13148
+  passable in v2: 9799
+  door in v2: 1
+  still blocked in v2: 3348
   outside built regions: 0
-  percentage fixed: 66.5%
+  percentage fixed: 74.5%
   example still-blocked edges:
-    2931,3292,0 N
-    2931,3292,0 E
-    2932,3289,0 N
-    2932,3289,0 E
-    2934,3289,0 N
-    2935,3292,0 N
-    2935,3320,0 N
-    2937,3386,0 E
-    2938,3292,0 N
-    2938,3292,0 E
-    2941,3313,0 N
-    2941,3313,0 E
-    2942,3312,0 N
-    2942,3312,0 E
-    2942,3377,0 N
-    2942,3377,0 E
-    2943,3291,0 N
-    2943,3291,0 E
-    2943,3311,0 E
-    2943,3364,0 E
-    2944,3374,0 N
-    2944,3374,0 E
-    2946,3301,0 N
-    2946,3301,0 E
-    2947,3300,0 N
-    2947,3300,0 E
-    2947,3303,0 N
-    2947,3303,0 E
-    2948,3299,0 E
-    2948,3302,0 N
+    3161,3425,0 E
+    3161,3447,0 E
+    3161,3448,0 N
+    3162,3419,0 N
+    3162,3419,0 E
+    3162,3448,0 E
+    3162,3449,0 N
+    3163,3449,0 N
+    3164,3427,0 E
+    3164,3439,0 N
+    3164,3439,0 E
+    3164,3449,0 N
+    3165,3423,0 N
+    3165,3423,0 E
+    3165,3449,0 N
+    3166,3424,0 N
+    3166,3424,0 E
+    3166,3449,0 N
+    3167,3425,0 N
+    3167,3425,0 E
+    3167,3449,0 N
+    3168,3426,0 N
+    3168,3426,0 E
+    3168,3449,0 N
+    3169,3426,0 E
+    3169,3449,0 N
+    3170,3449,0 N
+    3170,3449,0 E
+    3171,3448,0 N
+    3172,3447,0 E
 
 build statistics:
-  regions built: 6
+  regions built: 24
   placements by locType:
-    0: 3918
-    1: 909
-    2: 155
-    3: 222
-    4: 389
-    5: 188
-    6: 5
-    7: 42
-    8: 5
-    9: 623
-    10: 1956
-    11: 72
-    12: 855
-    13: 43
-    14: 42
-    15: 18
-    16: 86
-    17: 631
-    18: 953
-    19: 60
-    20: 37
-    21: 157
-    22: 11926
-  locType1-orient0 placements: 259
-  locType1-orient1 placements: 210
-  locType1-orient2 placements: 228
-  locType1-orient3 placements: 212
-  locType1 edges blocked total: 907
-  locType1 orientation-3 placements: 212
+    0: 14578
+    1: 3001
+    2: 502
+    3: 871
+    4: 1816
+    5: 1023
+    6: 33
+    7: 102
+    8: 68
+    9: 2314
+    10: 11260
+    11: 281
+    12: 3583
+    13: 255
+    14: 167
+    15: 63
+    16: 499
+    17: 3083
+    18: 3421
+    19: 502
+    20: 85
+    21: 293
+    22: 47861
+  locType1-orient0 placements: 785
+  locType1-orient1 placements: 765
+  locType1-orient2 placements: 713
+  locType1-orient3 placements: 738
+  locType1 edges blocked total: 3028
+  locType1 orientation-3 placements: 738
   locType1 invalid-orientation fallbacks: 0
-  ignored-locType count: 17465
-  terrain-blocked count: 4909
-  bridge-branch count: 48
-  out-of-region neighbour skips: 150
-  total edges made passable: 179313
-  door edges written: 86
+  ignored-locType count: 74395
+  terrain-blocked count: 21504
+  bridge-branch count: 673
+  out-of-region neighbour skips: 696
+  total edges made passable: 715497
+  door edges written: 312
   terrain note: tile-setting floor blocking and bridge lowering are implemented as a convention not yet verified against this project's ground truth.

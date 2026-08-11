@@ -1193,3 +1193,102 @@ D-0155 (2026-08-11) - locType 9 neighbour-clean split. MY CONFOUND HYPOTHESIS WA
   false) was wrong. Splitting the sample was the right move and it refuted my own hypothesis in
   both directions at once: the confound was not driving S/W, and it WAS hiding real N/E blocking.
   Pre-stating the interpretation rule is what made this readable instead of arguable.
+
+D-0156 (2026-08-11) - Waypoint coordinate text boxes shipped. Requested by Mytharium.
+
+  Waypoints #1-#5 can now be typed as "x,y,plane" in the Waypoint Settings config section
+  instead of only being placed by right-clicking a tile.
+
+  WHY IT WAS SMALL: the storage already existed. Positions were ALREADY persisted to RuneLite
+  config as "x,y,plane" under keys waypoint1Position..waypoint5Position in group "drewshelper",
+  encoded/decoded by WaypointPositionCodec, and onConfigChanged already detected those keys.
+  Declaring them as String @ConfigItem entries with the SAME keyName makes RuneLite render text
+  boxes bound to the existing storage - no new persistence, no Swing panel, no sidebar.
+
+  THE ONE REAL GAP that had to be closed: onConfigChanged only refreshed markers and marked the
+  route dirty. It never re-read the new string into the in-memory waypoints[] array, so a typed
+  coordinate would have updated the box and the config and moved nothing. The handler now decodes
+  the current value and applies it through setWaypoint(), which means a typed coordinate gets the
+  SAME traversability snapping a right-click gets.
+
+  LOAD-BEARING DETAIL, do not "simplify" it away: the equality check before calling setWaypoint is
+  not an optimisation. setWaypoint writes config, which fires another ConfigChanged. Without the
+  guard that is an infinite loop. Snapping is idempotent, so the second pass compares equal and
+  the recursion stops after one extra hop.
+
+  DEFECT FOUND AND FIXED IN REVIEW: isWaypointPositionConfigKey only checks the prefix and suffix,
+  so a key like waypoint9Position passes it but resolves to index -1. The delegated code indexed
+  waypoints[-1] directly, which would throw inside an event handler. Guarded with an index >= 0
+  check before any array access.
+
+  ENCODING TRAP worth recording: these two files have DIFFERENT line endings.
+      DrewsHelperConfig.java  = LF   (0 CRLF)
+      DrewsHelperPlugin.java  = CRLF (2,888 after the change)
+  Normalising either one rewrites the whole file in git and buries the real diff. Check per file,
+  never per repo.
+
+  VERIFIED: clean test build SUCCESSFUL, 177 tests, 0 failures, 23 suites. SHA match on both
+  transfers. Config 16,768 bytes LF-only; Plugin 104,031 bytes CRLF-only; braces balanced; no BOM.
+
+  NOT DONE - unit tests for waypointPositionIndex did NOT ship. The delegation only staged the two
+  main source files, so the worker could not see the real test tree and wrote its assertions into
+  an unrelated test class that was never uploaded. The feature is covered by compile plus the 177
+  existing tests and by direct code review, but the three specific assertions I specified
+  (index 0..4 for valid keys, -1 for colour keys / null / empty / out-of-range) are still owed.
+  My delegation setup was at fault, not the worker.
+
+  TOOLING NOTE: the codex output contract reported FAIL with marker-absent even though the marker
+  was present 3x in the plugin. CODEX_EXPECT_MARKER appears to require the marker in EVERY path
+  listed in CODEX_EXPECT_PATHS, and this marker only ever belonged in one of the two files. Pair a
+  single-file marker with a single expected path, or the contract false-fails.
+
+D-0157 (2026-08-11) - Fresh Falador capture: 74.5% of known over-blocking now fixed. But the
+  capture CANNOT prove the orientation-3 change is safe, and that was the stated purpose.
+
+  CAPTURE (Mytharium, 6 waypoints + Falador castle all three floors):
+      drews-live-flags.txt    881,752 B   55,077 rows   13 scenes
+      drews-map-validate.txt  749,436 B   13,148 rows   (the proof source)
+  Proof-region coverage, percent of each 64x64 region inside a captured scene:
+      region   plane0  plane1  plane2
+      45_51     79.7%   46.9%   46.9%      <- waypoint 1 was unreachable; he stood nearby
+      45_52     87.5%   53.7%   53.7%
+      46_51      100%   74.2%   74.2%
+      46_52      100%    100%    100%      <- Falador castle, all three floors
+      47_51      100%   15.2%   15.2%
+      47_52      100%   60.9%   60.9%
+  46_52 at 100% on all three planes is the one that mattered - orientation 3 is indoor geometry.
+
+  PROOF RESULT after swapping tools/route-a-live-mismatches.txt to the new capture:
+      proof edges parsed    13,148     (was 2,248 - a 5.8x larger ground-truth set)
+      passable in v2          9,799
+      door in v2                  1
+      still blocked in v2     3,348
+      outside built regions       0
+      PERCENTAGE FIXED        74.5%
+      ROUND TRIP OK 24 regions  (selector auto-expanded from 6 - he walked further than the
+                                 six target regions, so the build covers everything he touched)
+  Do NOT compare 3,348 against the old 753. Completely different edge sets. The comparable
+  figure is the fraction of v1 over-blocking that v2 fixes: 66.1% before (1,485/2,248) vs
+  74.5% now (9,799/13,148) - and even that is across different ground.
+
+  THE LIMITATION, and it is mine. The whole reason for the trip was to prove locType 1
+  orientation 3 (which UNBLOCKS 738 placements) does not make the router plan through walls.
+  The proof file cannot answer that. DrewsHelperMapValidator.Kind has both directions and the
+  validator constructs both (lines 225, 232), but BOTH sinks discard the dangerous one:
+      DrewsHelperPlugin.java:427  logger      if (kind != OURS_BLOCKS_LIVE_OPEN) continue;
+      DrewsHelperPlugin.java:501  file writer if (kind != OURS_BLOCKS_LIVE_OPEN) continue;
+  The comment at line 422 says so outright: "Only the we-block-but-the-game-allows half is
+  listed." Zero OURS_OPEN_LIVE_BLOCKS rows exist in any log, so it is not recoverable from the
+  run. Row cap is 50,000 and only 13,148 were written, so nothing was truncated - the omission
+  is by design, not by overflow.
+
+  NO RE-WALK IS NEEDED. drews-live-flags.txt records the raw blocked mask for every covered
+  tile, which is complete ground truth in BOTH directions (absence inside the covered bound
+  means passable, per the writer comment at lines 450-455). The dangerous set can therefore be
+  computed offline: v2 says passable AND live says blocked. That is a cross-tab style pass over
+  data already on disk, not another trip.
+
+  METHOD NOTE: I sent Mytharium in-game for a proof the instrument does not record. I should
+  have read the writer before writing the route, the same way reading the trigger first is what
+  caught the default-off Validate Map Data gate. Check what a tool PERSISTS, not just what it
+  computes, before designing a capture around it.

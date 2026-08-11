@@ -265,6 +265,36 @@ public interface DrewsHelperConfig extends Config
         return new Color(0x4B0082);
     }
 
+    @ConfigItem(keyName = "waypoint1Position", name = "Waypoint #1 (x,y,plane)", description = "Type a tile as x,y,plane - for example 2965,3380,0. Leave blank to clear. Off-tile coordinates snap to the nearest standable tile.", section = waypointSettings, position = 6)
+    default String waypoint1Position()
+    {
+        return "";
+    }
+
+    @ConfigItem(keyName = "waypoint2Position", name = "Waypoint #2 (x,y,plane)", description = "Type a tile as x,y,plane - for example 2965,3380,0. Leave blank to clear. Off-tile coordinates snap to the nearest standable tile.", section = waypointSettings, position = 7)
+    default String waypoint2Position()
+    {
+        return "";
+    }
+
+    @ConfigItem(keyName = "waypoint3Position", name = "Waypoint #3 (x,y,plane)", description = "Type a tile as x,y,plane - for example 2965,3380,0. Leave blank to clear. Off-tile coordinates snap to the nearest standable tile.", section = waypointSettings, position = 8)
+    default String waypoint3Position()
+    {
+        return "";
+    }
+
+    @ConfigItem(keyName = "waypoint4Position", name = "Waypoint #4 (x,y,plane)", description = "Type a tile as x,y,plane - for example 2965,3380,0. Leave blank to clear. Off-tile coordinates snap to the nearest standable tile.", section = waypointSettings, position = 9)
+    default String waypoint4Position()
+    {
+        return "";
+    }
+
+    @ConfigItem(keyName = "waypoint5Position", name = "Waypoint #5 (x,y,plane)", description = "Type a tile as x,y,plane - for example 2965,3380,0. Leave blank to clear. Off-tile coordinates snap to the nearest standable tile.", section = waypointSettings, position = 10)
+    default String waypoint5Position()
+    {
+        return "";
+    }
+
     // Both logging controls are gone. The movement benchmark did its job - it validated the
     // overlay against the client's own walking - and is now permanently off behind
     // ROUTE_BENCHMARK_ENABLED in the plugin. ETA accuracy logging stays ON permanently but
