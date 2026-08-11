@@ -578,3 +578,56 @@ D-0133 (2026-08-10) - LocTypeShapeProbe: the collision shape table, derived from
   signal at all and is carried as UNKNOWN. Openable placements peak on the same direction at
   ~60% vs ~93%, which is the open-door state showing through.
   Nothing about the expected answer was hard-coded - the table is the output, not the input.
+
+D-0134 (2026-08-10) - Full-scene live flag dump. One trip, permanent ground truth.
+  New public DrewsHelperMapValidator.liveBlockedMask(flags, sx, sy) returning bit 0 = north
+  blocked, bit 1 = east blocked, by negating the existing liveCanMoveNorth/liveCanMoveEast
+  rather than duplicating collision semantics. DrewsHelperPlugin now dumps the complete live
+  blocked-state of every measurable tile edge in a validated scene to
+  RUNELITE_DIR\drews-live-flags.txt, once per scene key per session, gated on the EXISTING
+  validateMapData toggle. Runs before the coverage-hole and empty-mismatch early returns, so a
+  scene with zero mismatches still yields data.
+  Format: a header line per scene then "<x>,<y>,<plane> <N><E>" for tiles with a blocked edge;
+  absence inside the covered area means passable. Only N and E are stored because south and
+  west are the neighbour tile's north and east - the same reason the shipped map format does it.
+  CORRECTION APPLIED DURING REVIEW: the generated version swept the full 104x104 scene, but the
+  final row and column have no neighbour to consult, so their mask silently read as passable.
+  Since absence means passable, that would have injected a ring of false ground truth. The loop
+  now stops one short on both axes and the header carries an explicit "covered" bound.
+  Why this exists: every round of item 3 so far cost another in-game trip because the validator
+  only recorded one-sided OURS_BLOCKS_LIVE_OPEN rows. Future questions are now offline
+  cross-tabs. Build green, 176 tests (was 171).
+
+D-0135 (2026-08-10) - CollisionMapBuilder: v2 built, and it works.
+  New cachetools program plus the buildCollisionMapV2 task. Cache -> per-region flag maps at
+  FLAG_COUNT = 4 -> collision-map-v2.zip, byte-compatible with the EXISTING DrewsHelperFlagMap
+  (16-byte big-endian minX/minY/maxX/maxY header + BitSet.toByteArray, gzipped per region,
+  entries named regionX_regionY). src/main was not touched - v1 keeps working.
+  Uses the measured D-0133 shape table as named constants, with locType 1 blocking all four
+  edges per D-0120 rather than guessing a direction.
+  SELF-VERIFICATION: every written entry is read back and decoded with an index formula
+  identical to DrewsHelperFlagMap.index. "ROUND TRIP OK 6 regions" - the format is right.
+  Also asserts PASSABLE and DOOR are never both set on an edge.
+
+  FIRST REAL RESULT, against the 2,248-edge proof file (all of which the shipped map blocks,
+  so the baseline is 0% correct):
+      passable in v2        1466   (65.2%)
+      door in v2              10   ( 0.4%)
+      still blocked in v2    772   (34.3%)
+      outside built regions    0
+  1,476 of 2,248 fixed, 65.7%, from a baseline of zero.
+
+  CROSS-VALIDATION - this is the part worth trusting. ProofEdgeClassifier, written earlier and
+  sharing no code path with the builder, independently classified the same edges as
+  NOTHING 1444 / OPENABLE 17 / SOLID 787. The builder produced 1466 / 10 / 772. Two independent
+  implementations landing within ~1.5% of each other is meaningful corroboration that the
+  shape table and the decode are both right.
+
+  Build statistics: 6 regions (auto-derived from the proof file coordinates, not hard-coded),
+  177,424 edges made passable, 85 door edges, 4,909 terrain-blocked tiles, 909 locType-1
+  UNKNOWN placements, 17,465 non-wall placements ignored, 48 bridge-branch tiles, 181
+  out-of-region neighbour writes skipped. Zip is 5,912 bytes for 6 regions.
+
+  ONE COMPILE FIX APPLIED: ProofEdge.regionId() called the outer two-arg regionId(x, y)
+  unqualified. The nested no-arg method shadows it, so it resolved to itself and would not
+  compile. Qualified as CollisionMapBuilder.regionId(...) with a comment.

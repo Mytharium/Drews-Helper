@@ -102,6 +102,57 @@ public class DrewsHelperMapValidatorTest
         assertTrue("no disagreement means no output", report.getMismatches().isEmpty());
     }
 
+    /**
+     * The mask is what turns a validated scene into reusable ground truth, so it must be exact
+     * on the bit positions and forgiving on the bounds - callers sweep whole scenes and cannot
+     * afford an exception on an edge tile.
+     */
+    @Test
+    public void northWallReportsNorthBitOnly()
+    {
+        int[][] flags = openScene();
+        flags[1][1] = CollisionDataFlag.BLOCK_MOVEMENT_NORTH;
+
+        assertEquals(1, DrewsHelperMapValidator.liveBlockedMask(flags, 1, 1));
+    }
+
+    @Test
+    public void eastWallReportsEastBitOnly()
+    {
+        int[][] flags = openScene();
+        flags[1][1] = CollisionDataFlag.BLOCK_MOVEMENT_EAST;
+
+        assertEquals(2, DrewsHelperMapValidator.liveBlockedMask(flags, 1, 1));
+    }
+
+    @Test
+    public void blockedBothWaysReportsBothBits()
+    {
+        int[][] flags = openScene();
+        flags[1][1] = CollisionDataFlag.BLOCK_MOVEMENT_NORTH
+            | CollisionDataFlag.BLOCK_MOVEMENT_EAST;
+
+        assertEquals(3, DrewsHelperMapValidator.liveBlockedMask(flags, 1, 1));
+    }
+
+    @Test
+    public void openTileReportsZero()
+    {
+        assertEquals(0, DrewsHelperMapValidator.liveBlockedMask(openScene(), 1, 1));
+    }
+
+    @Test
+    public void outOfRangeAndNullInputsReportZero()
+    {
+        int[][] flags = openScene();
+
+        assertEquals(0, DrewsHelperMapValidator.liveBlockedMask(null, 1, 1));
+        assertEquals(0, DrewsHelperMapValidator.liveBlockedMask(flags, -1, 1));
+        assertEquals(0, DrewsHelperMapValidator.liveBlockedMask(flags, 1, -1));
+        assertEquals(0, DrewsHelperMapValidator.liveBlockedMask(flags, flags.length, 1));
+        assertEquals(0, DrewsHelperMapValidator.liveBlockedMask(flags, 1, flags[1].length));
+    }
+
     private static int[][] openScene()
     {
         return new int[DrewsHelperMapValidator.SCENE_SIZE][DrewsHelperMapValidator.SCENE_SIZE];

@@ -149,8 +149,10 @@ public class DrewsHelperPlugin extends Plugin
     private String lastValidatedSceneKey;
     private int lastValidationTick;
     private final Set<String> emittedValidationLines = new HashSet<>();
+    private final Set<String> dumpedLiveFlagSceneKeys = new HashSet<>();
     private boolean validationWriteLimitWarned;
     private boolean validationFileWriteWarned;
+    private boolean liveFlagFileWriteWarned;
 
     @Inject
     private Client client;
@@ -230,8 +232,10 @@ public class DrewsHelperPlugin extends Plugin
         lastValidatedSceneKey = null;
         lastValidationTick = 0;
         emittedValidationLines.clear();
+        dumpedLiveFlagSceneKeys.clear();
         validationWriteLimitWarned = false;
         validationFileWriteWarned = false;
+        liveFlagFileWriteWarned = false;
         try
         {
             Files.deleteIfExists(new File(RuneLite.RUNELITE_DIR, "drews-map-validate.txt").toPath());
@@ -239,6 +243,14 @@ public class DrewsHelperPlugin extends Plugin
         catch (IOException ex)
         {
             log.warn("Drew's Helper: could not reset map validation proof file", ex);
+        }
+        try
+        {
+            Files.deleteIfExists(new File(RuneLite.RUNELITE_DIR, "drews-live-flags.txt").toPath());
+        }
+        catch (IOException ex)
+        {
+            log.warn("Drew's Helper: could not reset live collision dump file", ex);
         }
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
@@ -379,8 +391,10 @@ public class DrewsHelperPlugin extends Plugin
             return;
         }
 
+        int[][] flags = collision[plane].getFlags();
+        writeLiveFlagsIfNeeded(sceneKey, flags, baseX, baseY, plane);
         DrewsHelperMapValidator.Report report = DrewsHelperMapValidator.validate(
-            collision[plane].getFlags(), baseX, baseY, plane, collisionMap);
+            flags, baseX, baseY, plane, collisionMap);
 
         if (report.isCoverageHole())
         {
@@ -421,6 +435,59 @@ public class DrewsHelperPlugin extends Plugin
                 log.info("DREW_MAP_VALIDATE   ... {} more suppressed",
                     weBlockGameAllows - printed);
                 break;
+            }
+        }
+    }
+
+    private void writeLiveFlagsIfNeeded(
+        String sceneKey, int[][] flags, int baseX, int baseY, int plane)
+    {
+        if (flags == null || dumpedLiveFlagSceneKeys.contains(sceneKey))
+        {
+            return;
+        }
+
+        // The north and east edges of a tile are decided partly by the neighbouring tile, so the
+        // final row and column of the scene have no neighbour to consult and cannot be measured.
+        // They are excluded rather than reported as passable: a consumer reading absence as
+        // "passable" would otherwise silently ingest a ring of false ground truth. "covered" is
+        // the exclusive offset bound, so absence is only meaningful strictly inside it.
+        final int covered = DrewsHelperMapValidator.SCENE_SIZE - 1;
+
+        List<String> lines = new ArrayList<>();
+        lines.add("DREW_LIVE_FLAGS scene " + sceneKey
+            + " size=" + DrewsHelperMapValidator.SCENE_SIZE
+            + " covered=" + covered);
+        // Absence inside the covered area means both stored edges are passable, not missing.
+        for (int sx = 0; sx < covered; sx++)
+        {
+            for (int sy = 0; sy < covered; sy++)
+            {
+                int mask = DrewsHelperMapValidator.liveBlockedMask(flags, sx, sy);
+                if (mask == 0)
+                {
+                    continue;
+                }
+
+                String blockedEdges = ((mask & 1) != 0 ? "1" : "0")
+                    + ((mask & 2) != 0 ? "1" : "0");
+                lines.add((baseX + sx) + "," + (baseY + sy) + "," + plane
+                    + " " + blockedEdges);
+            }
+        }
+
+        try
+        {
+            Files.write(new File(RuneLite.RUNELITE_DIR, "drews-live-flags.txt").toPath(),
+                lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            dumpedLiveFlagSceneKeys.add(sceneKey);
+        }
+        catch (IOException ex)
+        {
+            if (!liveFlagFileWriteWarned)
+            {
+                liveFlagFileWriteWarned = true;
+                log.warn("Drew's Helper: could not write live collision dump rows", ex);
             }
         }
     }

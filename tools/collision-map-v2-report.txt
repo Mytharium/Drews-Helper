@@ -1,0 +1,81 @@
+collision map v2 build
+cache: C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
+project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
+output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\collision-map-v2.zip
+report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\collision-map-v2-report.txt
+region selector: defaulted from proof file to 11571 (45_51), 11572 (45_52), 11827 (46_51), 11828 (46_52), 12083 (47_51), 12084 (47_52)
+ROUND TRIP OK 6 regions
+
+proof-edge comparison:
+  proof edges parsed: 2248
+  passable in v2: 1466
+  door in v2: 10
+  still blocked in v2: 772
+  outside built regions: 0
+  percentage fixed: 65.7%
+  example still-blocked edges:
+    2931,3292,0 N
+    2931,3292,0 E
+    2932,3289,0 N
+    2932,3289,0 E
+    2934,3289,0 N
+    2935,3292,0 N
+    2935,3320,0 N
+    2937,3386,0 E
+    2938,3292,0 N
+    2938,3292,0 E
+    2941,3313,0 N
+    2941,3313,0 E
+    2942,3312,0 N
+    2942,3312,0 E
+    2942,3377,0 N
+    2942,3377,0 E
+    2943,3291,0 N
+    2943,3291,0 E
+    2943,3311,0 E
+    2943,3364,0 E
+    2944,3374,0 N
+    2944,3374,0 E
+    2946,3301,0 N
+    2946,3301,0 E
+    2947,3300,0 N
+    2947,3300,0 E
+    2947,3303,0 N
+    2947,3303,0 E
+    2947,3383,0 N
+    2948,3299,0 E
+
+build statistics:
+  regions built: 6
+  placements by locType:
+    0: 3918
+    1: 909
+    2: 155
+    3: 222
+    4: 389
+    5: 188
+    6: 5
+    7: 42
+    8: 5
+    9: 623
+    10: 1956
+    11: 72
+    12: 855
+    13: 43
+    14: 42
+    15: 18
+    16: 86
+    17: 631
+    18: 953
+    19: 60
+    20: 37
+    21: 157
+    22: 11926
+  unknown-locType-1 count: 909
+  ignored-locType count: 17465
+  terrain-blocked count: 4909
+  bridge-branch count: 48
+  out-of-region neighbour skips: 181
+  total edges made passable: 177424
+  door edges written: 85
+  terrain note: tile-setting floor blocking and bridge lowering are implemented as a convention not yet verified against this project's ground truth.

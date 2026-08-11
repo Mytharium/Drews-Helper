@@ -152,6 +152,31 @@ public final class DrewsHelperMapValidator
     }
 
     /**
+     * Live captures mirror the shipped map's north/east edge storage so offline analysis cannot
+     * invent duplicate south/west evidence that later disagrees with itself.
+     */
+    public static int liveBlockedMask(int[][] flags, int sx, int sy)
+    {
+        if (flags == null || sx < 0 || sy < 0 || sx >= flags.length || flags[sx] == null
+            || sy >= flags[sx].length)
+        {
+            return 0;
+        }
+
+        int mask = 0;
+        if (sy + 1 < flags[sx].length && !liveCanMoveNorth(flags, sx, sy))
+        {
+            mask |= 1;
+        }
+        if (sx + 1 < flags.length && flags[sx + 1] != null && sy < flags[sx + 1].length
+            && !liveCanMoveEast(flags, sx, sy))
+        {
+            mask |= 2;
+        }
+        return mask;
+    }
+
+    /**
      * Compares one loaded scene against our shipped map.
      *
      * @param flags  the client's collision flags for this plane, in scene coordinates

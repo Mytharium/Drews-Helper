@@ -1373,3 +1373,81 @@ the secondary directions are wall-clustering correlation, not blocking. The corr
 the PEAK against its own secondaries, not lift over the null baseline. The raw table is
 unambiguous to a human; the auto-selection heuristic is not. Trust the table, not that
 section, and do not wire the heuristic into the builder.
+
+## Item 3 - build phase. Two pieces, and the in-game run got bigger on purpose.
+
+Decisions now locked: shape-derived door bit (D-0119 reasoning), 1-tick door cost = +2 units
+(D-0117), UNKNOWN defaults to blocked (D-0120).
+
+### Piece 1 - full-scene live flag dump, and why it replaces the old ask
+
+Every round of item 3 so far has needed another in-game trip, because the validator only ever
+recorded OURS_BLOCKS_LIVE_OPEN - one-sided evidence. It tells us where our map over-blocks and
+nothing else. Resolving locType 1 needs the opposite view: what the live client blocks on all
+four edges of tiles we already know carry a single locType 1 placement.
+
+Rather than build a probe for that one question and then need another trip for the next one,
+the validator now dumps the COMPLETE live blocked-state of every tile edge in the scene, once
+per validated scene, to .runelite\drews-live-flags.txt. About 10,609 tiles times four edges per
+scene - small on disk, and it is a permanent ground-truth dataset.
+
+That turns every future question into an offline cross-tab: locType 1, the ~35 unexplained
+straight-wall placements, the real door open/closed rate, diagonal shapes. One trip, reusable
+forever, instead of one trip per hypothesis. This is the D-0119 principle applied to the test
+loop itself.
+
+### Piece 2 - the v2 region builder
+
+Cache -> per-region DrewsHelperFlagMap at FLAG_COUNT = 4 -> collision-map-v2.zip. Uses the
+measured shape table from D-0133, NOT a hand-written one:
+
+    locType 0  one edge   {0:W, 1:N, 2:E, 3:S}
+    locType 3  one edge   {0:W, 1:N, 2:E, 3:S}
+    locType 2  two edges  {0:NW, 1:NE, 2:SE, 3:SW}
+    locType 9  all four edges, orientation ignored
+    locType 1  UNKNOWN -> blocked (D-0120), counted and reported every run
+
+An openable placement sets the DOOR bit for the same edges its shape blocks, instead of the
+passable bit. Door and passable are mutually exclusive, which keeps every existing caller
+correct by default.
+
+Not shipped until it beats the old map on the 2,248-edge proof file, two Falador regions only,
+before anything touches the other 2,934.
+
+## Item 3 - v2 builder is REAL and MEASURED. Two open questions, both need live data.
+
+Status: builder written, compiles, runs on the real cache, round-trip verified, and fixes
+65.7% of the proof edges from a 0% baseline. See D-0135 for the numbers.
+
+NOT yet done, deliberately: the loader still reads v1 only. Do NOT wire
+collision-map-v2.zip into DrewsHelperCollisionMap until the two questions below are answered.
+Shipping a loader change for data that has not passed ground truth is the exact mistake the
+proof-first discipline exists to prevent.
+
+### Open question 1 - the 772 still-blocked edges
+
+These are edges the live client demonstrably let the player walk through, which v2 still
+blocks. Expected contributors, in order of likely size:
+  - locType 1 UNKNOWN, 909 placements in these 6 regions, each blocking all four edges by
+    D-0120. This is the conservative default working as designed, and it is the single biggest
+    lever available.
+  - locType 9 diagonals blocking whole tiles - correct per the shape table, but a diagonal
+    that only blocks a corner would be over-blocked by a whole-tile rule.
+  - doors that were standing open when the proof was captured and are not caught by the
+    Open/Close action test.
+Resolve with the drews-live-flags.txt ground truth, NOT by loosening the shape table on a hunch.
+
+### Open question 2 - the terrain rule is unverified
+
+Tile-setting floor blocking and the plane-1 bit-2 bridge convention are implemented as
+CONVENTION, explicitly labelled as such in the code and the report. 4,909 terrain-blocked tiles
+and 48 bridge-branch tiles in 6 regions. Nothing in this project has verified either. The live
+flag dump settles it: cross-tab tiles the builder blocked on terrain against what the client
+actually blocks.
+
+### The in-game run that answers both
+
+Needs Validate Map Data ON and a few stops of about ten seconds each. The dump fires once per
+scene key, on that scene's first validation, so arriving somewhere new is enough - no standing
+around for a minute like the mismatch capture needed. Bridges and upper floors are worth
+including specifically because they are the least verified part of the builder.

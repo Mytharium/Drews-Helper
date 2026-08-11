@@ -1394,3 +1394,17 @@ D-0119 (2026-08-10) - STANDING PREFERENCE: do it right, not fast.
   Corollary already learned the hard way: "quick" has repeatedly turned out to be slower here.
   The 25-row log cap, the getImpostor crash and the killed background job each cost a full
   test cycle. Careful has been the fast path on this project.
+
+D-0120 (2026-08-10) - An UNKNOWN edge in the v2 collision map defaults to BLOCKED.
+  Rule: when the shape table cannot determine what a placement blocks - today that is every
+  locType 1 - the builder writes the edge as blocked, never as passable.
+  Why: the two failure modes are not symmetric. A wrongly-blocked edge costs a detour, which
+  is annoying and self-evident. A wrongly-passable edge makes the router plan a path through a
+  solid wall, and the player just stops walking with no explanation. The second is the failure
+  we already measured most of in item 3 (the "we allow, the game blocks" direction outnumbers
+  the missing-door direction and grows with height), so guessing optimistically would make the
+  exact problem we are fixing worse.
+  Chosen by Mytharium 2026-08-10, consistent with D-0119.
+  This is a floor, not a resting place. UNKNOWN edges are to be resolved with live ground
+  truth, and the builder must count and report them every run so the number stays visible
+  instead of quietly becoming permanent.

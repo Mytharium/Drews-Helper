@@ -106,3 +106,10 @@ tasks.register('probeLocTypeShapes', JavaExec) {
     classpath = sourceSets.cachetools.runtimeClasspath
     mainClass = 'com.drewshelper.cachetools.LocTypeShapeProbe'
 }
+
+tasks.register('buildCollisionMapV2', JavaExec) {
+    group = 'drewshelper'
+    description = 'Build a v2 collision map from the OSRS cache and compare it to proof edges.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.CollisionMapBuilder'
+}
