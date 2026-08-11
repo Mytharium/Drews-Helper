@@ -175,11 +175,17 @@ public final class ProofEdgeClassifier
             {
                 classification.openableEdges++;
                 addBreakdown(classification.openableObjects, edgeWalls.wallObjects, true);
+                addDefinitionStats(classification.openableDefinitionStats, edgeWalls.wallObjects);
             }
             else
             {
                 classification.solidEdges++;
                 addBreakdown(classification.solidObjects, edgeWalls.wallObjects, false);
+                addDefinitionStats(classification.solidDefinitionStats, edgeWalls.wallObjects);
+                if (allWallPlacementsHaveInteractTypeZero(edgeWalls.wallObjects))
+                {
+                    classification.solidInteractTypeZeroEdges++;
+                }
             }
         }
 
@@ -223,7 +229,15 @@ public final class ProofEdgeClassifier
                 ObjectDefinition def = objects.get(location.getId());
                 String name = def == null || def.getName() == null ? "(unknown)" : def.getName();
                 String openStyleAction = firstOpenStyleAction(def);
-                wallObjects.add(new WallObject(location.getId(), name, openStyleAction));
+                wallObjects.add(new WallObject(
+                    location.getId(),
+                    name,
+                    openStyleAction,
+                    def == null ? null : def.getInteractType(),
+                    def == null ? null : def.getBlockingMask(),
+                    def == null ? null : def.getWallOrDoor(),
+                    def == null ? null : def.isBlocksProjectile()
+                ));
             }
         }
 
@@ -266,6 +280,58 @@ public final class ProofEdgeClassifier
             breakdown.count++;
             breakdown.ids.merge(wallObject.objectId, 1, Integer::sum);
         }
+    }
+
+    /**
+     * Records declared object-definition fields without treating them as collision truth. The
+     * point of this report is to expose the cache data behind each bucket, not to invent another
+     * blocking classifier.
+     */
+    private static void addDefinitionStats(DefinitionStats stats, List<WallObject> wallObjects)
+    {
+        for (WallObject wallObject : wallObjects)
+        {
+            increment(stats.interactTypes, formatFieldValue(wallObject.interactType));
+            increment(stats.blockingMasks, formatFieldValue(wallObject.blockingMask));
+            increment(stats.wallOrDoors, formatFieldValue(wallObject.wallOrDoor));
+            increment(stats.blocksProjectiles, formatFieldValue(wallObject.blocksProjectile));
+        }
+    }
+
+    private static void increment(Map<String, Integer> counts, String key)
+    {
+        counts.merge(key, 1, Integer::sum);
+    }
+
+    private static String formatFieldValue(Integer value)
+    {
+        return value == null ? "(missing definition)" : String.valueOf(value);
+    }
+
+    private static String formatFieldValue(Boolean value)
+    {
+        return value == null ? "(missing definition)" : String.valueOf(value);
+    }
+
+    /**
+     * Produces the single hypothesis headline for SOLID. {@code interactType == 0} is reported
+     * because it declares no clipping, but it is not used to move an edge between buckets.
+     */
+    private static boolean allWallPlacementsHaveInteractTypeZero(List<WallObject> wallObjects)
+    {
+        if (wallObjects.isEmpty())
+        {
+            return false;
+        }
+
+        for (WallObject wallObject : wallObjects)
+        {
+            if (wallObject.interactType == null || wallObject.interactType != 0)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -336,6 +402,14 @@ public final class ProofEdgeClassifier
         appendNothingExamples(report, classification.nothingExamples);
         report.append('\n');
         appendReading(report, classification);
+        report.append('\n');
+        appendDefinitionStats(report, "object definition fields in OPENABLE bucket:",
+            classification.openableDefinitionStats);
+        report.append('\n');
+        appendDefinitionStats(report, "object definition fields in SOLID bucket:",
+            classification.solidDefinitionStats);
+        report.append('\n');
+        appendInteractTypeZeroHypothesis(report, classification);
         return report.toString();
     }
 
@@ -423,6 +497,59 @@ public final class ProofEdgeClassifier
         {
             report.append("  ").append(example).append('\n');
         }
+    }
+
+    private static void appendDefinitionStats(
+        StringBuilder report,
+        String title,
+        DefinitionStats stats
+    )
+    {
+        report.append(title).append('\n');
+        appendDistribution(report, "interactType", stats.interactTypes);
+        appendDistribution(report, "blockingMask", stats.blockingMasks);
+        appendDistribution(report, "wallOrDoor", stats.wallOrDoors);
+        appendDistribution(report, "blocksProjectile", stats.blocksProjectiles);
+    }
+
+    private static void appendDistribution(
+        StringBuilder report,
+        String title,
+        Map<String, Integer> counts
+    )
+    {
+        report.append("  ").append(title).append(':').append('\n');
+        if (counts.isEmpty())
+        {
+            report.append("    (none)").append('\n');
+            return;
+        }
+
+        List<Map.Entry<String, Integer>> top = new ArrayList<>(counts.entrySet());
+        top.sort(Comparator
+            .<Map.Entry<String, Integer>>comparingInt(Map.Entry::getValue)
+            .reversed()
+            .thenComparing(Map.Entry::getKey));
+
+        for (Map.Entry<String, Integer> entry : top)
+        {
+            report.append("    ").append(entry.getKey())
+                .append(" -> ").append(entry.getValue())
+                .append('\n');
+        }
+    }
+
+    private static void appendInteractTypeZeroHypothesis(
+        StringBuilder report,
+        Classification classification
+    )
+    {
+        report.append("interactType == 0 hypothesis:").append('\n');
+        report.append("  SOLID edges where EVERY wall placement on the edge has interactType == 0: ")
+            .append(classification.solidInteractTypeZeroEdges)
+            .append('\n');
+        report.append("  Reading guide: close to the SOLID bucket count above points to non-blocking ");
+        report.append("scenery; near zero points to a decode disagreement.").append('\n');
     }
 
     private static void appendReading(StringBuilder report, Classification classification)
@@ -550,6 +677,8 @@ public final class ProofEdgeClassifier
         private final int parsedEdges;
         private final Map<String, ObjectBreakdown> openableObjects = new HashMap<>();
         private final Map<String, ObjectBreakdown> solidObjects = new HashMap<>();
+        private final DefinitionStats openableDefinitionStats = new DefinitionStats();
+        private final DefinitionStats solidDefinitionStats = new DefinitionStats();
         private final List<String> nothingExamples = new ArrayList<>();
 
         private int classifiedEdges;
@@ -557,6 +686,7 @@ public final class ProofEdgeClassifier
         private int nothingEdges;
         private int openableEdges;
         private int solidEdges;
+        private int solidInteractTypeZeroEdges;
 
         private Classification(int parsedEdges)
         {
@@ -583,17 +713,41 @@ public final class ProofEdgeClassifier
         private int count;
     }
 
+    private static final class DefinitionStats
+    {
+        private final Map<String, Integer> interactTypes = new HashMap<>();
+        private final Map<String, Integer> blockingMasks = new HashMap<>();
+        private final Map<String, Integer> wallOrDoors = new HashMap<>();
+        private final Map<String, Integer> blocksProjectiles = new HashMap<>();
+    }
+
     private static final class WallObject
     {
         private final int objectId;
         private final String name;
         private final String openStyleAction;
+        private final Integer interactType;
+        private final Integer blockingMask;
+        private final Integer wallOrDoor;
+        private final Boolean blocksProjectile;
 
-        private WallObject(int objectId, String name, String openStyleAction)
+        private WallObject(
+            int objectId,
+            String name,
+            String openStyleAction,
+            Integer interactType,
+            Integer blockingMask,
+            Integer wallOrDoor,
+            Boolean blocksProjectile
+        )
         {
             this.objectId = objectId;
             this.name = name;
             this.openStyleAction = openStyleAction;
+            this.interactType = interactType;
+            this.blockingMask = blockingMask;
+            this.wallOrDoor = wallOrDoor;
+            this.blocksProjectile = blocksProjectile;
         }
     }
 

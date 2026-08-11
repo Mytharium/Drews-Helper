@@ -39,3 +39,31 @@ example NOTHING edges:
   2929,3367,0 E
 
 reading: NOTHING edges are places where the proof edge has no cache wall placement on either tile, so those are rebuild wins if the shipped map is stale. OPENABLE edges are the door-aware prize because the cache sees an Open/Close wall object there. SOLID is 787, so those edges are a decode disagreement with the live client and the rebuild is not yet trustworthy until that bucket is understood.
+
+object definition fields in OPENABLE bucket:
+  interactType:
+    2 -> 22
+  blockingMask:
+    0 -> 22
+  wallOrDoor:
+    1 -> 17
+    0 -> 5
+  blocksProjectile:
+    true -> 22
+
+object definition fields in SOLID bucket:
+  interactType:
+    2 -> 1159
+    0 -> 7
+    1 -> 4
+  blockingMask:
+    0 -> 1170
+  wallOrDoor:
+    0 -> 1170
+  blocksProjectile:
+    true -> 982
+    false -> 188
+
+interactType == 0 hypothesis:
+  SOLID edges where EVERY wall placement on the edge has interactType == 0: 7
+  Reading guide: close to the SOLID bucket count above points to non-blocking scenery; near zero points to a decode disagreement.

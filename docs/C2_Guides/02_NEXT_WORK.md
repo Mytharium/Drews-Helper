@@ -1175,3 +1175,50 @@ Ordering consequence: the coverage/correctness rebuild is now the proven-large h
 lead. The door bit from D-0117 is still the right design and still rides along in the same
 format change - but it is no longer the part carrying most of the value, and the plan should
 not be sold that way.
+
+## Item 3 - the SOLID decoration hypothesis is DEAD (2026-08-10)
+
+Ran the field split on the 787 SOLID edges. The hypothesis was that they are non-blocking
+scenery. They are not:
+
+    SOLID interactType     2 -> 1159    0 -> 7    1 -> 4
+    SOLID blockingMask     0 -> 1170
+    SOLID wallOrDoor       0 -> 1170
+    SOLID blocksProjectile true -> 982  false -> 188
+
+    SOLID edges where EVERY placement has interactType == 0:  7 of 787
+
+Seven. The decoration reading is wrong.
+
+And note what the contrast group does: the OPENABLE bucket - real, confirmed doors - is
+interactType 2 on all 22 placements, blockingMask 0 on all 22. IDENTICAL to SOLID on both.
+These fields do not separate a door from whatever SOLID is, and they do not encode
+traversability. That is the SECOND time this project has been burned by exactly these three
+fields - see D-0119, where interactType/blockingMask/wallOrDoor were measured against gates
+vs chests and overlapped completely. Promoted to DECISION_LOG as D-0118 so nobody reaches for
+them a third time.
+
+One field did separate, in this sample only: wallOrDoor is 1 on 17 of the 22 OPENABLE
+placements and 0 on all 1,170 SOLID placements. Interesting as a door signal, but it is a
+17-placement sample and D-0119 already caught wallOrDoor overlapping elsewhere. Do not build
+on it without a much wider measurement.
+
+### The better hypothesis - and it is a flaw in the classifier, not the cache
+
+The classifier counts ANY wall-type placement on either tile of the edge, and deliberately
+ignores the placement's orientation. But a wall on a tile's NORTH edge does not block its
+EAST edge. With four edges per tile and both tiles inspected, most SOLID hits are probably
+walls facing a completely different direction from the one the player walked through.
+
+That would explain everything: real walls, correctly decoded, simply not on the edge in
+question - which is exactly why the live client let the player walk.
+
+It is cheap to test. The Location carries its orientation and AccessPointRowGenerator already
+has the orientation-to-edge mapping (proven by ground truth on the Falador gate, and measured
+at 65% predicted-edge-blocked vs 40% perpendicular control). Filter the wall placements by
+whether their orientation actually faces the crossed edge and re-run.
+
+Expected outcome if the hypothesis holds: SOLID collapses hard, most of it moving into
+NOTHING, and the rebuild case gets stronger rather than weaker. If SOLID survives an
+orientation filter, then there IS a real decode disagreement and no rebuilt map should ship
+until it is understood.

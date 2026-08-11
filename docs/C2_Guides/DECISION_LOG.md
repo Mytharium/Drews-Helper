@@ -1369,3 +1369,14 @@ D-0117 (2026-08-10) - The collision map becomes door-aware, and a door costs 1 t
   region forever. The door bit retires that loop. The tick is not free because opening really
   does cost a tick, and a route that pretends otherwise will under-estimate every indoor ETA.
   Chosen by Mytharium 2026-08-10 after being shown the measured cost of each option.
+
+D-0118 (2026-08-10) - interactType, blockingMask and wallOrDoor do NOT encode traversability.
+  Rule: never reach for these three ObjectDefinition fields to decide whether something blocks
+  movement or whether a thing is a way through. Measure instead.
+  Why: twice now. D-0119 measured them against gates vs chests and found complete overlap. The
+  SOLID-bucket split then found confirmed doors and unexplained SOLID edges are IDENTICAL on
+  interactType (2) and blockingMask (0), with 1,159 of 1,170 SOLID placements sharing the
+  doors' own value. A field that gives the same answer for a door, a chest and a wall is not
+  a traversability field, whatever its name suggests.
+  What to use instead: placement geometry - locType and orientation - plus live collision data
+  from the validator. That combination is what actually worked for both item 1 and item 2.
