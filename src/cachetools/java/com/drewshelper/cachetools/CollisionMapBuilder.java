@@ -79,12 +79,16 @@ public final class CollisionMapBuilder
     private static final int DANGEROUS_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_UNEXPLAINED_EXAMPLE_LIMIT = 20;
     private static final int ORIENT3_DANGEROUS_SAMPLE_FLOOR = 30;
+    // Defines both the border histogram verdict bucket and the headline comparison exclusion.
     private static final int BORDER_MAX_DISTANCE = 2;
     private static final int INTERIOR_MIN_DISTANCE = 20;
     private static final double BORDER_CONFIRMED_RATE_MULTIPLIER = 3.0;
     private static final double BORDER_REFUTED_RATE_MULTIPLIER = 1.5;
     private static final double BORDER_CONFIRMED_UNEXPLAINED_SHARE = 0.40;
     private static final long BORDER_INTERIOR_COMPARED_EDGE_FLOOR = 500L;
+    // A room interior floor tile carries no placement of its own but is adjacent to its walls.
+    private static final int NEAR_STRUCTURE_RADIUS = 1;
+    private static final int OCCUPANCY_CENSUS_REGION_ID = (46 << 8) | 52;
 
     private static final BorderDistanceBucket[] BORDER_DISTANCE_BUCKETS = {
         new BorderDistanceBucket("0", 0, 0),
@@ -533,6 +537,7 @@ public final class CollisionMapBuilder
 
         int x = baseX + location.getPosition().getX();
         int y = baseY + location.getPosition().getY();
+        stats.placementTileKeys.add(tileKey(x, y, plane));
         if (location.getType() == 1 && location.getOrientation() == 3)
         {
             stats.locType1Orientation3TileKeys.add(tileKey(x, y, plane));
@@ -956,21 +961,39 @@ public final class CollisionMapBuilder
         BorderDistances borderDistances
     )
     {
+        boolean passable = region.bits.isPassable(tile.x, tile.y, tile.plane, direction);
+        boolean door = region.bits.isDoor(tile.x, tile.y, tile.plane, direction);
+        boolean borderExcluded = borderDistances.contained
+            && borderDistances.maxBorderDistance <= BORDER_MAX_DISTANCE;
+        boolean dangerous = liveBlocked && passable;
+        boolean dangerousUnexplained = dangerous
+            && classifyDangerousEdge(comparison, stats, tile, direction) == DangerousSplit.UNEXPLAINED;
+
+        if (borderExcluded)
+        {
+            comparison.borderExcludedEdges++;
+            if (dangerous)
+            {
+                comparison.borderExcludedDangerous++;
+            }
+            if (dangerousUnexplained)
+            {
+                comparison.borderExcludedDangerousUnexplained++;
+            }
+            recordBorderHistogramEdge(comparison, borderDistances, dangerous, dangerousUnexplained);
+            return;
+        }
+
         comparison.comparedEdges++;
         if (orient3)
         {
             comparison.orient3ComparedEdges++;
         }
 
-        boolean dangerous = false;
-        boolean dangerousUnexplained = false;
-        boolean passable = region.bits.isPassable(tile.x, tile.y, tile.plane, direction);
-        boolean door = region.bits.isDoor(tile.x, tile.y, tile.plane, direction);
         if (liveBlocked)
         {
             if (passable)
             {
-                dangerous = true;
                 comparison.dangerous++;
                 if (orient3)
                 {
@@ -1005,9 +1028,61 @@ public final class CollisionMapBuilder
         }
 
         recordBorderHistogramEdge(comparison, borderDistances, dangerous, dangerousUnexplained);
+        recordInteriorMeasurementEdge(comparison, stats, region, tile, dangerous, dangerousUnexplained);
     }
 
-    private static DangerousSplit splitDangerousEdge(
+    private static void recordInteriorMeasurementEdge(
+        DangerousDirectionComparison comparison,
+        BuildStats stats,
+        BuiltRegion region,
+        LiveTile tile,
+        boolean dangerous,
+        boolean dangerousUnexplained
+    )
+    {
+        InteriorBucket bucket = classifyInteriorBucket(stats, tile);
+        boolean nearStructure = isNearStructure(stats, tile);
+        comparison.interiorMeasurement.record(
+            bucket,
+            region.regionId,
+            tile.plane,
+            nearStructure,
+            dangerous,
+            dangerousUnexplained
+        );
+    }
+
+    private static InteriorBucket classifyInteriorBucket(BuildStats stats, LiveTile tile)
+    {
+        if (tile.plane > 0)
+        {
+            return InteriorBucket.UPPER;
+        }
+
+        if (tile.plane == 0 && stats.placementTileKeys.contains(tileKey(tile.x, tile.y, 1)))
+        {
+            return InteriorBucket.UNDER_STRUCTURE;
+        }
+
+        return InteriorBucket.OUTDOOR;
+    }
+
+    private static boolean isNearStructure(BuildStats stats, LiveTile tile)
+    {
+        for (int dx = -NEAR_STRUCTURE_RADIUS; dx <= NEAR_STRUCTURE_RADIUS; dx++)
+        {
+            for (int dy = -NEAR_STRUCTURE_RADIUS; dy <= NEAR_STRUCTURE_RADIUS; dy++)
+            {
+                if (stats.placementTileKeys.contains(tileKey(tile.x + dx, tile.y + dy, tile.plane)))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static DangerousSplit classifyDangerousEdge(
         DangerousDirectionComparison comparison,
         BuildStats stats,
         LiveTile tile,
@@ -1019,6 +1094,30 @@ public final class CollisionMapBuilder
         boolean conflicted = dangerousAxisConflicted(comparison.live, key, direction);
         if (doorCapableLocType != null)
         {
+            return DangerousSplit.DOOR_CAPABLE;
+        }
+
+        if (conflicted)
+        {
+            return DangerousSplit.CONFLICTED;
+        }
+
+        return DangerousSplit.UNEXPLAINED;
+    }
+
+    private static DangerousSplit splitDangerousEdge(
+        DangerousDirectionComparison comparison,
+        BuildStats stats,
+        LiveTile tile,
+        char direction
+    )
+    {
+        DangerousSplit split = classifyDangerousEdge(comparison, stats, tile, direction);
+        long key = tile.key();
+        Integer doorCapableLocType = stats.doorCapableLocTypeByTile.get(key);
+        boolean conflicted = dangerousAxisConflicted(comparison.live, key, direction);
+        if (split == DangerousSplit.DOOR_CAPABLE)
+        {
             comparison.dangerousDoorCapable++;
             if (conflicted)
             {
@@ -1029,13 +1128,13 @@ public final class CollisionMapBuilder
             {
                 comparison.dangerousDoorCapableIgnoredLocType++;
             }
-            return DangerousSplit.DOOR_CAPABLE;
+            return split;
         }
 
-        if (conflicted)
+        if (split == DangerousSplit.CONFLICTED)
         {
             comparison.dangerousConflicted++;
-            return DangerousSplit.CONFLICTED;
+            return split;
         }
 
         comparison.dangerousUnexplained++;
@@ -1188,6 +1287,15 @@ public final class CollisionMapBuilder
             .append(comparison.live.conflictingEastObservations).append('\n');
         report.append("  live conflicting east tiles: ")
             .append(comparison.live.conflictingEastTileKeys.size()).append('\n');
+        report.append("  border-ring exclusion: ACTIVE (maxBorderDistance 0..")
+            .append(BORDER_MAX_DISTANCE)
+            .append(" withheld from every count below)").append('\n');
+        report.append("    borderExcludedEdges: ").append(comparison.borderExcludedEdges).append('\n');
+        report.append("    borderExcludedDangerous: ")
+            .append(comparison.borderExcludedDangerous).append('\n');
+        report.append("    borderExcludedDangerousUnexplained: ")
+            .append(comparison.borderExcludedDangerousUnexplained).append('\n');
+        report.append("    these edges are scene-capture artifacts, not map defects; the histogram below still counts them").append('\n');
         report.append("  comparedEdges: ").append(comparison.comparedEdges).append('\n');
         report.append("  outsideBuiltRegions: ").append(comparison.outsideBuiltRegions).append('\n');
         report.append("  DANGEROUS: ").append(comparison.dangerous).append('\n');
@@ -1197,6 +1305,7 @@ public final class CollisionMapBuilder
         report.append("  OVERBLOCK: ").append(comparison.overblock).append('\n');
         appendDangerousSplit(report, comparison);
         appendBorderHistograms(report, comparison);
+        appendInteriorMeasurement(report, comparison);
         report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
         report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
         report.append("  orient-3 compared-edge count: ")
@@ -1255,6 +1364,553 @@ public final class CollisionMapBuilder
         appendBorderHistogram(report, "minBorderDistance", comparison.minBorderDistanceHistogram);
     }
 
+    private static void appendInteriorMeasurement(
+        StringBuilder report,
+        DangerousDirectionComparison comparison
+    )
+    {
+        InteriorMeasurement measurement = comparison.interiorMeasurement;
+        long bucketComparedTotal = measurement.bucketComparedTotal();
+        long bucketDangerousTotal = measurement.bucketDangerousTotal();
+        long bucketDangerousUnexplainedTotal = measurement.bucketDangerousUnexplainedTotal();
+        long planeComparedTotal = measurement.planeComparedTotal();
+
+        report.append("  interior measurement pass:").append('\n');
+        appendInteriorMeasurementInterpretationRule(report);
+        report.append("    bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) ")
+            .append("DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)").append('\n');
+        for (InteriorBucket bucket : InteriorBucket.values())
+        {
+            InteriorBucketCounts counts = measurement.counts(bucket);
+            appendInteriorCountsRow(report, "    ", bucket.name(), counts, bucketDangerousUnexplainedTotal);
+            if (bucket == InteriorBucket.UNDER_STRUCTURE)
+            {
+                report.append("      caveat: UNDER_STRUCTURE includes bridge tiles and they are ")
+                    .append("unquantified in this pass.")
+                    .append('\n');
+            }
+        }
+
+        appendInteriorMeasurementAssertions(
+            report,
+            comparison,
+            bucketComparedTotal,
+            bucketDangerousTotal,
+            bucketDangerousUnexplainedTotal,
+            planeComparedTotal
+        );
+        appendInteriorMeasurementVerdicts(report, measurement, bucketDangerousUnexplainedTotal);
+        appendInteriorPlaneTable(report, measurement, bucketDangerousUnexplainedTotal);
+        appendInteriorRegionPlaneTable(report, measurement, bucketDangerousUnexplainedTotal);
+        appendUpperOccupancyMeasurement(report, measurement, bucketDangerousUnexplainedTotal);
+        appendOccupancyCensus(report, measurement);
+    }
+
+    private static void appendInteriorMeasurementInterpretationRule(StringBuilder report)
+    {
+        report.append("    interior interpretation rule:").append('\n');
+        report.append("      UPPER = plane > 0").append('\n');
+        report.append("      UNDER_STRUCTURE = plane 0 with a placement tile directly above on plane 1").append('\n');
+        report.append("      OUTDOOR = all remaining post-exclusion compared edges").append('\n');
+        report.append("      INTERIOR = UPPER + UNDER_STRUCTURE").append('\n');
+        report.append("      Reuses the border hypothesis thresholds deliberately: this hypothesis ")
+            .append("must clear the same bar.")
+            .append('\n');
+        report.append("      Rate denominator is comparedEdges for that row; share denominator is the bucket-sum ")
+            .append("DANGEROUS_UNEXPLAINED from UPPER + UNDER_STRUCTURE + OUTDOOR.").append('\n');
+        report.append("      Sub-results compare each proxy against OUTDOOR with the same share ")
+            .append("denominator.").append('\n');
+        report.append("      - VACUOUS: INTERIOR comparedEdges < ")
+            .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+            .append(" OR OUTDOOR comparedEdges < ")
+            .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+            .append(" -> INCONCLUSIVE - VACUOUS.").append('\n');
+        report.append("      - CONFIRMED (interiors): rate(INTERIOR) >= ")
+            .append(BORDER_CONFIRMED_RATE_MULTIPLIER)
+            .append("x rate(OUTDOOR) AND INTERIOR holds >= ")
+            .append(formatRate(BORDER_CONFIRMED_UNEXPLAINED_SHARE))
+            .append(" of post-exclusion DANGEROUS_UNEXPLAINED.").append('\n');
+        report.append("      - REFUTED: rate(INTERIOR) < ")
+            .append(BORDER_REFUTED_RATE_MULTIPLIER)
+            .append("x rate(OUTDOOR).").append('\n');
+        report.append("      - INCONCLUSIVE: anything else.").append('\n');
+    }
+
+    private static void appendInteriorCountsRow(
+        StringBuilder report,
+        String indent,
+        String label,
+        InteriorBucketCounts counts,
+        long dangerousUnexplainedTotal
+    )
+    {
+        report.append(indent).append(label)
+            .append(' ').append(counts.comparedEdges)
+            .append(' ').append(counts.dangerous)
+            .append(' ').append(formatRateWithCounts(counts.dangerous, counts.comparedEdges))
+            .append(' ').append(counts.dangerousUnexplained)
+            .append(' ').append(formatRateWithCounts(counts.dangerousUnexplained, dangerousUnexplainedTotal))
+            .append('\n');
+    }
+
+    private static void appendInteriorMeasurementAssertions(
+        StringBuilder report,
+        DangerousDirectionComparison comparison,
+        long bucketComparedTotal,
+        long bucketDangerousTotal,
+        long bucketDangerousUnexplainedTotal,
+        long planeComparedTotal
+    )
+    {
+        InteriorMeasurement measurement = comparison.interiorMeasurement;
+        report.append("    UPPER.comparedEdges + UNDER_STRUCTURE.comparedEdges + ")
+            .append("OUTDOOR.comparedEdges == comparedEdges: ")
+            .append(okFail(bucketComparedTotal == comparison.comparedEdges))
+            .append(" (").append(measurement.counts(InteriorBucket.UPPER).comparedEdges)
+            .append(" + ").append(measurement.counts(InteriorBucket.UNDER_STRUCTURE).comparedEdges)
+            .append(" + ").append(measurement.counts(InteriorBucket.OUTDOOR).comparedEdges)
+            .append(" == ").append(comparison.comparedEdges).append(")").append('\n');
+        report.append("    UPPER.dangerous + UNDER_STRUCTURE.dangerous + OUTDOOR.dangerous == DANGEROUS: ")
+            .append(okFail(bucketDangerousTotal == comparison.dangerous))
+            .append(" (").append(measurement.counts(InteriorBucket.UPPER).dangerous)
+            .append(" + ").append(measurement.counts(InteriorBucket.UNDER_STRUCTURE).dangerous)
+            .append(" + ").append(measurement.counts(InteriorBucket.OUTDOOR).dangerous)
+            .append(" == ").append(comparison.dangerous).append(")").append('\n');
+        report.append("    UPPER.unexplained + UNDER_STRUCTURE.unexplained + OUTDOOR.unexplained ")
+            .append("== DANGEROUS_UNEXPLAINED: ")
+            .append(okFail(bucketDangerousUnexplainedTotal == comparison.dangerousUnexplained))
+            .append(" (").append(measurement.counts(InteriorBucket.UPPER).dangerousUnexplained)
+            .append(" + ").append(measurement.counts(InteriorBucket.UNDER_STRUCTURE).dangerousUnexplained)
+            .append(" + ").append(measurement.counts(InteriorBucket.OUTDOOR).dangerousUnexplained)
+            .append(" == ").append(comparison.dangerousUnexplained).append(")").append('\n');
+        report.append("    sum over planes of comparedEdges == comparedEdges: ")
+            .append(okFail(planeComparedTotal == comparison.comparedEdges))
+            .append(" (").append(measurement.planeCounts[0].comparedEdges)
+            .append(" + ").append(measurement.planeCounts[1].comparedEdges)
+            .append(" + ").append(measurement.planeCounts[2].comparedEdges)
+            .append(" + ").append(measurement.planeCounts[3].comparedEdges)
+            .append(" == ").append(comparison.comparedEdges).append(")").append('\n');
+    }
+
+    private static void appendInteriorMeasurementVerdicts(
+        StringBuilder report,
+        InteriorMeasurement measurement,
+        long dangerousUnexplainedTotal
+    )
+    {
+        InteriorBucketCounts interior = new InteriorBucketCounts();
+        interior.add(measurement.counts(InteriorBucket.UPPER));
+        interior.add(measurement.counts(InteriorBucket.UNDER_STRUCTURE));
+        InteriorBucketCounts outdoor = measurement.counts(InteriorBucket.OUTDOOR);
+
+        report.append("    verdict combined INTERIOR (UPPER + UNDER_STRUCTURE): ")
+            .append(interiorMeasurementVerdict("INTERIOR", interior, outdoor, dangerousUnexplainedTotal))
+            .append('\n');
+        report.append("    verdict sub-result UPPER: ")
+            .append(interiorMeasurementVerdict(
+                "UPPER",
+                measurement.counts(InteriorBucket.UPPER),
+                outdoor,
+                dangerousUnexplainedTotal
+            ))
+            .append('\n');
+        report.append("    verdict sub-result UNDER_STRUCTURE: ")
+            .append(interiorMeasurementVerdict(
+                "UNDER_STRUCTURE",
+                measurement.counts(InteriorBucket.UNDER_STRUCTURE),
+                outdoor,
+                dangerousUnexplainedTotal
+            ))
+            .append('\n');
+    }
+
+    private static String interiorMeasurementVerdict(
+        String candidateLabel,
+        InteriorBucketCounts candidate,
+        InteriorBucketCounts outdoor,
+        long dangerousUnexplainedTotal
+    )
+    {
+        /*
+         * Reuse the border-hypothesis thresholds deliberately: this interior hypothesis must clear
+         * exactly the same bar the border hypothesis had to clear.
+         */
+        if (candidate.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR
+            || outdoor.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            return interiorMeasurementVacuousVerdict(candidateLabel, candidate, outdoor);
+        }
+
+        double candidateRate = rate(candidate.dangerous, candidate.comparedEdges);
+        double outdoorRate = rate(outdoor.dangerous, outdoor.comparedEdges);
+        double candidateUnexplainedShare = rate(candidate.dangerousUnexplained, dangerousUnexplainedTotal);
+        String details = " - " + candidateLabel + " rate "
+            + formatRateWithCounts(candidate.dangerous, candidate.comparedEdges)
+            + ", OUTDOOR rate "
+            + formatRateWithCounts(outdoor.dangerous, outdoor.comparedEdges)
+            + ", unexplainedShare "
+            + formatRateWithCounts(candidate.dangerousUnexplained, dangerousUnexplainedTotal);
+
+        if (candidateRate >= outdoorRate * BORDER_CONFIRMED_RATE_MULTIPLIER
+            && candidateUnexplainedShare >= BORDER_CONFIRMED_UNEXPLAINED_SHARE)
+        {
+            return interiorMeasurementConfirmedVerdict(candidateLabel) + details;
+        }
+        if (candidateRate < outdoorRate * BORDER_REFUTED_RATE_MULTIPLIER)
+        {
+            return "REFUTED" + details;
+        }
+        return "INCONCLUSIVE" + details;
+    }
+
+    private static String interiorMeasurementConfirmedVerdict(String candidateLabel)
+    {
+        if ("INTERIOR".equals(candidateLabel))
+        {
+            return "CONFIRMED (interiors)";
+        }
+        return "CONFIRMED (" + candidateLabel + ")";
+    }
+
+    private static String interiorMeasurementVacuousVerdict(
+        String candidateLabel,
+        InteriorBucketCounts candidate,
+        InteriorBucketCounts outdoor
+    )
+    {
+        StringBuilder verdict = new StringBuilder("INCONCLUSIVE - VACUOUS - ");
+        boolean first = true;
+        if (candidate.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            verdict.append(candidateLabel)
+                .append(" comparedEdges ")
+                .append(candidate.comparedEdges)
+                .append(" < ")
+                .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR);
+            first = false;
+        }
+        if (outdoor.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            if (!first)
+            {
+                verdict.append("; ");
+            }
+            verdict.append("OUTDOOR comparedEdges ")
+                .append(outdoor.comparedEdges)
+                .append(" < ")
+                .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR);
+        }
+        return verdict.toString();
+    }
+
+    private static void appendInteriorPlaneTable(
+        StringBuilder report,
+        InteriorMeasurement measurement,
+        long dangerousUnexplainedTotal
+    )
+    {
+        report.append("    per-plane interior measurement:").append('\n');
+        report.append("      plane comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) ")
+            .append("DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)").append('\n');
+        for (int plane = 0; plane < measurement.planeCounts.length; plane++)
+        {
+            appendInteriorCountsRow(
+                report,
+                "      ",
+                Integer.toString(plane),
+                measurement.planeCounts[plane],
+                dangerousUnexplainedTotal
+            );
+        }
+    }
+
+    private static void appendInteriorRegionPlaneTable(
+        StringBuilder report,
+        InteriorMeasurement measurement,
+        long dangerousUnexplainedTotal
+    )
+    {
+        report.append("    per-region-per-plane interior measurement:").append('\n');
+        if (measurement.regionPlaneCounts.isEmpty())
+        {
+            report.append("      (none)").append('\n');
+            return;
+        }
+
+        List<Map.Entry<RegionPlaneKey, InteriorBucketCounts>> rows = new ArrayList<>(
+            measurement.regionPlaneCounts.entrySet());
+        int rowLimit = 40;
+        if (rows.size() > rowLimit)
+        {
+            rows.sort((left, right) ->
+            {
+                int byCount = Long.compare(right.getValue().comparedEdges, left.getValue().comparedEdges);
+                if (byCount != 0)
+                {
+                    return byCount;
+                }
+                return left.getKey().compareTo(right.getKey());
+            });
+        }
+
+        report.append("      region plane comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) ")
+            .append("DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)").append('\n');
+        int rowsToPrint = Math.min(rows.size(), rowLimit);
+        for (int i = 0; i < rowsToPrint; i++)
+        {
+            Map.Entry<RegionPlaneKey, InteriorBucketCounts> row = rows.get(i);
+            report.append("      ").append(formatRegionId(row.getKey().regionId))
+                .append(' ').append(row.getKey().plane)
+                .append(' ').append(row.getValue().comparedEdges)
+                .append(' ').append(row.getValue().dangerous)
+                .append(' ').append(formatRateWithCounts(row.getValue().dangerous, row.getValue().comparedEdges))
+                .append(' ').append(row.getValue().dangerousUnexplained)
+                .append(' ')
+                .append(formatRateWithCounts(row.getValue().dangerousUnexplained, dangerousUnexplainedTotal))
+                .append('\n');
+        }
+        if (rows.size() > rowLimit)
+        {
+            report.append("      suppressed ")
+                .append(rows.size() - rowLimit)
+                .append(" region-plane rows with fewer compared edges").append('\n');
+        }
+    }
+
+    private static void appendUpperOccupancyMeasurement(
+        StringBuilder report,
+        InteriorMeasurement measurement,
+        long dangerousUnexplainedTotal
+    )
+    {
+        InteriorBucketCounts upperNearStructure = measurement.upperNearStructureCounts;
+        InteriorBucketCounts upperOpen = measurement.upperOpenCounts;
+        InteriorBucketCounts outdoor = measurement.counts(InteriorBucket.OUTDOOR);
+
+        report.append("    upper-floor occupancy subdivision:").append('\n');
+        appendUpperOccupancyInterpretationRule(report);
+        report.append("      bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) ")
+            .append("DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)").append('\n');
+        appendInteriorCountsRow(
+            report,
+            "      ",
+            "UPPER_NEAR_STRUCTURE",
+            upperNearStructure,
+            dangerousUnexplainedTotal
+        );
+        appendInteriorCountsRow(report, "      ", "UPPER_OPEN", upperOpen, dangerousUnexplainedTotal);
+        report.append("      caveat: a large open interior (a hall wider than 3 tiles) has floor tiles ")
+            .append("further than ")
+            .append(NEAR_STRUCTURE_RADIUS)
+            .append(" from any wall, so they land in UPPER_OPEN. That biases this test AGAINST ")
+            .append("the occupied-upper-floor hypothesis.")
+            .append('\n');
+        appendUpperOccupancyAssertions(report, measurement);
+        report.append("      verdict occupied upper floors: ")
+            .append(upperOccupancyVerdict(upperNearStructure, outdoor, dangerousUnexplainedTotal))
+            .append('\n');
+        report.append("      secondary read (NOT the verdict) UPPER_NEAR_STRUCTURE vs UPPER_OPEN: ")
+            .append(upperOccupancySecondaryRead(upperNearStructure, upperOpen))
+            .append('\n');
+    }
+
+    private static void appendUpperOccupancyInterpretationRule(StringBuilder report)
+    {
+        report.append("      upper occupancy interpretation rule:").append('\n');
+        report.append("        UPPER_NEAR_STRUCTURE = plane > 0 AND NEAR_STRUCTURE").append('\n');
+        report.append("        UPPER_OPEN = plane > 0 AND NOT NEAR_STRUCTURE").append('\n');
+        report.append("        NEAR_STRUCTURE = any placement tile in the same-plane 3x3 block ")
+            .append("around the compared edge tile.").append('\n');
+        report.append("        Reuses the border and interior hypothesis thresholds deliberately: ")
+            .append("this third hypothesis must clear the same bar.")
+            .append('\n');
+        report.append("        Rate denominator is comparedEdges for that row; share denominator is ")
+            .append("the bucket-sum DANGEROUS_UNEXPLAINED from UPPER + UNDER_STRUCTURE + OUTDOOR.")
+            .append('\n');
+        report.append("        Verdict compares UPPER_NEAR_STRUCTURE against OUTDOOR.").append('\n');
+        report.append("        - VACUOUS: UPPER_NEAR_STRUCTURE comparedEdges < ")
+            .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+            .append(" OR OUTDOOR comparedEdges < ")
+            .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+            .append(" -> INCONCLUSIVE - VACUOUS.").append('\n');
+        report.append("        - CONFIRMED (occupied upper floors): rate(UPPER_NEAR_STRUCTURE) >= ")
+            .append(BORDER_CONFIRMED_RATE_MULTIPLIER)
+            .append("x rate(OUTDOOR) AND UPPER_NEAR_STRUCTURE holds >= ")
+            .append(formatRate(BORDER_CONFIRMED_UNEXPLAINED_SHARE))
+            .append(" of post-exclusion DANGEROUS_UNEXPLAINED.").append('\n');
+        report.append("        - REFUTED: rate(UPPER_NEAR_STRUCTURE) < ")
+            .append(BORDER_REFUTED_RATE_MULTIPLIER)
+            .append("x rate(OUTDOOR).").append('\n');
+        report.append("        - INCONCLUSIVE: anything else.").append('\n');
+    }
+
+    private static void appendUpperOccupancyAssertions(
+        StringBuilder report,
+        InteriorMeasurement measurement
+    )
+    {
+        InteriorBucketCounts upper = measurement.counts(InteriorBucket.UPPER);
+        InteriorBucketCounts upperNearStructure = measurement.upperNearStructureCounts;
+        InteriorBucketCounts upperOpen = measurement.upperOpenCounts;
+        long comparedTotal = upperNearStructure.comparedEdges + upperOpen.comparedEdges;
+        long dangerousTotal = upperNearStructure.dangerous + upperOpen.dangerous;
+        long unexplainedTotal = upperNearStructure.dangerousUnexplained + upperOpen.dangerousUnexplained;
+
+        report.append("      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.comparedEdges + ")
+            .append("UPPER_OPEN.comparedEdges == UPPER.comparedEdges: ")
+            .append(okFail(comparedTotal == upper.comparedEdges))
+            .append(" (").append(upperNearStructure.comparedEdges)
+            .append(" + ").append(upperOpen.comparedEdges)
+            .append(" == ").append(upper.comparedEdges).append(")").append('\n');
+        report.append("      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.dangerous + ")
+            .append("UPPER_OPEN.dangerous == UPPER.dangerous: ")
+            .append(okFail(dangerousTotal == upper.dangerous))
+            .append(" (").append(upperNearStructure.dangerous)
+            .append(" + ").append(upperOpen.dangerous)
+            .append(" == ").append(upper.dangerous).append(")").append('\n');
+        report.append("      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.unexplained + ")
+            .append("UPPER_OPEN.unexplained == UPPER.unexplained: ")
+            .append(okFail(unexplainedTotal == upper.dangerousUnexplained))
+            .append(" (").append(upperNearStructure.dangerousUnexplained)
+            .append(" + ").append(upperOpen.dangerousUnexplained)
+            .append(" == ").append(upper.dangerousUnexplained).append(")").append('\n');
+    }
+
+    private static String upperOccupancyVerdict(
+        InteriorBucketCounts upperNearStructure,
+        InteriorBucketCounts outdoor,
+        long dangerousUnexplainedTotal
+    )
+    {
+        /*
+         * Reuse the border and interior hypothesis thresholds deliberately: this occupied-upper-floor
+         * hypothesis must clear exactly the same bar, with no new thresholds.
+         */
+        if (upperNearStructure.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR
+            || outdoor.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            return interiorMeasurementVacuousVerdict("UPPER_NEAR_STRUCTURE", upperNearStructure, outdoor);
+        }
+
+        double upperNearStructureRate = rate(upperNearStructure.dangerous, upperNearStructure.comparedEdges);
+        double outdoorRate = rate(outdoor.dangerous, outdoor.comparedEdges);
+        double upperNearStructureUnexplainedShare = rate(
+            upperNearStructure.dangerousUnexplained,
+            dangerousUnexplainedTotal
+        );
+        String details = " - UPPER_NEAR_STRUCTURE rate "
+            + formatRateWithCounts(upperNearStructure.dangerous, upperNearStructure.comparedEdges)
+            + ", OUTDOOR rate "
+            + formatRateWithCounts(outdoor.dangerous, outdoor.comparedEdges)
+            + ", unexplainedShare "
+            + formatRateWithCounts(upperNearStructure.dangerousUnexplained, dangerousUnexplainedTotal);
+
+        if (upperNearStructureRate >= outdoorRate * BORDER_CONFIRMED_RATE_MULTIPLIER
+            && upperNearStructureUnexplainedShare >= BORDER_CONFIRMED_UNEXPLAINED_SHARE)
+        {
+            return "CONFIRMED (occupied upper floors)" + details;
+        }
+        if (upperNearStructureRate < outdoorRate * BORDER_REFUTED_RATE_MULTIPLIER)
+        {
+            return "REFUTED" + details;
+        }
+        return "INCONCLUSIVE" + details;
+    }
+
+    private static String upperOccupancySecondaryRead(
+        InteriorBucketCounts upperNearStructure,
+        InteriorBucketCounts upperOpen
+    )
+    {
+        double upperNearStructureRate = rate(upperNearStructure.dangerous, upperNearStructure.comparedEdges);
+        double upperOpenRate = rate(upperOpen.dangerous, upperOpen.comparedEdges);
+        String details = "UPPER_NEAR_STRUCTURE rate "
+            + formatRateWithCounts(upperNearStructure.dangerous, upperNearStructure.comparedEdges)
+            + ", UPPER_OPEN rate "
+            + formatRateWithCounts(upperOpen.dangerous, upperOpen.comparedEdges);
+
+        if (upperOpenRate == 0.0)
+        {
+            return "dangerousRate ratio undefined - " + details;
+        }
+        return "dangerousRate ratio "
+            + formatMultiplier(upperNearStructureRate / upperOpenRate)
+            + " - "
+            + details;
+    }
+
+    private static void appendOccupancyCensus(
+        StringBuilder report,
+        InteriorMeasurement measurement
+    )
+    {
+        report.append("    occupancy census (post-exclusion compared edges):").append('\n');
+        report.append("      NEAR_STRUCTURE = any placement tile in the same-plane 3x3 block ")
+            .append("around the compared edge tile.").append('\n');
+        report.append("      This census tests whether upper planes are mostly empty sky; it does ")
+            .append("not decide the occupied-upper-floor verdict.")
+            .append('\n');
+        report.append("      plane comparedEdges NEAR_STRUCTURE notNEAR_STRUCTURE ")
+            .append("nearStructureRate(NEAR_STRUCTURE/comparedEdges)").append('\n');
+        for (int plane = 0; plane < measurement.occupancyPlaneCounts.length; plane++)
+        {
+            appendOccupancyCensusRow(
+                report,
+                "      ",
+                Integer.toString(plane),
+                measurement.occupancyPlaneCounts[plane]
+            );
+        }
+        appendOccupancyCensusAssertions(report, measurement);
+
+        report.append("      region ").append(formatRegionId(OCCUPANCY_CENSUS_REGION_ID))
+            .append(" occupancy census:").append('\n');
+        report.append("      region plane comparedEdges NEAR_STRUCTURE notNEAR_STRUCTURE ")
+            .append("nearStructureRate(NEAR_STRUCTURE/comparedEdges)").append('\n');
+        for (int plane = 0; plane < measurement.occupancyCensusRegionPlaneCounts.length; plane++)
+        {
+            appendOccupancyCensusRow(
+                report,
+                "      ",
+                formatRegionId(OCCUPANCY_CENSUS_REGION_ID) + " " + plane,
+                measurement.occupancyCensusRegionPlaneCounts[plane]
+            );
+        }
+    }
+
+    private static void appendOccupancyCensusRow(
+        StringBuilder report,
+        String indent,
+        String label,
+        OccupancyCensusCounts counts
+    )
+    {
+        report.append(indent).append(label)
+            .append(' ').append(counts.comparedEdges)
+            .append(' ').append(counts.nearStructureEdges)
+            .append(' ').append(counts.notNearStructureEdges)
+            .append(' ').append(formatRateWithCounts(counts.nearStructureEdges, counts.comparedEdges))
+            .append('\n');
+    }
+
+    private static void appendOccupancyCensusAssertions(
+        StringBuilder report,
+        InteriorMeasurement measurement
+    )
+    {
+        for (int plane = 0; plane < measurement.occupancyPlaneCounts.length; plane++)
+        {
+            OccupancyCensusCounts counts = measurement.occupancyPlaneCounts[plane];
+            long splitTotal = counts.nearStructureEdges + counts.notNearStructureEdges;
+            report.append("      plane ").append(plane).append(" occupancy census assertion: ")
+                .append("NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: ")
+                .append(okFail(splitTotal == counts.comparedEdges))
+                .append(" (").append(counts.nearStructureEdges)
+                .append(" + ").append(counts.notNearStructureEdges)
+                .append(" == ").append(counts.comparedEdges).append(")").append('\n');
+        }
+    }
+
     private static String borderHistogramVerdict(DangerousDirectionComparison comparison)
     {
         BorderHistogram histogram = comparison.maxBorderDistanceHistogram;
@@ -1268,7 +1924,16 @@ public final class CollisionMapBuilder
         long interiorComparedEdges = histogram.comparedEdgesAtOrAbove(INTERIOR_MIN_DISTANCE);
         double borderRate = rate(histogram.dangerous(BORDER_MAX_DISTANCE), borderComparedEdges);
         double interiorRate = rate(histogram.dangerousAtOrAbove(INTERIOR_MIN_DISTANCE), interiorComparedEdges);
-        double borderUnexplainedShare = rate(borderDangerousUnexplained, comparison.dangerousUnexplained);
+        /*
+         * The denominator MUST come from the histogram, not from comparison.dangerousUnexplained.
+         * The headline counter now excludes border rings 0..BORDER_MAX_DISTANCE, while the numerator
+         * is drawn from those very rings. Dividing one by the other asks "of the unexplained edges
+         * left after removing the border, how many are border edges" - which inflates the share and
+         * flips this verdict to CONFIRMED on its own exclusion. The histogram still counts every
+         * edge, so bucketedDangerousUnexplained is the exclusion-independent population and keeps
+         * this test measuring what it was written to measure.
+         */
+        double borderUnexplainedShare = rate(borderDangerousUnexplained, histogram.bucketedDangerousUnexplained);
 
         if (interiorComparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
         {
@@ -1548,6 +2213,25 @@ public final class CollisionMapBuilder
     private static String formatRate(double rate)
     {
         return String.format(Locale.ROOT, "%.6f (%.3f%%)", rate, rate * 100.0);
+    }
+
+    private static String formatRateWithCounts(long count, long total)
+    {
+        return formatRate(rate(count, total)) + " (" + count + "/" + total + ")";
+    }
+
+    private static String formatMultiplier(double multiplier)
+    {
+        return String.format(Locale.ROOT, "%.3fx", multiplier);
+    }
+
+    private static String okFail(boolean ok)
+    {
+        if (ok)
+        {
+            return "OK";
+        }
+        return "FAIL";
     }
 
     private static LiveCapture parseLiveCapture(Path liveFlagsFile) throws IOException
@@ -1899,6 +2583,13 @@ public final class CollisionMapBuilder
         UNEXPLAINED
     }
 
+    private enum InteriorBucket
+    {
+        UPPER,
+        UNDER_STRUCTURE,
+        OUTDOOR
+    }
+
     private static final class EmptyDirectionArray
     {
         private static final Direction[] HOLDER = new Direction[0];
@@ -1949,6 +2640,7 @@ public final class CollisionMapBuilder
         private final TreeMap<Integer, Long> placementsByLocType = new TreeMap<>();
         private final long[] locType1PlacementsByOrientation = new long[LOC_TYPE_1_EDGES_BY_ORIENTATION.length];
         private final Set<Long> locType1Orientation3TileKeys = new HashSet<>();
+        private final Set<Long> placementTileKeys = new HashSet<>();
         private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
 
         private long locType1EdgesBlockedTotal;
@@ -2406,6 +3098,7 @@ public final class CollisionMapBuilder
         private final BorderBucketCounts[] counts = new BorderBucketCounts[BORDER_DISTANCE_BUCKETS.length];
 
         private long bucketedComparedEdges;
+        private long bucketedDangerousUnexplained;
 
         private BorderHistogram()
         {
@@ -2427,6 +3120,7 @@ public final class CollisionMapBuilder
             if (dangerousUnexplained)
             {
                 bucket.dangerousUnexplained++;
+                bucketedDangerousUnexplained++;
             }
         }
 
@@ -2505,6 +3199,191 @@ public final class CollisionMapBuilder
                 }
             }
             throw new IllegalArgumentException("Border distance does not fit a bucket: " + distance);
+        }
+    }
+
+    private static final class InteriorBucketCounts
+    {
+        private long comparedEdges;
+        private long dangerous;
+        private long dangerousUnexplained;
+
+        private void record(boolean dangerous, boolean dangerousUnexplained)
+        {
+            comparedEdges++;
+            if (dangerous)
+            {
+                this.dangerous++;
+            }
+            if (dangerousUnexplained)
+            {
+                this.dangerousUnexplained++;
+            }
+        }
+
+        private void add(InteriorBucketCounts counts)
+        {
+            comparedEdges += counts.comparedEdges;
+            dangerous += counts.dangerous;
+            dangerousUnexplained += counts.dangerousUnexplained;
+        }
+    }
+
+    private static final class OccupancyCensusCounts
+    {
+        private long comparedEdges;
+        private long nearStructureEdges;
+        private long notNearStructureEdges;
+
+        private void record(boolean nearStructure)
+        {
+            comparedEdges++;
+            if (nearStructure)
+            {
+                nearStructureEdges++;
+            }
+            else
+            {
+                notNearStructureEdges++;
+            }
+        }
+    }
+
+    private static final class InteriorMeasurement
+    {
+        private final InteriorBucketCounts[] bucketCounts =
+            new InteriorBucketCounts[InteriorBucket.values().length];
+        private final InteriorBucketCounts upperNearStructureCounts = new InteriorBucketCounts();
+        private final InteriorBucketCounts upperOpenCounts = new InteriorBucketCounts();
+        private final InteriorBucketCounts[] planeCounts = new InteriorBucketCounts[PLANE_COUNT];
+        private final OccupancyCensusCounts[] occupancyPlaneCounts = new OccupancyCensusCounts[PLANE_COUNT];
+        private final OccupancyCensusCounts[] occupancyCensusRegionPlaneCounts =
+            new OccupancyCensusCounts[PLANE_COUNT];
+        private final TreeMap<RegionPlaneKey, InteriorBucketCounts> regionPlaneCounts = new TreeMap<>();
+
+        private InteriorMeasurement()
+        {
+            for (int i = 0; i < bucketCounts.length; i++)
+            {
+                bucketCounts[i] = new InteriorBucketCounts();
+            }
+            for (int i = 0; i < planeCounts.length; i++)
+            {
+                planeCounts[i] = new InteriorBucketCounts();
+            }
+            for (int i = 0; i < occupancyPlaneCounts.length; i++)
+            {
+                occupancyPlaneCounts[i] = new OccupancyCensusCounts();
+            }
+            for (int i = 0; i < occupancyCensusRegionPlaneCounts.length; i++)
+            {
+                occupancyCensusRegionPlaneCounts[i] = new OccupancyCensusCounts();
+            }
+        }
+
+        private void record(
+            InteriorBucket bucket,
+            int regionId,
+            int plane,
+            boolean nearStructure,
+            boolean dangerous,
+            boolean dangerousUnexplained
+        )
+        {
+            counts(bucket).record(dangerous, dangerousUnexplained);
+            planeCounts[plane].record(dangerous, dangerousUnexplained);
+            occupancyPlaneCounts[plane].record(nearStructure);
+            if (regionId == OCCUPANCY_CENSUS_REGION_ID)
+            {
+                occupancyCensusRegionPlaneCounts[plane].record(nearStructure);
+            }
+            if (bucket == InteriorBucket.UPPER)
+            {
+                if (nearStructure)
+                {
+                    upperNearStructureCounts.record(dangerous, dangerousUnexplained);
+                }
+                else
+                {
+                    upperOpenCounts.record(dangerous, dangerousUnexplained);
+                }
+            }
+            RegionPlaneKey key = new RegionPlaneKey(regionId, plane);
+            InteriorBucketCounts regionPlane = regionPlaneCounts.get(key);
+            if (regionPlane == null)
+            {
+                regionPlane = new InteriorBucketCounts();
+                regionPlaneCounts.put(key, regionPlane);
+            }
+            regionPlane.record(dangerous, dangerousUnexplained);
+        }
+
+        private InteriorBucketCounts counts(InteriorBucket bucket)
+        {
+            return bucketCounts[bucket.ordinal()];
+        }
+
+        private long bucketComparedTotal()
+        {
+            long total = 0L;
+            for (InteriorBucketCounts counts : bucketCounts)
+            {
+                total += counts.comparedEdges;
+            }
+            return total;
+        }
+
+        private long bucketDangerousTotal()
+        {
+            long total = 0L;
+            for (InteriorBucketCounts counts : bucketCounts)
+            {
+                total += counts.dangerous;
+            }
+            return total;
+        }
+
+        private long bucketDangerousUnexplainedTotal()
+        {
+            long total = 0L;
+            for (InteriorBucketCounts counts : bucketCounts)
+            {
+                total += counts.dangerousUnexplained;
+            }
+            return total;
+        }
+
+        private long planeComparedTotal()
+        {
+            long total = 0L;
+            for (InteriorBucketCounts counts : planeCounts)
+            {
+                total += counts.comparedEdges;
+            }
+            return total;
+        }
+    }
+
+    private static final class RegionPlaneKey implements Comparable<RegionPlaneKey>
+    {
+        private final int regionId;
+        private final int plane;
+
+        private RegionPlaneKey(int regionId, int plane)
+        {
+            this.regionId = regionId;
+            this.plane = plane;
+        }
+
+        @Override
+        public int compareTo(RegionPlaneKey other)
+        {
+            int byRegion = Integer.compare(regionId, other.regionId);
+            if (byRegion != 0)
+            {
+                return byRegion;
+            }
+            return Integer.compare(plane, other.plane);
         }
     }
 
@@ -2628,8 +3507,12 @@ public final class CollisionMapBuilder
         private final TreeMap<Integer, Long> dangerousDoorCapableByLocType = new TreeMap<>();
         private final BorderHistogram minBorderDistanceHistogram = new BorderHistogram();
         private final BorderHistogram maxBorderDistanceHistogram = new BorderHistogram();
+        private final InteriorMeasurement interiorMeasurement = new InteriorMeasurement();
 
         private long comparedEdges;
+        private long borderExcludedEdges;
+        private long borderExcludedDangerous;
+        private long borderExcludedDangerousUnexplained;
         private long outsideBuiltRegions;
         private long noContainingBlockComparedEdges;
         private long disagreeingBorderDistanceComparedEdges;

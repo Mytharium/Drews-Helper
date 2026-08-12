@@ -1507,3 +1507,145 @@ SESSION CLOSE 2026-08-11 (overnight, ~02:00-06:40). Drew's Helper collision/rout
       EVERY listed expected path. Use one path per marker.
     - Codex unit tests for waypointPositionIndex never shipped because their file was not in my
       staging set. Stage every file the brief implies, including tests. STILL OWED.
+
+D-0161 (2026-08-11) - Border-ring exclusion SHIPPED and verified. Step 2 of the session plan.
+
+  WHAT CHANGED (CollisionMapBuilder.java, 96471 -> 99219 B, sha256 CB99F70D... then re-edited):
+  Edges whose tile has maxBorderDistance <= BORDER_MAX_DISTANCE (0..2) are now withheld from every
+  headline counter in the dangerous-direction comparison. The threshold REUSES the existing
+  BORDER_MAX_DISTANCE constant rather than adding a new one, so the exclusion and the verdict rule
+  that justifies it can never drift apart.
+  splitDangerousEdge was split into a pure classifyDangerousEdge (no counter writes) plus the
+  existing recording wrapper, so an excluded edge can still be classified for the histogram
+  without contaminating the door-capable/conflicted/unexplained counters.
+  NO BLOCKING RULE WAS TOUCHED. shapeFor, markSolid, markDoor and recordDoorCapablePlacement are
+  byte-identical. This changes what the comparison COUNTS, not what the builder BLOCKS.
+
+  RESULTS - every number was predicted from the histogram BEFORE the run and all hit exactly:
+      borderExcludedEdges                 11712   (predicted 11712)
+      borderExcludedDangerous              7255   (predicted 7255)
+      borderExcludedDangerousUnexplained   7195   (predicted 7195)
+      comparedEdges            148662 -> 136950   (predicted 136950)
+      DANGEROUS                 28122 -> 20867    (predicted 20867)
+      DANGEROUS_UNEXPLAINED     22554 -> 15359    (predicted 15359)
+      dangerousRateAll        18.917% -> 15.237%  (predicted 15.237%)
+  Both closure assertions hold: the five outcome buckets sum to comparedEdges (136950), and the
+  three-way DANGEROUS split sums to DANGEROUS (20867).
+  Both border histogram tables are BYTE-IDENTICAL to the pre-change run - zero diff lines across
+  all 16 rows. The evidence that justified the exclusion survives the exclusion.
+
+  20867 IS THE FIRST DANGEROUS COUNT WORTH QUOTING. The old 28122 headline was 26% capture
+  artifact.
+
+  BUG FOUND AND FIXED MID-TASK - see D-0126. The border verdict flipped INCONCLUSIVE -> CONFIRMED
+  because its share test divided a histogram numerator (which still counts the border) by a
+  headline denominator (which no longer does). It was confirming the border artifact using its own
+  exclusion. Denominator repointed at the histogram total; verdict is back to INCONCLUSIVE and now
+  matches the committed baseline exactly. My work order caused this - it said "withheld from every
+  count below" without checking which downstream ratios read those counts.
+
+  TWO PREVIOUSLY-QUOTED NUMBERS MOVED and both conclusions survive:
+    - orientation 3: 9.953% vs 18.917% became 9.330% vs 15.237%. Still roughly 0.61x the map
+      average, still EXONERATED on the pre-stated rule. The rule stays.
+    - the ignored-locType door gap is 24 edges, not 30. Six of the original 30 were border
+      artifacts. Item 5 of the next-work list should read 24.
+
+  NEW SIGNAL, not chased: DANGEROUS_CONFLICTED barely moved (5516 -> 5465). Only 51 of 5516
+  conflicted edges lived in rings 0-2, so live-capture conflicts are almost entirely an INTERIOR
+  phenomenon, not a border one. Their share of DANGEROUS rose 19.6% -> 26.2% purely because the
+  denominator shrank. Worth remembering when chasing the deep-interior rise.
+
+  REMAINING: 15359 unexplained edges. The border cannot explain them - it has been removed.
+
+D-0162 (2026-08-11) - Interior hypothesis: REFUTED as stated, but the proxy was too coarse to
+  have tested it. Step 3 of the session plan. See D-0127.
+
+  WHAT WAS ADDED (CollisionMapBuilder.java, 99,607 -> 119,970 B, sha256 EE909273...197AA3B9):
+  A pure-addition interior measurement pass. New BuildStats.placementTileKeys records EVERY
+  placement on a valid plane - populated before the locType filter, so it sees placements
+  shapeFor() ignores. Three mutually exclusive buckets on post-exclusion edges only:
+      UPPER            plane > 0
+      UNDER_STRUCTURE  plane 0 with a placement directly above on plane 1
+      OUTDOOR          everything else
+  Thresholds REUSE the border hypothesis constants (3.0x / 1.5x / 40% / 500-edge floor) on
+  purpose - this hypothesis had to clear the same bar. Rule and denominators printed above the
+  numbers, per D-0126. Zero lines removed from the file; every step-2 value verified unchanged.
+
+  RESULT - REFUTED on all three reads:
+      bucket            comparedEdges  DANGEROUS   rate      UNEXPLAINED  share
+      UPPER                    60,452     7,493   12.395%         5,454  35.5%
+      UNDER_STRUCTURE          10,332     1,444   13.976%         1,044   6.8%
+      OUTDOOR                  66,166    11,930   18.030%         8,861  57.7%
+      INTERIOR (combined)      70,784     8,937   12.626%         6,498  42.3%
+  rate(INTERIOR) is 0.70x rate(OUTDOOR) - not merely below the 3.0x confirm bar, below 1.0.
+  Interiors as defined are SAFER than outdoors. All four closure assertions passed.
+
+  BUT THE PER-REGION TABLE POINTS THE OTHER WAY. Region 46_52 - named in advance as the
+  coverage-controlled read because it is the only region captured 100% on all three planes:
+      46_52 plane 0    8,192 edges     683 dangerous    8.337%
+      46_52 plane 1    8,120 edges   1,771 dangerous   21.810%
+      46_52 plane 2    8,120 edges   1,915 dangerous   23.584%
+  Same region, same capture, upstairs ~2.8x worse than its own ground floor. Meanwhile regions
+  45_51, 45_52, 46_51 and 47_51 score 3.6-10.4% on their upper planes.
+  Reason: comparedEdges per region are IDENTICAL across planes (45_51: 3330/3330, 46_52:
+  8120/8120), which proves the capture dumps the whole scene grid per plane rather than only the
+  walked footprint. Most upper-plane edges are therefore open sky over open ground, and they
+  diluted the UPPER bucket until it inverted.
+
+  LEADING HYPOTHESIS, NOT A FINDING: the real signal is OCCUPIED upper floors, not "plane > 0".
+  Untested. The sharper proxy is now cheap because placementTileKeys already exists - split UPPER
+  into "has a placement on its own tile" versus "does not". That is the next discriminating run.
+
+  NOT CLAIMED: that empty upper-plane tiles are the dilution. It is consistent with the identical
+  per-plane edge counts and the 3-6% rates, but it has not been measured directly. Measure before
+  quoting it.
+
+  UNCHANGED AND RE-VERIFIED after this addition: comparedEdges 136,950, DANGEROUS 20,867,
+  DANGEROUS_UNEXPLAINED 15,359, dangerousRateAll 15.237%, all three borderExcluded counters,
+  DOOR_SHUT 93, AGREE_BLOCKED 14,219, AGREE_OPEN 99,238, OVERBLOCK 2,533, border verdict
+  INCONCLUSIVE, and both border histogram tables.
+
+D-0163 (2026-08-12) - Occupied-upper-floor split: verdict INCONCLUSIVE. Empty-sky claim from
+  D-0162 is now MEASURED AND CONFIRMED. See D-0128.
+
+  WHAT WAS ADDED (CollisionMapBuilder.java 119,970 -> 134,948 B, sha256 526F105A...7F5720EE):
+  Pure addition, one line replaced (the record() call gained a parameter). New
+  NEAR_STRUCTURE_RADIUS = 1 and isNearStructure(): a tile counts as near structure if any tile in
+  the same-plane 3x3 block around it carries a placement. Deliberately NOT "placement on its own
+  tile" - placements are walls and objects, so a room-interior floor tile has none of its own and
+  that definition would have discarded exactly the population under test.
+  UPPER is SUBDIVIDED, not replaced: UPPER_NEAR_STRUCTURE + UPPER_OPEN. Same thresholds as the
+  border and interior hypotheses.
+
+  RESULT - INCONCLUSIVE:
+      bucket                comparedEdges  DANGEROUS    rate     UNEXPL   share
+      UPPER_NEAR_STRUCTURE         15,886      4,388   27.622%    4,078   26.6%
+      UPPER_OPEN                   44,566      3,105    6.967%    1,376    9.0%
+      OUTDOOR (unchanged)          66,166     11,930   18.030%    8,861   57.7%
+  vs OUTDOOR: 1.53x - above the 1.5x refute floor, far below the 3.0x confirm bar; share 26.6%
+  fails the 40% bar. INCONCLUSIVE is the honest answer and it is what the report prints.
+  Secondary read, explicitly NOT the verdict: UPPER_NEAR_STRUCTURE vs UPPER_OPEN is 3.965x.
+  All three closure assertions passed (15886+44566==60452, 4388+3105==7493, 4078+1376==5454).
+
+  THE EMPTY-SKY CLAIM IS NOW A FACT, NOT A HYPOTHESIS. Occupancy census, post-exclusion edges:
+      plane 0    76,498 edges    91.73% near structure     (6,328 not)
+      plane 1    30,226 edges    35.24% near structure    (19,574 not)
+      plane 2    30,226 edges    17.32% near structure    (24,992 not)
+  Plane 2 is 82.7% empty and plane 1 is 64.8% empty. D-0162 flagged this as "leading hypothesis,
+  not a finding" and refused to bank it. It is now measured. It fully accounts for the D-0162
+  inversion: UPPER was 73.7% empty sky sitting at 6.97%, which dragged the combined UPPER rate
+  down to 12.4% and put it below OUTDOOR.
+  Region 46_52 (the castle, the only region captured 100% on all three planes) is denser than the
+  global picture exactly as expected: 90.82% / 51.75% / 40.20% near structure by plane.
+
+  THE REAL TAKEAWAY, AND IT IS NOT ABOUT BUILDINGS: OUTDOOR alone holds 8,861 of 15,359
+  unexplained edges - 57.7%. Occupied upper floors hold 4,078 (26.6%). No building-based story
+  can explain the majority of this defect because the majority of it is not in buildings. Three
+  structural hypotheses are now tested: border (partial, ~32% coverage), interiors (refuted),
+  occupied upper floors (inconclusive, 1.53x). The unexplained edges are DIFFUSE, not clustered.
+  That should redirect the next round away from "where are they" and toward "what rule is wrong".
+
+  UNCHANGED AND RE-VERIFIED: comparedEdges 136,950, DANGEROUS 20,867, DANGEROUS_UNEXPLAINED
+  15,359, dangerousRateAll 15.237%, all three borderExcluded counters, DOOR_SHUT 93,
+  AGREE_BLOCKED 14,219, AGREE_OPEN 99,238, OVERBLOCK 2,533, border verdict INCONCLUSIVE, the
+  UPPER / UNDER_STRUCTURE / OUTDOOR rows, and the combined INTERIOR verdict REFUTED.

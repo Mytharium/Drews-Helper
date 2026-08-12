@@ -74,45 +74,50 @@ dangerous-direction pass:
   live conflicting north tiles: 5783
   live conflicting east observations: 7138
   live conflicting east tiles: 5828
-  comparedEdges: 148662
+  border-ring exclusion: ACTIVE (maxBorderDistance 0..2 withheld from every count below)
+    borderExcludedEdges: 11712
+    borderExcludedDangerous: 7255
+    borderExcludedDangerousUnexplained: 7195
+    these edges are scene-capture artifacts, not map defects; the histogram below still counts them
+  comparedEdges: 136950
   outsideBuiltRegions: 0
-  DANGEROUS: 28122
-  DOOR_SHUT: 95
-  AGREE_BLOCKED: 15432
-  AGREE_OPEN: 102411
-  OVERBLOCK: 2602
+  DANGEROUS: 20867
+  DOOR_SHUT: 93
+  AGREE_BLOCKED: 14219
+  AGREE_OPEN: 99238
+  OVERBLOCK: 2533
   dangerous split:
-    DANGEROUS_DOOR_CAPABLE: 52 (0.2% of DANGEROUS)
-    DANGEROUS_CONFLICTED: 5516 (19.6% of DANGEROUS)
-    DANGEROUS_UNEXPLAINED: 22554 (80.2% of DANGEROUS)
+    DANGEROUS_DOOR_CAPABLE: 43 (0.2% of DANGEROUS)
+    DANGEROUS_CONFLICTED: 5465 (26.2% of DANGEROUS)
+    DANGEROUS_UNEXPLAINED: 15359 (73.6% of DANGEROUS)
     DANGEROUS_BOTH is NOT a bucket - door-capable wins before conflicted (overlap assigned to DANGEROUS_DOOR_CAPABLE: 13)
-    DANGEROUS split assertion: DANGEROUS_DOOR_CAPABLE + DANGEROUS_CONFLICTED + DANGEROUS_UNEXPLAINED == DANGEROUS: OK (28122 == 28122)
+    DANGEROUS split assertion: DANGEROUS_DOOR_CAPABLE + DANGEROUS_CONFLICTED + DANGEROUS_UNEXPLAINED == DANGEROUS: OK (20867 == 20867)
     DANGEROUS_DOOR_CAPABLE locType histogram:
-      locType 10 (shapeFor IGNORED): 30
-      locType 0 (shapeFor HANDLED): 22
-    door-capable on IGNORED locType: 30 (57.7% of DANGEROUS_DOOR_CAPABLE)
+      locType 10 (shapeFor IGNORED): 24
+      locType 0 (shapeFor HANDLED): 19
+    door-capable on IGNORED locType: 24 (55.8% of DANGEROUS_DOOR_CAPABLE)
     largest door-capable locType group ignored by shapeFor: true
     example DANGEROUS_UNEXPLAINED edges:
-      2888,3272,0 N
-      2888,3272,0 E
-      2888,3273,0 N
-      2888,3273,0 E
-      2888,3274,0 N
-      2888,3274,0 E
-      2888,3275,0 N
-      2888,3275,0 E
-      2888,3276,0 N
-      2888,3276,0 E
-      2888,3277,0 N
-      2888,3277,0 E
-      2888,3278,0 N
-      2888,3278,0 E
-      2888,3279,0 N
-      2888,3279,0 E
-      2888,3280,0 N
-      2888,3280,0 E
-      2888,3281,0 N
-      2888,3281,0 E
+      2891,3346,0 N
+      2891,3347,0 N
+      2891,3347,0 E
+      2891,3348,0 E
+      2891,3353,0 N
+      2891,3354,0 N
+      2891,3354,0 E
+      2891,3355,0 E
+      2891,3360,0 N
+      2891,3361,0 N
+      2891,3364,0 N
+      2891,3365,0 N
+      2891,3370,0 N
+      2891,3371,0 N
+      2891,3383,0 E
+      2891,3387,0 E
+      2891,3388,0 N
+      2891,3390,0 E
+      2891,3392,0 E
+      2891,3394,0 N
   border histogram verdict: INCONCLUSIVE
   compared edges with NO containing block on their plane: 0
   compared edges where minBorderDistance != maxBorderDistance: 69448
@@ -136,43 +141,148 @@ dangerous-direction pass:
     5-9 34154 3406 0.099725 (9.972%) 3399
     10-19 43752 3672 0.083928 (8.393%) 3663
     20+ 26458 2586 0.097740 (9.774%) 2582
-  dangerousRateAll: 0.189167 (18.917%)
+  interior measurement pass:
+    interior interpretation rule:
+      UPPER = plane > 0
+      UNDER_STRUCTURE = plane 0 with a placement tile directly above on plane 1
+      OUTDOOR = all remaining post-exclusion compared edges
+      INTERIOR = UPPER + UNDER_STRUCTURE
+      Reuses the border hypothesis thresholds deliberately: this hypothesis must clear the same bar.
+      Rate denominator is comparedEdges for that row; share denominator is the bucket-sum DANGEROUS_UNEXPLAINED from UPPER + UNDER_STRUCTURE + OUTDOOR.
+      Sub-results compare each proxy against OUTDOOR with the same share denominator.
+      - VACUOUS: INTERIOR comparedEdges < 500 OR OUTDOOR comparedEdges < 500 -> INCONCLUSIVE - VACUOUS.
+      - CONFIRMED (interiors): rate(INTERIOR) >= 3.0x rate(OUTDOOR) AND INTERIOR holds >= 0.400000 (40.000%) of post-exclusion DANGEROUS_UNEXPLAINED.
+      - REFUTED: rate(INTERIOR) < 1.5x rate(OUTDOOR).
+      - INCONCLUSIVE: anything else.
+    bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
+    UPPER 60452 7493 0.123950 (12.395%) (7493/60452) 5454 0.355101 (35.510%) (5454/15359)
+    UNDER_STRUCTURE 10332 1444 0.139760 (13.976%) (1444/10332) 1044 0.067973 (6.797%) (1044/15359)
+      caveat: UNDER_STRUCTURE includes bridge tiles and they are unquantified in this pass.
+    OUTDOOR 66166 11930 0.180304 (18.030%) (11930/66166) 8861 0.576926 (57.693%) (8861/15359)
+    UPPER.comparedEdges + UNDER_STRUCTURE.comparedEdges + OUTDOOR.comparedEdges == comparedEdges: OK (60452 + 10332 + 66166 == 136950)
+    UPPER.dangerous + UNDER_STRUCTURE.dangerous + OUTDOOR.dangerous == DANGEROUS: OK (7493 + 1444 + 11930 == 20867)
+    UPPER.unexplained + UNDER_STRUCTURE.unexplained + OUTDOOR.unexplained == DANGEROUS_UNEXPLAINED: OK (5454 + 1044 + 8861 == 15359)
+    sum over planes of comparedEdges == comparedEdges: OK (76498 + 30226 + 30226 + 0 == 136950)
+    verdict combined INTERIOR (UPPER + UNDER_STRUCTURE): REFUTED - INTERIOR rate 0.126257 (12.626%) (8937/70784), OUTDOOR rate 0.180304 (18.030%) (11930/66166), unexplainedShare 0.423074 (42.307%) (6498/15359)
+    verdict sub-result UPPER: REFUTED - UPPER rate 0.123950 (12.395%) (7493/60452), OUTDOOR rate 0.180304 (18.030%) (11930/66166), unexplainedShare 0.355101 (35.510%) (5454/15359)
+    verdict sub-result UNDER_STRUCTURE: REFUTED - UNDER_STRUCTURE rate 0.139760 (13.976%) (1444/10332), OUTDOOR rate 0.180304 (18.030%) (11930/66166), unexplainedShare 0.067973 (6.797%) (1044/15359)
+    per-plane interior measurement:
+      plane comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
+      0 76498 13374 0.174828 (17.483%) (13374/76498) 9905 0.644899 (64.490%) (9905/15359)
+      1 30226 4159 0.137597 (13.760%) (4159/30226) 3152 0.205222 (20.522%) (3152/15359)
+      2 30226 3334 0.110302 (11.030%) (3334/30226) 2302 0.149880 (14.988%) (2302/15359)
+      3 0 0 0.000000 (0.000%) (0/0) 0 0.000000 (0.000%) (0/15359)
+    per-region-per-plane interior measurement:
+      region plane comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
+      11570 (45_50) 0 338 58 0.171598 (17.160%) (58/338) 56 0.003646 (0.365%) (56/15359)
+      11571 (45_51) 0 5904 712 0.120596 (12.060%) (712/5904) 638 0.041539 (4.154%) (638/15359)
+      11571 (45_51) 1 3330 345 0.103604 (10.360%) (345/3330) 345 0.022462 (2.246%) (345/15359)
+      11571 (45_51) 2 3330 173 0.051952 (5.195%) (173/3330) 173 0.011264 (1.126%) (173/15359)
+      11572 (45_52) 0 6784 1476 0.217571 (21.757%) (1476/6784) 914 0.059509 (5.951%) (914/15359)
+      11572 (45_52) 1 3848 202 0.052495 (5.249%) (202/3848) 202 0.013152 (1.315%) (202/15359)
+      11572 (45_52) 2 3848 138 0.035863 (3.586%) (138/3848) 138 0.008985 (0.898%) (138/15359)
+      11573 (45_53) 0 3800 464 0.122105 (12.211%) (464/3800) 379 0.024676 (2.468%) (379/15359)
+      11826 (46_50) 0 3440 525 0.152616 (15.262%) (525/3440) 497 0.032359 (3.236%) (497/15359)
+      11827 (46_51) 0 8192 1305 0.159302 (15.930%) (1305/8192) 945 0.061527 (6.153%) (945/15359)
+      11827 (46_51) 1 5504 318 0.057776 (5.778%) (318/5504) 201 0.013087 (1.309%) (201/15359)
+      11827 (46_51) 2 5504 213 0.038699 (3.870%) (213/5504) 90 0.005860 (0.586%) (90/15359)
+      11828 (46_52) 0 8192 683 0.083374 (8.337%) (683/8192) 587 0.038219 (3.822%) (587/15359)
+      11828 (46_52) 1 8120 1771 0.218103 (21.810%) (1771/8120) 882 0.057426 (5.743%) (882/15359)
+      11828 (46_52) 2 8120 1915 0.235837 (23.584%) (1915/8120) 1008 0.065629 (6.563%) (1008/15359)
+      11829 (46_53) 0 8040 1496 0.186070 (18.607%) (1496/8040) 736 0.047920 (4.792%) (736/15359)
+      11829 (46_53) 1 2440 191 0.078279 (7.828%) (191/2440) 191 0.012436 (1.244%) (191/15359)
+      11829 (46_53) 2 2440 183 0.075000 (7.500%) (183/2440) 183 0.011915 (1.191%) (183/15359)
+      11830 (46_54) 0 360 105 0.291667 (29.167%) (105/360) 105 0.006836 (0.684%) (105/15359)
+      12082 (47_50) 0 4440 663 0.149324 (14.932%) (663/4440) 657 0.042776 (4.278%) (657/15359)
+      12083 (47_51) 0 8168 1793 0.219515 (21.952%) (1793/8168) 1447 0.094212 (9.421%) (1447/15359)
+      12083 (47_51) 1 936 47 0.050214 (5.021%) (47/936) 47 0.003060 (0.306%) (47/15359)
+      12083 (47_51) 2 936 39 0.041667 (4.167%) (39/936) 39 0.002539 (0.254%) (39/15359)
+      12084 (47_52) 0 8192 1188 0.145020 (14.502%) (1188/8192) 714 0.046487 (4.649%) (714/15359)
+      12084 (47_52) 1 4608 1121 0.243273 (24.327%) (1121/4608) 1120 0.072921 (7.292%) (1120/15359)
+      12084 (47_52) 2 4608 509 0.110460 (11.046%) (509/4608) 507 0.033010 (3.301%) (507/15359)
+      12085 (47_53) 0 6944 1703 0.245248 (24.525%) (1703/6944) 1040 0.067713 (6.771%) (1040/15359)
+      12085 (47_53) 1 1440 164 0.113889 (11.389%) (164/1440) 164 0.010678 (1.068%) (164/15359)
+      12085 (47_53) 2 1440 164 0.113889 (11.389%) (164/1440) 164 0.010678 (1.068%) (164/15359)
+      12086 (47_54) 0 416 218 0.524038 (52.404%) (218/416) 218 0.014194 (1.419%) (218/15359)
+      12339 (48_51) 0 1464 447 0.305328 (30.533%) (447/1464) 434 0.028257 (2.826%) (434/15359)
+      12340 (48_52) 0 1536 447 0.291016 (29.102%) (447/1536) 447 0.029103 (2.910%) (447/15359)
+      12341 (48_53) 0 288 91 0.315972 (31.597%) (91/288) 91 0.005925 (0.592%) (91/15359)
+    upper-floor occupancy subdivision:
+      upper occupancy interpretation rule:
+        UPPER_NEAR_STRUCTURE = plane > 0 AND NEAR_STRUCTURE
+        UPPER_OPEN = plane > 0 AND NOT NEAR_STRUCTURE
+        NEAR_STRUCTURE = any placement tile in the same-plane 3x3 block around the compared edge tile.
+        Reuses the border and interior hypothesis thresholds deliberately: this third hypothesis must clear the same bar.
+        Rate denominator is comparedEdges for that row; share denominator is the bucket-sum DANGEROUS_UNEXPLAINED from UPPER + UNDER_STRUCTURE + OUTDOOR.
+        Verdict compares UPPER_NEAR_STRUCTURE against OUTDOOR.
+        - VACUOUS: UPPER_NEAR_STRUCTURE comparedEdges < 500 OR OUTDOOR comparedEdges < 500 -> INCONCLUSIVE - VACUOUS.
+        - CONFIRMED (occupied upper floors): rate(UPPER_NEAR_STRUCTURE) >= 3.0x rate(OUTDOOR) AND UPPER_NEAR_STRUCTURE holds >= 0.400000 (40.000%) of post-exclusion DANGEROUS_UNEXPLAINED.
+        - REFUTED: rate(UPPER_NEAR_STRUCTURE) < 1.5x rate(OUTDOOR).
+        - INCONCLUSIVE: anything else.
+      bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
+      UPPER_NEAR_STRUCTURE 15886 4388 0.276218 (27.622%) (4388/15886) 4078 0.265512 (26.551%) (4078/15359)
+      UPPER_OPEN 44566 3105 0.069672 (6.967%) (3105/44566) 1376 0.089589 (8.959%) (1376/15359)
+      caveat: a large open interior (a hall wider than 3 tiles) has floor tiles further than 1 from any wall, so they land in UPPER_OPEN. That biases this test AGAINST the occupied-upper-floor hypothesis.
+      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.comparedEdges + UPPER_OPEN.comparedEdges == UPPER.comparedEdges: OK (15886 + 44566 == 60452)
+      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.dangerous + UPPER_OPEN.dangerous == UPPER.dangerous: OK (4388 + 3105 == 7493)
+      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.unexplained + UPPER_OPEN.unexplained == UPPER.unexplained: OK (4078 + 1376 == 5454)
+      verdict occupied upper floors: INCONCLUSIVE - UPPER_NEAR_STRUCTURE rate 0.276218 (27.622%) (4388/15886), OUTDOOR rate 0.180304 (18.030%) (11930/66166), unexplainedShare 0.265512 (26.551%) (4078/15359)
+      secondary read (NOT the verdict) UPPER_NEAR_STRUCTURE vs UPPER_OPEN: dangerousRate ratio 3.965x - UPPER_NEAR_STRUCTURE rate 0.276218 (27.622%) (4388/15886), UPPER_OPEN rate 0.069672 (6.967%) (3105/44566)
+    occupancy census (post-exclusion compared edges):
+      NEAR_STRUCTURE = any placement tile in the same-plane 3x3 block around the compared edge tile.
+      This census tests whether upper planes are mostly empty sky; it does not decide the occupied-upper-floor verdict.
+      plane comparedEdges NEAR_STRUCTURE notNEAR_STRUCTURE nearStructureRate(NEAR_STRUCTURE/comparedEdges)
+      0 76498 70170 6328 0.917279 (91.728%) (70170/76498)
+      1 30226 10652 19574 0.352412 (35.241%) (10652/30226)
+      2 30226 5234 24992 0.173162 (17.316%) (5234/30226)
+      3 0 0 0 0.000000 (0.000%) (0/0)
+      plane 0 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (70170 + 6328 == 76498)
+      plane 1 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (10652 + 19574 == 30226)
+      plane 2 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (5234 + 24992 == 30226)
+      plane 3 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (0 + 0 == 0)
+      region 11828 (46_52) occupancy census:
+      region plane comparedEdges NEAR_STRUCTURE notNEAR_STRUCTURE nearStructureRate(NEAR_STRUCTURE/comparedEdges)
+      11828 (46_52) 0 8192 7440 752 0.908203 (90.820%) (7440/8192)
+      11828 (46_52) 1 8120 4202 3918 0.517488 (51.749%) (4202/8120)
+      11828 (46_52) 2 8120 3264 4856 0.401970 (40.197%) (3264/8120)
+      11828 (46_52) 3 0 0 0 0.000000 (0.000%) (0/0)
+  dangerousRateAll: 0.152369 (15.237%)
   orient-3 tile count: 738
-  orient-3 compared-edge count: 422
-  orient-3 dangerous edges: 42
-  dangerousRateOrient3: 0.099526 (9.953%)
+  orient-3 compared-edge count: 418
+  orient-3 dangerous edges: 39
+  dangerousRateOrient3: 0.093301 (9.330%)
   interpretation result: orientation 3 is EXONERATED: it is no worse than the map average and the rule stays
   example DANGEROUS edges:
-    2888,3272,0 N orient3=false
-    2888,3272,0 E orient3=false
-    2888,3273,0 N orient3=false
-    2888,3273,0 E orient3=false
-    2888,3274,0 N orient3=false
-    2888,3274,0 E orient3=false
-    2888,3275,0 N orient3=false
-    2888,3275,0 E orient3=false
-    2888,3276,0 N orient3=false
-    2888,3276,0 E orient3=false
-    2888,3277,0 N orient3=false
-    2888,3277,0 E orient3=false
-    2888,3278,0 N orient3=false
-    2888,3278,0 E orient3=false
-    2888,3279,0 N orient3=false
-    2888,3279,0 E orient3=false
-    2888,3280,0 N orient3=false
-    2888,3280,0 E orient3=false
-    2888,3281,0 N orient3=false
-    2888,3281,0 E orient3=false
-    2888,3282,0 N orient3=false
-    2888,3282,0 E orient3=false
-    2888,3283,0 N orient3=false
-    2888,3283,0 E orient3=false
-    2888,3284,0 N orient3=false
-    2888,3284,0 E orient3=false
-    2888,3285,0 N orient3=false
-    2888,3285,0 E orient3=false
-    2888,3286,0 N orient3=false
-    2888,3286,0 E orient3=false
+    2891,3346,0 N orient3=false
+    2891,3347,0 N orient3=false
+    2891,3347,0 E orient3=false
+    2891,3348,0 E orient3=false
+    2891,3353,0 N orient3=false
+    2891,3354,0 N orient3=false
+    2891,3354,0 E orient3=false
+    2891,3355,0 E orient3=false
+    2891,3360,0 N orient3=false
+    2891,3361,0 N orient3=false
+    2891,3364,0 N orient3=false
+    2891,3365,0 N orient3=false
+    2891,3370,0 N orient3=false
+    2891,3371,0 N orient3=false
+    2891,3371,0 E orient3=false
+    2891,3372,0 E orient3=false
+    2891,3383,0 E orient3=false
+    2891,3387,0 E orient3=false
+    2891,3388,0 N orient3=false
+    2891,3390,0 E orient3=false
+    2891,3392,0 E orient3=false
+    2891,3394,0 N orient3=false
+    2891,3397,0 N orient3=false
+    2891,3410,0 N orient3=false
+    2891,3411,0 N orient3=false
+    2891,3411,0 E orient3=false
+    2892,3345,0 E orient3=false
+    2892,3346,0 N orient3=false
+    2892,3346,0 E orient3=false
+    2892,3347,0 N orient3=false
 
 build statistics:
   regions built: 24

@@ -1500,3 +1500,90 @@ D-0125 (2026-08-11) - When a tile appears in several observation windows, score 
   and manufacturing the CONFIRMED verdict that was being looked for.
   Compute both min and max, use MAX for the verdict, and print both so any disagreement is
   visible rather than silently collapsed.
+
+D-0126 (2026-08-11) - A FILTERED COUNTER MUST NEVER BE THE DENOMINATOR OF A TEST WHOSE
+NUMERATOR COMES FROM THE UNFILTERED POPULATION.
+
+  Earned the hard way while shipping the border-ring exclusion. The exclusion removed rings 0-2
+  from every headline counter, exactly as specified. The border verdict then read:
+      share = borderDangerousUnexplained (histogram, 7195 - still counts the border)
+            / comparison.dangerousUnexplained (headline, 15359 - no longer counts the border)
+  7195/15359 = 46.8%, over the 40% bar, and the verdict flipped INCONCLUSIVE -> CONFIRMED.
+
+  The flip was pure artifact. The test was asking "of the unexplained edges REMAINING AFTER I
+  REMOVED THE BORDER, what share is border?" - a question that can only inflate. Removing the
+  border made the border look like a better explanation of what was left. Any exclusion big
+  enough to matter will manufacture its own confirmation this way.
+
+  Fix: the denominator now comes from the histogram (bucketedDangerousUnexplained = 22554),
+  which counts every edge and is exclusion-independent. Share returns to 31.9%, verdict returns
+  to INCONCLUSIVE, matching the pre-exclusion run exactly.
+
+  THE GENERAL RULE: when a filter is added anywhere upstream, every ratio downstream must be
+  re-checked for whether its numerator and denominator are still drawn from the SAME population.
+  Filtering is not a local change - it silently re-bases every rate that reads a filtered counter.
+
+  THE CHECK THAT CAUGHT IT: the pre-stated regression criterion "the histogram tables must be
+  byte-identical after the change". The tables were identical - and the verdict line, computed
+  from those identical tables, changed anyway. That contradiction is what exposed the bug. A
+  derived value moving while all of its declared inputs hold still is proof of a hidden input.
+  Always diff the CONCLUSIONS as well as the DATA; the data being right is not enough.
+
+D-0127 (2026-08-11) - A PROXY THAT LOOKS DEFINITIONALLY TRUE STILL HAS TO BE VALIDATED.
+MINE WAS FALSE, AND IT INVERTED THE VERDICT.
+
+  I wrote into the interior work order, as justification for the design: "Every plane>0 tile is
+  inside a structure." That sentence is wrong. The live capture dumps the ENTIRE scene grid for
+  whatever plane the player stands on - not just the tiles under a roof. So plane 2 over an open
+  field is also plane>0. It is empty sky, and it is outdoors.
+
+  Consequence, measured: UPPER swallowed 60,452 of 136,950 compared edges (44%), most of them
+  empty upper-plane grid over open ground. Regions whose upper planes are mostly sky score 3-6%
+  dangerous. Region 46_52 - the one region captured at 100% on all three planes, which is why it
+  was named as the coverage-controlled read BEFORE the run - scores 21.8% and 23.6% on planes 1
+  and 2 against 8.3% on its own plane 0. Same region, same capture, ~2.8x worse upstairs.
+
+  So the global verdict (REFUTED - interiors are SAFER, 12.6% vs 18.0%) and the within-region
+  contrast point OPPOSITE WAYS, and the difference is entirely sample composition. A bad proxy
+  did not merely weaken the test, it reversed its sign.
+
+  THE VERDICT STILL STANDS AS REFUTED. The rule was fixed in code before the numbers existed and
+  it returned REFUTED on all three reads - combined, UPPER alone, UNDER_STRUCTURE alone. I do not
+  get to overturn a pre-stated rule after seeing the data. What I get to do is state that the
+  proxy was too coarse to have tested what I claimed, and propose a sharper one.
+
+  THE RULE: before a bucket is used as a proxy for a real-world property, prove the bucket is
+  actually that property - do not argue it from the definition. Cheapest proof is a count: if
+  "inside a building" holds 44% of a dataset gathered by walking around one castle, the label is
+  wrong. A bucket that is far bigger or smaller than the real-world thing it names is a red flag
+  on the label, not a discovery about the world.
+
+  WHAT SAVED THIS: asking for the per-region-per-plane table in the same pass, and naming 46_52
+  as the controlled read in advance. The headline verdict alone would have closed the interior
+  hypothesis as dead. The breakdown showed the hypothesis was never actually tested.
+
+D-0128 (2026-08-12) - A BIG RATIO INSIDE A SUBGROUP IS NOT THE SUBGROUP EXPLAINING THE PROBLEM.
+AND WHEN YOU FIX A BROKEN PROXY, RE-RUN THE ORIGINAL RULE - DO NOT INVENT A KINDER ONE.
+
+  Context: D-0127 recorded that the "upper floor" proxy was mostly empty sky and had inverted the
+  interior verdict. The fix was to split UPPER by actual occupancy. The corrected test produced a
+  spectacular-looking internal number and a mediocre real one:
+      UPPER_NEAR_STRUCTURE vs UPPER_OPEN     3.97x   (27.62% vs 6.97%)   <- eye-catching
+      UPPER_NEAR_STRUCTURE vs OUTDOOR        1.53x   (27.62% vs 18.03%)  <- the actual test
+      share of all unexplained                26.6%  (4078/15359)        <- fails the 40% bar
+  Verdict: INCONCLUSIVE. Barely clears the 1.5x refute floor, nowhere near the 3.0x confirm bar.
+
+  THE TEMPTATION, NAMED SO IT CAN BE RESISTED: after two rounds of chasing this, 3.97x is exactly
+  the number a person wants to report. It is real, it is clean, and it is the wrong comparison.
+  It says occupied upper floors are worse than EMPTY upper floors - which is nearly a tautology,
+  since empty sky has almost nothing to get wrong. What decides whether buildings explain the
+  defect is the comparison against ordinary ground, and that is 1.53x.
+
+  THE OTHER HALF OF THE RULE: the corrected test kept the SAME thresholds (3.0 / 1.5 / 40% / 500)
+  as the border and interior hypotheses. Fixing a proxy is a chance to quietly re-baseline, and
+  re-baselining after seeing a disappointing result is how a measurement programme rots. Third
+  hypothesis, same bar, no exceptions.
+
+  WHAT THE CORRECTED TEST ACTUALLY BOUGHT: not a confirmation - a correct negative. The interior
+  hypothesis was not merely mis-measured in D-0127, it is genuinely weak. That is worth as much
+  as a confirmation would have been, and it cost one short re-run.
