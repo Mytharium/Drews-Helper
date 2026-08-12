@@ -1850,3 +1850,73 @@ D-0168 (2026-08-12) - Post-promotion verification of `5bddcf4` against live clie
   CONCLUSION: no rollback. `5bddcf4` stands. Two defects and one coverage gap were parked rather
   than actioned - parked items 24, 25 and 26 in `02_NEXT_WORK.md`. Durable rules: D-0133 in
   `DECISION_LOG.md`.
+
+D-0169 (2026-08-12) - The terrain floor rule was measured against live client ground truth
+  and is CORRECT AS SHIPPED. Stale "not yet verified" caveat removed. NO LOGIC CHANGED.
+
+  Scope note: this entry records a measurement pass. The only code touched is the stale caveat
+  comment in `CollisionMapBuilder.applyTerrain()` and the matching `terrain note:` string in the
+  report footer, both of which asserted the rule was unverified and were therefore false. No
+  gradle task was run and no report was regenerated. Durable rules are D-0134 in
+  `DECISION_LOG.md`.
+
+  METHOD: 49 scenes across the three captures in `C:\Users\drews\.runelite\` - `FULL_20260811`,
+  `POST_20260812` and `POST2_20260812`. 233,067 covered tiles, 40,113 `0xFFFFFF` sentinel rows
+  excluded, leaving 192,061 usable observations of which 26,962 are client `BLOCK_MOVEMENT_FLOOR`
+  (0x200000). The client floor bit is read from the third `rawFlags` column of each data row.
+
+  CONFUSION MATRIX - nine candidate predicates against the client no-floor bit:
+      predicate                                  TP      FP     FN       TN  precision    recall
+      C1 CURRENT (bit0 + bridge lowering)     26962     526      0   164573    98.086%  100.000%
+      C2 bit0 only, no bridge lowering        26954     852      8   164247    96.936%   99.970%
+      C3 bit0 OR bit2 (0x04)                  26961   13828      1   151271    66.099%   99.996%
+      C4 bit0 OR bit4 (0x10)                  26954    3304      8   161795    89.081%   99.970%
+      C5 void tile (underlay==0&&overlay==0)  14680   63297  12282   101802    18.826%   54.447%
+      C6 bit0 OR void tile                    26954   64118      8   100981    29.596%   99.970%
+      C7 water overlay {442,445,448,451}       1136    8395  25826   156704    11.919%    4.213%
+      C8 bit0 OR water overlay                26954    8814      8   156285    75.358%   99.970%
+      C9 water overlay && underlay==0           283    4697  26679   160402     5.683%    1.050%
+
+  VERDICT ON C1 - THE SHIPPED RULE HAS ZERO FALSE NEGATIVES AND NOTHING BEATS IT. Every
+  alternative buys no recall and pays for it in precision. The cheapest of them (C4) gives up
+  9 points of precision and gains nothing at all, and the popular "it must really be water or
+  void" theories are not close: C5 misses 12,282 real no-floor tiles and C7 misses 25,826.
+
+  THE BRIDGE BRANCH IS VERIFIED, NOT VACUOUS. Prior art called it vacuous because its counter
+  showed 0 covered tiles. Across the full three-capture set it is covered, and it matters:
+      bridge-flagged tiles with bit 0 set          862
+      agreement WITH plane lowering            859/862 = 99.65%
+      agreement WITHOUT plane lowering         525/862 = 60.9%
+  Removing the bridge branch would be a clear regression. C2 in the matrix shows the same thing
+  from the other side: dropping the lowering introduces 8 false negatives and 326 extra false
+  positives.
+
+  SUPERSEDED - THE EARLIER `LiveFlagCrossTab` FINDING. It reported that 65% of client-blocked
+  tiles were unexplained and that 79.4% of them read `tileSetting == 0x00`. It was counting
+  tiles blocked on ALL FOUR EDGES, which folds in walls, scenery and objects - none of which the
+  terrain rule is responsible for. Isolating the actual floor bit gives 100% recall. Two
+  operational notes before anyone re-runs that tool: its `DATA_ROW` regex is 2-group and CANNOT
+  parse the current 3-column captures at all, and the `0xFFFFFF` sentinel rows must be excluded.
+  Use the regex shape at `CollisionMapBuilder.java:126-128` instead.
+
+  FALSE PREMISE CORRECTED - "our map marks open ocean passable while the client blocks it" is
+  NOT TRUE. In the Rimmington box (x2880-2919, y3200-3263, plane 0):
+      usable tiles                                   1,893
+      tiles carrying ZERO client collision flags      1,414
+      tiles the client marks BLOCK_MOVEMENT_FLOOR       217
+      cache/client agreement                   1,857/1,893 = 98.1%
+  The client no-floor tiles form a 1-2 tile coastline band; the open water beyond it is
+  unflagged by the client too. The client does not block open ocean, so the map is not
+  disagreeing with it there.
+
+  BOTH SEALED POCKETS ARE ALREADY UNREACHABLE (parked item 25). A flood fill of the shipped map
+  from Lumbridge (3222,3218) yields a 112,387-tile land component, and neither pocket seed is in
+  it:
+      pocket 1 (2886,3252)   4,375 tiles   2,130 captured   1 client-no-floor
+      pocket 2 (3064,3201)   1,100 tiles   1,005 captured   1 client-no-floor
+  That makes them map hygiene, not a routing bug.
+
+  CONCLUSION: NO CODE CHANGE TO `applyTerrain` IS WARRANTED. The rule is correct as shipped and
+  the measurement says so at precision 98.086% / recall 100.000%. Three side findings were
+  parked rather than actioned - items 27, 28 and 29 in `02_NEXT_WORK.md`. Durable rules: D-0134
+  in `DECISION_LOG.md`.

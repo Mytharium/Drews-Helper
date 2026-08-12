@@ -1761,3 +1761,54 @@ fully passable. And a blocked->open flip is not a regression until reachability 
   back over coastal flips that no player can reach.
 
   Cross-reference: build notes are `D-0168` in `CHANGELOG_AGENT_NOTES.md`.
+
+D-0134 (2026-08-12) - The terrain floor rule is VERIFIED, it must be measured against the
+ISOLATED floor bit, and the client does not flag open ocean as no-floor either.
+
+  Three durable rules out of one measurement pass over 49 live-client scenes. All three exist
+  because a plausible-sounding "the terrain rule is wrong" report survived several sessions
+  without anyone isolating the bit it was supposedly wrong about.
+
+  RULE 1 - `tileSetting & 1` PLUS BRIDGE LOWERING IS VERIFIED. DO NOT "IMPROVE" IT. The rule in
+  `CollisionMapBuilder.applyTerrain()` - block when `tileSetting & 1`, and lower the plane by one
+  when `getTileSetting(1,x,y) & 2` - was measured against the client `BLOCK_MOVEMENT_FLOOR`
+  (0x200000) bit over 192,061 usable observations containing 26,962 client no-floor tiles:
+
+      predicate                                  TP      FP     FN       TN  precision    recall
+      C1 CURRENT (bit0 + bridge lowering)     26962     526      0   164573    98.086%  100.000%
+      C2 bit0 only, no bridge lowering        26954     852      8   164247    96.936%   99.970%
+      C3 bit0 OR bit2 (0x04)                  26961   13828      1   151271    66.099%   99.996%
+      C4 bit0 OR bit4 (0x10)                  26954    3304      8   161795    89.081%   99.970%
+      C5 void tile (underlay==0&&overlay==0)  14680   63297  12282   101802    18.826%   54.447%
+      C6 bit0 OR void tile                    26954   64118      8   100981    29.596%   99.970%
+      C7 water overlay {442,445,448,451}       1136    8395  25826   156704    11.919%    4.213%
+      C8 bit0 OR water overlay                26954    8814      8   156285    75.358%   99.970%
+      C9 water overlay && underlay==0           283    4697  26679   160402     5.683%    1.050%
+
+  C1 is the shipped rule and it has ZERO FALSE NEGATIVES. Every alternative measured buys no
+  recall and costs precision, so any future proposal to widen this predicate is already refuted
+  unless it arrives with a new measurement that beats 98.086% / 100.000% on the same captures.
+  The bridge branch specifically is NOT vacuous - 862 covered tiles, 99.65% agreement with
+  lowering versus 60.9% without - so it must not be deleted as dead code.
+
+  RULE 2 - WHEN MEASURING THE FLOOR RULE, ISOLATE `BLOCK_MOVEMENT_FLOOR` (0x200000) OUT OF THE
+  RAW FLAG COLUMN. Measuring the terrain rule against "the client blocks this tile on all four
+  edges" conflates walls, scenery and objects with the floor, and none of those are the terrain
+  rule's job. That conflation is exactly what produced the earlier `LiveFlagCrossTab` claim that
+  65% of client-blocked tiles were unexplained by terrain and that 79.4% of them read
+  `tileSetting == 0x00`. Against the isolated floor bit the same rule has 100% recall. That
+  earlier finding is SUPERSEDED and must not be quoted again.
+
+  RULE 3 - THE CLIENT DOES NOT FLAG OPEN OCEAN AS NO-FLOOR EITHER. It flags only a 1-2 tile
+  coastline band. Measured in the Rimmington box (x2880-2919, y3200-3263, plane 0):
+
+      usable tiles                                   1,893
+      tiles carrying ZERO client collision flags      1,414
+      tiles the client marks BLOCK_MOVEMENT_FLOOR       217
+      cache/client agreement                   1,857/1,893 = 98.1%
+
+  Therefore any future report of the form "the map thinks water is walkable" must check the
+  client's OWN flags for those same tiles before it is treated as a disagreement. If the client
+  does not flag the water either, the two agree and there is nothing to fix.
+
+  Cross-reference: build notes are `D-0169` in `CHANGELOG_AGENT_NOTES.md`.

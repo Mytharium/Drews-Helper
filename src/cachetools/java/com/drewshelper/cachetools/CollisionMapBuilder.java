@@ -538,9 +538,16 @@ public final class CollisionMapBuilder
                     }
 
                     /*
-                     * A CONVENTION NOT YET VERIFIED AGAINST GROUND TRUTH in this project.
-                     * The rebuilt map must be checked against live client data before any full
-                     * archive commit treats this bridge handling as proven.
+                     * VERIFIED AGAINST LIVE CLIENT GROUND TRUTH on 2026-08-12. Measured over 49
+                     * scenes / 192,061 usable observations / 26,962 client BLOCK_MOVEMENT_FLOOR
+                     * tiles: bit 0 plus this bridge lowering scores precision 98.086%, recall
+                     * 100.000% - zero false negatives. The bridge branch alone is not vacuous and
+                     * not cosmetic: of 862 bridge-flagged blocked tiles it agrees with the client
+                     * 859/862 = 99.65% with lowering versus 525/862 = 60.9% without, so removing
+                     * it is a regression. Every alternative predicate measured (bit 2, bit 4, void
+                     * tile, water overlay, and their unions with bit 0) buys no recall and costs
+                     * precision. Do not "improve" this rule. See D-0169 in
+                     * docs/C2_Guides/CHANGELOG_AGENT_NOTES.md and D-0134 in docs/C2_Guides/DECISION_LOG.md.
                      */
                     boolean bridge = (terrain.getTileSetting(1, localX, localY) & 2) != 0;
                     if (bridge)
@@ -3415,8 +3422,8 @@ public final class CollisionMapBuilder
         report.append("  out-of-region neighbour skips: ").append(stats.outOfRegionNeighbourSkips).append('\n');
         report.append("  total edges made passable: ").append(stats.totalEdgesMadePassable).append('\n');
         report.append("  door edges written: ").append(stats.doorEdgesWritten).append('\n');
-        report.append("  terrain note: tile-setting floor blocking and bridge lowering are implemented as ");
-        report.append("a convention not yet verified against this project's ground truth.").append('\n');
+        report.append("  terrain note: tile-setting floor blocking and bridge lowering are VERIFIED against ");
+        report.append("live client ground truth (2026-08-12): precision 98.086%, recall 100.000%.").append('\n');
     }
 
     private static void appendRegionList(StringBuilder report, Set<Integer> regionIds)

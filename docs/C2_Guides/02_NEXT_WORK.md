@@ -656,6 +656,30 @@ section has been changed. Append new findings here as they come up; strike them 
     regions, likewise have no live data. Anything asserted about those regions is route-engine
     inference rather than measurement, and should be quoted that way until a capture covers them.
 
+27. **Cross-region seam drops S/W edges (2026-08-12).**
+    `markSolidAllEdges` reaches its neighbours through `edgeIfInside`, which cannot clear a flag
+    whose storage cell lives in the NEIGHBOURING region, so a terrain-blocked tile sitting on a
+    region boundary leaks exactly one edge. Measured: 18 wrongly-passable edges inside the 24
+    rebuilt regions, 24 across all 64 captured regions - and every single one is at `y%64==0`
+    (south) or `x%64==0` (west), with zero unexplained. Needs cross-region edge reconciliation at
+    write time, after all regions are built. This is NOT a terrain-rule problem - D-0169 measured
+    the rule itself as correct. Parked, not fixed.
+
+28. **C1's 526 false positives are the likely source of parked item 24 (2026-08-12).**
+    The verified terrain rule (D-0169) still over-blocks 526 tiles: cache says blocked, live
+    client says walkable. Breakdown - 484 on plane 0, 516 have `tileSetting[plane] == 1`, only 3
+    are bridge-flagged and only 9 sit on a region seam. That is a 0.32% over-block rate. Note the
+    direction: this is the OPPOSITE of the reported ocean symptom, and it is the more plausible
+    cause of the "OPEN-but-live-BLOCKED edges 132 -> 1,735" regression recorded in item 24 above.
+    Work item 24 from this angle first. Parked, not fixed.
+
+29. **Legacy (non-rebuilt) regions are the real weak spot (2026-08-12).**
+    147 of the 171 unexplained floor leaks sit in 2021-vintage Runemoro entries that the v2
+    rebuild has never touched. They concentrate in `52_50` (101 leaks) and `52_51` (36) - Al
+    Kharid east - followed by `51_154`, `50_49` and `50_48`. EXTENDING THE REBUILD TO THOSE
+    REGIONS WILL BUY FAR MORE THAN ANY TERRAIN-RULE CHANGE: the v2 rebuild is measurably better
+    than the v1 data sitting next to it. Highest-value follow-up of the three. Parked, not fixed.
+
 ### Unconfirmed - status needs checking before acting
 
 14. **Route-speed baseline before the heuristic change.** The prior recommendation was to bank a clean
