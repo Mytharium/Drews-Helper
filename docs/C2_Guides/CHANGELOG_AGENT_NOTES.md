@@ -1649,3 +1649,52 @@ D-0163 (2026-08-12) - Occupied-upper-floor split: verdict INCONCLUSIVE. Empty-sk
   15,359, dangerousRateAll 15.237%, all three borderExcluded counters, DOOR_SHUT 93,
   AGREE_BLOCKED 14,219, AGREE_OPEN 99,238, OVERBLOCK 2,533, border verdict INCONCLUSIVE, the
   UPPER / UNDER_STRUCTURE / OUTDOOR rows, and the combined INTERIOR verdict REFUTED.
+
+D-0164 (2026-08-12) - Phase 0 ignored-placement adjacency: verdict INCONCLUSIVE, largest effect
+  measured in this investigation, falsification control PASSED. See D-0129.
+
+  WHAT WAS ADDED (CollisionMapBuilder.java 134,948 -> 161,015 B, sha256 FAF09A83...DB482B20):
+  Pure addition; one line replaced (appendDangerousDirectionComparison gained a BuildStats param
+  so the census can print set sizes). shapeFor() is BYTE-IDENTICAL - verified by md5 on the
+  method body, f2f4eb7d6013c28c0db6b6e819730515 before and after. New sets
+  sceneryPlacementTileKeys (locType 10/11) and otherIgnoredTileKeys (any type shapeFor ignores,
+  excluding 10, 11 and GROUND_DECOR_LOC_TYPE 22), populated at the same site as
+  placementTileKeys, before the locType filter. Ignored-ness is decided by calling
+  shapeForHandlesLocType() rather than re-listing the handled cases, so the two can never drift.
+  Adjacency tests BOTH endpoints of the edge - a placement on either side can block it.
+  Fourth hypothesis, same thresholds as the previous three, no new constant.
+
+  RESULT:
+      bucket             comparedEdges  DANGEROUS  UNEXPL  unexplRate  share   OVERBLOCK  obRate
+      ADJ_SCENERY               10,792      5,555   5,405     50.083%  35.19%        127  1.177%
+      ADJ_OTHER_IGNORED          6,117      3,504   3,429     56.057%  22.33%        125  2.043%
+      NOT_ADJACENT             120,041     11,808   6,525      5.436%  42.48%      2,281  1.900%
+  ADJ_SCENERY vs NOT_ADJACENT: rateRatio 9.214x - THREE TIMES the 3.0x confirm bar - but share
+  35.19% misses the 40% bar, so the pre-stated verdict is INCONCLUSIVE and that is what prints.
+  Secondary read ADJ_OTHER_IGNORED vs NOT_ADJACENT: 10.313x, share 22.33%, also INCONCLUSIVE.
+  All five closure assertions passed, including OVERBLOCK (127 + 125 + 2281 == 2533).
+
+  OVERBLOCK CONTROL PASSED - the single most important line in this run. Predicted before the run:
+  missing objects cannot cause overblock. Measured: ADJ_SCENERY 1.177% vs NOT_ADJACENT 1.900%,
+  i.e. LOWER. A generic "clutter is hard" confound would have lifted both error directions.
+
+  CONCENTRATION: 16,909 edges (12.3% of the compared population) carry 8,834 of 15,359 unexplained
+  edges (57.5%). Recorded as arithmetic on two pre-stated buckets, explicitly NOT as a verdict -
+  the union was not the test fixed in code beforehand.
+
+  CENSUS: 11,541 unique scenery tiles (exactly matching 11,260 type-10 + 281 type-11 placements -
+  no tile collisions) and 14,955 other-ignored tiles. ADJ_SCENERY is overwhelmingly plane 0
+  (9,847 of 10,792); ADJ_OTHER_IGNORED is mostly planes 1-2 (4,757 of 6,117), consistent with the
+  roof locTypes 17/18 living upstairs.
+
+  LIMITATION, printed in the report: adjacency is not causation. A tile beside a tree is also a
+  tile in a cluttered place. This rules the theory OUT cheaply; it cannot alone prove the objects
+  are what block those edges. The overblock control is what raises it above bare correlation.
+
+  UNCHANGED AND RE-VERIFIED: zero removed lines in the committed report diff. comparedEdges
+  136,950, DANGEROUS 20,867, DANGEROUS_UNEXPLAINED 15,359, rate 15.237%, DOOR_SHUT 93,
+  AGREE_BLOCKED 14,219, AGREE_OPEN 99,238, OVERBLOCK 2,533, all borderExcluded counters, border
+  verdict INCONCLUSIVE, both histogram tables, all interior and occupancy rows and verdicts.
+
+  NEXT: the union bucket (adjacent to ANY ignored placement, excluding type 22) as a PRE-STATED
+  run. Then Phase 1 - read footprint and blocking flag off the object definition.

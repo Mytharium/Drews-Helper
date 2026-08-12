@@ -89,6 +89,11 @@ public final class CollisionMapBuilder
     // A room interior floor tile carries no placement of its own but is adjacent to its walls.
     private static final int NEAR_STRUCTURE_RADIUS = 1;
     private static final int OCCUPANCY_CENSUS_REGION_ID = (46 << 8) | 52;
+    /*
+     * locType 22 is ground decoration, expected to be non-blocking, and is therefore excluded from
+     * the candidate ignored-placement set on purpose.
+     */
+    private static final int GROUND_DECOR_LOC_TYPE = 22;
 
     private static final BorderDistanceBucket[] BORDER_DISTANCE_BUCKETS = {
         new BorderDistanceBucket("0", 0, 0),
@@ -538,6 +543,7 @@ public final class CollisionMapBuilder
         int x = baseX + location.getPosition().getX();
         int y = baseY + location.getPosition().getY();
         stats.placementTileKeys.add(tileKey(x, y, plane));
+        recordIgnoredPlacementTile(stats, x, y, plane, location.getType());
         if (location.getType() == 1 && location.getOrientation() == 3)
         {
             stats.locType1Orientation3TileKeys.add(tileKey(x, y, plane));
@@ -564,6 +570,28 @@ public final class CollisionMapBuilder
         {
             bits.markEdge(x, y, plane, direction, openable, stats);
         }
+    }
+
+    private static void recordIgnoredPlacementTile(BuildStats stats, int x, int y, int plane, int locType)
+    {
+        boolean ignored = !shapeForHandlesLocType(locType);
+        if (!ignored)
+        {
+            return;
+        }
+
+        if (locType == 10 || locType == 11)
+        {
+            stats.sceneryPlacementTileKeys.add(tileKey(x, y, plane));
+            return;
+        }
+
+        if (locType == GROUND_DECOR_LOC_TYPE)
+        {
+            return;
+        }
+
+        stats.otherIgnoredTileKeys.add(tileKey(x, y, plane));
     }
 
     private static void recordDoorCapablePlacement(BuildStats stats, int x, int y, int plane, int locType)
@@ -966,6 +994,7 @@ public final class CollisionMapBuilder
         boolean borderExcluded = borderDistances.contained
             && borderDistances.maxBorderDistance <= BORDER_MAX_DISTANCE;
         boolean dangerous = liveBlocked && passable;
+        boolean overblock = !liveBlocked && !passable;
         boolean dangerousUnexplained = dangerous
             && classifyDangerousEdge(comparison, stats, tile, direction) == DangerousSplit.UNEXPLAINED;
 
@@ -1029,6 +1058,15 @@ public final class CollisionMapBuilder
 
         recordBorderHistogramEdge(comparison, borderDistances, dangerous, dangerousUnexplained);
         recordInteriorMeasurementEdge(comparison, stats, region, tile, dangerous, dangerousUnexplained);
+        recordSceneryAdjacencyMeasurementEdge(
+            comparison,
+            stats,
+            tile,
+            direction,
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
     }
 
     private static void recordInteriorMeasurementEdge(
@@ -1050,6 +1088,71 @@ public final class CollisionMapBuilder
             dangerous,
             dangerousUnexplained
         );
+    }
+
+    private static void recordSceneryAdjacencyMeasurementEdge(
+        DangerousDirectionComparison comparison,
+        BuildStats stats,
+        LiveTile tile,
+        char direction,
+        boolean dangerous,
+        boolean dangerousUnexplained,
+        boolean overblock
+    )
+    {
+        SceneryAdjacencyBucket bucket = classifySceneryAdjacencyBucket(stats, tile, direction);
+        comparison.sceneryAdjacencyMeasurement.record(
+            bucket,
+            tile.plane,
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
+    }
+
+    private static SceneryAdjacencyBucket classifySceneryAdjacencyBucket(
+        BuildStats stats,
+        LiveTile tile,
+        char direction
+    )
+    {
+        int otherX = tile.x;
+        int otherY = tile.y;
+        if (direction == 'N')
+        {
+            otherY = tile.y + 1;
+        }
+        else if (direction == 'E')
+        {
+            otherX = tile.x + 1;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Unhandled adjacency direction " + direction);
+        }
+
+        /*
+         * Stored north/east edges sit between two same-plane tiles. A placement on either endpoint
+         * can explain the client blocking that edge, so the adjacency census checks both endpoints.
+         */
+        if (edgeTouchesTileKey(stats.sceneryPlacementTileKeys, tile, otherX, otherY))
+        {
+            return SceneryAdjacencyBucket.ADJ_SCENERY;
+        }
+        if (edgeTouchesTileKey(stats.otherIgnoredTileKeys, tile, otherX, otherY))
+        {
+            return SceneryAdjacencyBucket.ADJ_OTHER_IGNORED;
+        }
+        return SceneryAdjacencyBucket.NOT_ADJACENT;
+    }
+
+    private static boolean edgeTouchesTileKey(Set<Long> tileKeys, LiveTile tile, int otherX, int otherY)
+    {
+        if (tileKeys.contains(tile.key()))
+        {
+            return true;
+        }
+        return tileKeys.contains(tileKey(otherX, otherY, tile.plane));
     }
 
     private static InteriorBucket classifyInteriorBucket(BuildStats stats, LiveTile tile)
@@ -1223,7 +1326,7 @@ public final class CollisionMapBuilder
         report.append('\n');
         appendProofComparison(report, comparison);
         report.append('\n');
-        appendDangerousDirectionComparison(report, dangerousComparison);
+        appendDangerousDirectionComparison(report, result.stats, dangerousComparison);
         report.append('\n');
         appendBuildStats(report, result.stats);
         return report.toString();
@@ -1256,6 +1359,7 @@ public final class CollisionMapBuilder
 
     private static void appendDangerousDirectionComparison(
         StringBuilder report,
+        BuildStats stats,
         DangerousDirectionComparison comparison
     )
     {
@@ -1306,6 +1410,7 @@ public final class CollisionMapBuilder
         appendDangerousSplit(report, comparison);
         appendBorderHistograms(report, comparison);
         appendInteriorMeasurement(report, comparison);
+        appendSceneryAdjacencyMeasurement(report, stats, comparison);
         report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
         report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
         report.append("  orient-3 compared-edge count: ")
@@ -1908,6 +2013,385 @@ public final class CollisionMapBuilder
                 .append(" (").append(counts.nearStructureEdges)
                 .append(" + ").append(counts.notNearStructureEdges)
                 .append(" == ").append(counts.comparedEdges).append(")").append('\n');
+        }
+    }
+
+    private static void appendSceneryAdjacencyMeasurement(
+        StringBuilder report,
+        BuildStats stats,
+        DangerousDirectionComparison comparison
+    )
+    {
+        SceneryAdjacencyMeasurement measurement = comparison.sceneryAdjacencyMeasurement;
+        long bucketComparedTotal = measurement.bucketComparedTotal();
+        long bucketDangerousTotal = measurement.bucketDangerousTotal();
+        long bucketDangerousUnexplainedTotal = measurement.bucketDangerousUnexplainedTotal();
+        long bucketOverblockTotal = measurement.bucketOverblockTotal();
+
+        report.append("  ignored-placement adjacency pass:").append('\n');
+        appendSceneryAdjacencyInterpretationRule(report);
+        report.append("    bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) ")
+            .append("DANGEROUS_UNEXPLAINED dangerousUnexplainedRate(DANGEROUS_UNEXPLAINED/comparedEdges) ")
+            .append("unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum) OVERBLOCK ")
+            .append("overblockRate(OVERBLOCK/comparedEdges)").append('\n');
+        for (SceneryAdjacencyBucket bucket : SceneryAdjacencyBucket.values())
+        {
+            appendSceneryAdjacencyCountsRow(
+                report,
+                "    ",
+                bucket.name(),
+                measurement.counts(bucket),
+                bucketDangerousUnexplainedTotal
+            );
+        }
+
+        appendSceneryAdjacencyAssertions(
+            report,
+            comparison,
+            bucketComparedTotal,
+            bucketDangerousTotal,
+            bucketDangerousUnexplainedTotal,
+            bucketOverblockTotal
+        );
+        appendSceneryAdjacencyVerdicts(report, measurement, bucketDangerousUnexplainedTotal);
+        appendSceneryAdjacencyOverblockControl(report, measurement);
+        appendSceneryAdjacencyCensus(report, stats, measurement);
+        report.append("    caveat: adjacency does not prove causation. A tile next to a tree is also ")
+            .append("a tile in a cluttered part of the world, and clutter correlates with lots of ")
+            .append("things. This test can rule the theory OUT cheaply; it cannot on its own prove ")
+            .append("the objects are what block those edges.")
+            .append('\n');
+    }
+
+    private static void appendSceneryAdjacencyInterpretationRule(StringBuilder report)
+    {
+        report.append("    ignored-placement adjacency interpretation rule:").append('\n');
+        report.append("      ADJ_SCENERY = either endpoint has an ignored locType 10 or 11 placement.").append('\n');
+        report.append("      ADJ_OTHER_IGNORED = not ADJ_SCENERY, and either endpoint has another ")
+            .append("ignored placement excluding locTypes 10, 11, and ground decoration 22.")
+            .append('\n');
+        report.append("      NOT_ADJACENT = neither endpoint is in the ignored-placement candidate sets.").append('\n');
+        report.append("      ADJ_SCENERY wins ties; the three buckets are exhaustive over every ")
+            .append("post-exclusion compared edge.")
+            .append('\n');
+        report.append("      This fourth hypothesis reuses the border, interior, and occupied-upper-floor ")
+            .append("thresholds deliberately; no new threshold is introduced.")
+            .append('\n');
+        report.append("      Rate denominator is comparedEdges for that row; share denominator is the ")
+            .append("bucket-sum DANGEROUS_UNEXPLAINED from ADJ_SCENERY + ADJ_OTHER_IGNORED + ")
+            .append("NOT_ADJACENT.")
+            .append('\n');
+        report.append("      Main verdict compares ADJ_SCENERY against NOT_ADJACENT on ")
+            .append("dangerousUnexplainedRate; secondary read compares ADJ_OTHER_IGNORED against ")
+            .append("NOT_ADJACENT.")
+            .append('\n');
+        report.append("      - VACUOUS: either side comparedEdges < ")
+            .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+            .append(" -> INCONCLUSIVE - VACUOUS, naming the short side and count with no ratio ")
+            .append("computed.")
+            .append('\n');
+        report.append("      - CONFIRMED (ignored scenery): rate(ADJ_SCENERY) >= ")
+            .append(BORDER_CONFIRMED_RATE_MULTIPLIER)
+            .append("x rate(NOT_ADJACENT) AND ADJ_SCENERY holds >= ")
+            .append(formatRate(BORDER_CONFIRMED_UNEXPLAINED_SHARE))
+            .append(" of post-exclusion DANGEROUS_UNEXPLAINED.")
+            .append('\n');
+        report.append("      - REFUTED: rate(ADJ_SCENERY) < ")
+            .append(BORDER_REFUTED_RATE_MULTIPLIER)
+            .append("x rate(NOT_ADJACENT).")
+            .append('\n');
+        report.append("      - INCONCLUSIVE: anything else.").append('\n');
+    }
+
+    private static void appendSceneryAdjacencyCountsRow(
+        StringBuilder report,
+        String indent,
+        String label,
+        SceneryAdjacencyBucketCounts counts,
+        long dangerousUnexplainedTotal
+    )
+    {
+        report.append(indent).append(label)
+            .append(' ').append(counts.comparedEdges)
+            .append(' ').append(counts.dangerous)
+            .append(' ').append(formatRateWithCounts(counts.dangerous, counts.comparedEdges))
+            .append(' ').append(counts.dangerousUnexplained)
+            .append(' ').append(formatRateWithCounts(counts.dangerousUnexplained, counts.comparedEdges))
+            .append(' ').append(formatRateWithCounts(counts.dangerousUnexplained, dangerousUnexplainedTotal))
+            .append(' ').append(counts.overblock)
+            .append(' ').append(formatRateWithCounts(counts.overblock, counts.comparedEdges))
+            .append('\n');
+    }
+
+    private static void appendSceneryAdjacencyAssertions(
+        StringBuilder report,
+        DangerousDirectionComparison comparison,
+        long bucketComparedTotal,
+        long bucketDangerousTotal,
+        long bucketDangerousUnexplainedTotal,
+        long bucketOverblockTotal
+    )
+    {
+        SceneryAdjacencyMeasurement measurement = comparison.sceneryAdjacencyMeasurement;
+        SceneryAdjacencyBucketCounts scenery = measurement.counts(SceneryAdjacencyBucket.ADJ_SCENERY);
+        SceneryAdjacencyBucketCounts other = measurement.counts(SceneryAdjacencyBucket.ADJ_OTHER_IGNORED);
+        SceneryAdjacencyBucketCounts notAdjacent = measurement.counts(SceneryAdjacencyBucket.NOT_ADJACENT);
+
+        report.append("    adjacency split assertion: ADJ_SCENERY.comparedEdges + ")
+            .append("ADJ_OTHER_IGNORED.comparedEdges + NOT_ADJACENT.comparedEdges == comparedEdges: ")
+            .append(okFail(bucketComparedTotal == comparison.comparedEdges))
+            .append(" (").append(scenery.comparedEdges)
+            .append(" + ").append(other.comparedEdges)
+            .append(" + ").append(notAdjacent.comparedEdges)
+            .append(" == ").append(comparison.comparedEdges).append(")").append('\n');
+        report.append("    adjacency split assertion: ADJ_SCENERY.dangerous + ADJ_OTHER_IGNORED.dangerous ")
+            .append("+ NOT_ADJACENT.dangerous == DANGEROUS: ")
+            .append(okFail(bucketDangerousTotal == comparison.dangerous))
+            .append(" (").append(scenery.dangerous)
+            .append(" + ").append(other.dangerous)
+            .append(" + ").append(notAdjacent.dangerous)
+            .append(" == ").append(comparison.dangerous).append(")").append('\n');
+        report.append("    adjacency split assertion: ADJ_SCENERY.dangerousUnexplained + ")
+            .append("ADJ_OTHER_IGNORED.dangerousUnexplained + NOT_ADJACENT.dangerousUnexplained ")
+            .append("== DANGEROUS_UNEXPLAINED: ")
+            .append(okFail(bucketDangerousUnexplainedTotal == comparison.dangerousUnexplained))
+            .append(" (").append(scenery.dangerousUnexplained)
+            .append(" + ").append(other.dangerousUnexplained)
+            .append(" + ").append(notAdjacent.dangerousUnexplained)
+            .append(" == ").append(comparison.dangerousUnexplained).append(")").append('\n');
+        report.append("    adjacency split assertion: ADJ_SCENERY.overblock + ADJ_OTHER_IGNORED.overblock ")
+            .append("+ NOT_ADJACENT.overblock == OVERBLOCK: ")
+            .append(okFail(bucketOverblockTotal == comparison.overblock))
+            .append(" (").append(scenery.overblock)
+            .append(" + ").append(other.overblock)
+            .append(" + ").append(notAdjacent.overblock)
+            .append(" == ").append(comparison.overblock).append(")").append('\n');
+    }
+
+    private static void appendSceneryAdjacencyVerdicts(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement,
+        long dangerousUnexplainedTotal
+    )
+    {
+        SceneryAdjacencyBucketCounts notAdjacent = measurement.counts(SceneryAdjacencyBucket.NOT_ADJACENT);
+
+        report.append("    verdict ADJ_SCENERY vs NOT_ADJACENT: ")
+            .append(sceneryAdjacencyVerdict(
+                "ADJ_SCENERY",
+                "CONFIRMED (ignored scenery)",
+                measurement.counts(SceneryAdjacencyBucket.ADJ_SCENERY),
+                notAdjacent,
+                dangerousUnexplainedTotal
+            ))
+            .append('\n');
+        report.append("    secondary read ADJ_OTHER_IGNORED vs NOT_ADJACENT: ")
+            .append(sceneryAdjacencyVerdict(
+                "ADJ_OTHER_IGNORED",
+                "CONFIRMED (other ignored placements)",
+                measurement.counts(SceneryAdjacencyBucket.ADJ_OTHER_IGNORED),
+                notAdjacent,
+                dangerousUnexplainedTotal
+            ))
+            .append('\n');
+    }
+
+    private static String sceneryAdjacencyVerdict(
+        String candidateLabel,
+        String confirmedVerdict,
+        SceneryAdjacencyBucketCounts candidate,
+        SceneryAdjacencyBucketCounts notAdjacent,
+        long dangerousUnexplainedTotal
+    )
+    {
+        /*
+         * Reuse the border-hypothesis thresholds deliberately: this fourth hypothesis must clear
+         * exactly the same bar the previous three hypotheses had to clear.
+         */
+        if (candidate.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR
+            || notAdjacent.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            return sceneryAdjacencyVacuousVerdict(candidateLabel, candidate, notAdjacent);
+        }
+
+        double candidateRate = rate(candidate.dangerousUnexplained, candidate.comparedEdges);
+        double notAdjacentRate = rate(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges);
+        double candidateUnexplainedShare = rate(candidate.dangerousUnexplained, dangerousUnexplainedTotal);
+        String details = " - " + candidateLabel + " dangerousUnexplainedRate "
+            + formatRateWithCounts(candidate.dangerousUnexplained, candidate.comparedEdges)
+            + ", NOT_ADJACENT dangerousUnexplainedRate "
+            + formatRateWithCounts(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges)
+            + ", rateRatio "
+            + sceneryAdjacencyRateRatio(candidateRate, notAdjacentRate)
+            + ", unexplainedShare "
+            + formatRateWithCounts(candidate.dangerousUnexplained, dangerousUnexplainedTotal);
+
+        if (candidateRate >= notAdjacentRate * BORDER_CONFIRMED_RATE_MULTIPLIER
+            && candidateUnexplainedShare >= BORDER_CONFIRMED_UNEXPLAINED_SHARE)
+        {
+            return confirmedVerdict + details;
+        }
+        if (candidateRate < notAdjacentRate * BORDER_REFUTED_RATE_MULTIPLIER)
+        {
+            return "REFUTED" + details;
+        }
+        return "INCONCLUSIVE" + details;
+    }
+
+    private static String sceneryAdjacencyVacuousVerdict(
+        String candidateLabel,
+        SceneryAdjacencyBucketCounts candidate,
+        SceneryAdjacencyBucketCounts notAdjacent
+    )
+    {
+        StringBuilder verdict = new StringBuilder("INCONCLUSIVE - VACUOUS - ");
+        boolean first = true;
+        if (candidate.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            verdict.append(candidateLabel)
+                .append(" comparedEdges ")
+                .append(candidate.comparedEdges)
+                .append(" < ")
+                .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR);
+            first = false;
+        }
+        if (notAdjacent.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            if (!first)
+            {
+                verdict.append("; ");
+            }
+            verdict.append("NOT_ADJACENT comparedEdges ")
+                .append(notAdjacent.comparedEdges)
+                .append(" < ")
+                .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR);
+        }
+        verdict.append(" - no ratio computed");
+        return verdict.toString();
+    }
+
+    private static String sceneryAdjacencyRateRatio(double candidateRate, double notAdjacentRate)
+    {
+        if (notAdjacentRate == 0.0)
+        {
+            if (candidateRate == 0.0)
+            {
+                return "undefined (both rates zero)";
+            }
+            return "undefined (NOT_ADJACENT rate zero)";
+        }
+        return formatMultiplier(candidateRate / notAdjacentRate);
+    }
+
+    private static void appendSceneryAdjacencyOverblockControl(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement
+    )
+    {
+        SceneryAdjacencyBucketCounts scenery = measurement.counts(SceneryAdjacencyBucket.ADJ_SCENERY);
+        SceneryAdjacencyBucketCounts notAdjacent = measurement.counts(SceneryAdjacencyBucket.NOT_ADJACENT);
+        double sceneryOverblockRate = rate(scenery.overblock, scenery.comparedEdges);
+        double notAdjacentOverblockRate = rate(notAdjacent.overblock, notAdjacent.comparedEdges);
+        boolean controlPassed = sceneryOverblockRate
+            <= notAdjacentOverblockRate * BORDER_REFUTED_RATE_MULTIPLIER;
+
+        report.append("    overblock control rule:").append('\n');
+        report.append("      Missing ignored objects can only make this builder say PASSABLE where ")
+            .append("the client says BLOCKED; they cannot cause OVERBLOCK because no edge is ")
+            .append("written for them.")
+            .append('\n');
+        report.append("      control PASS if overblockRate(ADJ_SCENERY) <= ")
+            .append("overblockRate(NOT_ADJACENT) * ")
+            .append(BORDER_REFUTED_RATE_MULTIPLIER)
+            .append(".")
+            .append('\n');
+        report.append("    overblock rates:").append('\n');
+        for (SceneryAdjacencyBucket bucket : SceneryAdjacencyBucket.values())
+        {
+            SceneryAdjacencyBucketCounts counts = measurement.counts(bucket);
+            report.append("      ").append(bucket.name())
+                .append(' ').append(formatRateWithCounts(counts.overblock, counts.comparedEdges))
+                .append('\n');
+        }
+        if (controlPassed)
+        {
+            report.append("    overblock control PASS - ADJ_SCENERY overblockRate ")
+                .append(formatRateWithCounts(scenery.overblock, scenery.comparedEdges))
+                .append(" <= NOT_ADJACENT overblockRate ")
+                .append(formatRateWithCounts(notAdjacent.overblock, notAdjacent.comparedEdges))
+                .append(" * ")
+                .append(BORDER_REFUTED_RATE_MULTIPLIER)
+                .append('\n');
+        }
+        else
+        {
+            report.append("    overblock control FAIL - ADJ_SCENERY overblockRate ")
+                .append(formatRateWithCounts(scenery.overblock, scenery.comparedEdges))
+                .append(" > NOT_ADJACENT overblockRate ")
+                .append(formatRateWithCounts(notAdjacent.overblock, notAdjacent.comparedEdges))
+                .append(" * ")
+                .append(BORDER_REFUTED_RATE_MULTIPLIER)
+                .append('\n');
+            report.append("CONTROL FAILED - the object theory predicts no overblock concentration; this contradicts it")
+                .append('\n');
+        }
+    }
+
+    private static void appendSceneryAdjacencyCensus(
+        StringBuilder report,
+        BuildStats stats,
+        SceneryAdjacencyMeasurement measurement
+    )
+    {
+        report.append("    ignored-placement adjacency census:").append('\n');
+        report.append("      unique tiles in sceneryPlacementTileKeys: ")
+            .append(stats.sceneryPlacementTileKeys.size()).append('\n');
+        report.append("      unique tiles in otherIgnoredTileKeys: ")
+            .append(stats.otherIgnoredTileKeys.size()).append('\n');
+        report.append("      plane comparedEdges ADJ_SCENERY ADJ_OTHER_IGNORED NOT_ADJACENT").append('\n');
+        for (int plane = 0; plane < PLANE_COUNT; plane++)
+        {
+            appendSceneryAdjacencyPlaneCensusRow(report, measurement, plane);
+        }
+        appendSceneryAdjacencyPlaneAssertions(report, measurement);
+    }
+
+    private static void appendSceneryAdjacencyPlaneCensusRow(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement,
+        int plane
+    )
+    {
+        report.append("      ").append(plane)
+            .append(' ').append(measurement.planeComparedTotal(plane))
+            .append(' ').append(measurement.planeCounts(plane, SceneryAdjacencyBucket.ADJ_SCENERY).comparedEdges)
+            .append(' ').append(measurement.planeCounts(plane, SceneryAdjacencyBucket.ADJ_OTHER_IGNORED).comparedEdges)
+            .append(' ').append(measurement.planeCounts(plane, SceneryAdjacencyBucket.NOT_ADJACENT).comparedEdges)
+            .append('\n');
+    }
+
+    private static void appendSceneryAdjacencyPlaneAssertions(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement
+    )
+    {
+        for (int plane = 0; plane < PLANE_COUNT; plane++)
+        {
+            SceneryAdjacencyBucketCounts scenery =
+                measurement.planeCounts(plane, SceneryAdjacencyBucket.ADJ_SCENERY);
+            SceneryAdjacencyBucketCounts other =
+                measurement.planeCounts(plane, SceneryAdjacencyBucket.ADJ_OTHER_IGNORED);
+            SceneryAdjacencyBucketCounts notAdjacent =
+                measurement.planeCounts(plane, SceneryAdjacencyBucket.NOT_ADJACENT);
+            long comparedTotal = scenery.comparedEdges + other.comparedEdges + notAdjacent.comparedEdges;
+
+            report.append("      plane ").append(plane).append(" adjacency split assertion: ")
+                .append("ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: ")
+                .append(okFail(comparedTotal == measurement.planeComparedTotal(plane)))
+                .append(" (").append(scenery.comparedEdges)
+                .append(" + ").append(other.comparedEdges)
+                .append(" + ").append(notAdjacent.comparedEdges)
+                .append(" == ").append(measurement.planeComparedTotal(plane)).append(")").append('\n');
         }
     }
 
@@ -2590,6 +3074,13 @@ public final class CollisionMapBuilder
         OUTDOOR
     }
 
+    private enum SceneryAdjacencyBucket
+    {
+        ADJ_SCENERY,
+        ADJ_OTHER_IGNORED,
+        NOT_ADJACENT
+    }
+
     private static final class EmptyDirectionArray
     {
         private static final Direction[] HOLDER = new Direction[0];
@@ -2641,6 +3132,8 @@ public final class CollisionMapBuilder
         private final long[] locType1PlacementsByOrientation = new long[LOC_TYPE_1_EDGES_BY_ORIENTATION.length];
         private final Set<Long> locType1Orientation3TileKeys = new HashSet<>();
         private final Set<Long> placementTileKeys = new HashSet<>();
+        private final Set<Long> sceneryPlacementTileKeys = new HashSet<>();
+        private final Set<Long> otherIgnoredTileKeys = new HashSet<>();
         private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
 
         private long locType1EdgesBlockedTotal;
@@ -3364,6 +3857,123 @@ public final class CollisionMapBuilder
         }
     }
 
+    private static final class SceneryAdjacencyBucketCounts
+    {
+        private long comparedEdges;
+        private long dangerous;
+        private long dangerousUnexplained;
+        private long overblock;
+
+        private void record(boolean dangerous, boolean dangerousUnexplained, boolean overblock)
+        {
+            comparedEdges++;
+            if (dangerous)
+            {
+                this.dangerous++;
+            }
+            if (dangerousUnexplained)
+            {
+                this.dangerousUnexplained++;
+            }
+            if (overblock)
+            {
+                this.overblock++;
+            }
+        }
+    }
+
+    private static final class SceneryAdjacencyMeasurement
+    {
+        private final SceneryAdjacencyBucketCounts[] bucketCounts =
+            new SceneryAdjacencyBucketCounts[SceneryAdjacencyBucket.values().length];
+        private final SceneryAdjacencyBucketCounts[][] planeBucketCounts =
+            new SceneryAdjacencyBucketCounts[PLANE_COUNT][SceneryAdjacencyBucket.values().length];
+        private final long[] planeComparedEdges = new long[PLANE_COUNT];
+
+        private SceneryAdjacencyMeasurement()
+        {
+            for (int i = 0; i < bucketCounts.length; i++)
+            {
+                bucketCounts[i] = new SceneryAdjacencyBucketCounts();
+            }
+            for (int plane = 0; plane < planeBucketCounts.length; plane++)
+            {
+                for (int bucket = 0; bucket < planeBucketCounts[plane].length; bucket++)
+                {
+                    planeBucketCounts[plane][bucket] = new SceneryAdjacencyBucketCounts();
+                }
+            }
+        }
+
+        private void record(
+            SceneryAdjacencyBucket bucket,
+            int plane,
+            boolean dangerous,
+            boolean dangerousUnexplained,
+            boolean overblock
+        )
+        {
+            counts(bucket).record(dangerous, dangerousUnexplained, overblock);
+            planeComparedEdges[plane]++;
+            planeCounts(plane, bucket).record(dangerous, dangerousUnexplained, overblock);
+        }
+
+        private SceneryAdjacencyBucketCounts counts(SceneryAdjacencyBucket bucket)
+        {
+            return bucketCounts[bucket.ordinal()];
+        }
+
+        private SceneryAdjacencyBucketCounts planeCounts(int plane, SceneryAdjacencyBucket bucket)
+        {
+            return planeBucketCounts[plane][bucket.ordinal()];
+        }
+
+        private long bucketComparedTotal()
+        {
+            long total = 0L;
+            for (SceneryAdjacencyBucketCounts counts : bucketCounts)
+            {
+                total += counts.comparedEdges;
+            }
+            return total;
+        }
+
+        private long bucketDangerousTotal()
+        {
+            long total = 0L;
+            for (SceneryAdjacencyBucketCounts counts : bucketCounts)
+            {
+                total += counts.dangerous;
+            }
+            return total;
+        }
+
+        private long bucketDangerousUnexplainedTotal()
+        {
+            long total = 0L;
+            for (SceneryAdjacencyBucketCounts counts : bucketCounts)
+            {
+                total += counts.dangerousUnexplained;
+            }
+            return total;
+        }
+
+        private long bucketOverblockTotal()
+        {
+            long total = 0L;
+            for (SceneryAdjacencyBucketCounts counts : bucketCounts)
+            {
+                total += counts.overblock;
+            }
+            return total;
+        }
+
+        private long planeComparedTotal(int plane)
+        {
+            return planeComparedEdges[plane];
+        }
+    }
+
     private static final class RegionPlaneKey implements Comparable<RegionPlaneKey>
     {
         private final int regionId;
@@ -3508,6 +4118,8 @@ public final class CollisionMapBuilder
         private final BorderHistogram minBorderDistanceHistogram = new BorderHistogram();
         private final BorderHistogram maxBorderDistanceHistogram = new BorderHistogram();
         private final InteriorMeasurement interiorMeasurement = new InteriorMeasurement();
+        private final SceneryAdjacencyMeasurement sceneryAdjacencyMeasurement =
+            new SceneryAdjacencyMeasurement();
 
         private long comparedEdges;
         private long borderExcludedEdges;

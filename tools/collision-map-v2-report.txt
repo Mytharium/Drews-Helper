@@ -246,6 +246,50 @@ dangerous-direction pass:
       11828 (46_52) 1 8120 4202 3918 0.517488 (51.749%) (4202/8120)
       11828 (46_52) 2 8120 3264 4856 0.401970 (40.197%) (3264/8120)
       11828 (46_52) 3 0 0 0 0.000000 (0.000%) (0/0)
+  ignored-placement adjacency pass:
+    ignored-placement adjacency interpretation rule:
+      ADJ_SCENERY = either endpoint has an ignored locType 10 or 11 placement.
+      ADJ_OTHER_IGNORED = not ADJ_SCENERY, and either endpoint has another ignored placement excluding locTypes 10, 11, and ground decoration 22.
+      NOT_ADJACENT = neither endpoint is in the ignored-placement candidate sets.
+      ADJ_SCENERY wins ties; the three buckets are exhaustive over every post-exclusion compared edge.
+      This fourth hypothesis reuses the border, interior, and occupied-upper-floor thresholds deliberately; no new threshold is introduced.
+      Rate denominator is comparedEdges for that row; share denominator is the bucket-sum DANGEROUS_UNEXPLAINED from ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT.
+      Main verdict compares ADJ_SCENERY against NOT_ADJACENT on dangerousUnexplainedRate; secondary read compares ADJ_OTHER_IGNORED against NOT_ADJACENT.
+      - VACUOUS: either side comparedEdges < 500 -> INCONCLUSIVE - VACUOUS, naming the short side and count with no ratio computed.
+      - CONFIRMED (ignored scenery): rate(ADJ_SCENERY) >= 3.0x rate(NOT_ADJACENT) AND ADJ_SCENERY holds >= 0.400000 (40.000%) of post-exclusion DANGEROUS_UNEXPLAINED.
+      - REFUTED: rate(ADJ_SCENERY) < 1.5x rate(NOT_ADJACENT).
+      - INCONCLUSIVE: anything else.
+    bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED dangerousUnexplainedRate(DANGEROUS_UNEXPLAINED/comparedEdges) unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum) OVERBLOCK overblockRate(OVERBLOCK/comparedEdges)
+    ADJ_SCENERY 10792 5555 0.514733 (51.473%) (5555/10792) 5405 0.500834 (50.083%) (5405/10792) 0.351911 (35.191%) (5405/15359) 127 0.011768 (1.177%) (127/10792)
+    ADJ_OTHER_IGNORED 6117 3504 0.572830 (57.283%) (3504/6117) 3429 0.560569 (56.057%) (3429/6117) 0.223257 (22.326%) (3429/15359) 125 0.020435 (2.043%) (125/6117)
+    NOT_ADJACENT 120041 11808 0.098366 (9.837%) (11808/120041) 6525 0.054356 (5.436%) (6525/120041) 0.424832 (42.483%) (6525/15359) 2281 0.019002 (1.900%) (2281/120041)
+    adjacency split assertion: ADJ_SCENERY.comparedEdges + ADJ_OTHER_IGNORED.comparedEdges + NOT_ADJACENT.comparedEdges == comparedEdges: OK (10792 + 6117 + 120041 == 136950)
+    adjacency split assertion: ADJ_SCENERY.dangerous + ADJ_OTHER_IGNORED.dangerous + NOT_ADJACENT.dangerous == DANGEROUS: OK (5555 + 3504 + 11808 == 20867)
+    adjacency split assertion: ADJ_SCENERY.dangerousUnexplained + ADJ_OTHER_IGNORED.dangerousUnexplained + NOT_ADJACENT.dangerousUnexplained == DANGEROUS_UNEXPLAINED: OK (5405 + 3429 + 6525 == 15359)
+    adjacency split assertion: ADJ_SCENERY.overblock + ADJ_OTHER_IGNORED.overblock + NOT_ADJACENT.overblock == OVERBLOCK: OK (127 + 125 + 2281 == 2533)
+    verdict ADJ_SCENERY vs NOT_ADJACENT: INCONCLUSIVE - ADJ_SCENERY dangerousUnexplainedRate 0.500834 (50.083%) (5405/10792), NOT_ADJACENT dangerousUnexplainedRate 0.054356 (5.436%) (6525/120041), rateRatio 9.214x, unexplainedShare 0.351911 (35.191%) (5405/15359)
+    secondary read ADJ_OTHER_IGNORED vs NOT_ADJACENT: INCONCLUSIVE - ADJ_OTHER_IGNORED dangerousUnexplainedRate 0.560569 (56.057%) (3429/6117), NOT_ADJACENT dangerousUnexplainedRate 0.054356 (5.436%) (6525/120041), rateRatio 10.313x, unexplainedShare 0.223257 (22.326%) (3429/15359)
+    overblock control rule:
+      Missing ignored objects can only make this builder say PASSABLE where the client says BLOCKED; they cannot cause OVERBLOCK because no edge is written for them.
+      control PASS if overblockRate(ADJ_SCENERY) <= overblockRate(NOT_ADJACENT) * 1.5.
+    overblock rates:
+      ADJ_SCENERY 0.011768 (1.177%) (127/10792)
+      ADJ_OTHER_IGNORED 0.020435 (2.043%) (125/6117)
+      NOT_ADJACENT 0.019002 (1.900%) (2281/120041)
+    overblock control PASS - ADJ_SCENERY overblockRate 0.011768 (1.177%) (127/10792) <= NOT_ADJACENT overblockRate 0.019002 (1.900%) (2281/120041) * 1.5
+    ignored-placement adjacency census:
+      unique tiles in sceneryPlacementTileKeys: 11541
+      unique tiles in otherIgnoredTileKeys: 14955
+      plane comparedEdges ADJ_SCENERY ADJ_OTHER_IGNORED NOT_ADJACENT
+      0 76498 9847 1360 65291
+      1 30226 686 2694 26846
+      2 30226 259 2063 27904
+      3 0 0 0 0
+      plane 0 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (9847 + 1360 + 65291 == 76498)
+      plane 1 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (686 + 2694 + 26846 == 30226)
+      plane 2 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (259 + 2063 + 27904 == 30226)
+      plane 3 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (0 + 0 + 0 == 0)
+    caveat: adjacency does not prove causation. A tile next to a tree is also a tile in a cluttered part of the world, and clutter correlates with lots of things. This test can rule the theory OUT cheaply; it cannot on its own prove the objects are what block those edges.
   dangerousRateAll: 0.152369 (15.237%)
   orient-3 tile count: 738
   orient-3 compared-edge count: 418

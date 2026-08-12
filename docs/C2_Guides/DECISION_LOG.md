@@ -1587,3 +1587,39 @@ AND WHEN YOU FIX A BROKEN PROXY, RE-RUN THE ORIGINAL RULE - DO NOT INVENT A KIND
   WHAT THE CORRECTED TEST ACTUALLY BOUGHT: not a confirmation - a correct negative. The interior
   hypothesis was not merely mis-measured in D-0127, it is genuinely weak. That is worth as much
   as a confirmation would have been, and it cost one short re-run.
+
+D-0129 (2026-08-12) - A FALSIFICATION CONTROL THAT PASSES IS WORTH MORE THAN A BIG RATIO.
+AND A BUCKET CAN FAIL BY BEING TOO NARROW, NOT ONLY BY BEING TOO WIDE.
+
+  Phase 0 produced a 9.214x rate separation - by far the largest in this investigation; the
+  border artifact, the previous record, was 4.01x. On effect size alone it is not close.
+  It is still not the reason to believe it.
+
+  THE REASON TO BELIEVE IT IS THE CONTROL. Before the run I stated: missing objects can ONLY make
+  the builder say PASSABLE where the client says BLOCKED. They cannot cause OVERBLOCK, because no
+  edge is written for them at all. So overblock must NOT concentrate next to ignored placements.
+  It did not:  ADJ_SCENERY 1.177% (127/10792) vs NOT_ADJACENT 1.900% (2281/120041).
+  Lower, not higher. That is the prediction that could have killed the theory and did not.
+  A "cluttered areas are just harder" confound would have raised BOTH error directions. Only one
+  moved, and it moved in exactly the direction the mechanism requires.
+
+  Effect size says "something is here". A surviving falsification control says "and it is the
+  thing I claimed". D-0127 and D-0128 both had impressive-looking ratios attached to proxies that
+  did not survive scrutiny. This one had a way to be wrong and was not.
+
+  THE SECOND HALF - MY BUCKET WAS TOO NARROW. The verdict is INCONCLUSIVE, on the share test:
+  ADJ_SCENERY holds 35.19% of unexplained, under the 40% bar. But ADJ_OTHER_IGNORED - the
+  secondary read - came back at 10.313x, an even larger separation. The effect is NOT specific to
+  scenery. It is any placement shapeFor() ignores.
+  D-0127 was a bucket too WIDE (empty sky diluting real buildings). This is the mirror image: a
+  bucket too NARROW, splitting one real population across two rows so neither clears a share bar
+  that the union clears comfortably.
+
+  WHAT I AM NOT DOING: reading the two rows together and calling it CONFIRMED. 5405 + 3429 = 8834
+  of 15359 is 57.5%, which would pass - and that arithmetic is a POST-HOC union, not the test I
+  fixed in code beforehand. Same discipline as D-0128. The union is the next PRE-STATED run, not
+  a re-reading of this one.
+
+  THE RULE: state the falsification condition before the run and report whether it held, every
+  time. When a pre-stated bucket turns out mis-drawn, the remedy is a new pre-stated run with the
+  corrected bucket - never a wider reading of the run you already have.
