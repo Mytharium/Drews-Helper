@@ -165,6 +165,37 @@ public final class DrewsHelperRouteSnapshot
         return path;
     }
 
+    /**
+     * The path as far as the first remaining waypoint, or the whole path when that waypoint is
+     * not on it.
+     *
+     * <p>The ground overlay draws this instead of the full path. With several waypoints placed, a
+     * later leg crossing the current one is indistinguishable underfoot, and the player follows
+     * the floor rather than the map. The world map still draws the whole journey, where the
+     * crossing is readable and the overview is the point.
+     *
+     * <p>Falls back to the full path rather than to an empty one: a destination that never
+     * appears on the path - reached by transport, or snapped to a different tile - must degrade
+     * to the old behaviour, never to drawing nothing.
+     */
+    public List<WorldPoint> getCurrentLegPath()
+    {
+        if (path.isEmpty() || destinations.isEmpty())
+        {
+            return path;
+        }
+
+        WorldPoint legEnd = destinations.get(0);
+        for (int index = 0; index < path.size(); index++)
+        {
+            if (legEnd.equals(path.get(index)))
+            {
+                return Collections.unmodifiableList(path.subList(0, index + 1));
+            }
+        }
+        return path;
+    }
+
     public List<WorldPoint> getDestinations()
     {
         return destinations;

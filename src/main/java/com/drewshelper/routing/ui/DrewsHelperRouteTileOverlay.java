@@ -82,11 +82,13 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
             return null;
         }
 
+        // Ground tiles show the CURRENT leg only. The world map still draws the whole journey -
+        // see DrewsHelperRouteSnapshot#getCurrentLegPath for why the two differ.
         DrewsHelperRouteSnapshot snapshot = plugin.getRouteSnapshot();
         if (snapshot.hasPath())
         {
             Color color = translucentPathColor();
-            for (WorldPoint point : snapshot.getPath())
+            for (WorldPoint point : snapshot.getCurrentLegPath())
             {
                 drawTile(graphics, point, color);
             }
@@ -145,7 +147,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
     private void drawTransportEndpoints(Graphics2D graphics, DrewsHelperRouteSnapshot snapshot)
     {
         DrewsHelperTransportGraph graph = plugin.getTransportGraph();
-        List<WorldPoint> path = snapshot.getPath();
+        List<WorldPoint> path = snapshot.getCurrentLegPath();
 
         for (int index = 0; index + 1 < path.size(); index++)
         {
@@ -184,7 +186,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
     private void drawDoorSteps(Graphics2D graphics, DrewsHelperRouteSnapshot snapshot)
     {
         DrewsHelperTransportGraph graph = plugin.getTransportGraph();
-        List<WorldPoint> path = snapshot.getPath();
+        List<WorldPoint> path = snapshot.getCurrentLegPath();
         Set<Long> outlinedEdges = new HashSet<>();
         int outlines = 0;
 
