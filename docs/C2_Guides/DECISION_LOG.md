@@ -2117,3 +2117,75 @@ map treats plane 1 as open ground, and the router walks across it.
 
   Cross-reference: root cause behind the Falador Park reports. Supersedes nothing; D-0136 and
   D-0137 stand.
+
+D-0139 (2026-08-12) - Roofs are the upper-floor blocker, and phase 2 is the weaker change.
+
+  RULE 1 - LOCTYPES 12, 13, 14, 16, 17, 18, 19 AND 21 ARE THE MISSING UPPER-FLOOR RULE. They are
+  the OSRS roof shapes. Measured over the 62-region 2026-08-12 capture with phase 2 off and roofs
+  the only difference between two builds:
+
+      DANGEROUS_UNEXPLAINED   89651 -> 59953    -29698   (-33.1%)
+      OVERBLOCK               11910 -> 15913     +4003
+      route-aware OVERBLOCK    6098 ->  6626      +528
+      proof edges fixed        74.5% -> 71.0%     -3.5pts
+
+  One rule removes a third of every unexplained dangerous edge in the build.
+
+  RULE 2 - BLOCKING ROOFS CANNOT TOUCH THE GROUND FLOOR. There are ZERO roof placements on
+  plane 0 (by-plane counter 0 / 11749 / 8163 / 3636) and the plane-0 dangerous count is identical
+  in both builds at 60837. This was raised as a risk and answered by measurement, not argument.
+
+  RULE 3 - BLOCKING ROOFS CANNOT SEAL A WALKABLE UPPER STOREY. OSRS places a roof on the plane
+  ABOVE the interior it covers, so a building with a walkable first floor has its interior at
+  plane 1 and its roof at plane 2 - the walkable tile carries no roof marker. The evidence is the
+  direction of the numbers: upper-plane dangerous fell about 36% (plane 1 13.842% -> 8.847%,
+  plane 2 13.279% -> 8.403%) while route-aware overblock rose by 528 across the whole build.
+  Sealing walkable storeys would have moved both the other way.
+
+  RULE 4 - PHASE 2 IS THE WEAKER CHANGE ON EVERY AXIS MEASURED. Route-aware, same regions and
+  capture: roofs are -29698 unexplained for +528 route-aware overblock, a ratio of 56.2 to 1;
+  phase 2 is -13469 for +3532, a ratio of 3.8 to 1. Phase 2 also costs 4.7x more on the
+  proof-edge set (-16.4pts against -3.5pts) for 45% of the fix. Phase 2 should be reworked or
+  dropped rather than kept by default.
+
+  RULE 5 - DO NOT SOFTEN A CRITERION TO PASS YOUR OWN CHANGE. Both configurations FAIL the
+  proof-edge criterion (roofs 71.0%, phase 2 58.2%, against a 74.5% baseline). The criterion was
+  not relaxed to let either through. A gate that gets loosened whenever it blocks the author's
+  own work is not a gate. If a criterion is wrong it changes on its own merits, in its own
+  commit, with its own reasoning - never as a side effect of wanting a result.
+
+  RULE 6 - CONFIRM ATTRIBUTION BY EMPTYING THE BUCKET YOU BLAMED. ADJ_OTHER_IGNORED
+  dangerousUnexplained collapses 29962 -> 428, a 98.6% reduction. The bucket the proof pass
+  blamed is the bucket that empties. That is the difference between a correlation and a
+  demonstrated cause, and it is the check to run whenever a fix comes out of an adjacency
+  measurement.
+
+  RULE 7 - SHIP THE RULE THAT WAS MEASURED. Roof blocking keys on locType alone, with no
+  interactType condition and no footprint expansion, because locType alone is what the proof pass
+  measured. Adding a plausible extra condition at implementation time ships a rule nobody proved.
+
+  RULE 8 - A CONTROL THAT MEASURES ITS OWN FIX ALWAYS FAILS. Found three times in this one file:
+  the ADJ_SCENERY overblock control, the union overblock control, and the per-locType overblock
+  column. All three assume no edge is written for ignored objects, which stops being true the
+  moment a blocking phase writes them. Same regions and capture, ADJ_SCENERY overblockRate is
+  0.912% with phase 2 off and 14.026% with it on. Any control whose premise names something the
+  build does must state whether the build is currently doing it.
+
+  RULE 9 - A HARDCODED BASELINE INVALIDATES ITSELF WHEN THE INPUT SCOPE CHANGES. The phase 2 gate
+  compared against constants from a 24-region run, so a 62-region run read AGREE_OPEN 854157
+  against a 161245 baseline and reported ABORT on nothing but a bigger sample. Baselines are now
+  measured live - same regions, same capture, blocking phases forced off. This is D-0138's "one
+  sample is a direction, not a rate" one level up.
+
+  RULE 10 - STATE THE PREDICTION BEFORE THE RUN. The prediction here, that no excluded locType
+  would clear the bar locTypes 10 and 11 clear, was falsified: the excluded set returns 69.8% to
+  91.7% dangerousUnexplained at 23.2x to 30.4x against locType 10's 49.6% at 16.5x. Writing it
+  down first is what made the falsification usable instead of arguable.
+
+  HELD BACK. locTypes 15 and 20 sit under the 500 compared-edge floor at 384 and 488 edges
+  despite 90.6% and 98.2% rates, and will clear on wider capture. locType 4 clears the danger bar
+  at 5.3x but is a wall decoration and is more likely to be standing beside the wall that really
+  blocks; it needs its own pass. locTypes 5-8 are inconclusive or vacuous.
+
+  Cross-reference: extends D-0138 and answers it. Supersedes nothing. Commits a469d96
+  (per-locType proof pass, three control fixes, live gate baseline) and b48b4bd (phase 3 roofs).
