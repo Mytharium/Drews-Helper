@@ -48,7 +48,8 @@ import net.runelite.api.CollisionDataFlag;
  * Builds the v2 per-region edge map from the OSRS cache.
  *
  * <p>The shipped archive stays runtime-compatible with the two-flag reader. Door flags are kept in
- * the builder/report only until a door-aware runtime reader exists.
+ * the builder/report only until a door-aware runtime reader exists, and a door edge is written
+ * PASSABLE in that archive - see archivePassable.
  */
 public final class CollisionMapBuilder
 {
@@ -1297,14 +1298,16 @@ public final class CollisionMapBuilder
                 for (int x = bits.minX; x <= bits.maxX; x++)
                 {
                     int northIndex = archiveIndex(bits, x, y, plane, FLAG_NORTH_PASSABLE);
-                    if (actual.get(northIndex) != bits.flags.get(bits.index(x, y, plane, FLAG_NORTH_PASSABLE)))
+                    if (actual.get(northIndex)
+                        != archivePassable(bits, x, y, plane, FLAG_NORTH_PASSABLE, FLAG_NORTH_DOOR))
                     {
                         throw new IOException("Round trip north-passable mismatch in " + expected.name
                             + " at " + x + "," + y + "," + plane);
                     }
 
                     int eastIndex = archiveIndex(bits, x, y, plane, FLAG_EAST_PASSABLE);
-                    if (actual.get(eastIndex) != bits.flags.get(bits.index(x, y, plane, FLAG_EAST_PASSABLE)))
+                    if (actual.get(eastIndex)
+                        != archivePassable(bits, x, y, plane, FLAG_EAST_PASSABLE, FLAG_EAST_DOOR))
                     {
                         throw new IOException("Round trip east-passable mismatch in " + expected.name
                             + " at " + x + "," + y + "," + plane);
@@ -4632,11 +4635,11 @@ public final class CollisionMapBuilder
                 {
                     for (int x = bits.minX; x <= bits.maxX; x++)
                     {
-                        if (bits.flags.get(bits.index(x, y, plane, FLAG_NORTH_PASSABLE)))
+                        if (archivePassable(bits, x, y, plane, FLAG_NORTH_PASSABLE, FLAG_NORTH_DOOR))
                         {
                             archive.set(archiveIndex(bits, x, y, plane, FLAG_NORTH_PASSABLE));
                         }
-                        if (bits.flags.get(bits.index(x, y, plane, FLAG_EAST_PASSABLE)))
+                        if (archivePassable(bits, x, y, plane, FLAG_EAST_PASSABLE, FLAG_EAST_DOOR))
                         {
                             archive.set(archiveIndex(bits, x, y, plane, FLAG_EAST_PASSABLE));
                         }
@@ -4655,6 +4658,27 @@ public final class CollisionMapBuilder
         {
             return bits.countFlag(FLAG_NORTH_DOOR) + bits.countFlag(FLAG_EAST_DOOR);
         }
+    }
+
+    /**
+     * Collapses the builder's four flags onto the two the runtime reader understands.
+     *
+     * <p>markDoor clears PASSABLE and sets DOOR, and the archive carried only the PASSABLE flags -
+     * so before this rule every door in the game was written to the shipped archive as a solid
+     * wall. That seals buildings, and the cost is out of all proportion to the edge count: measured
+     * 2026-08-12 in one 26-tile box around the Ardougne mansion, an all-region rebuild opened 501
+     * edges and closed 28, yet those 28 were 14 matched door pairs and the only way out of the
+     * mansion became a teleport. Live ground truth from the client says that walk is 54 tiles.
+     *
+     * <p>A shut door is not a wall, so a door edge is written passable. When a door-aware runtime
+     * reader exists it can charge the tick that opening one costs; until then, free is far closer
+     * to the truth than impassable.
+     */
+    private static boolean archivePassable(
+        RegionBits bits, int x, int y, int plane, int passableFlag, int doorFlag)
+    {
+        return bits.flags.get(bits.index(x, y, plane, passableFlag))
+            || bits.flags.get(bits.index(x, y, plane, doorFlag));
     }
 
     private static final class RegionBits
