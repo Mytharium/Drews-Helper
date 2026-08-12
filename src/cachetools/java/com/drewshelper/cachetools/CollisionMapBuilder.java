@@ -1475,15 +1475,24 @@ public final class CollisionMapBuilder
         boolean door = region.bits.isDoor(tile.x, tile.y, tile.plane, direction);
         boolean borderExcluded = borderDistances.contained
             && borderDistances.maxBorderDistance <= BORDER_MAX_DISTANCE;
+        /*
+         * archiveFlags writes a door edge PASSABLE, so the report has to read it the same way or it
+         * measures a map nobody runs. Only the open side moves: a door the client says is OPEN was
+         * being counted as an overblock and it is not one - the shipped archive lets you walk it.
+         * The blocked side is deliberately untouched, so a door the client saw SHUT still lands in
+         * DOOR_SHUT rather than inflating DANGEROUS with cases that are benign because the door
+         * opens.
+         */
+        boolean archivePassable = passable || door;
         boolean dangerous = liveBlocked && passable;
-        boolean overblock = !liveBlocked && !passable;
+        boolean overblock = !liveBlocked && !archivePassable;
         /*
          * The client says this edge is open and so do we. These are the edges a NEW blocking rule
          * would turn into overblocks, which is the one thing the per-locType table could not see:
          * its overblock column only counts blocking the current build already does, so a build
          * with the rule switched off reports zero cost for that rule by construction.
          */
-        boolean agreeOpen = !liveBlocked && passable;
+        boolean agreeOpen = !liveBlocked && archivePassable;
         boolean dangerousUnexplained = dangerous
             && classifyDangerousEdge(comparison, stats, tile, direction) == DangerousSplit.UNEXPLAINED;
 
@@ -1536,7 +1545,7 @@ public final class CollisionMapBuilder
                 comparison.agreeBlocked++;
             }
         }
-        else if (passable)
+        else if (archivePassable)
         {
             comparison.agreeOpen++;
         }
