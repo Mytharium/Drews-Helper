@@ -4,13 +4,15 @@ Last updated: 2026-08-12.
 
 ## NEXT SESSION - START HERE (written 2026-08-12 02:30, session 2 - list execution)
 
-Three commits landed this session, in order:
+Four commits landed this session, in order:
 
       d71a2f1  post-promotion verification of 5bddcf4  (docs only)   PUSHED
-      fe7ef81  terrain floor rule verified              (no logic)    unpushed
-      4c2d0d4  rescope + sailing research               (docs only)   unpushed
+      fe7ef81  terrain floor rule verified              (no logic)    PUSHED
+      4c2d0d4  rescope + sailing research               (docs only)   PUSHED
+      d20cf36  this handoff document                    (docs only)   PUSHED
 
-Repo clean, `main` is **ahead 2** of `origin/main`. Mytharium pushes manually - ask, do not push.
+Repo clean and level with origin/main - everything from this session is pushed. Mytharium
+pushes manually - ask, do not push.
 
 ### THE LIST - Mytharium's approved work plan, current status
 
