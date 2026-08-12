@@ -4,7 +4,8 @@ Last updated: 2026-08-12.
 
 ## NEXT SESSION - START HERE (written 2026-08-12, collision/routing track)
 
-Phase 2 object blocking is built. The current committed-intent rule is deliberately narrow:
+Phase 2 object blocking is built and wired into the runtime collision resource. The current
+committed rule is deliberately narrow:
 
 1. Only ignored scenery/object placements: locType 10/11.
 2. Only cache-solid objects: `ObjectDefinition.getInteractType() != 0`.
@@ -40,18 +41,29 @@ Saved baseline/report files:
 - `tools/collision-phase2-disabled-baseline-20260811.txt` - same code with Phase 2 disabled.
 - `tools/collision-map-v2-report.txt` - current Phase 2 enabled report.
 
+Runtime state:
+
+- `build/collision-map-v2.zip` is a 24-region patch selected from the FULL proof capture, NOT a
+  standalone world map.
+- `src/main/resources/collision-map.zip` remains the runtime resource and still has 1,524 regions.
+  The 24 rebuilt v2 entries were merged into it; the other 1,500 entries were preserved.
+- The shipped archive must stay in the two-flag runtime format (north/east passability only). The
+  builder may keep door flags in memory/report, but writing four flags into the shipped zip makes
+  the current loader decode those regions incorrectly and can turn valid routes into `NO_PATH`.
+
 Next work:
 
-1. Test real routes after the plugin picks up the rebuilt collision map. Any route that worked
-   before and now fails is a rollback-level signal.
+1. Myth should launch the dev plugin and test real routes now. Any route that worked before and
+   now fails is a rollback-level signal.
 2. Do NOT expand to larger footprints in the same change. The 2,853 held-back objects need their
    own pre-stated Phase 3 gate.
 3. Do NOT block "other ignored" locTypes as full objects. The broad rule overblocked badly; roofs
    and structural locTypes need separate classification.
 4. Small owed test still open: unit tests for `waypointPositionIndex`.
 
-IN-GAME WORK NEEDED FROM MYTHARIUM: after this commit is pushed and installed, run one normal route
-through clutter that used to cut through scenery, and one known-good route that should not change.
+IN-GAME WORK NEEDED FROM MYTHARIUM: after this commit is pushed, launch the dev plugin, run one
+normal route through clutter that used to cut through scenery, and one known-good route that should
+not change.
 
 ## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
 

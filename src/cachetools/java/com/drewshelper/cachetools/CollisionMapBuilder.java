@@ -47,8 +47,8 @@ import net.runelite.api.CollisionDataFlag;
 /**
  * Builds the v2 per-region edge map from the OSRS cache.
  *
- * <p>The shipped v1 map remains untouched. This tool writes a new format-compatible archive whose
- * extra door flags are ignored by old callers and available to a future door-aware reader.
+ * <p>The shipped archive stays runtime-compatible with the two-flag reader. Door flags are kept in
+ * the builder/report only until a door-aware runtime reader exists.
  */
 public final class CollisionMapBuilder
 {
@@ -65,6 +65,7 @@ public final class CollisionMapBuilder
     private static final int MAX_REGION_Y = 255;
     private static final int PLANE_COUNT = 4;
     private static final int FLAG_COUNT = 4;
+    private static final int ARCHIVE_FLAG_COUNT = 2;
     private static final int STORED_EDGE_COUNT = 2;
 
     private static final int FLAG_NORTH_PASSABLE = 0;
@@ -1009,48 +1010,39 @@ public final class CollisionMapBuilder
             {
                 for (int x = bits.minX; x <= bits.maxX; x++)
                 {
-                    for (int flag = 0; flag < FLAG_COUNT; flag++)
+                    int northIndex = archiveIndex(bits, x, y, plane, FLAG_NORTH_PASSABLE);
+                    if (actual.get(northIndex) != bits.flags.get(bits.index(x, y, plane, FLAG_NORTH_PASSABLE)))
                     {
-                        int index = bits.index(x, y, plane, flag);
-                        if (actual.get(index) != bits.flags.get(index))
-                        {
-                            throw new IOException("Round trip bit mismatch in " + expected.name
-                                + " at " + x + "," + y + "," + plane + " flag " + flag);
-                        }
+                        throw new IOException("Round trip north-passable mismatch in " + expected.name
+                            + " at " + x + "," + y + "," + plane);
+                    }
+
+                    int eastIndex = archiveIndex(bits, x, y, plane, FLAG_EAST_PASSABLE);
+                    if (actual.get(eastIndex) != bits.flags.get(bits.index(x, y, plane, FLAG_EAST_PASSABLE)))
+                    {
+                        throw new IOException("Round trip east-passable mismatch in " + expected.name
+                            + " at " + x + "," + y + "," + plane);
                     }
                 }
             }
         }
 
-        int unexpected = actual.nextSetBit(bits.totalBits());
+        int unexpected = actual.nextSetBit(archiveTotalBits(bits));
         if (unexpected >= 0)
         {
             throw new IOException("Round trip found out-of-range bit " + unexpected + " in " + expected.name);
         }
-        assertNoPassableDoorOverlap(actual, bits);
     }
 
-    private static void assertNoPassableDoorOverlap(BitSet actual, RegionBits bits) throws IOException
+    private static int archiveTotalBits(RegionBits bits)
     {
-        for (int plane = 0; plane < PLANE_COUNT; plane++)
-        {
-            for (int y = bits.minY; y <= bits.maxY; y++)
-            {
-                for (int x = bits.minX; x <= bits.maxX; x++)
-                {
-                    if (actual.get(bits.index(x, y, plane, FLAG_NORTH_PASSABLE))
-                        && actual.get(bits.index(x, y, plane, FLAG_NORTH_DOOR)))
-                    {
-                        throw new IOException("N passable and N door both set at " + x + "," + y + "," + plane);
-                    }
-                    if (actual.get(bits.index(x, y, plane, FLAG_EAST_PASSABLE))
-                        && actual.get(bits.index(x, y, plane, FLAG_EAST_DOOR)))
-                    {
-                        throw new IOException("E passable and E door both set at " + x + "," + y + "," + plane);
-                    }
-                }
-            }
-        }
+        return PLANE_COUNT * bits.width * bits.height * ARCHIVE_FLAG_COUNT;
+    }
+
+    private static int archiveIndex(RegionBits bits, int x, int y, int plane, int flag)
+    {
+        return (plane * bits.width * bits.height + (y - bits.minY) * bits.width + (x - bits.minX))
+            * ARCHIVE_FLAG_COUNT + flag;
     }
 
     private static Comparison compareProofEdges(
@@ -1630,6 +1622,10 @@ public final class CollisionMapBuilder
         report.append('\n');
         report.append("phase2 solid-object blocking: ")
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
+            .append('\n');
+        report.append("archive format: ")
+            .append(ARCHIVE_FLAG_COUNT)
+            .append(" runtime passability flags; door flags are report-only")
             .append('\n');
         report.append(roundTrip).append('\n');
         report.append('\n');
@@ -4004,7 +4000,7 @@ public final class CollisionMapBuilder
 
         private byte[] encode()
         {
-            byte[] bitsBytes = bits.flags.toByteArray();
+            byte[] bitsBytes = archiveFlags().toByteArray();
             ByteBuffer buffer = ByteBuffer.allocate(16 + bitsBytes.length);
             buffer.putInt(bits.minX);
             buffer.putInt(bits.minY);
@@ -4012,6 +4008,29 @@ public final class CollisionMapBuilder
             buffer.putInt(bits.maxY);
             buffer.put(bitsBytes);
             return buffer.array();
+        }
+
+        private BitSet archiveFlags()
+        {
+            BitSet archive = new BitSet(archiveTotalBits(bits));
+            for (int plane = 0; plane < PLANE_COUNT; plane++)
+            {
+                for (int y = bits.minY; y <= bits.maxY; y++)
+                {
+                    for (int x = bits.minX; x <= bits.maxX; x++)
+                    {
+                        if (bits.flags.get(bits.index(x, y, plane, FLAG_NORTH_PASSABLE)))
+                        {
+                            archive.set(archiveIndex(bits, x, y, plane, FLAG_NORTH_PASSABLE));
+                        }
+                        if (bits.flags.get(bits.index(x, y, plane, FLAG_EAST_PASSABLE)))
+                        {
+                            archive.set(archiveIndex(bits, x, y, plane, FLAG_EAST_PASSABLE));
+                        }
+                    }
+                }
+            }
+            return archive;
         }
 
         private long countPassableEdges()

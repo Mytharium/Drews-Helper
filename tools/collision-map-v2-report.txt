@@ -5,6 +5,7 @@ output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\bu
 report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\collision-map-v2-report.txt
 region selector: defaulted from proof file to 11570 (45_50), 11571 (45_51), 11572 (45_52), 11573 (45_53), 11826 (46_50), 11827 (46_51), 11828 (46_52), 11829 (46_53), 11830 (46_54), 12082 (47_50), 12083 (47_51), 12084 (47_52), 12085 (47_53), 12086 (47_54), 12339 (48_51), 12340 (48_52), 12341 (48_53), 12342 (48_54), 12596 (49_52), 12597 (49_53), 12598 (49_54), 12852 (50_52), 12853 (50_53), 12854 (50_54)
 phase2 solid-object blocking: enabled
+archive format: 2 runtime passability flags; door flags are report-only
 ROUND TRIP OK 24 regions
 
 proof-edge comparison:

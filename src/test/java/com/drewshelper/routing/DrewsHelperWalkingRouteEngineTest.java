@@ -383,9 +383,9 @@ public class DrewsHelperWalkingRouteEngineTest
         );
 
         assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
-        assertEquals(32, route.getWalkingDistance());
-        assertEquals(new WorldPoint(2950, 3228, 0), route.getPath().get(16));
-        assertEquals(new WorldPoint(2951, 3228, 0), route.getPath().get(17));
+        assertEquals(29, route.getWalkingDistance());
+        assertEquals(new WorldPoint(2950, 3227, 0), route.getPath().get(16));
+        assertEquals(new WorldPoint(2951, 3226, 0), route.getPath().get(17));
 
         DrewsHelperRouteSnapshot southernRoute = engine.solve(
             new WorldPoint(2942, 3243, 0),
@@ -393,9 +393,9 @@ public class DrewsHelperWalkingRouteEngineTest
         );
 
         assertEquals(DrewsHelperRouteStatus.READY, southernRoute.getStatus());
-        assertEquals(38, southernRoute.getWalkingDistance());
-        assertEquals(new WorldPoint(2950, 3228, 0), southernRoute.getPath().get(16));
-        assertEquals(new WorldPoint(2951, 3228, 0), southernRoute.getPath().get(17));
+        assertEquals(35, southernRoute.getWalkingDistance());
+        assertEquals(new WorldPoint(2943, 3227, 0), southernRoute.getPath().get(16));
+        assertEquals(new WorldPoint(2944, 3226, 0), southernRoute.getPath().get(17));
     }
 
     @Test
@@ -412,9 +412,9 @@ public class DrewsHelperWalkingRouteEngineTest
         );
 
         assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
-        assertEquals(32, route.getWalkingDistance());
-        assertEquals(new WorldPoint(2950, 3228, 0), route.getPath().get(16));
-        assertEquals(new WorldPoint(2951, 3228, 0), route.getPath().get(17));
+        assertEquals(29, route.getWalkingDistance());
+        assertEquals(new WorldPoint(2950, 3227, 0), route.getPath().get(16));
+        assertEquals(new WorldPoint(2951, 3226, 0), route.getPath().get(17));
     }
 
     @Test
@@ -449,12 +449,11 @@ public class DrewsHelperWalkingRouteEngineTest
         );
 
         assertEquals(DrewsHelperRouteStatus.READY, path3.getStatus());
-        assertEquals(29, path3.getWalkingDistance());
-        assertEquals(new WorldPoint(2966, 3231, 0), path3.getPath().get(25));
-        assertEquals(new WorldPoint(2967, 3231, 0), path3.getPath().get(26));
-        assertEquals(new WorldPoint(2968, 3230, 0), path3.getPath().get(27));
-        assertEquals(new WorldPoint(2969, 3229, 0), path3.getPath().get(28));
-        assertEquals(new WorldPoint(2970, 3229, 0), path3.getPath().get(29));
+        assertEquals(28, path3.getWalkingDistance());
+        assertEquals(new WorldPoint(2967, 3231, 0), path3.getPath().get(25));
+        assertEquals(new WorldPoint(2968, 3230, 0), path3.getPath().get(26));
+        assertEquals(new WorldPoint(2969, 3229, 0), path3.getPath().get(27));
+        assertEquals(new WorldPoint(2970, 3229, 0), path3.getPath().get(28));
     }
 
     @Test
@@ -485,8 +484,8 @@ public class DrewsHelperWalkingRouteEngineTest
         assertEquals(DrewsHelperRouteStatus.READY, shadowPath3.getStatus());
         assertEquals(visiblePath3.getWalkingDistance(), shadowPath3.getWalkingDistance());
         assertFalse(visiblePath3.getPath().equals(shadowPath3.getPath()));
-        assertEquals(new WorldPoint(2966, 3231, 0), shadowPath3.getPath().get(25));
-        assertEquals(new WorldPoint(2967, 3230, 0), shadowPath3.getPath().get(26));
+        assertEquals(new WorldPoint(2967, 3230, 0), shadowPath3.getPath().get(25));
+        assertEquals(new WorldPoint(2968, 3229, 0), shadowPath3.getPath().get(26));
     }
 
     @Test
@@ -514,10 +513,10 @@ public class DrewsHelperWalkingRouteEngineTest
         assertEquals(DrewsHelperRouteStatus.READY, shapeShadowRoute.getStatus());
         assertEquals(visibleRoute.getWalkingDistance(), shapeShadowRoute.getWalkingDistance());
         assertFalse(visibleRoute.getPath().equals(shapeShadowRoute.getPath()));
-        assertEquals(new WorldPoint(2996, 3288, 0), visibleRoute.getPath().get(104));
-        assertEquals(new WorldPoint(2997, 3287, 0), visibleRoute.getPath().get(105));
+        assertEquals(new WorldPoint(2991, 3286, 0), visibleRoute.getPath().get(104));
+        assertEquals(new WorldPoint(2991, 3285, 0), visibleRoute.getPath().get(105));
         assertEquals(
-            new WorldPoint(2994, 3287, 0),
+            new WorldPoint(2994, 3285, 0),
             shapeShadowRoute.getPath().get(105)
         );
     }

@@ -1695,3 +1695,34 @@ one-way live N/E validator gate.
   Phase 2 is intentionally limited to ignored locType 10/11, `getInteractType() != 0`, 1x1
   placements. The 2,853 held-back larger footprints and other ignored locTypes need their own
   pre-stated gates.
+
+D-0132 (2026-08-12) - `collision-map-v2.zip` is a patch archive, and the shipped runtime archive
+must stay two-flag until the runtime reader changes.
+
+  Decision: never replace `src/main/resources/collision-map.zip` wholesale with
+  `build/collision-map-v2.zip` unless the builder was run for all runtime regions and that all-region
+  output was separately verified. The normal Phase 2 output is a 24-region patch selected from the
+  FULL proof capture. Runtime promotion means merge those 24 entries into the existing 1,524-entry
+  `src/main/resources/collision-map.zip`.
+
+  Decision: the shipped archive format remains two runtime flags per tile: north passability and
+  east passability. The builder may keep N/E door flags in memory and in the report, but those door
+  flags are report-only until a door-aware `DrewsHelperCollisionMap` reader exists.
+
+  Reason: the current runtime loader constructs `DrewsHelperFlagMap(bytes, 2)`. A four-flag archive
+  is not safely "ignored" by that reader; the bit stride changes, so every tile after the first is
+  decoded against the wrong bits. The first promotion attempt proved the failure mode: several
+  previously-ready Falador route fixtures turned into `NO_PATH`. After changing the builder to emit
+  a two-flag archive, the `NO_PATH` failures disappeared and only expected exact-route fixture drift
+  remained.
+
+  Guardrail: every future runtime promotion must verify:
+
+      patch entry count > 0
+      runtime entry count remains the expected world count unless an all-region replacement is
+      explicitly intended
+      patch entries missing from runtime are reviewed, not silently accepted
+      `clean test build` passes against `DrewsHelperCollisionMap.loadDefault()`
+
+  If a future door-aware reader is added, make the archive version explicit rather than relying on
+  inferred bitset length.

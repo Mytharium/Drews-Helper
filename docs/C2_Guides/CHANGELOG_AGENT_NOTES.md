@@ -1783,3 +1783,34 @@ D-0166 (2026-08-12) - Phase 2 object blocking built: narrow 1x1 scenery objects 
   enabled PASS report; `clean test build` passed. Next required check is live route behaviour after
   this map is installed: one clutter route that should improve, and one known-good route that should
   not break.
+
+D-0167 (2026-08-12) - Phase 2 runtime wiring shipped: merged the 24 rebuilt regions into the
+  runtime collision resource and fixed the v2 archive format.
+
+  Important correction from the wiring pass: `build/collision-map-v2.zip` is a 24-region patch
+  selected from the FULL proof capture, not a standalone replacement for the 1,524-region runtime
+  map. Replacing `src/main/resources/collision-map.zip` with it would delete the rest of the world.
+  The shipped runtime resource keeps `src/main/resources/collision-map.zip` as the loader target and
+  merges the 24 rebuilt entries into that zip.
+
+  Second correction: the v2 builder was keeping four flags per tile in memory (N/E passability plus
+  N/E door diagnostics) and originally wrote all four into the zip. The current runtime reader
+  decodes the archive as two flags per tile. That mismatch caused the first promoted runtime zip to
+  turn valid Falador fixture routes into `NO_PATH`. The builder now writes only the two runtime
+  passability flags; door flags stay report-only until a door-aware loader exists.
+
+  Runtime promotion details:
+      patch entries: 24
+      runtime entries after merge: 1,524
+      patch missing from runtime: 0
+      runtime collision-map.zip sha256: EBCB6A6356AFAF366B1053C8641DD499C82BCE395731BD4FC744920AB114D5E7
+      build/collision-map-v2.zip sha256: A9F0890F3584FC0E672566E9DA8F76B1EE39FA6D31733AB5FFBD020E5E5512B2
+
+  Exact-route fixture drift was expected after promoting rebuilt Falador/Draynor regions. The
+  `NO_PATH` failures were the format bug; after the two-flag fix, remaining failures were stale
+  distance/checkpoint expectations. Updated only those expected values.
+
+  Verification: `clean test build` passed after runtime promotion and fixture updates. Then
+  `buildCollisionMapV2 --live-flags C:\Users\drews\.runelite\drews-live-flags.FULL_20260811.txt`
+  passed again and regenerated a report that says `archive format: 2 runtime passability flags;
+  door flags are report-only` and `Phase 2 route-aware solid-object gate: PASS`.
