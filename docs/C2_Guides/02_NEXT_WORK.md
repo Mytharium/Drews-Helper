@@ -69,6 +69,19 @@ ACTIVE SEQUENCE - in order
                                                  optimality metric. D-0136 RULE 4.
       F. Pilot region to zero known errors       The gate. Nothing expands anywhere else
                                                  until the pilot area passes.
+      G. Route-vs-actual tracking                DEFERRED until the map is fixed - Mytharium's
+                                                 call, 2026-08-12. Not a build, a switch:
+                                                 `ROUTE_BENCHMARK_ENABLED` at
+                                                 `DrewsHelperPlugin.java:101` is a hardcoded
+                                                 false. The comparator behind it is intact and
+                                                 substantial - first divergence index, max
+                                                 lateral deviation, merge-back classification,
+                                                 shadow-route fit scoring. Held back on
+                                                 purpose: at the error rate measured on
+                                                 2026-08-12 (81.1% of 518,105 disagreements
+                                                 are under-blocks) it would mostly report
+                                                 divergences caused by the MAP, not by the
+                                                 router, so it is noise until F closes.
 
 CARRIED, RE-RANKED
 

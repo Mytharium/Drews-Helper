@@ -765,6 +765,10 @@ public class DrewsHelperPlugin extends Plugin
      * interesting row is the one with no matching edge: the router moved between two tiles that no
      * transport connects, which means it reached one of them some other way.
      *
+     * <p>Pure-walk routes are recorded too, with legs=0. Absence of a row must mean "no route",
+     * never "a route with nothing interesting in it" - the second reading is what made a
+     * wall-clipping report untraceable.
+     *
      * <p>TEMPORARY INSTRUMENTATION, same as the level record - see parked item 32.
      */
     private void writeRouteLegsIfChanged()
@@ -802,17 +806,29 @@ public class DrewsHelperPlugin extends Plugin
                 + " label=" + (label == null ? "NO_MATCHING_EDGE" : label));
         }
 
-        if (legs.isEmpty() || legs.toString().equals(lastRouteLegsBlock))
+        // Every route is recorded, including one that is pure walking. Returning early on an
+        // empty leg list made the recorder blind to exactly the reports it exists to answer: a
+        // route that clips a house wall uses no ladder, door or teleport, so it produced no row
+        // at all and there was nothing to match a screenshot against.
+        //
+        // Keyed on the destinations and the hops - NOT on the route solve and NOT on the path.
+        // routeSignature carries the player's exact tile (see appendPoint), so it changes on
+        // every step, and path.size() shrinks as walked tiles are consumed; either would append
+        // the same route once per poll for the whole journey. Destinations change when a waypoint
+        // is placed or cleared, which is when a route is genuinely a different one.
+        List<WorldPoint> destinations = snapshot.getDestinations();
+        String legKey = destinations.toString() + legs.toString();
+        if (legKey.equals(lastRouteLegsBlock))
         {
             return;
         }
-        lastRouteLegsBlock = legs.toString();
+        lastRouteLegsBlock = legKey;
 
-        List<WorldPoint> destinations = snapshot.getDestinations();
         List<String> rows = new ArrayList<>();
         rows.add("DREW_ROUTELEG v1 route tick=" + tickCounter
             + " legs=" + legs.size()
             + " path=" + path.size()
+            + " from=" + pointText(path.get(0))
             + " dest=" + (destinations.isEmpty()
                 ? "-" : pointText(destinations.get(destinations.size() - 1))));
         rows.addAll(legs);
