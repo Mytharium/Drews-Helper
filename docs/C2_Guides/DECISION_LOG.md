@@ -2050,3 +2050,70 @@ capture already distinguishes unobserved ground, and no emitter change is needed
   error class without proving we were entitled to.
 
   Cross-reference: supersedes RULE 1 of `D-0136` only. All other D-0136 rules stand.
+
+D-0138 (2026-08-12) - The wall-crossing routes are an upper-plane defect: the shipped collision
+map treats plane 1 as open ground, and the router walks across it.
+
+  Reported three times over two days as "the route takes me through a wall", and diagnosed as a
+  wall twice. Both diagnoses were wrong. The route does not cross the wall - it walks along the
+  floor ABOVE it, and the world map draws every plane flat, so on screen the two are identical.
+  Mytharium named it first, from the client: "it had me climb up a ladder and the route is now
+  telling me to walk through the air. Maybe that is why it is bugging out with the wall."
+
+  RULE 1 - THE EVIDENCE IS ONE ROUTE, TWO LEGS, 230 TILES APART. First run of the leg recorder,
+  from `drews-route-legs.txt`:
+
+      DREW_ROUTELEG v1 route tick=25 legs=2 path=327 dest=3026,3361,0
+      DREW_ROUTELEG v1 #1 from=3262,3402,0 to=3262,3402,1 objId=11794 label=Climb-up Ladder
+      DREW_ROUTELEG v1 #2 from=3032,3389,1 to=3032,3388,0 objId=17052 label=Jump Wall
+
+  Two transport legs and nothing between them. The route climbs a ladder in Varrock onto plane 1,
+  walks 230 tiles west entirely on plane 1, and drops off the Falador north wall. Both legs are
+  legal rows in `drewshelper-transports.tsv`; the illegal part is the walk between them. The
+  client answers `I can't reach that!`. A second route the same session recorded one leg (the
+  same Jump Wall) at path=292, matching the HUD's "Route Length 291 tiles" exactly.
+
+  RULE 2 - PLANE 1 IS 5.31x MORE PERMISSIVE THAN PLANE 0, MEASURED. Scene 3200:3376 (Varrock
+  centre), both planes captured in one session:
+
+      plane 0   tiles=10609  mismatches=3752  overblock=1469  underblock=2283   1.55x
+      plane 1   tiles=10609  mismatches=4613  overblock= 731  underblock=3882   5.31x
+
+  43% of plane-1 tiles disagree with the client. Interior tiles after stripping the scene border:
+  plane 0 = 1,318 (332 void sentinel, 986 real blocking values); plane 1 = 1,985 (559 void
+  sentinel, 1,426 real blocking values). One scene is not a rate - this is a direction, not a
+  global figure, and the agreed next step is per-plane coverage across several cities BEFORE any
+  rebuild.
+
+  RULE 3 - IT IS THE DATA, NOT THE READER. `DrewsHelperFlagMap.get` returns false - cannot move -
+  for any coordinate outside the region and any plane outside 0-3, and
+  `DrewsHelperCollisionMap.loadRegion` returns an all-false map for a region absent from the zip.
+  Absent data therefore BLOCKS, which is the safe direction. The wrong bits are physically inside
+  `collision-map.zip` for the upper planes, so the fix belongs in the builder, not the router.
+
+  RULE 4 - THE FLOOR-BIT HYPOTHESIS IS DEAD. DO NOT RETRY IT. The obvious theory was that the
+  builder ignores `BLOCK_MOVEMENT_FLOOR` (0x200000). Measured across every interior under-block
+  tile on both planes: ZERO carry that bit outside the 0xFFFFFF full sentinel. The client's
+  "no floor here" signal, in what the capture actually records, IS the full sentinel. There is no
+  separate bit being ignored.
+
+  RULE 5 - A "ROUTE CROSSES A WALL" REPORT IS AN ELEVATION REPORT UNTIL PROVEN OTHERWISE. Read
+  `drews-route-legs.txt` first and look at the plane in the from/to tiles. The world map cannot
+  show the difference; the leg record can, and it settled this in a single run.
+
+  RULE 6 - THE REQUIREMENTS GATE IS CORRECT AND IS NOT IMPLICATED. Investigated alongside this
+  and cleared on evidence: Mytharium holds Agility 30 / Ranged 21 / Strength 50 against the
+  Grapple Wall 17050 requirement of 11 / 19 / 37, but no crossbow and no mithril grapple, so
+  `meetsItems("CROSSBOW=1&MITH_GRAPPLE=1")` fails and both GRAPPLE_SHORTCUT edges are correctly
+  dropped. `buildCapability()` returns permissive only when not logged in, the routing graph uses
+  the capability-aware `loadDefault` overload, and `countOf` returns 0 for unknown symbols.
+
+  METHOD NOTE. Every finding here came from recording something the code already computed and
+  then discarded. RULE 2 exists only because the OURS_OPEN_LIVE_BLOCKS filter at
+  `DrewsHelperPlugin.java:438` and `:639` was removed; RULE 1 exists only because the transport
+  hops are now written with their tiles instead of as bare labels. In both cases the diagnosis
+  was blocked by a write-time filter, not by missing computation. Record raw, filter at read
+  time: a discarded observation costs a re-collection, a recorded one costs a line.
+
+  Cross-reference: root cause behind the Falador Park reports. Supersedes nothing; D-0136 and
+  D-0137 stand.

@@ -422,12 +422,37 @@ public class DrewsHelperPlugin extends Plugin
         lastValidationTick = tickCounter;
 
         CollisionData[] collision = client.getCollisionMaps();
-        if (collision == null || plane < 0 || plane >= collision.length
-            || collision[plane] == null)
+        if (collision == null)
         {
             return;
         }
 
+        // Every plane of the loaded scene, not just the one being stood on. The upper planes are
+        // where the shipped map is worst - the first scene measured both ways was 5.31x more
+        // permissive on plane 1 than 1.55x on plane 0 - and reaching them by standing on them
+        // would mean climbing every staircase in the game. The client already holds all four.
+        for (int scenePlane = 0; scenePlane < collision.length; scenePlane++)
+        {
+            validateScenePlane(collision, baseX, baseY, scenePlane);
+        }
+    }
+
+    /**
+     * Validates one plane of the loaded scene against the client's own collision flags.
+     *
+     * <p>Split out of {@link #validateMapDataIfEnabled()} so every plane is checked from wherever
+     * the player is standing. The per-scene summary row carries the plane, so a plane the client
+     * has not populated announces itself as an implausible count rather than as silence - which
+     * matters, because silence is exactly what hid the under-block half for as long as it did.
+     */
+    private void validateScenePlane(CollisionData[] collision, int baseX, int baseY, int plane)
+    {
+        if (plane < 0 || plane >= collision.length || collision[plane] == null)
+        {
+            return;
+        }
+
+        String sceneKey = baseX + ":" + baseY + ":" + plane;
         int[][] flags = collision[plane].getFlags();
         writeLiveFlagsIfNeeded(sceneKey, flags, baseX, baseY, plane);
         DrewsHelperMapValidator.Report report = DrewsHelperMapValidator.validate(
