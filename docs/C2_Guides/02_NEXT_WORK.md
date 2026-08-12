@@ -634,6 +634,28 @@ section has been changed. Append new findings here as they come up; strike them 
     proof before moving any row into `transport-overrides.tsv`. Implemented by D-0121: exact junk
     filter, 512-step detour ranking, review/proven output split, and optional Route A proof parser.
 
+24. **v2 false-open edges - the safety-axis regression that rode along with the win (2026-08-12).**
+    Measured against the live client capture `drews-live-flags.POST_20260812.txt` (scene 2888:3192:0,
+    4,048 rows, plane 0, x2888-2990 y3192-3294): edges where the map says OPEN but the live client
+    says BLOCKED rose from 132 (v1) to 1,735 (v2). Overall map-vs-client agreement still improved
+    67.98% -> 82.97% on that same capture, so this is a net-positive change with a real regression
+    riding along - not a rollback signal. It is still worth a targeted pass later, because the win
+    sits on the over-blocking axis while the cost sits on the safety axis, and only the second one
+    can walk a player into scenery. Parked deliberately: do not fix this mid-slice.
+
+25. **Sealed-off walkable pockets cause false NO_PATH (2026-08-12).**
+    v2 opens terrain the live client agrees is walkable, but leaves a residual barrier ring around
+    it, so the route engine returns `NO_PATH` for any destination inside those pockets. Two known
+    pockets: roughly 4,375 tiles around (2886,3252) and roughly 1,100 tiles around (3064,3201).
+    The opened tiles themselves are correct; the ring enclosing them is not. Parked, not fixed.
+
+26. **Coverage gap: region `47_50` and most rebuilt planes have no live-client ground truth (2026-08-12).**
+    Region `47_50` (Port Sarim waterfront, x3040-3071 y3200-3239) has ZERO live-client ground truth -
+    the capture stops at x2990. Its "unreachable pocket" status is inferred from the route engine
+    only and has never been confirmed against the client. Planes 1-3, and 21 of the 24 rebuilt
+    regions, likewise have no live data. Anything asserted about those regions is route-engine
+    inference rather than measurement, and should be quoted that way until a capture covers them.
+
 ### Unconfirmed - status needs checking before acting
 
 14. **Route-speed baseline before the heuristic change.** The prior recommendation was to bank a clean

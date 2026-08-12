@@ -1814,3 +1814,39 @@ D-0167 (2026-08-12) - Phase 2 runtime wiring shipped: merged the 24 rebuilt regi
   `buildCollisionMapV2 --live-flags C:\Users\drews\.runelite\drews-live-flags.FULL_20260811.txt`
   passed again and regenerated a report that says `archive format: 2 runtime passability flags;
   door flags are report-only` and `Phase 2 route-aware solid-object gate: PASS`.
+
+D-0168 (2026-08-12) - Post-promotion verification of `5bddcf4` against live client ground truth.
+  NO CODE CHANGED. Verdict: no rollback, the commit stands.
+
+  Scope note: this entry records a verification pass only. Nothing under `src/` or `tools/` was
+  edited for it and no gradle task was run; the only working-tree changes are documentation.
+
+  FINDING 1 - the route engine does NOT path into water. 24 of 24 unbounded land->water solves
+  returned `NO_PATH`, from four genuine-land starts:
+      Rimmington         2957,3215
+      Port Sarim town    3013,3243
+      Crafting Guild     2933,3288
+      Falador            3013,3323
+  Karamja / Musa Point (2920,3175) is in that destination set and is also unreachable. The
+  water-routing worry raised after promotion does not reproduce.
+
+  FINDING 2 - the blocked->open flips in the coastal regions are real, but they form pockets
+  sealed off from the mainland. Being unreachable, they cannot affect any route a player can walk.
+  A byte diff showing flipped tiles is not on its own evidence of a routing change; the durable
+  rule is D-0133 in `DECISION_LOG.md`.
+
+  FINDING 3 - map-versus-live-client agreement improved 67.98% (v1) -> 82.97% (v2), and v1
+  over-blocking dropped from 6,019 to 1,537 false-blocked edges.
+
+  FINDING 4 - of the 2,948 tiles v2 newly opened inside the captured scene, the live client
+  confirms 2,537 (86%) genuinely passable; only 411 (14%) are blocked. Those 411 are parked, not
+  fixed - see parked items 24 and 25 in `02_NEXT_WORK.md`.
+
+  FINDING 5 - the three in-game fixture routes reproduce exactly, all from start 2942,3243,0:
+      -> 2951,3208,0    READY 35   (was 38)
+      -> 2932,3214,0    READY 29   (unchanged)
+      -> 2962,3214,0    READY 29   (was 32)
+
+  CONCLUSION: no rollback. `5bddcf4` stands. Two defects and one coverage gap were parked rather
+  than actioned - parked items 24, 25 and 26 in `02_NEXT_WORK.md`. Durable rules: D-0133 in
+  `DECISION_LOG.md`.

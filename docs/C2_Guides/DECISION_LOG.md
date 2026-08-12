@@ -1726,3 +1726,38 @@ must stay two-flag until the runtime reader changes.
 
   If a future door-aware reader is added, make the archive version explicit rather than relying on
   inferred bitset length.
+
+D-0133 (2026-08-12) - Live-flag polarity: `1` means BLOCKED, and a tile with NO row at all is
+fully passable. And a blocked->open flip is not a regression until reachability is tested.
+
+  Two durable rules, both of which cost real time in a single session.
+
+  RULE 1 - the live-flag capture format. In `drews-live-flags*.txt` every data row is:
+
+      x,y,plane <N><E> <rawFlagsDecimal>
+
+  The polarity is `1` = BLOCKED, and a tile with NO ROW AT ALL is fully passable. Rows are emitted
+  only when at least one direction is blocked, which is precisely why no `00` token ever appears
+  anywhere in the file. That absence is the format working as designed, not data going missing.
+
+  Self-check whenever the polarity is in doubt: read `1` as "passable" and both the old and the new
+  map score WORSE THAN RANDOM against the same capture - 32.02% and 17.03% agreement. Read it the
+  correct way and the same two maps score 67.98% and 82.97%. A decoding that makes a real map look
+  worse than a coin flip is a decoding error, not a map defect.
+
+  Corroborating detail: sentinel rows with `rawFlags = 16777215` (0xFFFFFF, every block bit set)
+  carry token `11`. That only decodes sensibly as "both directions blocked". Under the inverted
+  reading, an all-bits-set row would have to mean a fully open tile.
+
+  RULE 2 - a tile flipping blocked->open in the collision map is NOT by itself a routing
+  regression. Flipped regions must be tested for REACHABILITY FROM GENUINE LAND before any of them
+  is called a defect. The discriminating test is an unbounded route solve from a real land tile
+  into the flipped area: if it returns `NO_PATH`, the flip sits inside a sealed pocket and cannot
+  change any route a player can actually walk.
+
+  Reason: a byte-level diff of two collision archives cannot tell a cosmetic flag change in a
+  sealed pocket apart from a genuine routable regression - both look identical in the diff. Only
+  the reachability solve separates them. Applying this is what kept `5bddcf4` from being rolled
+  back over coastal flips that no player can reach.
+
+  Cross-reference: build notes are `D-0168` in `CHANGELOG_AGENT_NOTES.md`.
