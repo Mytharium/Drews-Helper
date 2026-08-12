@@ -97,13 +97,14 @@ public final class CollisionMapBuilder
      * the candidate ignored-placement set on purpose.
      */
     private static final int GROUND_DECOR_LOC_TYPE = 22;
-    private static final long PHASE2_BASELINE_DANGEROUS = 33672L;
-    private static final long PHASE2_BASELINE_AGREE_OPEN = 161245L;
-    private static final long PHASE2_BASELINE_OVERBLOCK = 4239L;
-    private static final long PHASE2_BASELINE_ROUTE_AWARE_OVERBLOCK = 2616L;
-    private static final long PHASE2_ABORT_OVERBLOCK = 5900L;
-    private static final long PHASE2_ABORT_ROUTE_AWARE_OVERBLOCK = 4277L;
-    private static final long PHASE2_ABORT_AGREE_OPEN_DROP = 5000L;
+    /*
+     * The phase 2 gate used to compare against hardcoded baselines measured on a 24-region run
+     * (DANGEROUS 33672, AGREE_OPEN 161245, OVERBLOCK 4239, route-aware OVERBLOCK 2616). On any
+     * other region set the verdict was meaningless: a 62-region run read AGREE_OPEN 854157
+     * against a 161245 baseline and reported ABORT on nothing but a bigger sample. The baseline
+     * is now measured live - same regions, same capture, built again with phase 2 forced off.
+     */
+    private static final int LOC_TYPE_MASK_BITS = 24;
     private static final int LIVE_BLOCKED_TILE_MASK = CollisionDataFlag.BLOCK_MOVEMENT_FLOOR
         | CollisionDataFlag.BLOCK_MOVEMENT_FLOOR_DECORATION
         | CollisionDataFlag.BLOCK_MOVEMENT_OBJECT
@@ -195,6 +196,7 @@ public final class CollisionMapBuilder
             String roundTrip = verifyRoundTrip(request.outputZip, result.regions);
             Comparison comparison = compareProofEdges(proofEdges, result.regions);
             DangerousDirectionComparison dangerousComparison = compareDangerousDirections(request.liveFlagsFile, result);
+            Phase2Baseline phase2Baseline = measurePhase2Baseline(store, request, proofEdges);
             String report = buildReport(
                 cacheDir,
                 project,
@@ -202,7 +204,8 @@ public final class CollisionMapBuilder
                 result,
                 roundTrip,
                 comparison,
-                dangerousComparison
+                dangerousComparison,
+                phase2Baseline
             );
 
             Path reportFile = project.resolve(REPORT_FILE);
@@ -214,6 +217,29 @@ public final class CollisionMapBuilder
         {
             store.close();
         }
+    }
+
+    private static Phase2Baseline measurePhase2Baseline(
+        Store store,
+        BuildRequest request,
+        List<ProofEdge> proofEdges
+    ) throws IOException
+    {
+        if (!request.phase2SolidObjectBlocking)
+        {
+            return null;
+        }
+
+        /*
+         * The gate asks "is enabling phase 2 better than not enabling it, on THIS region set".
+         * Only a baseline measured on the same regions and the same capture can answer that, so
+         * the build is simply run again with phase 2 forced off. No zip is written for it.
+         */
+        BuildResult baselineResult = build(store, request.withPhase2SolidObjectBlocking(false));
+        return new Phase2Baseline(
+            compareDangerousDirections(request.liveFlagsFile, baselineResult),
+            compareProofEdges(proofEdges, baselineResult.regions)
+        );
     }
 
     private static BuildRequest parseRequest(
@@ -389,6 +415,7 @@ public final class CollisionMapBuilder
         Map<Integer, ObjectDefinition> objects = loadObjectDefinitions(store);
         RegionLoader loader = new RegionLoader(store, ZERO_KEYS);
         BuildStats stats = new BuildStats();
+        stats.phase2SolidObjectBlockingEnabled = request.phase2SolidObjectBlocking;
         TreeMap<String, BuiltRegion> regions = new TreeMap<>();
 
         if (request.allRegions)
@@ -787,6 +814,22 @@ public final class CollisionMapBuilder
         if (!ignored)
         {
             return;
+        }
+
+        if (locType != GROUND_DECOR_LOC_TYPE && locType >= 0 && locType < LOC_TYPE_MASK_BITS)
+        {
+            /*
+             * Proof-pass state for the per-locType table. A tile can carry several ignored
+             * placements of different locTypes, so this is a bitmask rather than a single
+             * attribution: a per-locType row is allowed to overlap another row rather than one
+             * arbitrarily-first locType stealing the edge from the rest.
+             */
+            long maskKey = tileKey(x, y, plane);
+            Integer previousMask = stats.ignoredLocTypeMaskByTile.get(maskKey);
+            stats.ignoredLocTypeMaskByTile.put(
+                maskKey,
+                (previousMask == null ? 0 : previousMask.intValue()) | (1 << locType)
+            );
         }
 
         if (locType == 10 || locType == 11)
@@ -1332,6 +1375,12 @@ public final class CollisionMapBuilder
             dangerousUnexplained,
             overblock
         );
+        comparison.ignoredLocTypeMeasurement.record(
+            ignoredLocTypeMaskForEdge(stats, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
         recordIgnoredObjectDefinitionFlagMeasurements(
             comparison.sceneryAdjacencyMeasurement,
             stats,
@@ -1449,6 +1498,18 @@ public final class CollisionMapBuilder
             return;
         }
         measurement.recordIgnoredObjectFlag(flag, dangerous, dangerousUnexplained, overblock);
+    }
+
+    private static int ignoredLocTypeMaskForEdge(
+        BuildStats stats,
+        LiveTile tile,
+        int otherX,
+        int otherY
+    )
+    {
+        Integer here = stats.ignoredLocTypeMaskByTile.get(tile.key());
+        Integer other = stats.ignoredLocTypeMaskByTile.get(tileKey(otherX, otherY, tile.plane));
+        return (here == null ? 0 : here.intValue()) | (other == null ? 0 : other.intValue());
     }
 
     private static boolean edgeTouchesTileKey(Set<Long> tileKeys, LiveTile tile, int otherX, int otherY)
@@ -1603,7 +1664,8 @@ public final class CollisionMapBuilder
         BuildResult result,
         String roundTrip,
         Comparison comparison,
-        DangerousDirectionComparison dangerousComparison
+        DangerousDirectionComparison dangerousComparison,
+        Phase2Baseline phase2Baseline
     )
     {
         StringBuilder report = new StringBuilder();
@@ -1638,7 +1700,13 @@ public final class CollisionMapBuilder
         report.append('\n');
         appendProofComparison(report, comparison);
         report.append('\n');
-        appendDangerousDirectionComparison(report, result.stats, dangerousComparison);
+        appendDangerousDirectionComparison(
+            report,
+            result.stats,
+            dangerousComparison,
+            comparison,
+            phase2Baseline
+        );
         report.append('\n');
         appendBuildStats(report, result.stats);
         return report.toString();
@@ -1672,7 +1740,9 @@ public final class CollisionMapBuilder
     private static void appendDangerousDirectionComparison(
         StringBuilder report,
         BuildStats stats,
-        DangerousDirectionComparison comparison
+        DangerousDirectionComparison comparison,
+        Comparison proofComparison,
+        Phase2Baseline phase2Baseline
     )
     {
         report.append("dangerous-direction pass:").append('\n');
@@ -1743,7 +1813,7 @@ public final class CollisionMapBuilder
         appendBorderHistograms(report, comparison);
         appendInteriorMeasurement(report, comparison);
         appendSceneryAdjacencyMeasurement(report, stats, comparison);
-        appendPhase2Gate(report, comparison);
+        appendPhase2Gate(report, stats, comparison, proofComparison, phase2Baseline);
         report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
         report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
         report.append("  orient-3 compared-edge count: ")
@@ -1768,52 +1838,64 @@ public final class CollisionMapBuilder
         }
     }
 
-    private static void appendPhase2Gate(StringBuilder report, DangerousDirectionComparison comparison)
+    private static void appendPhase2Gate(
+        StringBuilder report,
+        BuildStats stats,
+        DangerousDirectionComparison comparison,
+        Comparison proofComparison,
+        Phase2Baseline baseline
+    )
     {
-        long dangerousDrop = PHASE2_BASELINE_DANGEROUS - comparison.dangerous;
-        long agreeOpenDrop = PHASE2_BASELINE_AGREE_OPEN - comparison.agreeOpen;
-        long overblockRise = comparison.overblock - PHASE2_BASELINE_OVERBLOCK;
-        long routeAwareOverblock = comparison.overblock - comparison.overblockSourceTileBlockedRaw;
-        long routeAwareOverblockRise = routeAwareOverblock - PHASE2_BASELINE_ROUTE_AWARE_OVERBLOCK;
-        boolean overblockOk = comparison.overblock <= PHASE2_ABORT_OVERBLOCK;
-        boolean routeAwareOverblockOk = routeAwareOverblock <= PHASE2_ABORT_ROUTE_AWARE_OVERBLOCK;
-        boolean agreeOpenOk = agreeOpenDrop <= PHASE2_ABORT_AGREE_OPEN_DROP;
-        boolean netOk = dangerousDrop > Math.max(0L, overblockRise);
-        boolean routeAwareNetOk = dangerousDrop > Math.max(0L, routeAwareOverblockRise);
+        if (!stats.phase2SolidObjectBlockingEnabled)
+        {
+            report.append("  Phase 2 route-aware solid-object gate: NOT APPLICABLE - phase 2 is ")
+                .append("disabled, so this run IS the baseline.").append('\n');
+            return;
+        }
+        if (baseline == null || baseline.dangerous.skipped || comparison.skipped)
+        {
+            report.append("  Phase 2 route-aware solid-object gate: NOT APPLICABLE - no live ")
+                .append("baseline was measured for this run.").append('\n');
+            return;
+        }
+
+        long unexplainedDrop =
+            baseline.dangerous.dangerousUnexplained - comparison.dangerousUnexplained;
+        long overblockRise = comparison.overblock - baseline.dangerous.overblock;
+        long routeAwareCurrent = comparison.overblock - comparison.overblockSourceTileBlockedRaw;
+        long routeAwareBaseline =
+            baseline.dangerous.overblock - baseline.dangerous.overblockSourceTileBlockedRaw;
+        long routeAwareRise = routeAwareCurrent - routeAwareBaseline;
+        double proofCurrent = rate(proofComparison.fixedEdges(), proofComparison.insideBuiltRegions());
+        double proofBaseline = rate(baseline.proof.fixedEdges(), baseline.proof.insideBuiltRegions());
+        boolean netOk = unexplainedDrop > Math.max(0L, routeAwareRise);
+        boolean proofOk = proofCurrent >= proofBaseline;
 
         report.append("  Phase 2 route-aware solid-object gate: ")
-            .append(routeAwareOverblockOk && agreeOpenOk && routeAwareNetOk ? "PASS" : "ABORT")
+            .append(netOk && proofOk ? "PASS" : "ABORT")
+            .append(" (baseline measured live: same regions, same capture, phase 2 forced off)")
             .append('\n');
-        report.append("    baseline DANGEROUS: ").append(PHASE2_BASELINE_DANGEROUS)
-            .append(", current: ").append(comparison.dangerous)
-            .append(", drop: ").append(dangerousDrop).append('\n');
-        report.append("    strict one-way OVERBLOCK gate: baseline ").append(PHASE2_BASELINE_OVERBLOCK)
-            .append(", current: ").append(comparison.overblock)
-            .append(", rise: ").append(overblockRise)
-            .append(", abort above: ").append(PHASE2_ABORT_OVERBLOCK)
-            .append(" -> ").append(okFail(overblockOk)).append('\n');
-        report.append("    route-aware OVERBLOCK gate: baseline ")
-            .append(PHASE2_BASELINE_ROUTE_AWARE_OVERBLOCK)
-            .append(", current: ").append(routeAwareOverblock)
-            .append(" (").append(comparison.overblock)
-            .append(" - ").append(comparison.overblockSourceTileBlockedRaw)
-            .append(" source-tile live BLOCKED_TILE cases)")
-            .append(", rise: ").append(routeAwareOverblockRise)
-            .append(", abort above: ").append(PHASE2_ABORT_ROUTE_AWARE_OVERBLOCK)
-            .append(" -> ").append(okFail(routeAwareOverblockOk)).append('\n');
-        report.append("    baseline AGREE_OPEN: ").append(PHASE2_BASELINE_AGREE_OPEN)
-            .append(", current: ").append(comparison.agreeOpen)
-            .append(", drop: ").append(agreeOpenDrop)
-            .append(", abort drop above: ").append(PHASE2_ABORT_AGREE_OPEN_DROP)
-            .append(" -> ").append(okFail(agreeOpenOk)).append('\n');
-        report.append("    strict one-way net criterion: DANGEROUS drop must be > max(0, OVERBLOCK rise) -> ")
-            .append(okFail(netOk))
-            .append(" (").append(dangerousDrop)
-            .append(" > ").append(Math.max(0L, overblockRise)).append(")").append('\n');
-        report.append("    route-aware net criterion: DANGEROUS drop must be > max(0, route-aware OVERBLOCK rise) -> ")
-            .append(okFail(routeAwareNetOk))
-            .append(" (").append(dangerousDrop)
-            .append(" > ").append(Math.max(0L, routeAwareOverblockRise)).append(")").append('\n');
+        report.append("    DANGEROUS_UNEXPLAINED: baseline ")
+            .append(baseline.dangerous.dangerousUnexplained)
+            .append(", current ").append(comparison.dangerousUnexplained)
+            .append(", drop ").append(unexplainedDrop).append('\n');
+        report.append("    OVERBLOCK: baseline ").append(baseline.dangerous.overblock)
+            .append(", current ").append(comparison.overblock)
+            .append(", rise ").append(overblockRise).append('\n');
+        report.append("    route-aware OVERBLOCK: baseline ").append(routeAwareBaseline)
+            .append(", current ").append(routeAwareCurrent)
+            .append(" (OVERBLOCK minus source-tile live BLOCKED_TILE cases)")
+            .append(", rise ").append(routeAwareRise).append('\n');
+        report.append("    proof edges fixed: baseline ").append(formatRate(proofBaseline))
+            .append(", current ").append(formatRate(proofCurrent))
+            .append(" -> ").append(okFail(proofOk)).append('\n');
+        report.append("    net criterion: DANGEROUS_UNEXPLAINED drop must be > max(0, route-aware ")
+            .append("OVERBLOCK rise) -> ").append(okFail(netOk))
+            .append(" (").append(unexplainedDrop)
+            .append(" > ").append(Math.max(0L, routeAwareRise)).append(")").append('\n');
+        report.append("    proof criterion: the proof-edge fixed rate must not fall below the ")
+            .append("baseline. A phase that trades route-proven open edges back into blocked ")
+            .append("ones is not an improvement whatever the aggregate counts do.").append('\n');
     }
 
     private static void appendBorderHistogramInterpretationRule(StringBuilder report)
@@ -2442,14 +2524,153 @@ public final class CollisionMapBuilder
             bucketOverblockTotal
         );
         appendSceneryAdjacencyClosureAssertions(report, measurement);
-        appendSceneryAdjacencyVerdicts(report, measurement, bucketDangerousUnexplainedTotal);
-        appendSceneryAdjacencyOverblockControl(report, measurement);
+        appendSceneryAdjacencyVerdicts(report, stats, measurement, bucketDangerousUnexplainedTotal);
+        appendSceneryAdjacencyOverblockControl(report, stats, measurement);
         appendSceneryAdjacencyCensus(report, stats, measurement);
+        appendIgnoredLocTypeProofPass(report, stats, comparison);
         report.append("    caveat: adjacency does not prove causation. A tile next to a tree is also ")
             .append("a tile in a cluttered part of the world, and clutter correlates with lots of ")
             .append("things. This test can rule the theory OUT cheaply; it cannot on its own prove ")
             .append("the objects are what block those edges.")
             .append('\n');
+    }
+
+    private static void appendIgnoredLocTypeProofPass(
+        StringBuilder report,
+        BuildStats stats,
+        DangerousDirectionComparison comparison
+    )
+    {
+        IgnoredLocTypeMeasurement measurement = comparison.ignoredLocTypeMeasurement;
+        SceneryAdjacencyBucketCounts notAdjacent = measurement.notAdjacent;
+        double notAdjacentUnexplainedRate =
+            rate(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges);
+        double notAdjacentOverblockRate = rate(notAdjacent.overblock, notAdjacent.comparedEdges);
+
+        report.append("    per-locType ignored-placement proof pass:").append('\n');
+        report.append("      PREDICTION (stated before the run): phase 2 blocks only locTypes 10 ")
+            .append("and 11 and excludes every other ignored locType as unsafe without its own ")
+            .append("proof pass. If that exclusion is correct, no excluded locType clears the ")
+            .append("same bar 10 and 11 clear. If some excluded locType does clear it, the ")
+            .append("exclusion list is itself the defect.")
+            .append('\n');
+        report.append("      Rows are NOT mutually exclusive. A tile can carry several ignored ")
+            .append("placements of different locTypes, and each row counts every edge touching ")
+            .append("one of its own placements, so rows overlap and do not sum to comparedEdges. ")
+            .append("The alternative - assigning each tile one arbitrary locType - would let one ")
+            .append("locType silently steal another's edges.")
+            .append('\n');
+        report.append("      Ground decoration locType ").append(GROUND_DECOR_LOC_TYPE)
+            .append(" is excluded from the mask, matching the adjacency pass above.").append('\n');
+        report.append("      Thresholds are the existing ones, reused deliberately - no new ")
+            .append("threshold is introduced.")
+            .append('\n');
+        report.append("      - INCONCLUSIVE-VACUOUS: comparedEdges < ")
+            .append(BORDER_INTERIOR_COMPARED_EDGE_FLOOR).append('\n');
+        report.append("      - REFUTED: dangerousUnexplainedRate < ")
+            .append(BORDER_REFUTED_RATE_MULTIPLIER).append("x NOT_ADJACENT.").append('\n');
+        report.append("      - BLOCKABLE: dangerousUnexplainedRate >= ")
+            .append(BORDER_CONFIRMED_RATE_MULTIPLIER)
+            .append("x NOT_ADJACENT AND overblockRate <= ")
+            .append(BORDER_REFUTED_RATE_MULTIPLIER)
+            .append("x NOT_ADJACENT.")
+            .append('\n');
+        report.append("      - UNSAFE-OVERBLOCK: clears the danger bar but its overblockRate is ")
+            .append("already above the overblock bar. Blocking there would deepen the ")
+            .append("sealed-building failure and needs its own pass first.")
+            .append('\n');
+        report.append("      - INCONCLUSIVE: anything else.").append('\n');
+        if (stats.phase2SolidObjectBlockingEnabled)
+        {
+            report.append("      WARNING: phase 2 is ENABLED, so the overblock column for ")
+                .append("locTypes 10 and 11 counts edges this build wrote itself. Read this ")
+                .append("table from a run with ")
+                .append(DISABLE_PHASE2_SOLID_OBJECTS_ARG)
+                .append(".")
+                .append('\n');
+        }
+        report.append("      baseline NOT_ADJACENT comparedEdges ").append(notAdjacent.comparedEdges)
+            .append(" dangerousUnexplainedRate ")
+            .append(formatRateWithCounts(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges))
+            .append(" overblockRate ")
+            .append(formatRateWithCounts(notAdjacent.overblock, notAdjacent.comparedEdges))
+            .append('\n');
+        report.append("      locType phase2Handled comparedEdges DANGEROUS ")
+            .append("dangerousUnexplainedRate unexplainedRatio overblockRate overblockRatio verdict")
+            .append('\n');
+        for (int locType = 0; locType < LOC_TYPE_MASK_BITS; locType++)
+        {
+            SceneryAdjacencyBucketCounts counts = measurement.counts(locType);
+            if (counts.comparedEdges == 0)
+            {
+                continue;
+            }
+
+            double unexplainedRate = rate(counts.dangerousUnexplained, counts.comparedEdges);
+            double overblockRate = rate(counts.overblock, counts.comparedEdges);
+            report.append("      ").append(locType)
+                .append(' ').append(locType == 10 || locType == 11 ? "yes" : "no")
+                .append(' ').append(counts.comparedEdges)
+                .append(' ').append(counts.dangerous)
+                .append(' ')
+                .append(formatRateWithCounts(counts.dangerousUnexplained, counts.comparedEdges))
+                .append(' ')
+                .append(sceneryAdjacencyRateRatio(unexplainedRate, notAdjacentUnexplainedRate))
+                .append(' ').append(formatRateWithCounts(counts.overblock, counts.comparedEdges))
+                .append(' ').append(sceneryAdjacencyRateRatio(overblockRate, notAdjacentOverblockRate))
+                .append(' ').append(ignoredLocTypeVerdict(
+                    counts,
+                    unexplainedRate,
+                    overblockRate,
+                    notAdjacentUnexplainedRate,
+                    notAdjacentOverblockRate
+                ))
+                .append('\n');
+        }
+        report.append("      tiles carrying more than one ignored locType: ")
+            .append(multiLocTypeTileCount(stats))
+            .append(" of ").append(stats.ignoredLocTypeMaskByTile.size())
+            .append(" masked tiles").append('\n');
+    }
+
+    private static String ignoredLocTypeVerdict(
+        SceneryAdjacencyBucketCounts counts,
+        double unexplainedRate,
+        double overblockRate,
+        double notAdjacentUnexplainedRate,
+        double notAdjacentOverblockRate
+    )
+    {
+        if (counts.comparedEdges < BORDER_INTERIOR_COMPARED_EDGE_FLOOR)
+        {
+            return "INCONCLUSIVE-VACUOUS";
+        }
+        if (unexplainedRate < notAdjacentUnexplainedRate * BORDER_REFUTED_RATE_MULTIPLIER)
+        {
+            return "REFUTED";
+        }
+        if (unexplainedRate < notAdjacentUnexplainedRate * BORDER_CONFIRMED_RATE_MULTIPLIER)
+        {
+            return "INCONCLUSIVE";
+        }
+        if (overblockRate > notAdjacentOverblockRate * BORDER_REFUTED_RATE_MULTIPLIER)
+        {
+            return "UNSAFE-OVERBLOCK";
+        }
+        return "BLOCKABLE";
+    }
+
+    private static long multiLocTypeTileCount(BuildStats stats)
+    {
+        long count = 0;
+        for (Integer mask : stats.ignoredLocTypeMaskByTile.values())
+        {
+            if (Integer.bitCount(mask) > 1)
+            {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static void appendSceneryAdjacencyInterpretationRule(StringBuilder report)
@@ -2689,6 +2910,7 @@ public final class CollisionMapBuilder
 
     private static void appendSceneryAdjacencyVerdicts(
         StringBuilder report,
+        BuildStats stats,
         SceneryAdjacencyMeasurement measurement,
         long dangerousUnexplainedTotal
     )
@@ -2727,7 +2949,23 @@ public final class CollisionMapBuilder
                 dangerousUnexplainedTotal
             ))
             .append('\n');
-        appendSceneryAdjacencyUnionOverblockControl(report, adjIgnored, notAdjacent);
+        if (stats.phase2SolidObjectBlockingEnabled)
+        {
+            /*
+             * Same premise failure as the ADJ_SCENERY overblock control: phase 2 writes
+             * edges for the ignored-object set this control assumes is unwritten, so with
+             * phase 2 on it reports FAIL by construction rather than by evidence.
+             */
+            report.append("    union overblock control: NOT APPLICABLE - phase 2 ")
+                .append("solid-object blocking is ENABLED. Re-run with ")
+                .append(DISABLE_PHASE2_SOLID_OBJECTS_ARG)
+                .append(" to evaluate it.")
+                .append('\n');
+        }
+        else
+        {
+            appendSceneryAdjacencyUnionOverblockControl(report, adjIgnored, notAdjacent);
+        }
         appendIgnoredSoliditySplit(report, measurement, notAdjacent, dangerousUnexplainedTotal);
         appendIgnoredObjectFlagDiscriminationTable(report, measurement, notAdjacent);
     }
@@ -2978,6 +3216,7 @@ public final class CollisionMapBuilder
 
     private static void appendSceneryAdjacencyOverblockControl(
         StringBuilder report,
+        BuildStats stats,
         SceneryAdjacencyMeasurement measurement
     )
     {
@@ -3005,6 +3244,23 @@ public final class CollisionMapBuilder
             report.append("      ").append(bucket.name())
                 .append(' ').append(formatRateWithCounts(counts.overblock, counts.comparedEdges))
                 .append('\n');
+        }
+        if (stats.phase2SolidObjectBlockingEnabled)
+        {
+            /*
+             * The control's premise - "no edge is written for ignored objects" - is false while
+             * phase 2 is on, because phase 2 writes edges for exactly the ADJ_SCENERY set. Run
+             * this way the control measures its own fix and reports FAIL by construction.
+             * Measured 2026-08-12 over the same 62 regions and the same capture: ADJ_SCENERY
+             * overblockRate 0.912% with phase 2 off against 14.026% with phase 2 on.
+             */
+            report.append("    overblock control: NOT APPLICABLE - phase 2 solid-object blocking ")
+                .append("is ENABLED, so the premise above does not hold and the rates shown are ")
+                .append("informational only. Re-run with ")
+                .append(DISABLE_PHASE2_SOLID_OBJECTS_ARG)
+                .append(" to evaluate this control.")
+                .append('\n');
+            return;
         }
         if (controlPassed)
         {
@@ -3917,6 +4173,18 @@ public final class CollisionMapBuilder
             this.defaultedRegions = defaultedRegions;
             this.phase2SolidObjectBlocking = phase2SolidObjectBlocking;
         }
+
+        private BuildRequest withPhase2SolidObjectBlocking(boolean enabled)
+        {
+            return new BuildRequest(
+                outputZip,
+                liveFlagsFile,
+                allRegions,
+                regionIds,
+                defaultedRegions,
+                enabled
+            );
+        }
     }
 
     private static final class BuildResult
@@ -3943,6 +4211,7 @@ public final class CollisionMapBuilder
         private final Set<Long> blocksProjectileTileKeys = new HashSet<>();
         private final Set<Long> obstructsGroundTileKeys = new HashSet<>();
         private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
+        private final Map<Long, Integer> ignoredLocTypeMaskByTile = new HashMap<>();
         private final TreeMap<String, Long> ignoredNonDecorFootprintHistogram = new TreeMap<>();
 
         private long locType1EdgesBlockedTotal;
@@ -3971,6 +4240,7 @@ public final class CollisionMapBuilder
         private long totalEdgesMadePassable;
         private long doorEdgesWritten;
         private long totalRegionsBuilt;
+        private boolean phase2SolidObjectBlockingEnabled;
     }
 
     private static final class RegionSource
@@ -4739,6 +5009,59 @@ public final class CollisionMapBuilder
         }
     }
 
+    private static final class Phase2Baseline
+    {
+        private final DangerousDirectionComparison dangerous;
+        private final Comparison proof;
+
+        private Phase2Baseline(DangerousDirectionComparison dangerous, Comparison proof)
+        {
+            this.dangerous = dangerous;
+            this.proof = proof;
+        }
+    }
+
+    private static final class IgnoredLocTypeMeasurement
+    {
+        private final SceneryAdjacencyBucketCounts[] byLocType =
+            new SceneryAdjacencyBucketCounts[LOC_TYPE_MASK_BITS];
+        private final SceneryAdjacencyBucketCounts notAdjacent = new SceneryAdjacencyBucketCounts();
+
+        private IgnoredLocTypeMeasurement()
+        {
+            for (int i = 0; i < byLocType.length; i++)
+            {
+                byLocType[i] = new SceneryAdjacencyBucketCounts();
+            }
+        }
+
+        private SceneryAdjacencyBucketCounts counts(int locType)
+        {
+            return byLocType[locType];
+        }
+
+        private void record(
+            int mask,
+            boolean dangerous,
+            boolean dangerousUnexplained,
+            boolean overblock
+        )
+        {
+            if (mask == 0)
+            {
+                notAdjacent.record(dangerous, dangerousUnexplained, overblock);
+                return;
+            }
+            for (int locType = 0; locType < byLocType.length; locType++)
+            {
+                if ((mask & (1 << locType)) != 0)
+                {
+                    byLocType[locType].record(dangerous, dangerousUnexplained, overblock);
+                }
+            }
+        }
+    }
+
     private static final class SceneryAdjacencyMeasurement
     {
         private final SceneryAdjacencyBucketCounts[] bucketCounts =
@@ -5030,6 +5353,8 @@ public final class CollisionMapBuilder
         private final InteriorMeasurement interiorMeasurement = new InteriorMeasurement();
         private final SceneryAdjacencyMeasurement sceneryAdjacencyMeasurement =
             new SceneryAdjacencyMeasurement();
+        private final IgnoredLocTypeMeasurement ignoredLocTypeMeasurement =
+            new IgnoredLocTypeMeasurement();
 
         private long comparedEdges;
         private long borderExcludedEdges;
