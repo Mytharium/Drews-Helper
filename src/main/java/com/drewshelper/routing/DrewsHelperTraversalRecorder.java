@@ -28,8 +28,16 @@ public final class DrewsHelperTraversalRecorder
     /** Ticks to wait for movement to settle before writing the observation. */
     private static final int SETTLE_TICKS = 12;
 
-    /** Guards against a single stuck click pinning the recorder forever. */
-    private static final int ABANDON_TICKS = 40;
+    /**
+     * Guards against a single stuck click pinning the recorder forever.
+     *
+     * <p>40 was far too tight. Abandon counts from the CLICK, so the budget for the whole walk was
+     * ABANDON_TICKS - SETTLE_TICKS = 28 ticks; every row the first session recorded settled at
+     * 21-27, i.e. hard against the cap, and a click 20-40 tiles away was dropped silently. A click
+     * that never moves the player is already dropped by the settle path within SETTLE_TICKS, so
+     * this only ever needed to be a backstop.
+     */
+    private static final int ABANDON_TICKS = 300;
 
     private final File output;
 

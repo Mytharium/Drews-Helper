@@ -163,6 +163,13 @@ public class DrewsHelperPlugin extends Plugin
     private final Set<String> emittedValidationLines = new HashSet<>();
     private final Set<String> dumpedLiveFlagSceneKeys = new HashSet<>();
     private boolean validationWriteLimitWarned;
+
+    /** Ticks between real-level polls. A level-up is rare; per-tick string building is not free. */
+    private static final int PLAYER_LEVEL_POLL_TICKS = 50;
+
+    /** Last row written to drews-player-levels.txt, so only a genuine change appends. */
+    private String lastPlayerLevelsRow;
+    private boolean playerLevelsWriteWarned;
     private boolean validationFileWriteWarned;
     private boolean liveFlagFileWriteWarned;
 
@@ -249,6 +256,8 @@ public class DrewsHelperPlugin extends Plugin
         emittedValidationLines.clear();
         dumpedLiveFlagSceneKeys.clear();
         validationWriteLimitWarned = false;
+        lastPlayerLevelsRow = null;
+        playerLevelsWriteWarned = false;
         validationFileWriteWarned = false;
         liveFlagFileWriteWarned = false;
         try
@@ -308,6 +317,7 @@ public class DrewsHelperPlugin extends Plugin
         markRouteDirtyOnCooldownMinuteChange();
         validateMapDataIfEnabled();
         recordTraversalIfSettled();
+        writePlayerLevelsIfChanged();
 
         // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
         // which dirties the route and returns early below - so anything downstream of that
@@ -419,33 +429,104 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         int weBlockGameAllows = 0;
+        int gameBlocksWeAllow = 0;
         for (DrewsHelperMapValidator.Mismatch mismatch : report.getMismatches())
         {
             if (mismatch.getKind() == DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN)
             {
                 weBlockGameAllows++;
             }
+            else
+            {
+                gameBlocksWeAllow++;
+            }
         }
-        writeValidationMismatches(report);
-        log.info("DREW_MAP_VALIDATE scene {} tiles={} mismatches={} ({} we block but the game allows)",
-            sceneKey, report.getTilesChecked(), report.getMismatches().size(), weBlockGameAllows);
+        writeValidationMismatches(report, sceneKey, weBlockGameAllows, gameBlocksWeAllow);
+        log.info("DREW_MAP_VALIDATE scene {} tiles={} mismatches={} (overblock={} underblock={})",
+            sceneKey, report.getTilesChecked(), report.getMismatches().size(),
+            weBlockGameAllows, gameBlocksWeAllow);
 
-        // Only the we-block-but-the-game-allows half is listed: that is the Falador-gate
-        // shape, and it is the half that turns into a transport override row.
-        int printed = 0;
+        // Under-blocks first. They are the rare half and the only half that can explain a route
+        // crossing something solid, so a dense over-blocking scene must not consume the whole cap
+        // before one of them is shown.
+        int printed = logMismatches(report, DrewsHelperMapValidator.Kind.OURS_OPEN_LIVE_BLOCKS, 0);
+        printed = logMismatches(report, DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN, printed);
+        int suppressed = report.getMismatches().size() - printed;
+        if (suppressed > 0)
+        {
+            log.info("DREW_MAP_VALIDATE   ... {} more suppressed", suppressed);
+        }
+    }
+
+    /**
+     * Logs mismatches of one kind, continuing from {@code printed} and stopping at the shared cap.
+     * Returns the new running total so the caller can carry one cap across both kinds.
+     */
+    private int logMismatches(
+        DrewsHelperMapValidator.Report report, DrewsHelperMapValidator.Kind kind, int printed)
+    {
         for (DrewsHelperMapValidator.Mismatch mismatch : report.getMismatches())
         {
-            if (mismatch.getKind() != DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN)
+            if (printed >= MAX_VALIDATION_ROWS_LOGGED)
+            {
+                return printed;
+            }
+            if (mismatch.getKind() != kind)
             {
                 continue;
             }
             log.info("DREW_MAP_VALIDATE   {}", mismatch);
             printed++;
-            if (printed >= MAX_VALIDATION_ROWS_LOGGED)
+        }
+        return printed;
+    }
+
+    /**
+     * Appends the account's real (unboosted) levels whenever they change.
+     *
+     * <p>Real levels, not boosted ones, because a potion moves what you can hit right now but not
+     * what a transport requirement is checked against - the same value the capability snapshot
+     * uses. Append-only and change-gated, so the file is a history rather than a current-state
+     * blob: a route recorded last week can be read against the levels held at the time.
+     */
+    private void writePlayerLevelsIfChanged()
+    {
+        if (tickCounter % PLAYER_LEVEL_POLL_TICKS != 0
+            || client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
+        StringBuilder row = new StringBuilder("DREW_LEVELS v1");
+        int total = 0;
+        for (Skill skill : Skill.values())
+        {
+            int level = client.getRealSkillLevel(skill);
+            total += level;
+            row.append(" ").append(skill.name()).append("=").append(level);
+        }
+        row.append(" TOTAL=").append(total);
+
+        String line = row.toString();
+        if (line.equals(lastPlayerLevelsRow))
+        {
+            return;
+        }
+        lastPlayerLevelsRow = line;
+
+        List<String> rows = new ArrayList<>();
+        rows.add(line);
+        try
+        {
+            Files.write(new File(RuneLite.RUNELITE_DIR, "drews-player-levels.txt").toPath(),
+                rows, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        }
+        catch (IOException ex)
+        {
+            if (!playerLevelsWriteWarned)
             {
-                log.info("DREW_MAP_VALIDATE   ... {} more suppressed",
-                    weBlockGameAllows - printed);
-                break;
+                playerLevelsWriteWarned = true;
+                log.warn("Drew's Helper: could not write the player level record", ex);
             }
         }
     }
@@ -630,17 +711,35 @@ public class DrewsHelperPlugin extends Plugin
         }
     }
 
-    private void writeValidationMismatches(DrewsHelperMapValidator.Report report)
+    private void writeValidationMismatches(
+        DrewsHelperMapValidator.Report report,
+        String sceneKey,
+        int weBlockGameAllows,
+        int gameBlocksWeAllow
+    )
     {
         List<String> lines = new ArrayList<>();
         Set<String> pendingLines = new HashSet<>();
+
+        // The per-scene totals used to exist only as a log line, and a dev run's console is not
+        // captured anywhere, so the counts died with the window. They belong in the file that
+        // outlives the session, alongside the rows they summarise.
+        String summary = "DREW_MAP_VALIDATE scene " + sceneKey
+            + " tiles=" + report.getTilesChecked()
+            + " mismatches=" + report.getMismatches().size()
+            + " overblock=" + weBlockGameAllows
+            + " underblock=" + gameBlocksWeAllow;
+        if (!emittedValidationLines.contains(summary) && pendingLines.add(summary))
+        {
+            lines.add(summary);
+        }
+
+        // Both kinds are recorded. Filtering to the over-blocks here is what left the file unable
+        // to answer "did our map let a route through something solid": the validator computes that
+        // half and it was discarded before anything reached disk. The kind is in the row text, so
+        // a reader can still take either half on its own.
         for (DrewsHelperMapValidator.Mismatch mismatch : report.getMismatches())
         {
-            if (mismatch.getKind() != DrewsHelperMapValidator.Kind.OURS_BLOCKS_LIVE_OPEN)
-            {
-                continue;
-            }
-
             String line = "DREW_MAP_VALIDATE   " + mismatch.toString();
             if (emittedValidationLines.contains(line) || !pendingLines.add(line))
             {
