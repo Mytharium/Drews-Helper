@@ -680,6 +680,69 @@ section has been changed. Append new findings here as they come up; strike them 
     REGIONS WILL BUY FAR MORE THAN ANY TERRAIN-RULE CHANGE: the v2 rebuild is measurably better
     than the v1 data sitting next to it. Highest-value follow-up of the three. Parked, not fixed.
 
+30. **Sailing-aware routing - researched, NOT built (2026-08-12).**
+    Requested by Mytharium: route ocean destinations by walking to a boat and sailing, and show a
+    "Requirements:" message when Sailing is not unlocked.
+    - **OSRS Sailing is FREE-ROAM STEERING** (click-to-steer, no autopilot, no port-to-port menu)
+      and Jagex explicitly rejected boat collision. Released 19 Nov 2025, members only, quest
+      gate Pandemonium. Boats run roughly 0.5-1x running speed, so this is transport, not a
+      teleport.
+    - **But the travel endpoints are a fixed set: 57 docking/mooring points, Sailing levels 1 to
+      87, NOT boostable.** Sailing can therefore be modelled as dock-to-dock transport edges with
+      no water collision map and no second movement mode. Because collision was removed, a
+      straight-line approximation is close to the real path. This is what collapses the job from
+      large to small.
+    - **Upstream `Skretzo/shortest-path` has NO sailing transport data** - no `SAILING` in its
+      TransportType enum, no dock/mooring rows, and an explicit source comment at
+      `PathfinderConfig.java:665-668`: "We don't model sailing navigation." Tracking issue #351
+      is unassigned with no activity since 2026-05-11 and the author states he does not intend to
+      start soon. DO NOT WAIT FOR UPSTREAM. (Runemoro/shortest-path is dead - last push
+      2024-07-26. Skretzo is canonical.)
+    - **Upstream DOES already have, merged 2026-05-24 - do not double-add:** 5 island rowboat
+      pairs in `boats.tsv` gated on construction varbits 18351/18355/18356/18370/18371; Port
+      Sarim and Musa Point to The Pandemonium in `ships.tsv` gated on the Pandemonium quest;
+      Sailors' amulet 3 teleports; sailing-island bank chests; and PR #485, which suppresses
+      teleports while aboard a boat.
+    - **The data is published and machine-readable - nobody needs to visit a dock in game.** OSRS
+      Wiki `Mooring point` (`?action=raw`) yields 57 rows, all with `{{Map|...|x,y}}`
+      coordinates, Sailing level and quest gates. `Map:Sailing` is contentmodel json, 147 KB, 525
+      markers across 34 categories with positions and level requirements. `nucleon/port-tasks`
+      (GitHub, BSD-2-Clause, the same licence as upstream) has 31 ports with level + gangplank
+      ObjectID + WorldPoint, plus 164 pre-authored port-pair routes and 1,673 waypoints. RuneLite
+      `ObjectID1` publishes 32 `SAILING_GANGPLANK_*` constants (59835-59866) and 27
+      `SAILING_MOORING_*` (59867-59893). Cross-validated: on all 26 ports present in both
+      port-tasks and the wiki the Sailing levels match EXACTLY; coordinates differ by 1-7 tiles
+      (map pin versus nav waypoint).
+    - **Our schema already supports it with no new columns.** The `skills` column format is
+      `Name=level` joined by `;`, compared against UNBOOSTED real levels - which matches the
+      game's not-boostable rule exactly. `SAILING("Sailing", true)` exists in RuneLite's `Skill`
+      enum. Unknown transport categories are skipped rather than fatal, so `SAILING` rows can
+      ship and older builds ignore them.
+    - **One-line trap:** `ROUTE_RELEVANT_SKILLS` at `DrewsHelperPlugin.java:111-114` is a
+      hardcoded allowlist and `Skill.SAILING` is absent from it. Without adding it, levelling
+      Sailing would not invalidate the cached route and newly-unlocked docks would not appear
+      until something else forced a rebuild. Silent bug.
+    - **Not published anywhere:** the exact walkable interaction tile per dock (wiki pins and
+      port-tasks nav points disagree by 1-7 tiles); edge topology, because free-roam means
+      effectively all-pairs at 57x56 = 3,192 and port-tasks only authored the 164 pairs its own
+      tasks needed; and per-leg duration, which is genuinely variable by hull/sail/wind and is
+      unsolved upstream too (issue #370).
+    - Estimated effort: an afternoon to a day for dock-to-dock edges. A true on-water path
+      overlay would be weeks and is explicitly NOT recommended. Parked, not built.
+
+31. **"Requirements:" message needs the near-miss retained (2026-08-12).**
+    The display half already exists: `DrewsHelperRouteSnapshot.noPath(..., String message, ...)`
+    carries a free-text reason and `DrewsHelperOverlay.routeStatusText()` renders
+    `route.getMessage()` for NO_PATH/ERROR/CALCULATING. But the only string ever passed is `"No
+    route to waypoint #" + (index + 1)` (`DrewsHelperWalkingRouteEngine.java:298`), there are no
+    chat messages anywhere in the plugin, and `DrewsHelperRouteStatus` has no locked or
+    unmet-requirement member. The structural problem is UPSTREAM OF THE UI: a capability-locked
+    edge is silently deleted at graph-load time (`DrewsHelperTransportGraph.java:116-119`), so by
+    the time routing fails the edge does not exist and nothing remembers why. To say "Requires 67
+    Sailing" the near-miss must be RETAINED - either have `satisfies()` return a reason object
+    instead of a boolean, or run a second unrestricted-capability solve on failure and diff the
+    two. The display is free; the diagnosis needs building. Parked, not built.
+
 ### Unconfirmed - status needs checking before acting
 
 14. **Route-speed baseline before the heuristic change.** The prior recommendation was to bank a clean

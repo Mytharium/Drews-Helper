@@ -1812,3 +1812,47 @@ ISOLATED floor bit, and the client does not flag open ocean as no-floor either.
   does not flag the water either, the two agree and there is nothing to fix.
 
   Cross-reference: build notes are `D-0169` in `CHANGELOG_AGENT_NOTES.md`.
+
+D-0135 (2026-08-12) - Missing regions are mostly ocean and are correctly blocked; never
+bulk-build or bulk-rebuild collision regions.
+
+  Five durable rules out of one measurement pass over the full cache region set. They exist
+  because "1,425 regions are missing from the collision map" reads like a defect report, and it
+  is not one.
+
+  RULE 1 - A REGION ABSENT FROM `collision-map.zip` IS FULLY IMPASSABLE, NOT BROKEN.
+  `DrewsHelperCollisionMap.loadRegion` hands back a `DrewsHelperFlagMap` whose BitSet is
+  all-clear, and bit-set means PASSABLE, so all-clear means every edge blocked. Absence is a SAFE
+  DEFAULT. Never treat "missing region" as "routing gap" without first checking whether the
+  region is ocean.
+
+  RULE 2 - NEVER BULK-BUILD THE MISSING REGIONS AND NEVER BULK-REBUILD THE LEGACY ONES. Measured:
+
+      building all 1,425 missing regions would open roughly 800 ocean regions, 78 of which
+      the shipped map deliberately keeps shut
+      rebuilding all 1,323 legacy land entries opens a net 2,441,025 plane-0 edges - it
+      closes plane-0 edges in 102 regions and opens them in 1,121
+
+  Both are REGION-TARGETED jobs only, and every region included must be justified by a measured
+  leak or a measured absence of content. Builder speed is not an argument for doing it in bulk -
+  all 2,936 regions build in 7.61s - the behavioural blast radius is the argument against.
+
+  RULE 3 - THE BUILDER'S REGION SELECTOR IS POSITIONAL, NOT `--regions`. Tokens are `rx_ry`, a
+  bare 0-65535 id, or the literal `all`, taken from the non-option arguments after the output zip
+  (`parseRequest`, `CollisionMapBuilder.java:219-284`). The only real flags are `--live-flags`
+  and `--disable-phase2-solid-objects`. An explicit list is strict and throws on an unknown
+  region; `all` skips silently.
+
+  RULE 4 - THE PHASE 2 ROUTE-AWARE GATE IS ONLY MEANINGFUL FOR THE ORIGINAL 24 PROOF REGIONS. Its
+  baselines are hard-coded absolutes from that build, so any other region set drives `agreeOpen`
+  to 0 and makes the gate report ABORT falsely. Treat the verdict as N/A unless the region set
+  matches the baseline's, and do not let a false ABORT block a slice. Making it
+  region-set-relative, or marking it N/A explicitly, is the fix.
+
+  RULE 5 - ZEAH/KOUREND IS SHIPPED, VARLAMORE IS THE GAP. Confirmed by landmark region for Great
+  Kourend castle, Hosidius, Lovakengj, Shayzien, Port Piscarilius, Mount Karuulm, Arceuus and the
+  Woodcutting Guild, and separately for Fossil Island, Lunar Isle, Prifddinas, Zanaris and Ape
+  Atoll. The missing surface content is Varlamore, block rx17-29 / ry44-53. Correct any guide
+  text that says otherwise.
+
+  Cross-reference: build notes are `D-0170` in `CHANGELOG_AGENT_NOTES.md`.

@@ -1920,3 +1920,116 @@ D-0169 (2026-08-12) - The terrain floor rule was measured against live client gr
   the measurement says so at precision 98.086% / recall 100.000%. Three side findings were
   parked rather than actioned - items 27, 28 and 29 in `02_NEXT_WORK.md`. Durable rules: D-0134
   in `DECISION_LOG.md`.
+
+D-0170 (2026-08-12) - Item 2/3 rescoped by measurement: do NOT build the 1,425 missing regions,
+  do NOT bulk-rebuild the legacy 1,524. NO CODE CHANGED.
+
+  Scope note: this entry records a measurement and scoping pass only. Nothing under `src/` or
+  `tools/` was edited, no gradle task shipped anything, and no runtime archive was touched; the
+  only working-tree changes are documentation. Durable rules are D-0135 in `DECISION_LOG.md`.
+
+  REGION CENSUS - full 65,536-id sweep of the cache, 1.4s:
+      cache loadable regions                     2,936
+      shipped `collision-map.zip` entries        1,524
+      intersection                               1,511
+      missing from the shipped map               1,425
+  The guide's 2,936 figure is correct.
+
+  A REGION ABSENT FROM THE ZIP IS FULLY IMPASSABLE TODAY, NOT BROKEN.
+  `DrewsHelperCollisionMap.loadRegion` returns a `DrewsHelperFlagMap` whose BitSet is all-clear,
+  and bit-set means PASSABLE, so all-clear means every edge blocked. The status quo for a missing
+  region is safe-blocked. This single fact inverts the case for item 2: building the missing
+  regions is not filling a hole, it is opening ground that is currently shut.
+
+  CLASSIFICATION OF THE 1,425 - discriminator is underlay id 0 on all 4,096 plane-0 tiles plus a
+  water overlay plus zero named objects:
+      ocean/void filler            804   56.4%
+      underground/instanced        375   26.3%
+      surface with real content    246   17.3%
+
+  BUILDING THE OCEAN WOULD ACTIVELY DAMAGE THE MAP. Ocean regions emit a median 32,768 of 32,768
+  passable edges, and 469 of the 804 come out fully open at plane 0. The decisive control is not
+  that number but the shipped map's own behaviour: 164 regions ALREADY IN the shipped map match
+  the ocean signature, and the 2021 Runemoro data ships them at median plane-0 passable = 0, with
+  85 of the 164 fully blocked. The sea was deliberately closed. The v2 builder emits those same
+  164 regions at median 8,192, so a bulk build would RE-OPEN 78 ocean regions that the shipped
+  map intentionally keeps shut. The builder needs a void/water rule before any bulk work.
+
+  PREMISE CORRECTION - ZEAH/KOUREND IS ALREADY SHIPPED. Verified by landmark region:
+      Great Kourend castle   25_57        Mount Karuulm         20_59
+      Hosidius               27_55        Arceuus               26_60
+      Lovakengj              23_59        Woodcutting Guild     25_54
+      Shayzien               23_56
+      Port Piscarilius       28_58
+  Also already shipped: Fossil Island 58_59, Lunar Isle 32_60, Prifddinas 35_51, Zanaris 37_69
+  and Ape Atoll 43_43. THE MISSING SURFACE CONTENT IS VARLAMORE - block rx17-29 / ry44-53
+  (x1088-1919, y2816-3455):
+      Civitas illa Fortis    26_48        Quetzacalli Gorge     25_50
+      Hunter Guild           24_47        Aldarin               22_45
+      Avium Savannah         22_47        Sunset Coast          23_46
+  Any guide text claiming Zeah is missing is wrong and should be read as Varlamore.
+
+  REALISTIC COUNT WORTH ADDING IS ~74-90, NOT 1,425. By named-object threshold:
+      threshold           total   surface   Varlamore
+      namedLocs>0           538       199          85
+      namedLocs>50          326       112          74
+      namedLocs>200         157        54          47
+
+  ITEM 3 (BULK LEGACY REBUILD) IS MORE DANGEROUS THAN ITEM 2, NOT LESS. Across the 1,323 legacy
+  land entries the rebuild closes plane-0 edges in only 102 regions and opens them in 1,121, a
+  net +2,441,025 plane-0 edges opened. Legacy shipped plane-0 median is 2,391 against a rebuilt
+  5,805, so the 2021 data is systematically far more conservative than what the builder produces.
+  A wholesale legacy rebuild is the largest behavioural change available here and cannot be
+  verified in one pass. Leak-targeted per-region only, never bulk.
+
+  13 SHIPPED ENTRIES ARE NOT LOADABLE FROM THE CURRENT CACHE AT ALL - stale 2021 regions Jagex
+  has since removed, all of them 32,784-byte legacy entries:
+      29_89   29_90   30_89   30_90   31_89   31_90
+      51_153  56_140  56_141  56_142  57_140  57_141  57_142
+  Dead weight; drop them the first time a merge task runs.
+
+  BUILDER FACTS. The region selector is POSITIONAL, NOT a `--regions` flag (`parseRequest`,
+  `CollisionMapBuilder.java:219-284`): args[0] is the output zip if it is not a build option, the
+  remaining non-option tokens are split on `[,\s]+`, each token is `rx_ry` or a bare 0-65535 id,
+  and the literal `all` selects everything. The only real flags are `--live-flags <path>` and
+  `--disable-phase2-solid-objects`. Timing on JDK 17 at -Xmx6g:
+      1 region                  0.78s
+      8 regions                 0.74s
+      all 2,936 regions         7.61s, 2,125 MB peak, 1,341,146 B zip
+  Marginal cost is about 2.4 ms/region, so TIME IS A NON-ISSUE; memory is the only constraint,
+  because every `BuiltRegion` is held until `writeZip`. The builder never reads the shipped zip.
+  Explicit region lists are strict and throw on an unknown region; `all` skips silently.
+
+  ZERO LIVE GROUND TRUTH DEGRADES CLEANLY. With no capture the report says `DANGEROUS PASS
+  VACUOUS - zero edges compared, proves nothing` and emits `INCONCLUSIVE - VACUOUS` sub-verdicts,
+  and there is no divide-by-zero because `percent()` and `rate()` guard `total == 0`. BUT THE
+  PHASE 2 GATE FAILS CLOSED AND FALSELY: its baselines are hard-coded absolutes taken from the
+  24-region proof build, so with no capture overlap `agreeOpen` is 0 and `agreeOpenDrop` is
+  161,245, which exceeds the 5,000 threshold and gives ABORT. The gate is therefore GUARANTEED to
+  say ABORT for any region set that is not the original 24. It is report text only - the zip is
+  still written and the exit code is 0 - but the verdict is meaningless for new regions and must
+  be made region-set-relative or explicitly marked N/A.
+
+  LOAD TIME IS NOT A CONCERN. `loadDefault()` does not decompress on startup; it stores the raw
+  gzip members and decompresses lazily per region on first access, caching thereafter.
+
+  MIXED-FORMAT HAZARD: NONE, CONFIRMED. `DrewsHelperFlagMap` derives width and height from the
+  16-byte header and `index()` never consults bitset length. Legacy 32,784 B entries and rebuilt
+  4,112 B entries both address indices 0-32,767 only. Proven in production since `5bddcf4`.
+
+  RECOMMENDED SLICING:
+      Slice 0  2 regions 52_50, 52_51 (Al Kharid east) - carries 137 of the 171 known
+               floor-rule leaks; already in the map so the merge is a pure REPLACE,
+               entry count stays 1,524, D-0132 satisfied literally, existing route
+               fixtures and live capture already cover the area. Caveat: 52_50 is net
+               -1,450 edges all-planes but +235 at plane 0 - mixed, re-run its capture.
+      Slice 1  74 regions Varlamore surface namedLocs>50. +52,987 B (+5.8%), final
+               ~960 KB. Every region absent today so the router returns NO_PATH for
+               every Varlamore query. Needs one live-capture walk. Phase 2 verdict N/A.
+               Smaller PoC: the capital, 6 regions 25_47 25_48 26_47 26_48 27_47 27_48.
+      Slice 2  remaining ~38 surface non-filler, only after Slice 1 is measured.
+      Never    the 804 ocean regions.
+
+  CONCLUSION: items 2 and 3 are both rescoped from bulk to targeted, and neither is a bulk job at
+  any point in the future. Durable rules: D-0135 in `DECISION_LOG.md`. The sailing research and
+  the "Requirements:" message diagnosis are parked as items 30 and 31 in `02_NEXT_WORK.md`.
