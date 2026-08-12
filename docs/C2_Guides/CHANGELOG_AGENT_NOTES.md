@@ -1698,3 +1698,54 @@ D-0164 (2026-08-12) - Phase 0 ignored-placement adjacency: verdict INCONCLUSIVE,
 
   NEXT: the union bucket (adjacent to ANY ignored placement, excluding type 22) as a PRE-STATED
   run. Then Phase 1 - read footprint and blocking flag off the object definition.
+
+D-0165 (2026-08-12) - Union bucket CONFIRMED (bookkeeping) and Phase 1 solid-flag split
+  CONFIRMED (the real evidence). See D-0130.
+
+  CollisionMapBuilder.java 161,015 -> 185,127 B, sha256 4EB4B2A4...7017E6F8. shapeFor() body
+  BYTE-IDENTICAL, md5 f2f4eb7d6013c28c0db6b6e819730515 before and after. 17 diff removals were a
+  refactor hoisting tileKey(x,y,plane) into a local and reusing it - both placementTileKeys and
+  locType1Orientation3TileKeys are still populated at the same site, verified by grep and by every
+  dependent number being unchanged. Zero removed lines in the committed report diff.
+
+  PART A - UNION, exactly as predicted before the run (a mismatch would have meant a bucketing
+  bug; there was none):
+      ADJ_IGNORED 16,909 edges / 9,059 dangerous / 8,834 unexplained / 252 overblock
+      rate 52.244%, ratio 9.611x, share 57.517%, overblock 1.490% -> CONFIRMED
+  The report prints, above that verdict, that it is arithmetic on two already-measured buckets and
+  is NOT new evidence.
+
+  PART B - THE SOLID-FLAG SPLIT, first time the builder has read any ObjectDefinition field other
+  than getId():
+      ADJ_SOLID_FLAGGED   14,760   8,956 dang   8,792 unexpl   59.566%   10.958x   share 57.24%
+      ADJ_NONSOLID_ONLY    2,149     103 dang      42 unexpl    1.954%    0.360x   share  0.27%
+      NOT_ADJACENT       120,041  11,808 dang   6,525 unexpl    5.436%
+  ADJ_SOLID_FLAGGED: CONFIRMED on both criteria (10.958x >= 3.0x, 57.24% >= 40%).
+  ADJ_NONSOLID_ONLY is BELOW baseline at 0.360x. The clutter confound had a clean chance to win
+  and lost by ~30x. All eight closure assertions passed.
+
+  FLAG DISCRIMINATION TABLE:
+      getInteractType() != 0   14,760 edges   59.566%   10.958x
+      isBlocksProjectile()     12,731 edges   59.603%   10.965x
+      isObstructsGround()           4 edges    0.000%    0.000x
+  interactType distribution over ignored non-decor placements: 0 = 3,363, 1 = 617, 2 = 22,554.
+  Also counted: isBlocksProjectile true 21,013; isObstructsGround true 35; getWallOrDoor() != 0
+  9,216; getBlockingMask() != 0 546.
+
+  SECOND DEFECT COUNTED: 2,873 ignored non-decor placements have a footprint larger than 1x1. The
+  builder treats every placement as one tile. Independent of solidity; own ticket.
+
+  REPORT BUG TO FIX (small, mine): the footprint histogram prints its header and then
+  "suppressed 18 footprint rows with fewer placements" WITHOUT printing the top-12 rows it says it
+  is showing. The 2,873 count is correct and came from a separate line; the histogram itself
+  emitted nothing. Fix before quoting any per-size breakdown.
+
+  UNCHANGED AND RE-VERIFIED: comparedEdges 136,950, DANGEROUS 20,867, DANGEROUS_UNEXPLAINED
+  15,359, rate 15.237%, DOOR_SHUT 93, AGREE_BLOCKED 14,219, AGREE_OPEN 99,238, OVERBLOCK 2,533,
+  all borderExcluded counters, border verdict INCONCLUSIVE, both histogram tables, all interior /
+  occupancy / adjacency rows and verdicts.
+
+  NEXT: Phase 2 writes object blocking. FIRST change in this whole investigation that alters what
+  the builder BLOCKS rather than what it counts. It can only ADD blocking, so a wrong version
+  closes routes that currently work. Needs its own go/no-go, OVERBLOCK as the tripwire, and a
+  route re-test. Do not bundle the footprint fix into it - one change at a time.

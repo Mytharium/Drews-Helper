@@ -1623,3 +1623,40 @@ AND A BUCKET CAN FAIL BY BEING TOO NARROW, NOT ONLY BY BEING TOO WIDE.
   THE RULE: state the falsification condition before the run and report whether it held, every
   time. When a pre-stated bucket turns out mis-drawn, the remedy is a new pre-stated run with the
   corrected bucket - never a wider reading of the run you already have.
+
+D-0130 (2026-08-12) - CONFIRMED: the builder ignores solid objects, and that is what the
+unexplained dangerous edges are. Four hypotheses died to reach this one; this is what a real
+cause looks like next to those.
+
+  THE DISCRIMINATING RESULT. Both sub-buckets sit in the SAME cluttered neighbourhoods - they are
+  both "next to an ignored placement". The only difference is what the game data says the object
+  IS. Split on getInteractType() != 0, read off the cache, not asserted by me:
+      ADJ_SOLID_FLAGGED   14,760 edges   59.566% unexplained   10.958x baseline   CONFIRMED
+      ADJ_NONSOLID_ONLY    2,149 edges    1.954% unexplained    0.360x baseline
+      NOT_ADJACENT       120,041 edges    5.436% unexplained
+  Objects the game marks solid: eleven times worse than open ground. Objects sitting right beside
+  them that the game marks walk-through: BETTER than open ground. 8,792 of the 8,834 adjacent
+  unexplained edges - 99.5% - are next to a solid-flagged object.
+
+  WHY THIS IS A CAUSE AND NOT A CORRELATION. The prediction was written into the report ABOVE the
+  numbers before the run: "if ADJ_NONSOLID_ONLY is just as bad as ADJ_SOLID_FLAGGED, then
+  adjacency is tracking clutter, not solidity, and the object theory is weakened even though the
+  union verdict passed." Clutter was the live alternative explanation and it had a clean way to
+  win. It lost by a factor of thirty.
+  The overblock control also still holds: ADJ_SOLID_FLAGGED 1.436% vs NOT_ADJACENT 1.900%. Two
+  independent falsification conditions, both stated in advance, both survived.
+
+  THE METHOD THAT GOT HERE, AFTER FOUR FAILURES: stop inventing the category. D-0127 died on a
+  proxy I asserted ("plane>0 is inside a building"). D-0128 died on a bucket I drew. This time the
+  category came out of the data - the cache carries a per-object solidity flag and we read it.
+  The rule generalises: when the source data already answers the question, reading it beats any
+  proxy you can construct, and it beats it by an order of magnitude in discriminating power.
+
+  FLAG CHOICE, HONESTLY: isBlocksProjectile() scores 10.965x against interactType != 0 at
+  10.958x. That is a tie, not a finding - and it covers fewer edges (12,731 vs 14,760). Do not
+  read a preference into 0.007x. interactType stays the primary because it covers more of the
+  population. isObstructsGround() is useless here (4 edges).
+
+  SECOND DEFECT, NOW COUNTED, NOT YET FIXED: 2,873 ignored non-decor placements have a footprint
+  LARGER THAN 1x1, and the builder treats every placement as a single tile. That is independent
+  of the solidity gap and will still be wrong after solidity is fixed. Its own ticket.

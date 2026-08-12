@@ -542,11 +542,13 @@ public final class CollisionMapBuilder
 
         int x = baseX + location.getPosition().getX();
         int y = baseY + location.getPosition().getY();
-        stats.placementTileKeys.add(tileKey(x, y, plane));
+        long key = tileKey(x, y, plane);
+        stats.placementTileKeys.add(key);
+        recordIgnoredNonDecorDefinitionPlacement(stats, key, location.getType(), def);
         recordIgnoredPlacementTile(stats, x, y, plane, location.getType());
         if (location.getType() == 1 && location.getOrientation() == 3)
         {
-            stats.locType1Orientation3TileKeys.add(tileKey(x, y, plane));
+            stats.locType1Orientation3TileKeys.add(key);
         }
 
         boolean openable = firstOpenStyleAction(def) != null;
@@ -569,6 +571,90 @@ public final class CollisionMapBuilder
         for (Direction direction : shape)
         {
             bits.markEdge(x, y, plane, direction, openable, stats);
+        }
+    }
+
+    private static void recordIgnoredNonDecorDefinitionPlacement(
+        BuildStats stats,
+        long key,
+        int locType,
+        ObjectDefinition def
+    )
+    {
+        if (shapeForHandlesLocType(locType))
+        {
+            return;
+        }
+        if (locType == GROUND_DECOR_LOC_TYPE)
+        {
+            return;
+        }
+
+        stats.ignoredNonDecorPlacements++;
+        if (def == null)
+        {
+            stats.ignoredNonDecorMissingDefinitionPlacements++;
+            return;
+        }
+
+        int interactType = def.getInteractType();
+        int sizeX = def.getSizeX();
+        int sizeY = def.getSizeY();
+        int blockingMask = def.getBlockingMask();
+        boolean blocksProjectile = def.isBlocksProjectile();
+        boolean obstructsGround = def.isObstructsGround();
+        int wallOrDoor = def.getWallOrDoor();
+
+        if (interactType != 0)
+        {
+            stats.interactTypeNonZeroTileKeys.add(key);
+        }
+        if (blocksProjectile)
+        {
+            stats.blocksProjectileTileKeys.add(key);
+        }
+        if (obstructsGround)
+        {
+            stats.obstructsGroundTileKeys.add(key);
+        }
+
+        if (interactType == 0)
+        {
+            stats.ignoredNonDecorInteractType0Placements++;
+        }
+        else if (interactType == 1)
+        {
+            stats.ignoredNonDecorInteractType1Placements++;
+        }
+        else if (interactType == 2)
+        {
+            stats.ignoredNonDecorInteractType2Placements++;
+        }
+        else
+        {
+            stats.ignoredNonDecorInteractTypeOtherPlacements++;
+        }
+
+        stats.ignoredNonDecorFootprintHistogram.merge(sizeX + "x" + sizeY, 1L, Long::sum);
+        if (sizeX > 1 || sizeY > 1)
+        {
+            stats.ignoredNonDecorFootprintLargerThanOneByOnePlacements++;
+        }
+        if (blocksProjectile)
+        {
+            stats.ignoredNonDecorBlocksProjectilePlacements++;
+        }
+        if (obstructsGround)
+        {
+            stats.ignoredNonDecorObstructsGroundPlacements++;
+        }
+        if (wallOrDoor != 0)
+        {
+            stats.ignoredNonDecorWallOrDoorPlacements++;
+        }
+        if (blockingMask != 0)
+        {
+            stats.ignoredNonDecorBlockingMaskPlacements++;
         }
     }
 
@@ -1100,22 +1186,6 @@ public final class CollisionMapBuilder
         boolean overblock
     )
     {
-        SceneryAdjacencyBucket bucket = classifySceneryAdjacencyBucket(stats, tile, direction);
-        comparison.sceneryAdjacencyMeasurement.record(
-            bucket,
-            tile.plane,
-            dangerous,
-            dangerousUnexplained,
-            overblock
-        );
-    }
-
-    private static SceneryAdjacencyBucket classifySceneryAdjacencyBucket(
-        BuildStats stats,
-        LiveTile tile,
-        char direction
-    )
-    {
         int otherX = tile.x;
         int otherY = tile.y;
         if (direction == 'N')
@@ -1131,6 +1201,34 @@ public final class CollisionMapBuilder
             throw new IllegalArgumentException("Unhandled adjacency direction " + direction);
         }
 
+        SceneryAdjacencyBucket bucket = classifySceneryAdjacencyBucket(stats, tile, otherX, otherY);
+        comparison.sceneryAdjacencyMeasurement.record(
+            bucket,
+            tile.plane,
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
+        recordIgnoredObjectDefinitionFlagMeasurements(
+            comparison.sceneryAdjacencyMeasurement,
+            stats,
+            tile,
+            otherX,
+            otherY,
+            bucket,
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
+    }
+
+    private static SceneryAdjacencyBucket classifySceneryAdjacencyBucket(
+        BuildStats stats,
+        LiveTile tile,
+        int otherX,
+        int otherY
+    )
+    {
         /*
          * Stored north/east edges sit between two same-plane tiles. A placement on either endpoint
          * can explain the client blocking that edge, so the adjacency census checks both endpoints.
@@ -1144,6 +1242,90 @@ public final class CollisionMapBuilder
             return SceneryAdjacencyBucket.ADJ_OTHER_IGNORED;
         }
         return SceneryAdjacencyBucket.NOT_ADJACENT;
+    }
+
+    private static void recordIgnoredObjectDefinitionFlagMeasurements(
+        SceneryAdjacencyMeasurement measurement,
+        BuildStats stats,
+        LiveTile tile,
+        int otherX,
+        int otherY,
+        SceneryAdjacencyBucket bucket,
+        boolean dangerous,
+        boolean dangerousUnexplained,
+        boolean overblock
+    )
+    {
+        if (bucket == SceneryAdjacencyBucket.NOT_ADJACENT)
+        {
+            return;
+        }
+
+        boolean interactTypeNonZero = edgeTouchesTileKey(
+            stats.interactTypeNonZeroTileKeys,
+            tile,
+            otherX,
+            otherY
+        );
+        if (interactTypeNonZero)
+        {
+            measurement.recordIgnoredSolidity(
+                IgnoredSolidityBucket.ADJ_SOLID_FLAGGED,
+                dangerous,
+                dangerousUnexplained,
+                overblock
+            );
+        }
+        else
+        {
+            measurement.recordIgnoredSolidity(
+                IgnoredSolidityBucket.ADJ_NONSOLID_ONLY,
+                dangerous,
+                dangerousUnexplained,
+                overblock
+            );
+        }
+
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.INTERACT_TYPE_NONZERO,
+            interactTypeNonZero,
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.BLOCKS_PROJECTILE,
+            edgeTouchesTileKey(stats.blocksProjectileTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.OBSTRUCTS_GROUND,
+            edgeTouchesTileKey(stats.obstructsGroundTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock
+        );
+    }
+
+    private static void recordIgnoredObjectFlagMeasurement(
+        SceneryAdjacencyMeasurement measurement,
+        IgnoredObjectFlag flag,
+        boolean marked,
+        boolean dangerous,
+        boolean dangerousUnexplained,
+        boolean overblock
+    )
+    {
+        if (!marked)
+        {
+            return;
+        }
+        measurement.recordIgnoredObjectFlag(flag, dangerous, dangerousUnexplained, overblock);
     }
 
     private static boolean edgeTouchesTileKey(Set<Long> tileKeys, LiveTile tile, int otherX, int otherY)
@@ -2044,6 +2226,13 @@ public final class CollisionMapBuilder
                 bucketDangerousUnexplainedTotal
             );
         }
+        appendSceneryAdjacencyCountsRow(
+            report,
+            "    ",
+            "ADJ_IGNORED",
+            combinedSceneryAdjacencyCounts(measurement),
+            bucketDangerousUnexplainedTotal
+        );
 
         appendSceneryAdjacencyAssertions(
             report,
@@ -2053,6 +2242,7 @@ public final class CollisionMapBuilder
             bucketDangerousUnexplainedTotal,
             bucketOverblockTotal
         );
+        appendSceneryAdjacencyClosureAssertions(report, measurement);
         appendSceneryAdjacencyVerdicts(report, measurement, bucketDangerousUnexplainedTotal);
         appendSceneryAdjacencyOverblockControl(report, measurement);
         appendSceneryAdjacencyCensus(report, stats, measurement);
@@ -2123,6 +2313,16 @@ public final class CollisionMapBuilder
             .append('\n');
     }
 
+    private static SceneryAdjacencyBucketCounts combinedSceneryAdjacencyCounts(
+        SceneryAdjacencyMeasurement measurement
+    )
+    {
+        SceneryAdjacencyBucketCounts combined = new SceneryAdjacencyBucketCounts();
+        combined.add(measurement.counts(SceneryAdjacencyBucket.ADJ_SCENERY));
+        combined.add(measurement.counts(SceneryAdjacencyBucket.ADJ_OTHER_IGNORED));
+        return combined;
+    }
+
     private static void appendSceneryAdjacencyAssertions(
         StringBuilder report,
         DangerousDirectionComparison comparison,
@@ -2168,6 +2368,126 @@ public final class CollisionMapBuilder
             .append(" == ").append(comparison.overblock).append(")").append('\n');
     }
 
+    private static void appendSceneryAdjacencyClosureAssertions(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement
+    )
+    {
+        SceneryAdjacencyBucketCounts scenery = measurement.counts(SceneryAdjacencyBucket.ADJ_SCENERY);
+        SceneryAdjacencyBucketCounts other = measurement.counts(SceneryAdjacencyBucket.ADJ_OTHER_IGNORED);
+        SceneryAdjacencyBucketCounts adjIgnored = combinedSceneryAdjacencyCounts(measurement);
+        SceneryAdjacencyBucketCounts solid =
+            measurement.ignoredSolidityCounts(IgnoredSolidityBucket.ADJ_SOLID_FLAGGED);
+        SceneryAdjacencyBucketCounts nonsolid =
+            measurement.ignoredSolidityCounts(IgnoredSolidityBucket.ADJ_NONSOLID_ONLY);
+
+        appendTwoBucketAssertion(
+            report,
+            "    adjacency union assertion: ",
+            "ADJ_SCENERY.comparedEdges",
+            scenery.comparedEdges,
+            "ADJ_OTHER_IGNORED.comparedEdges",
+            other.comparedEdges,
+            "ADJ_IGNORED.comparedEdges",
+            adjIgnored.comparedEdges
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    adjacency union assertion: ",
+            "ADJ_SCENERY.dangerous",
+            scenery.dangerous,
+            "ADJ_OTHER_IGNORED.dangerous",
+            other.dangerous,
+            "ADJ_IGNORED.dangerous",
+            adjIgnored.dangerous
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    adjacency union assertion: ",
+            "ADJ_SCENERY.dangerousUnexplained",
+            scenery.dangerousUnexplained,
+            "ADJ_OTHER_IGNORED.dangerousUnexplained",
+            other.dangerousUnexplained,
+            "ADJ_IGNORED.dangerousUnexplained",
+            adjIgnored.dangerousUnexplained
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    adjacency union assertion: ",
+            "ADJ_SCENERY.overblock",
+            scenery.overblock,
+            "ADJ_OTHER_IGNORED.overblock",
+            other.overblock,
+            "ADJ_IGNORED.overblock",
+            adjIgnored.overblock
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    ignored-solid split assertion: ",
+            "ADJ_SOLID_FLAGGED.comparedEdges",
+            solid.comparedEdges,
+            "ADJ_NONSOLID_ONLY.comparedEdges",
+            nonsolid.comparedEdges,
+            "ADJ_IGNORED.comparedEdges",
+            adjIgnored.comparedEdges
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    ignored-solid split assertion: ",
+            "ADJ_SOLID_FLAGGED.dangerous",
+            solid.dangerous,
+            "ADJ_NONSOLID_ONLY.dangerous",
+            nonsolid.dangerous,
+            "ADJ_IGNORED.dangerous",
+            adjIgnored.dangerous
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    ignored-solid split assertion: ",
+            "ADJ_SOLID_FLAGGED.dangerousUnexplained",
+            solid.dangerousUnexplained,
+            "ADJ_NONSOLID_ONLY.dangerousUnexplained",
+            nonsolid.dangerousUnexplained,
+            "ADJ_IGNORED.dangerousUnexplained",
+            adjIgnored.dangerousUnexplained
+        );
+        appendTwoBucketAssertion(
+            report,
+            "    ignored-solid split assertion: ",
+            "ADJ_SOLID_FLAGGED.overblock",
+            solid.overblock,
+            "ADJ_NONSOLID_ONLY.overblock",
+            nonsolid.overblock,
+            "ADJ_IGNORED.overblock",
+            adjIgnored.overblock
+        );
+    }
+
+    private static void appendTwoBucketAssertion(
+        StringBuilder report,
+        String prefix,
+        String leftLabel,
+        long leftValue,
+        String rightLabel,
+        long rightValue,
+        String totalLabel,
+        long totalValue
+    )
+    {
+        long sum = leftValue + rightValue;
+        report.append(prefix)
+            .append(leftLabel)
+            .append(" + ")
+            .append(rightLabel)
+            .append(" == ")
+            .append(totalLabel)
+            .append(": ")
+            .append(okFail(sum == totalValue))
+            .append(" (").append(leftValue)
+            .append(" + ").append(rightValue)
+            .append(" == ").append(totalValue).append(")").append('\n');
+    }
+
     private static void appendSceneryAdjacencyVerdicts(
         StringBuilder report,
         SceneryAdjacencyMeasurement measurement,
@@ -2194,6 +2514,180 @@ public final class CollisionMapBuilder
                 dangerousUnexplainedTotal
             ))
             .append('\n');
+        SceneryAdjacencyBucketCounts adjIgnored = combinedSceneryAdjacencyCounts(measurement);
+        report.append("    NOTE: this union verdict is arithmetic on two buckets already measured ")
+            .append("in the previous run. It records the union as a stated test; it is NOT new ")
+            .append("evidence. The new evidence in this report is the solid-flag split below.")
+            .append('\n');
+        report.append("    verdict ADJ_IGNORED vs NOT_ADJACENT: ")
+            .append(sceneryAdjacencyVerdict(
+                "ADJ_IGNORED",
+                "CONFIRMED",
+                adjIgnored,
+                notAdjacent,
+                dangerousUnexplainedTotal
+            ))
+            .append('\n');
+        appendSceneryAdjacencyUnionOverblockControl(report, adjIgnored, notAdjacent);
+        appendIgnoredSoliditySplit(report, measurement, notAdjacent, dangerousUnexplainedTotal);
+        appendIgnoredObjectFlagDiscriminationTable(report, measurement, notAdjacent);
+    }
+
+    private static void appendSceneryAdjacencyUnionOverblockControl(
+        StringBuilder report,
+        SceneryAdjacencyBucketCounts adjIgnored,
+        SceneryAdjacencyBucketCounts notAdjacent
+    )
+    {
+        double adjIgnoredOverblockRate = rate(adjIgnored.overblock, adjIgnored.comparedEdges);
+        double notAdjacentOverblockRate = rate(notAdjacent.overblock, notAdjacent.comparedEdges);
+        boolean controlPassed = adjIgnoredOverblockRate
+            <= notAdjacentOverblockRate * BORDER_REFUTED_RATE_MULTIPLIER;
+
+        if (controlPassed)
+        {
+            report.append("    union overblock control PASS (")
+                .append(formatPercentOnly(adjIgnoredOverblockRate))
+                .append(" <= ")
+                .append(formatPercentOnly(notAdjacentOverblockRate))
+                .append(" * ")
+                .append(BORDER_REFUTED_RATE_MULTIPLIER)
+                .append(")").append('\n');
+        }
+        else
+        {
+            report.append("    union overblock control FAIL (")
+                .append(formatPercentOnly(adjIgnoredOverblockRate))
+                .append(" > ")
+                .append(formatPercentOnly(notAdjacentOverblockRate))
+                .append(" * ")
+                .append(BORDER_REFUTED_RATE_MULTIPLIER)
+                .append(")").append('\n');
+        }
+    }
+
+    private static void appendIgnoredSoliditySplit(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement,
+        SceneryAdjacencyBucketCounts notAdjacent,
+        long dangerousUnexplainedTotal
+    )
+    {
+        SceneryAdjacencyBucketCounts solid =
+            measurement.ignoredSolidityCounts(IgnoredSolidityBucket.ADJ_SOLID_FLAGGED);
+        SceneryAdjacencyBucketCounts nonsolid =
+            measurement.ignoredSolidityCounts(IgnoredSolidityBucket.ADJ_NONSOLID_ONLY);
+
+        report.append("    ignored-solid split:").append('\n');
+        report.append("      PREDICTION (stated before the run): if ignored solid objects are the cause, ")
+            .append("ADJ_SOLID_FLAGGED carries the errors and ADJ_NONSOLID_ONLY looks like ")
+            .append("NOT_ADJACENT. If ADJ_NONSOLID_ONLY is just as bad as ADJ_SOLID_FLAGGED, ")
+            .append("then adjacency is tracking clutter, not solidity, and the object theory is ")
+            .append("weakened even though the union verdict passed.")
+            .append('\n');
+        report.append("      bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) ")
+            .append("DANGEROUS_UNEXPLAINED dangerousUnexplainedRate(DANGEROUS_UNEXPLAINED/comparedEdges) ")
+            .append("unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum) OVERBLOCK ")
+            .append("overblockRate(OVERBLOCK/comparedEdges)").append('\n');
+        appendSceneryAdjacencyCountsRow(
+            report,
+            "      ",
+            IgnoredSolidityBucket.ADJ_SOLID_FLAGGED.name(),
+            solid,
+            dangerousUnexplainedTotal
+        );
+        appendSceneryAdjacencyCountsRow(
+            report,
+            "      ",
+            IgnoredSolidityBucket.ADJ_NONSOLID_ONLY.name(),
+            nonsolid,
+            dangerousUnexplainedTotal
+        );
+        report.append("      verdict ADJ_SOLID_FLAGGED vs NOT_ADJACENT: ")
+            .append(sceneryAdjacencyVerdict(
+                "ADJ_SOLID_FLAGGED",
+                "CONFIRMED",
+                solid,
+                notAdjacent,
+                dangerousUnexplainedTotal
+            ))
+            .append('\n');
+        appendSceneryAdjacencyRateRead(report, "      ", "ADJ_NONSOLID_ONLY", nonsolid, notAdjacent);
+    }
+
+    private static void appendSceneryAdjacencyRateRead(
+        StringBuilder report,
+        String indent,
+        String label,
+        SceneryAdjacencyBucketCounts counts,
+        SceneryAdjacencyBucketCounts notAdjacent
+    )
+    {
+        double candidateRate = rate(counts.dangerousUnexplained, counts.comparedEdges);
+        double notAdjacentRate = rate(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges);
+        report.append(indent)
+            .append("rate ")
+            .append(label)
+            .append(" vs NOT_ADJACENT: ")
+            .append(label)
+            .append(" dangerousUnexplainedRate ")
+            .append(formatRateWithCounts(counts.dangerousUnexplained, counts.comparedEdges))
+            .append(", NOT_ADJACENT dangerousUnexplainedRate ")
+            .append(formatRateWithCounts(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges))
+            .append(", rateRatio ")
+            .append(sceneryAdjacencyRateRatio(candidateRate, notAdjacentRate))
+            .append('\n');
+    }
+
+    private static void appendIgnoredObjectFlagDiscriminationTable(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement,
+        SceneryAdjacencyBucketCounts notAdjacent
+    )
+    {
+        report.append("    flag discrimination - higher ratio = better separator:").append('\n');
+        report.append("      flag markedAdjIgnoredEdges dangerousUnexplainedRate ratioAgainstNOT_ADJACENT")
+            .append('\n');
+        for (IgnoredObjectFlag flag : IgnoredObjectFlag.values())
+        {
+            appendIgnoredObjectFlagDiscriminationRow(report, measurement, flag, notAdjacent);
+        }
+    }
+
+    private static void appendIgnoredObjectFlagDiscriminationRow(
+        StringBuilder report,
+        SceneryAdjacencyMeasurement measurement,
+        IgnoredObjectFlag flag,
+        SceneryAdjacencyBucketCounts notAdjacent
+    )
+    {
+        SceneryAdjacencyBucketCounts counts = measurement.ignoredObjectFlagCounts(flag);
+        double candidateRate = rate(counts.dangerousUnexplained, counts.comparedEdges);
+        double notAdjacentRate = rate(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges);
+        report.append("      ")
+            .append(ignoredObjectFlagLabel(flag))
+            .append(": ")
+            .append(counts.comparedEdges)
+            .append(' ')
+            .append(formatRateWithCounts(counts.dangerousUnexplained, counts.comparedEdges))
+            .append(' ')
+            .append(sceneryAdjacencyRateRatio(candidateRate, notAdjacentRate))
+            .append('\n');
+    }
+
+    private static String ignoredObjectFlagLabel(IgnoredObjectFlag flag)
+    {
+        switch (flag)
+        {
+            case INTERACT_TYPE_NONZERO:
+                return "getInteractType() != 0";
+            case BLOCKS_PROJECTILE:
+                return "isBlocksProjectile()";
+            case OBSTRUCTS_GROUND:
+                return "isObstructsGround()";
+            default:
+                throw new IllegalArgumentException("Unhandled ignored object flag " + flag);
+        }
     }
 
     private static String sceneryAdjacencyVerdict(
@@ -2354,6 +2848,7 @@ public final class CollisionMapBuilder
             appendSceneryAdjacencyPlaneCensusRow(report, measurement, plane);
         }
         appendSceneryAdjacencyPlaneAssertions(report, measurement);
+        appendIgnoredNonDecorDefinitionCensus(report, stats);
     }
 
     private static void appendSceneryAdjacencyPlaneCensusRow(
@@ -2392,6 +2887,68 @@ public final class CollisionMapBuilder
                 .append(" + ").append(other.comparedEdges)
                 .append(" + ").append(notAdjacent.comparedEdges)
                 .append(" == ").append(measurement.planeComparedTotal(plane)).append(")").append('\n');
+        }
+    }
+
+    private static void appendIgnoredNonDecorDefinitionCensus(StringBuilder report, BuildStats stats)
+    {
+        report.append("    ignored non-decor ObjectDefinition census:").append('\n');
+        report.append("      placements: ").append(stats.ignoredNonDecorPlacements).append('\n');
+        report.append("      missing definitions: ")
+            .append(stats.ignoredNonDecorMissingDefinitionPlacements).append('\n');
+        report.append("      getInteractType() counts: 0=")
+            .append(stats.ignoredNonDecorInteractType0Placements)
+            .append(" 1=").append(stats.ignoredNonDecorInteractType1Placements)
+            .append(" 2=").append(stats.ignoredNonDecorInteractType2Placements)
+            .append(" other=").append(stats.ignoredNonDecorInteractTypeOtherPlacements)
+            .append('\n');
+        report.append("      footprint histogram, largest 12 rows:").append('\n');
+        appendIgnoredNonDecorFootprintHistogram(report, stats);
+        report.append("      placements with footprint larger than 1x1: ")
+            .append(stats.ignoredNonDecorFootprintLargerThanOneByOnePlacements).append('\n');
+        report.append("      isBlocksProjectile() true: ")
+            .append(stats.ignoredNonDecorBlocksProjectilePlacements).append('\n');
+        report.append("      isObstructsGround() true: ")
+            .append(stats.ignoredNonDecorObstructsGroundPlacements).append('\n');
+        report.append("      getWallOrDoor() != 0: ")
+            .append(stats.ignoredNonDecorWallOrDoorPlacements).append('\n');
+        report.append("      getBlockingMask() != 0: ")
+            .append(stats.ignoredNonDecorBlockingMaskPlacements).append('\n');
+    }
+
+    private static void appendIgnoredNonDecorFootprintHistogram(StringBuilder report, BuildStats stats)
+    {
+        if (stats.ignoredNonDecorFootprintHistogram.isEmpty())
+        {
+            report.append("        (none)").append('\n');
+            return;
+        }
+
+        List<Map.Entry<String, Long>> rows = new ArrayList<>(
+            stats.ignoredNonDecorFootprintHistogram.entrySet());
+        rows.sort((left, right) ->
+        {
+            int byCount = Long.compare(right.getValue(), left.getValue());
+            if (byCount != 0)
+            {
+                return byCount;
+            }
+            return left.getKey().compareTo(right.getKey());
+        });
+
+        int rowLimit = 12;
+        int rowsToPrint = Math.min(rows.size(), rowLimit);
+        for (int i = 0; i < rowsToPrint; i++)
+        {
+            Map.Entry<String, Long> row = rows.get(i);
+            report.append("        ").append(row.getKey()).append(": ")
+                .append(row.getValue()).append('\n');
+        }
+        if (rows.size() > rowLimit)
+        {
+            report.append("        suppressed ")
+                .append(rows.size() - rowLimit)
+                .append(" footprint rows with fewer placements").append('\n');
         }
     }
 
@@ -2697,6 +3254,11 @@ public final class CollisionMapBuilder
     private static String formatRate(double rate)
     {
         return String.format(Locale.ROOT, "%.6f (%.3f%%)", rate, rate * 100.0);
+    }
+
+    private static String formatPercentOnly(double rate)
+    {
+        return String.format(Locale.ROOT, "%.3f%%", rate * 100.0);
     }
 
     private static String formatRateWithCounts(long count, long total)
@@ -3081,6 +3643,19 @@ public final class CollisionMapBuilder
         NOT_ADJACENT
     }
 
+    private enum IgnoredSolidityBucket
+    {
+        ADJ_SOLID_FLAGGED,
+        ADJ_NONSOLID_ONLY
+    }
+
+    private enum IgnoredObjectFlag
+    {
+        INTERACT_TYPE_NONZERO,
+        BLOCKS_PROJECTILE,
+        OBSTRUCTS_GROUND
+    }
+
     private static final class EmptyDirectionArray
     {
         private static final Direction[] HOLDER = new Direction[0];
@@ -3134,12 +3709,27 @@ public final class CollisionMapBuilder
         private final Set<Long> placementTileKeys = new HashSet<>();
         private final Set<Long> sceneryPlacementTileKeys = new HashSet<>();
         private final Set<Long> otherIgnoredTileKeys = new HashSet<>();
+        private final Set<Long> interactTypeNonZeroTileKeys = new HashSet<>();
+        private final Set<Long> blocksProjectileTileKeys = new HashSet<>();
+        private final Set<Long> obstructsGroundTileKeys = new HashSet<>();
         private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
+        private final TreeMap<String, Long> ignoredNonDecorFootprintHistogram = new TreeMap<>();
 
         private long locType1EdgesBlockedTotal;
         private long locType1Orientation3Placements;
         private long locType1InvalidOrientationFallbacks;
         private long ignoredLocTypePlacements;
+        private long ignoredNonDecorPlacements;
+        private long ignoredNonDecorMissingDefinitionPlacements;
+        private long ignoredNonDecorInteractType0Placements;
+        private long ignoredNonDecorInteractType1Placements;
+        private long ignoredNonDecorInteractType2Placements;
+        private long ignoredNonDecorInteractTypeOtherPlacements;
+        private long ignoredNonDecorFootprintLargerThanOneByOnePlacements;
+        private long ignoredNonDecorBlocksProjectilePlacements;
+        private long ignoredNonDecorObstructsGroundPlacements;
+        private long ignoredNonDecorWallOrDoorPlacements;
+        private long ignoredNonDecorBlockingMaskPlacements;
         private long doorCapableTileCollisions;
         private long terrainBlockedTiles;
         private long bridgeBranchTiles;
@@ -3880,12 +4470,24 @@ public final class CollisionMapBuilder
                 this.overblock++;
             }
         }
+
+        private void add(SceneryAdjacencyBucketCounts counts)
+        {
+            comparedEdges += counts.comparedEdges;
+            dangerous += counts.dangerous;
+            dangerousUnexplained += counts.dangerousUnexplained;
+            overblock += counts.overblock;
+        }
     }
 
     private static final class SceneryAdjacencyMeasurement
     {
         private final SceneryAdjacencyBucketCounts[] bucketCounts =
             new SceneryAdjacencyBucketCounts[SceneryAdjacencyBucket.values().length];
+        private final SceneryAdjacencyBucketCounts[] ignoredSolidityCounts =
+            new SceneryAdjacencyBucketCounts[IgnoredSolidityBucket.values().length];
+        private final SceneryAdjacencyBucketCounts[] ignoredObjectFlagCounts =
+            new SceneryAdjacencyBucketCounts[IgnoredObjectFlag.values().length];
         private final SceneryAdjacencyBucketCounts[][] planeBucketCounts =
             new SceneryAdjacencyBucketCounts[PLANE_COUNT][SceneryAdjacencyBucket.values().length];
         private final long[] planeComparedEdges = new long[PLANE_COUNT];
@@ -3895,6 +4497,14 @@ public final class CollisionMapBuilder
             for (int i = 0; i < bucketCounts.length; i++)
             {
                 bucketCounts[i] = new SceneryAdjacencyBucketCounts();
+            }
+            for (int i = 0; i < ignoredSolidityCounts.length; i++)
+            {
+                ignoredSolidityCounts[i] = new SceneryAdjacencyBucketCounts();
+            }
+            for (int i = 0; i < ignoredObjectFlagCounts.length; i++)
+            {
+                ignoredObjectFlagCounts[i] = new SceneryAdjacencyBucketCounts();
             }
             for (int plane = 0; plane < planeBucketCounts.length; plane++)
             {
@@ -3918,9 +4528,39 @@ public final class CollisionMapBuilder
             planeCounts(plane, bucket).record(dangerous, dangerousUnexplained, overblock);
         }
 
+        private void recordIgnoredSolidity(
+            IgnoredSolidityBucket bucket,
+            boolean dangerous,
+            boolean dangerousUnexplained,
+            boolean overblock
+        )
+        {
+            ignoredSolidityCounts(bucket).record(dangerous, dangerousUnexplained, overblock);
+        }
+
+        private void recordIgnoredObjectFlag(
+            IgnoredObjectFlag flag,
+            boolean dangerous,
+            boolean dangerousUnexplained,
+            boolean overblock
+        )
+        {
+            ignoredObjectFlagCounts(flag).record(dangerous, dangerousUnexplained, overblock);
+        }
+
         private SceneryAdjacencyBucketCounts counts(SceneryAdjacencyBucket bucket)
         {
             return bucketCounts[bucket.ordinal()];
+        }
+
+        private SceneryAdjacencyBucketCounts ignoredSolidityCounts(IgnoredSolidityBucket bucket)
+        {
+            return ignoredSolidityCounts[bucket.ordinal()];
+        }
+
+        private SceneryAdjacencyBucketCounts ignoredObjectFlagCounts(IgnoredObjectFlag flag)
+        {
+            return ignoredObjectFlagCounts[flag.ordinal()];
         }
 
         private SceneryAdjacencyBucketCounts planeCounts(int plane, SceneryAdjacencyBucket bucket)
