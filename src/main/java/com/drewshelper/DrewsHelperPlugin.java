@@ -147,7 +147,13 @@ public class DrewsHelperPlugin extends Plugin
 
     /** Cap on validator rows logged per scene, so one bad region cannot flood the console. */
     private static final int MAX_VALIDATION_ROWS_LOGGED = 25;
-    private static final int MAX_VALIDATION_ROWS_WRITTEN = 50000;
+    /**
+     * Cap on unique proof rows written per session. Raised from 50,000 once both mismatch kinds
+     * were recorded: a single dense scene now emits ~4,600 rows, which put the old cap about
+     * eleven scenes into a normal session. Under-blocks are the half we most want a lot of, so
+     * the ceiling is set well clear of any realistic session rather than tuned close to one.
+     */
+    private static final int MAX_VALIDATION_ROWS_WRITTEN = 500000;
     private static final int VALIDATION_REVALIDATE_TICKS = 100;
 
     /**
