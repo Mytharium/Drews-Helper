@@ -1867,6 +1867,9 @@ expanding, and make UNKNOWN a first-class state.
   parts. These rules are the adapted form. Where this entry and the source plan disagree, this
   entry wins.
 
+  RULE 1 IS SUPERSEDED AND WRONG - see D-0137. It is kept verbatim below as the record of a
+  measurement error, not as guidance. Do not act on it. The figures it quotes are accurate; the
+  interpretation placed on them is not.
   RULE 1 - UNKNOWN IS A FIRST-CLASS STATE. ABSENCE OF A ROW MEANS "NOT OBSERVED", NEVER
   "PASSABLE". This is the single highest-value change available to the project. D-0133 RULE 1
   records that the capture emits a row only when at least one direction is blocked, so the
@@ -1969,3 +1972,81 @@ expanding, and make UNKNOWN a first-class state.
   validation harness rather than standing as its own item.
 
   Cross-reference: the revised work sequence is THE LIST in `02_NEXT_WORK.md`.
+
+D-0137 (2026-08-12) - CORRECTION: D-0136 RULE 1 is wrong. AGREE_OPEN is observed evidence, the
+capture already distinguishes unobserved ground, and no emitter change is needed.
+
+  D-0136 RULE 1 claimed that the capture cannot tell observed-open from never-loaded, that the
+  158,647 AGREE_OPEN edges are therefore silence being scored as success, that 51.86% is the
+  honest accuracy figure, and that the emitter must be changed to write a row for every loaded
+  tile. All four claims are false. They were reached by reading D-0133's FORMAT rule - "a tile
+  with no row at all is fully passable" - and assuming it propagates into the comparison. It
+  does not. The code was written more carefully than that reading of it. RULE 1 of D-0136 is
+  superseded in full; the remaining rules of D-0136 stand unchanged.
+
+  RULE 1 - THE CAPTURE FORMAT ALREADY CARRIES THE OBSERVED REGION, PER SCENE. Every scene block
+  opens with a header naming its exclusive covered bound:
+
+      DREW_LIVE_FLAGS scene 2912:3160:0 size=104 covered=103
+
+  The emitter writes it deliberately. Its own comment at `DrewsHelperPlugin.java:450-455` states
+  that the final row and column are "excluded rather than reported as passable" precisely so a
+  consumer cannot "silently ingest a ring of false ground truth". Absence is only ever meaningful
+  strictly inside the covered bound, and the format states where that bound is.
+
+  RULE 2 - THE BUILDER ALREADY PARSES AND ENFORCES IT. `LIVE_SCENE_HEADER` at
+  `CollisionMapBuilder.java:123-124` captures the covered value, `:3545` parses it, and
+  `:3591-3594` throws a hard IOException on any row falling outside the covered bound. A capture
+  that violated the contract would fail the build rather than quietly pollute the numbers.
+
+  RULE 3 - UNOBSERVED TILES NEVER ENTER THE COMPARISON AT ALL. This is the decisive fact.
+  `capture.tiles` is populated ONLY inside `addLiveDataRow` (`:3663-3667`); nothing anywhere
+  synthesizes a LiveTile for a coordinate that had no row. The comparison loop is
+  `for (LiveTile tile : live.tiles.values())` at `:1123`. Every compared edge therefore descends
+  from a tile the client positively reported on, and a never-observed tile contributes zero edges
+  in either direction. There is no silence in the sample to remove.
+
+  RULE 4 - AGREE_OPEN IS EVIDENCE, NOT SILENCE. A row is emitted when at least one of N/E is
+  blocked - `:3596-3599` throws if neither is - so a tile with north blocked and east open
+  contributes one blocked edge AND one genuinely observed open edge. AGREE_OPEN is the second
+  kind. The arithmetic confirms the shape:
+
+      compared 226,350 + outsideBuiltRegions 94,542 + border-excluded 19,482 = 340,374 edges
+      340,374 / 2 = 170,187 tiles
+      parsed rows 220,398 - sentinel rows 47,232 = 173,166 row instances, deduplicated by the
+      TreeMap across overlapping scenes to approximately 170,187 unique tiles
+
+  Compared edges equal exactly twice the unique row-bearing tile count. Nothing else is in the
+  denominator.
+
+  RULE 5 - THE CORRECTED READING OF THE FIGURES. The numbers quoted in D-0136 RULE 1 are all
+  accurate; only their interpretation was wrong.
+
+      84.03% overall agreement      CORRECT and defensible - this is the headline figure
+      51.86%                        recall on the BLOCKED class only. A real weakness worth
+                                    tracking, but NOT a replacement for the headline
+      12.88% DANGEROUS              unchanged
+      17.80% over-block             unchanged
+      4.20% ground-truth coverage   unchanged - still the genuine bottleneck
+
+  Quote 84.03% as the agreement rate. Quote 51.86% as blocked-edge recall. Never present the
+  second as a correction of the first.
+
+  RULE 6 - NO EMITTER CHANGE. Item A of THE LIST is closed with no code written. Writing a row
+  for every loaded tile would grow capture files roughly 5-10x and buy nothing the format does
+  not already provide. Item B - passive traversal verification - is untouched by this correction
+  and becomes the top item.
+
+  METHOD NOTE. This is the third consecutive LIST item to close on a false premise, and the only
+  one where the false premise had already been written into a decision entry before it was
+  checked. The cheap discriminating question - "does the CONSUMER actually do what the FORMAT
+  permits?" - costs minutes and would have prevented the whole entry. Read the consumer before
+  concluding anything about what a format implies.
+
+  The genuinely open measurement question in this area is NOT absence handling. It is the border
+  ring: 19,482 edges withheld from scoring, 11,120 of them DANGEROUS (57.08% of the withheld
+  set), on the report's own verdict `border histogram verdict: INCONCLUSIVE` at
+  `tools/collision-map-v2-report.txt:127`. We removed a set disproportionately full of our worst
+  error class without proving we were entitled to.
+
+  Cross-reference: supersedes RULE 1 of `D-0136` only. All other D-0136 rules stand.

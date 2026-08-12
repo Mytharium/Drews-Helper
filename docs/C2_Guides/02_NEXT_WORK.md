@@ -46,11 +46,11 @@ CLOSED
 
 ACTIVE SEQUENCE - in order
 
-      A. UNKNOWN in the capture emitter          ~1 evening. Emit a row for EVERY loaded
-                                                 tile, not only blocked ones. DO THIS FIRST:
-                                                 until it lands, every accuracy number the
-                                                 project produces has to be re-derived by
-                                                 hand. D-0136 RULE 1.
+      A. UNKNOWN in the capture emitter          CLOSED - not a defect, no code written.
+                                                 D-0137 supersedes D-0136 RULE 1: the format
+                                                 already carries `covered=` per scene, the
+                                                 builder enforces it, and unobserved tiles
+                                                 never enter the comparison at all.
       B. Traversal verification listener         ~1 day. Compare predicted against actual on
                                                  every manual traversal and record the
                                                  contradictions. This is what breaks the
@@ -86,16 +86,16 @@ CARRIED, RE-RANKED
 
 ### Recommended order to pick up, with the reasoning
 
-**Start with A.** One evening, and it is the only item that changes what every other measurement
-means. Right now the capture cannot distinguish "we checked, it is open" from "we never went
-there", so the two most quotable accuracy figures the project has differ by 32 points depending
-on which reading is taken. Fixing the emitter retires that ambiguity permanently instead of
-re-deriving around it every time somebody asks.
+**Item A is CLOSED - do not build it.** D-0137 supersedes D-0136 RULE 1 in full. The capture
+format already carries the observed region per scene, the builder parses and enforces it, and
+unobserved tiles never enter the comparison at all. AGREE_OPEN is observed evidence rather than
+silence, so 84.03% is the honest agreement figure and 51.86% is blocked-edge recall, not a
+correction of it. No emitter change is needed and none was made.
 
-**Then B, because it compounds.** Every other item is a fixed amount of work for a fixed payoff.
-B changes the collection RATE for the rest of the project's life - ground truth stops being an
-errand that has to be scheduled and becomes a by-product of playing. If only two things ever get
-built, build A and B.
+**Start with B, because it compounds.** Every other item is a fixed amount of work for a fixed
+payoff. B changes the collection RATE for the rest of the project's life - ground truth stops
+being an errand that has to be scheduled and becomes a by-product of playing. Coverage is still
+4.20% and that was never affected by the RULE 1 error, so B is now unambiguously the top item.
 
 **C, D and E are the plan's machinery**, and that order matters: tiers before the object recorder
 so object data lands already labelled, and the harness last so it has something to validate.
