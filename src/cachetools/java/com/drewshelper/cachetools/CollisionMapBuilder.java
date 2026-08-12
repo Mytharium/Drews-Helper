@@ -78,6 +78,7 @@ public final class CollisionMapBuilder
     private static final String REPORT_FILE = "tools/collision-map-v2-report.txt";
     private static final String LIVE_FLAGS_ARG = "--live-flags";
     private static final String DISABLE_PHASE2_SOLID_OBJECTS_ARG = "--disable-phase2-solid-objects";
+    private static final String DISABLE_PHASE3_ROOF_BLOCKING_ARG = "--disable-phase3-roof-blocking";
     private static final int STILL_BLOCKED_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_UNEXPLAINED_EXAMPLE_LIMIT = 20;
@@ -225,7 +226,7 @@ public final class CollisionMapBuilder
         List<ProofEdge> proofEdges
     ) throws IOException
     {
-        if (!request.phase2SolidObjectBlocking)
+        if (!request.phase2SolidObjectBlocking && !request.phase3RoofBlocking)
         {
             return null;
         }
@@ -235,7 +236,7 @@ public final class CollisionMapBuilder
          * Only a baseline measured on the same regions and the same capture can answer that, so
          * the build is simply run again with phase 2 forced off. No zip is written for it.
          */
-        BuildResult baselineResult = build(store, request.withPhase2SolidObjectBlocking(false));
+        BuildResult baselineResult = build(store, request.withObjectBlockingDisabled());
         return new Phase2Baseline(
             compareDangerousDirections(request.liveFlagsFile, baselineResult),
             compareProofEdges(proofEdges, baselineResult.regions)
@@ -258,6 +259,7 @@ public final class CollisionMapBuilder
 
         Path liveFlagsFile = defaultLiveFlagsFile();
         boolean phase2SolidObjectBlocking = true;
+        boolean phase3RoofBlocking = true;
         List<String> selectorArgs = new ArrayList<>();
         for (int i = selectorStart; i < args.length; i++)
         {
@@ -265,6 +267,11 @@ public final class CollisionMapBuilder
             if (DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg))
             {
                 phase2SolidObjectBlocking = false;
+                continue;
+            }
+            if (DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg))
+            {
+                phase3RoofBlocking = false;
                 continue;
             }
             if (LIVE_FLAGS_ARG.equals(arg))
@@ -292,13 +299,16 @@ public final class CollisionMapBuilder
         if (selectorArgs.isEmpty())
         {
             TreeSet<Integer> regions = defaultProofRegions(proofEdges);
-            return new BuildRequest(outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking);
+            return new BuildRequest(
+                outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking, phase3RoofBlocking);
         }
 
         String selector = joinRegionSelector(selectorArgs);
         if ("all".equalsIgnoreCase(selector.trim()))
         {
-            return new BuildRequest(outputZip, liveFlagsFile, true, Collections.emptySet(), false, phase2SolidObjectBlocking);
+            return new BuildRequest(
+                outputZip, liveFlagsFile, true, Collections.emptySet(), false, phase2SolidObjectBlocking,
+                phase3RoofBlocking);
         }
 
         TreeSet<Integer> regions = parseRegionIds(selector);
@@ -306,7 +316,8 @@ public final class CollisionMapBuilder
         {
             throw new IOException("No region ids parsed from selector: " + selector);
         }
-        return new BuildRequest(outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking);
+        return new BuildRequest(
+            outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking, phase3RoofBlocking);
     }
 
     private static boolean isLiveFlagsArg(String arg)
@@ -316,7 +327,9 @@ public final class CollisionMapBuilder
 
     private static boolean isBuildOptionArg(String arg)
     {
-        return isLiveFlagsArg(arg) || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg);
+        return isLiveFlagsArg(arg)
+            || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
+            || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg);
     }
 
     private static Path defaultLiveFlagsFile()
@@ -416,6 +429,7 @@ public final class CollisionMapBuilder
         RegionLoader loader = new RegionLoader(store, ZERO_KEYS);
         BuildStats stats = new BuildStats();
         stats.phase2SolidObjectBlockingEnabled = request.phase2SolidObjectBlocking;
+        stats.phase3RoofBlockingEnabled = request.phase3RoofBlocking;
         TreeMap<String, BuiltRegion> regions = new TreeMap<>();
 
         if (request.allRegions)
@@ -667,6 +681,27 @@ public final class CollisionMapBuilder
         boolean phase2SolidObjectBlocking
     )
     {
+        if (stats.phase3RoofBlockingEnabled && isProvenBlockableRoofLocType(locType))
+        {
+            /*
+             * Phase 3. Blocked on locType alone, with no interactType and no footprint condition,
+             * because locType alone is exactly what the proof pass measured. Adding an unmeasured
+             * extra condition here would ship a rule other than the proven one. The anchor tile
+             * only, matching the placement tile the proof pass counted - footprint expansion is a
+             * separate, separately-provable change.
+             */
+            stats.phase3RoofPlacements++;
+            if (plane >= 0 && plane < PLANE_COUNT)
+            {
+                stats.phase3RoofPlacementsByPlane[plane]++;
+            }
+            if (openable)
+            {
+                stats.phase3RoofOpenStylePlacements++;
+            }
+            bits.markSolidAllEdges(x, y, plane, stats);
+            return;
+        }
         if (!phase2SolidObjectBlocking)
         {
             return;
@@ -686,6 +721,41 @@ public final class CollisionMapBuilder
             stats.phase2SolidObjectOpenStylePlacements++;
         }
         bits.markSolidAllEdges(x, y, plane, stats);
+    }
+
+    private static boolean isProvenBlockableRoofLocType(int locType)
+    {
+        /*
+         * Measured 2026-08-12 over the 62-region capture with phase 2 off, against NOT_ADJACENT
+         * at 3.013% dangerousUnexplained and 1.074% overblock. Columns are dangerousUnexplained,
+         * its ratio against NOT_ADJACENT, and the overblock ratio:
+         *   12  85.4%  28.4x  0.19x        13  90.8%  30.1x  0.18x
+         *   14  91.7%  30.4x  0.00x        16  86.9%  28.9x  0.07x
+         *   17  91.5%  30.4x  0.00x        18  80.9%  26.9x  0.11x
+         *   19  74.6%  24.8x  0.04x        21  69.8%  23.2x  0.19x
+         * Every row clears 3.0x danger and sits far under the 1.5x overblock ceiling.
+         *
+         * locTypes 15 and 20 look identical to their neighbours (90.6% and 98.2%) but sit under
+         * the 500 compared-edge floor at 384 and 488 edges, so they are held back until the
+         * capture covers more ground rather than promoted on a short sample. locType 4 clears the
+         * danger bar at 5.3x but it is a wall decoration and is much more likely to be standing
+         * next to the wall that actually blocks; it needs its own pass. locTypes 5-8 are
+         * inconclusive or vacuous.
+         */
+        switch (locType)
+        {
+            case 12:
+            case 13:
+            case 14:
+            case 16:
+            case 17:
+            case 18:
+            case 19:
+            case 21:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static boolean shouldBlockIgnoredSolidObject(
@@ -1692,6 +1762,9 @@ public final class CollisionMapBuilder
         report.append("phase2 solid-object blocking: ")
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
             .append('\n');
+        report.append("phase3 roof blocking (locTypes 12,13,14,16,17,18,19,21): ")
+            .append(request.phase3RoofBlocking ? "enabled" : "disabled")
+            .append('\n');
         report.append("archive format: ")
             .append(ARCHIVE_FLAG_COUNT)
             .append(" runtime passability flags; door flags are report-only")
@@ -1846,9 +1919,9 @@ public final class CollisionMapBuilder
         Phase2Baseline baseline
     )
     {
-        if (!stats.phase2SolidObjectBlockingEnabled)
+        if (!stats.phase2SolidObjectBlockingEnabled && !stats.phase3RoofBlockingEnabled)
         {
-            report.append("  Phase 2 route-aware solid-object gate: NOT APPLICABLE - phase 2 is ")
+            report.append("  object-blocking gate: NOT APPLICABLE - phase 2 and phase 3 are both ")
                 .append("disabled, so this run IS the baseline.").append('\n');
             return;
         }
@@ -1871,7 +1944,11 @@ public final class CollisionMapBuilder
         boolean netOk = unexplainedDrop > Math.max(0L, routeAwareRise);
         boolean proofOk = proofCurrent >= proofBaseline;
 
-        report.append("  Phase 2 route-aware solid-object gate: ")
+        report.append("  object-blocking gate (phase2=")
+            .append(stats.phase2SolidObjectBlockingEnabled ? "on" : "off")
+            .append(" phase3=")
+            .append(stats.phase3RoofBlockingEnabled ? "on" : "off")
+            .append("): ")
             .append(netOk && proofOk ? "PASS" : "ABORT")
             .append(" (baseline measured live: same regions, same capture, phase 2 forced off)")
             .append('\n');
@@ -3661,6 +3738,15 @@ public final class CollisionMapBuilder
         report.append("  locType1 invalid-orientation fallbacks: ")
             .append(stats.locType1InvalidOrientationFallbacks).append('\n');
         report.append("  ignored-locType count: ").append(stats.ignoredLocTypePlacements).append('\n');
+        report.append("  Phase 3 roof placements blocked: ")
+            .append(stats.phase3RoofPlacements).append('\n');
+        report.append("  Phase 3 roof placements blocked by plane: ")
+            .append(stats.phase3RoofPlacementsByPlane[0]).append(' ')
+            .append(stats.phase3RoofPlacementsByPlane[1]).append(' ')
+            .append(stats.phase3RoofPlacementsByPlane[2]).append(' ')
+            .append(stats.phase3RoofPlacementsByPlane[3]).append('\n');
+        report.append("  Phase 3 roof open-style placements blocked: ")
+            .append(stats.phase3RoofOpenStylePlacements).append('\n');
         report.append("  Phase 2 solid-object placements blocked: ")
             .append(stats.phase2SolidObjectPlacements).append('\n');
         report.append("  Phase 2 solid-object open-style placements blocked: ")
@@ -4156,6 +4242,7 @@ public final class CollisionMapBuilder
         private final Set<Integer> regionIds;
         private final boolean defaultedRegions;
         private final boolean phase2SolidObjectBlocking;
+        private final boolean phase3RoofBlocking;
 
         private BuildRequest(
             Path outputZip,
@@ -4163,7 +4250,8 @@ public final class CollisionMapBuilder
             boolean allRegions,
             Set<Integer> regionIds,
             boolean defaultedRegions,
-            boolean phase2SolidObjectBlocking
+            boolean phase2SolidObjectBlocking,
+            boolean phase3RoofBlocking
         )
         {
             this.outputZip = outputZip;
@@ -4172,17 +4260,23 @@ public final class CollisionMapBuilder
             this.regionIds = regionIds;
             this.defaultedRegions = defaultedRegions;
             this.phase2SolidObjectBlocking = phase2SolidObjectBlocking;
+            this.phase3RoofBlocking = phase3RoofBlocking;
         }
 
-        private BuildRequest withPhase2SolidObjectBlocking(boolean enabled)
+        private BuildRequest withObjectBlockingDisabled()
         {
+            /*
+             * The gate baseline is "no object blocking at all", so both phases go off together.
+             * Turning off only one would measure a mixture rather than a baseline.
+             */
             return new BuildRequest(
                 outputZip,
                 liveFlagsFile,
                 allRegions,
                 regionIds,
                 defaultedRegions,
-                enabled
+                false,
+                false
             );
         }
     }
@@ -4240,7 +4334,11 @@ public final class CollisionMapBuilder
         private long totalEdgesMadePassable;
         private long doorEdgesWritten;
         private long totalRegionsBuilt;
+        private final long[] phase3RoofPlacementsByPlane = new long[PLANE_COUNT];
+        private long phase3RoofPlacements;
+        private long phase3RoofOpenStylePlacements;
         private boolean phase2SolidObjectBlockingEnabled;
+        private boolean phase3RoofBlockingEnabled;
     }
 
     private static final class RegionSource
