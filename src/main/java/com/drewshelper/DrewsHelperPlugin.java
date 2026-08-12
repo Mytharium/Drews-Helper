@@ -471,8 +471,10 @@ public class DrewsHelperPlugin extends Plugin
 
                 String blockedEdges = ((mask & 1) != 0 ? "1" : "0")
                     + ((mask & 2) != 0 ? "1" : "0");
+                // The final token is the client's raw collision flag word; it is additive,
+                // and older captures simply lack it.
                 lines.add((baseX + sx) + "," + (baseY + sy) + "," + plane
-                    + " " + blockedEdges);
+                    + " " + blockedEdges + " " + Integer.toString(flags[sx][sy]));
             }
         }
 

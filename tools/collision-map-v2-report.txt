@@ -66,6 +66,10 @@ dangerous-direction pass:
     if dangerousRateOrient3 is at or below dangerousRateAll, orientation 3 is EXONERATED: it is no worse than the map average and the rule stays.
   live scene blocks: 13
   live rows parsed: 55064
+  live rows with raw flags: 0
+  live rows without raw flags: 55064
+  raw flag coverage: 0.000000 (0.000%) (0/55064)
+  OLD FORMAT CAPTURE - no raw flags present
   live covered tile observations: 137917
   live unique covered tiles: 74331
   live duplicate rows: 0

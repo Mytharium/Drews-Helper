@@ -110,7 +110,7 @@ public final class CollisionMapBuilder
         "^DREW_LIVE_FLAGS\\s+scene\\s+(-?\\d+):(-?\\d+):(-?\\d+)\\s+size=(\\d+)\\s+covered=(\\d+)\\s*$"
     );
     private static final Pattern LIVE_DATA_ROW = Pattern.compile(
-        "^(-?\\d+),(-?\\d+),(-?\\d+)\\s+([01])([01])\\s*$"
+        "^(-?\\d+),(-?\\d+),(-?\\d+)\\s+([01])([01])(?:\\s+(-?\\d+))?\\s*$"
     );
 
     /*
@@ -1559,6 +1559,16 @@ public final class CollisionMapBuilder
         double dangerousRateOrient3 = rate(comparison.dangerousOrient3, comparison.orient3ComparedEdges);
         report.append("  live scene blocks: ").append(comparison.live.sceneBlocks).append('\n');
         report.append("  live rows parsed: ").append(comparison.live.rowsParsed).append('\n');
+        report.append("  live rows with raw flags: ")
+            .append(comparison.live.rowsWithRawFlags).append('\n');
+        report.append("  live rows without raw flags: ")
+            .append(comparison.live.rowsWithoutRawFlags).append('\n');
+        report.append("  raw flag coverage: ")
+            .append(formatRateWithCounts(comparison.live.rowsWithRawFlags, comparison.live.rowsParsed)).append('\n');
+        if (comparison.live.rowsWithRawFlags == 0)
+        {
+            report.append("  OLD FORMAT CAPTURE - no raw flags present").append('\n');
+        }
         report.append("  live covered tile observations: ")
             .append(comparison.live.coveredTileObservations).append('\n');
         report.append("  live unique covered tiles: ").append(comparison.live.tiles.size()).append('\n');
@@ -3368,6 +3378,13 @@ public final class CollisionMapBuilder
         int plane = parseLiveInt(row.group(3), "row plane", lineNumber);
         boolean north = "1".equals(row.group(4));
         boolean east = "1".equals(row.group(5));
+        String rawFlagsValue = row.group(6);
+        boolean hasRawFlags = rawFlagsValue != null;
+        int rawFlags = 0;
+        if (hasRawFlags)
+        {
+            rawFlags = parseLiveInt(rawFlagsValue, "row raw flags", lineNumber);
+        }
 
         if (plane != block.plane)
         {
@@ -3385,7 +3402,18 @@ public final class CollisionMapBuilder
         }
 
         capture.rowsParsed++;
-        StoredLiveEdges previous = block.rows.put(tileKey(x, y, plane), new StoredLiveEdges(north, east));
+        if (hasRawFlags)
+        {
+            capture.rowsWithRawFlags++;
+        }
+        else
+        {
+            capture.rowsWithoutRawFlags++;
+        }
+        StoredLiveEdges previous = block.rows.put(
+            tileKey(x, y, plane),
+            new StoredLiveEdges(north, east, hasRawFlags, rawFlags)
+        );
         if (previous != null)
         {
             capture.duplicateRows++;
@@ -3433,13 +3461,15 @@ public final class CollisionMapBuilder
                 StoredLiveEdges row = block.rows.get(key);
                 boolean north = row != null && row.north;
                 boolean east = row != null && row.east;
+                boolean hasRawFlags = row != null && row.hasRawFlags;
+                int rawFlags = hasRawFlags ? row.rawFlags : 0;
                 LiveTile tile = capture.tiles.get(key);
                 if (tile == null)
                 {
                     tile = new LiveTile(x, y, block.plane);
                     capture.tiles.put(key, tile);
                 }
-                tile.observe(north, east, capture);
+                tile.observe(north, east, hasRawFlags, rawFlags, capture);
             }
         }
     }
@@ -4047,6 +4077,8 @@ public final class CollisionMapBuilder
 
         private long sceneBlocks;
         private long rowsParsed;
+        private long rowsWithRawFlags;
+        private long rowsWithoutRawFlags;
         private long coveredTileObservations;
         private long duplicateRows;
         private long duplicateRowConflicts;
@@ -4641,11 +4673,15 @@ public final class CollisionMapBuilder
     {
         private final boolean north;
         private final boolean east;
+        private final boolean hasRawFlags;
+        private final int rawFlags;
 
-        private StoredLiveEdges(boolean north, boolean east)
+        private StoredLiveEdges(boolean north, boolean east, boolean hasRawFlags, int rawFlags)
         {
             this.north = north;
             this.east = east;
+            this.hasRawFlags = hasRawFlags;
+            this.rawFlags = rawFlags;
         }
     }
 
@@ -4657,8 +4693,10 @@ public final class CollisionMapBuilder
 
         private boolean northSeen;
         private boolean eastSeen;
+        private boolean rawFlagsSeen;
         private boolean northBlocked;
         private boolean eastBlocked;
+        private int rawFlags;
 
         private LiveTile(int x, int y, int plane)
         {
@@ -4667,7 +4705,7 @@ public final class CollisionMapBuilder
             this.plane = plane;
         }
 
-        private void observe(boolean north, boolean east, LiveCapture capture)
+        private void observe(boolean north, boolean east, boolean hasRawFlags, int rawFlags, LiveCapture capture)
         {
             if (northSeen && northBlocked != north)
             {
@@ -4683,6 +4721,11 @@ public final class CollisionMapBuilder
             eastSeen = true;
             northBlocked = north;
             eastBlocked = east;
+            if (hasRawFlags)
+            {
+                rawFlagsSeen = true;
+                this.rawFlags = rawFlags;
+            }
         }
 
         private long key()
