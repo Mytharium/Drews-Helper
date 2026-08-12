@@ -42,6 +42,7 @@ import net.runelite.cache.region.Location;
 import net.runelite.cache.region.Region;
 import net.runelite.cache.region.RegionLoader;
 import net.runelite.cache.util.KeyProvider;
+import net.runelite.api.CollisionDataFlag;
 
 /**
  * Builds the v2 per-region edge map from the OSRS cache.
@@ -75,6 +76,7 @@ public final class CollisionMapBuilder
     private static final String PROOF_FILE = "tools/route-a-live-mismatches.txt";
     private static final String REPORT_FILE = "tools/collision-map-v2-report.txt";
     private static final String LIVE_FLAGS_ARG = "--live-flags";
+    private static final String DISABLE_PHASE2_SOLID_OBJECTS_ARG = "--disable-phase2-solid-objects";
     private static final int STILL_BLOCKED_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_UNEXPLAINED_EXAMPLE_LIMIT = 20;
@@ -94,6 +96,17 @@ public final class CollisionMapBuilder
      * the candidate ignored-placement set on purpose.
      */
     private static final int GROUND_DECOR_LOC_TYPE = 22;
+    private static final long PHASE2_BASELINE_DANGEROUS = 33672L;
+    private static final long PHASE2_BASELINE_AGREE_OPEN = 161245L;
+    private static final long PHASE2_BASELINE_OVERBLOCK = 4239L;
+    private static final long PHASE2_BASELINE_ROUTE_AWARE_OVERBLOCK = 2616L;
+    private static final long PHASE2_ABORT_OVERBLOCK = 5900L;
+    private static final long PHASE2_ABORT_ROUTE_AWARE_OVERBLOCK = 4277L;
+    private static final long PHASE2_ABORT_AGREE_OPEN_DROP = 5000L;
+    private static final int LIVE_BLOCKED_TILE_MASK = CollisionDataFlag.BLOCK_MOVEMENT_FLOOR
+        | CollisionDataFlag.BLOCK_MOVEMENT_FLOOR_DECORATION
+        | CollisionDataFlag.BLOCK_MOVEMENT_OBJECT
+        | CollisionDataFlag.BLOCK_MOVEMENT_FULL;
 
     private static final BorderDistanceBucket[] BORDER_DISTANCE_BUCKETS = {
         new BorderDistanceBucket("0", 0, 0),
@@ -210,17 +223,23 @@ public final class CollisionMapBuilder
     {
         Path outputZip = project.resolve(DEFAULT_ZIP);
         int selectorStart = 0;
-        if (args.length > 0 && !isLiveFlagsArg(args[0]))
+        if (args.length > 0 && !isBuildOptionArg(args[0]))
         {
             outputZip = resolve(project, args[0]);
             selectorStart = 1;
         }
 
         Path liveFlagsFile = defaultLiveFlagsFile();
+        boolean phase2SolidObjectBlocking = true;
         List<String> selectorArgs = new ArrayList<>();
         for (int i = selectorStart; i < args.length; i++)
         {
             String arg = args[i];
+            if (DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg))
+            {
+                phase2SolidObjectBlocking = false;
+                continue;
+            }
             if (LIVE_FLAGS_ARG.equals(arg))
             {
                 if (i + 1 >= args.length)
@@ -246,13 +265,13 @@ public final class CollisionMapBuilder
         if (selectorArgs.isEmpty())
         {
             TreeSet<Integer> regions = defaultProofRegions(proofEdges);
-            return new BuildRequest(outputZip, liveFlagsFile, false, regions, true);
+            return new BuildRequest(outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking);
         }
 
         String selector = joinRegionSelector(selectorArgs);
         if ("all".equalsIgnoreCase(selector.trim()))
         {
-            return new BuildRequest(outputZip, liveFlagsFile, true, Collections.emptySet(), false);
+            return new BuildRequest(outputZip, liveFlagsFile, true, Collections.emptySet(), false, phase2SolidObjectBlocking);
         }
 
         TreeSet<Integer> regions = parseRegionIds(selector);
@@ -260,12 +279,17 @@ public final class CollisionMapBuilder
         {
             throw new IOException("No region ids parsed from selector: " + selector);
         }
-        return new BuildRequest(outputZip, liveFlagsFile, false, regions, false);
+        return new BuildRequest(outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking);
     }
 
     private static boolean isLiveFlagsArg(String arg)
     {
         return LIVE_FLAGS_ARG.equals(arg) || arg.startsWith(LIVE_FLAGS_ARG + "=");
+    }
+
+    private static boolean isBuildOptionArg(String arg)
+    {
+        return isLiveFlagsArg(arg) || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg);
     }
 
     private static Path defaultLiveFlagsFile()
@@ -372,7 +396,7 @@ public final class CollisionMapBuilder
             {
                 for (int regionY = MIN_REGION_Y; regionY <= MAX_REGION_Y; regionY++)
                 {
-                    loadAndBuild(loader, objects, regionId(regionX, regionY), true, stats, regions);
+                    loadAndBuild(loader, objects, request, regionId(regionX, regionY), true, stats, regions);
                 }
             }
         }
@@ -380,7 +404,7 @@ public final class CollisionMapBuilder
         {
             for (int regionId : request.regionIds)
             {
-                loadAndBuild(loader, objects, regionId, false, stats, regions);
+                loadAndBuild(loader, objects, request, regionId, false, stats, regions);
             }
         }
 
@@ -402,6 +426,7 @@ public final class CollisionMapBuilder
     private static void loadAndBuild(
         RegionLoader loader,
         Map<Integer, ObjectDefinition> objects,
+        BuildRequest request,
         int regionId,
         boolean skipMissing,
         BuildStats stats,
@@ -418,7 +443,7 @@ public final class CollisionMapBuilder
             throw new IOException("Cache has no map or loc archive for region " + formatRegionId(regionId));
         }
 
-        BuiltRegion region = buildRegion(source, objects, stats);
+        BuiltRegion region = buildRegion(source, objects, stats, request.phase2SolidObjectBlocking);
         regions.put(region.name, region);
     }
 
@@ -451,7 +476,8 @@ public final class CollisionMapBuilder
     private static BuiltRegion buildRegion(
         RegionSource source,
         Map<Integer, ObjectDefinition> objects,
-        BuildStats stats
+        BuildStats stats,
+        boolean phase2SolidObjectBlocking
     )
     {
         int regionX = source.regionId >> 8;
@@ -480,7 +506,15 @@ public final class CollisionMapBuilder
 
             for (Location location : locations)
             {
-                applyLocation(minX, minY, location, objects.get(location.getId()), bits, stats);
+                applyLocation(
+                    minX,
+                    minY,
+                    location,
+                    objects.get(location.getId()),
+                    bits,
+                    stats,
+                    phase2SolidObjectBlocking
+                );
             }
         }
 
@@ -529,7 +563,8 @@ public final class CollisionMapBuilder
         Location location,
         ObjectDefinition def,
         RegionBits bits,
-        BuildStats stats
+        BuildStats stats,
+        boolean phase2SolidObjectBlocking
     )
     {
         stats.placementsByLocType.merge(location.getType(), 1L, Long::sum);
@@ -565,6 +600,17 @@ public final class CollisionMapBuilder
         Direction[] shape = shapeFor(location.getType(), location.getOrientation(), stats);
         if (shape.length == 0)
         {
+            applyIgnoredSolidObjectBlocking(
+                location.getType(),
+                def,
+                openable,
+                x,
+                y,
+                plane,
+                bits,
+                stats,
+                phase2SolidObjectBlocking
+            );
             return;
         }
 
@@ -572,6 +618,75 @@ public final class CollisionMapBuilder
         {
             bits.markEdge(x, y, plane, direction, openable, stats);
         }
+    }
+
+    private static void applyIgnoredSolidObjectBlocking(
+        int locType,
+        ObjectDefinition def,
+        boolean openable,
+        int x,
+        int y,
+        int plane,
+        RegionBits bits,
+        BuildStats stats,
+        boolean phase2SolidObjectBlocking
+    )
+    {
+        if (!phase2SolidObjectBlocking)
+        {
+            return;
+        }
+        if (!shouldBlockIgnoredSolidObject(locType, def, stats))
+        {
+            return;
+        }
+
+        stats.phase2SolidObjectPlacements++;
+        if (openable)
+        {
+            /*
+             * Open/Close is not a door definition here; containers use it too. Count it so the
+             * report keeps visibility into any open-style objects admitted by this phase.
+             */
+            stats.phase2SolidObjectOpenStylePlacements++;
+        }
+        bits.markSolidAllEdges(x, y, plane, stats);
+    }
+
+    private static boolean shouldBlockIgnoredSolidObject(
+        int locType,
+        ObjectDefinition def,
+        BuildStats stats
+    )
+    {
+        if (shapeForHandlesLocType(locType) || locType == GROUND_DECOR_LOC_TYPE)
+        {
+            return false;
+        }
+        /*
+         * Phase 2 is deliberately limited to standard scenery/object placements. Other ignored
+         * locTypes include roofs and structural encodings that are not safe to treat as full-tile
+         * blockers without their own proof pass.
+         */
+        if (locType != 10 && locType != 11)
+        {
+            return false;
+        }
+        if (def == null)
+        {
+            stats.phase2SolidObjectMissingDefinitionSkipped++;
+            return false;
+        }
+        if (def.getInteractType() == 0)
+        {
+            return false;
+        }
+        if (def.getSizeX() != 1 || def.getSizeY() != 1)
+        {
+            stats.phase2SolidObjectFootprintHeldBackPlacements++;
+            return false;
+        }
+        return true;
     }
 
     private static void recordIgnoredNonDecorDefinitionPlacement(
@@ -1140,6 +1255,10 @@ public final class CollisionMapBuilder
         else
         {
             comparison.overblock++;
+            if (liveRawBlockedTile(tile))
+            {
+                comparison.overblockSourceTileBlockedRaw++;
+            }
         }
 
         recordBorderHistogramEdge(comparison, borderDistances, dangerous, dangerousUnexplained);
@@ -1153,6 +1272,11 @@ public final class CollisionMapBuilder
             dangerousUnexplained,
             overblock
         );
+    }
+
+    private static boolean liveRawBlockedTile(LiveTile tile)
+    {
+        return tile.rawFlagsSeen && (tile.rawFlags & LIVE_BLOCKED_TILE_MASK) != 0;
     }
 
     private static void recordInteriorMeasurementEdge(
@@ -1504,6 +1628,9 @@ public final class CollisionMapBuilder
             appendRegionList(report, request.regionIds);
         }
         report.append('\n');
+        report.append("phase2 solid-object blocking: ")
+            .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
+            .append('\n');
         report.append(roundTrip).append('\n');
         report.append('\n');
         appendProofComparison(report, comparison);
@@ -1599,10 +1726,21 @@ public final class CollisionMapBuilder
         report.append("  AGREE_BLOCKED: ").append(comparison.agreeBlocked).append('\n');
         report.append("  AGREE_OPEN: ").append(comparison.agreeOpen).append('\n');
         report.append("  OVERBLOCK: ").append(comparison.overblock).append('\n');
+        report.append("  OVERBLOCK with source tile carrying live BLOCKED_TILE raw flag: ")
+            .append(comparison.overblockSourceTileBlockedRaw);
+        if (comparison.overblock != 0)
+        {
+            report.append(" (")
+                .append(formatPercentOnly((double) comparison.overblockSourceTileBlockedRaw
+                    / (double) comparison.overblock))
+                .append(" of OVERBLOCK)");
+        }
+        report.append('\n');
         appendDangerousSplit(report, comparison);
         appendBorderHistograms(report, comparison);
         appendInteriorMeasurement(report, comparison);
         appendSceneryAdjacencyMeasurement(report, stats, comparison);
+        appendPhase2Gate(report, comparison);
         report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
         report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
         report.append("  orient-3 compared-edge count: ")
@@ -1625,6 +1763,54 @@ public final class CollisionMapBuilder
                 report.append("    ").append(example).append('\n');
             }
         }
+    }
+
+    private static void appendPhase2Gate(StringBuilder report, DangerousDirectionComparison comparison)
+    {
+        long dangerousDrop = PHASE2_BASELINE_DANGEROUS - comparison.dangerous;
+        long agreeOpenDrop = PHASE2_BASELINE_AGREE_OPEN - comparison.agreeOpen;
+        long overblockRise = comparison.overblock - PHASE2_BASELINE_OVERBLOCK;
+        long routeAwareOverblock = comparison.overblock - comparison.overblockSourceTileBlockedRaw;
+        long routeAwareOverblockRise = routeAwareOverblock - PHASE2_BASELINE_ROUTE_AWARE_OVERBLOCK;
+        boolean overblockOk = comparison.overblock <= PHASE2_ABORT_OVERBLOCK;
+        boolean routeAwareOverblockOk = routeAwareOverblock <= PHASE2_ABORT_ROUTE_AWARE_OVERBLOCK;
+        boolean agreeOpenOk = agreeOpenDrop <= PHASE2_ABORT_AGREE_OPEN_DROP;
+        boolean netOk = dangerousDrop > Math.max(0L, overblockRise);
+        boolean routeAwareNetOk = dangerousDrop > Math.max(0L, routeAwareOverblockRise);
+
+        report.append("  Phase 2 route-aware solid-object gate: ")
+            .append(routeAwareOverblockOk && agreeOpenOk && routeAwareNetOk ? "PASS" : "ABORT")
+            .append('\n');
+        report.append("    baseline DANGEROUS: ").append(PHASE2_BASELINE_DANGEROUS)
+            .append(", current: ").append(comparison.dangerous)
+            .append(", drop: ").append(dangerousDrop).append('\n');
+        report.append("    strict one-way OVERBLOCK gate: baseline ").append(PHASE2_BASELINE_OVERBLOCK)
+            .append(", current: ").append(comparison.overblock)
+            .append(", rise: ").append(overblockRise)
+            .append(", abort above: ").append(PHASE2_ABORT_OVERBLOCK)
+            .append(" -> ").append(okFail(overblockOk)).append('\n');
+        report.append("    route-aware OVERBLOCK gate: baseline ")
+            .append(PHASE2_BASELINE_ROUTE_AWARE_OVERBLOCK)
+            .append(", current: ").append(routeAwareOverblock)
+            .append(" (").append(comparison.overblock)
+            .append(" - ").append(comparison.overblockSourceTileBlockedRaw)
+            .append(" source-tile live BLOCKED_TILE cases)")
+            .append(", rise: ").append(routeAwareOverblockRise)
+            .append(", abort above: ").append(PHASE2_ABORT_ROUTE_AWARE_OVERBLOCK)
+            .append(" -> ").append(okFail(routeAwareOverblockOk)).append('\n');
+        report.append("    baseline AGREE_OPEN: ").append(PHASE2_BASELINE_AGREE_OPEN)
+            .append(", current: ").append(comparison.agreeOpen)
+            .append(", drop: ").append(agreeOpenDrop)
+            .append(", abort drop above: ").append(PHASE2_ABORT_AGREE_OPEN_DROP)
+            .append(" -> ").append(okFail(agreeOpenOk)).append('\n');
+        report.append("    strict one-way net criterion: DANGEROUS drop must be > max(0, OVERBLOCK rise) -> ")
+            .append(okFail(netOk))
+            .append(" (").append(dangerousDrop)
+            .append(" > ").append(Math.max(0L, overblockRise)).append(")").append('\n');
+        report.append("    route-aware net criterion: DANGEROUS drop must be > max(0, route-aware OVERBLOCK rise) -> ")
+            .append(okFail(routeAwareNetOk))
+            .append(" (").append(dangerousDrop)
+            .append(" > ").append(Math.max(0L, routeAwareOverblockRise)).append(")").append('\n');
     }
 
     private static void appendBorderHistogramInterpretationRule(StringBuilder report)
@@ -3216,6 +3402,14 @@ public final class CollisionMapBuilder
         report.append("  locType1 invalid-orientation fallbacks: ")
             .append(stats.locType1InvalidOrientationFallbacks).append('\n');
         report.append("  ignored-locType count: ").append(stats.ignoredLocTypePlacements).append('\n');
+        report.append("  Phase 2 solid-object placements blocked: ")
+            .append(stats.phase2SolidObjectPlacements).append('\n');
+        report.append("  Phase 2 solid-object open-style placements blocked: ")
+            .append(stats.phase2SolidObjectOpenStylePlacements).append('\n');
+        report.append("  Phase 2 solid-object missing-definition placements skipped: ")
+            .append(stats.phase2SolidObjectMissingDefinitionSkipped).append('\n');
+        report.append("  Phase 2 solid-object footprint-held-back placements: ")
+            .append(stats.phase2SolidObjectFootprintHeldBackPlacements).append('\n');
         report.append("  door-capable placement tiles: ")
             .append(stats.doorCapableLocTypeByTile.size()).append('\n');
         report.append("  door-capable placement tile collisions: ")
@@ -3702,13 +3896,15 @@ public final class CollisionMapBuilder
         private final boolean allRegions;
         private final Set<Integer> regionIds;
         private final boolean defaultedRegions;
+        private final boolean phase2SolidObjectBlocking;
 
         private BuildRequest(
             Path outputZip,
             Path liveFlagsFile,
             boolean allRegions,
             Set<Integer> regionIds,
-            boolean defaultedRegions
+            boolean defaultedRegions,
+            boolean phase2SolidObjectBlocking
         )
         {
             this.outputZip = outputZip;
@@ -3716,6 +3912,7 @@ public final class CollisionMapBuilder
             this.allRegions = allRegions;
             this.regionIds = regionIds;
             this.defaultedRegions = defaultedRegions;
+            this.phase2SolidObjectBlocking = phase2SolidObjectBlocking;
         }
     }
 
@@ -3760,6 +3957,10 @@ public final class CollisionMapBuilder
         private long ignoredNonDecorObstructsGroundPlacements;
         private long ignoredNonDecorWallOrDoorPlacements;
         private long ignoredNonDecorBlockingMaskPlacements;
+        private long phase2SolidObjectPlacements;
+        private long phase2SolidObjectOpenStylePlacements;
+        private long phase2SolidObjectMissingDefinitionSkipped;
+        private long phase2SolidObjectFootprintHeldBackPlacements;
         private long doorCapableTileCollisions;
         private long terrainBlockedTiles;
         private long bridgeBranchTiles;
@@ -4821,6 +5022,7 @@ public final class CollisionMapBuilder
         private long agreeBlocked;
         private long agreeOpen;
         private long overblock;
+        private long overblockSourceTileBlockedRaw;
         private long orient3TileCount;
         private long orient3ComparedEdges;
         private long dangerousOrient3;

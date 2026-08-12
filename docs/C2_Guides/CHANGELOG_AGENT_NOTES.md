@@ -1749,3 +1749,37 @@ D-0165 (2026-08-12) - Union bucket CONFIRMED (bookkeeping) and Phase 1 solid-fla
   the builder BLOCKS rather than what it counts. It can only ADD blocking, so a wrong version
   closes routes that currently work. Needs its own go/no-go, OVERBLOCK as the tripwire, and a
   route re-test. Do not bundle the footprint fix into it - one change at a time.
+
+D-0166 (2026-08-12) - Phase 2 object blocking built: narrow 1x1 scenery objects only, route-aware
+  gate PASS.
+
+  CollisionMapBuilder now writes blocking for ignored locType 10/11 placements whose
+  ObjectDefinition says `getInteractType() != 0` and whose footprint is exactly 1x1. It does NOT
+  block handled wall locTypes, ground decoration locType 22, roofs/other ignored structural
+  locTypes, or larger footprints. Larger footprints are explicitly held back for a later phase.
+
+  The first broad version - all ignored non-decor solid objects - failed its own tripwire:
+      DANGEROUS 33,672 -> 23,837, but OVERBLOCK 4,239 -> 9,609.
+  The narrowed locType 10/11 version passes the route-aware gate:
+      DANGEROUS 33,672 -> 29,154 (drop 4,518)
+      DANGEROUS_UNEXPLAINED 24,674 -> 20,455 (drop 4,219)
+      strict one-way OVERBLOCK 4,239 -> 6,837 (old strict gate FAIL)
+      route-aware OVERBLOCK 2,616 -> 3,944 (rise 1,328; abort above 4,277) PASS
+      AGREE_OPEN 161,245 -> 158,647 (drop 2,598; abort above 5,000) PASS
+      route-aware net 4,518 > 1,328 PASS
+
+  The strict one-way gate fails because the route map stores N/E as undirected edges:
+  `canMoveSouth(x,y)` reads `canMoveNorth(x,y-1)` and `canMoveWest(x,y)` reads
+  `canMoveEast(x-1,y)`. Live raw flags show 2,893 current OVERBLOCK edges have a source tile that
+  the client itself marked as BLOCKED_TILE. Those are route-aware tile-block cases, not necessarily
+  route regressions.
+
+  Added `--disable-phase2-solid-objects` so the same builder can produce the before report without
+  code surgery. Saved `tools/collision-phase2-disabled-baseline-20260811.txt`; current enabled
+  report is `tools/collision-map-v2-report.txt`.
+
+  Verification: `buildCollisionMapV2 --disable-phase2-solid-objects --live-flags ...FULL_20260811`
+  saved the disabled baseline; `buildCollisionMapV2 --live-flags ...FULL_20260811` produced the
+  enabled PASS report; `clean test build` passed. Next required check is live route behaviour after
+  this map is installed: one clutter route that should improve, and one known-good route that should
+  not break.

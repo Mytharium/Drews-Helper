@@ -1,51 +1,57 @@
 # Next Work
 
-Last updated: 2026-08-11.
+Last updated: 2026-08-12.
 
-## NEXT SESSION - START HERE (written 2026-08-11 06:40, collision/routing track)
+## NEXT SESSION - START HERE (written 2026-08-12, collision/routing track)
 
-Do these in order. Everything below is measured; nothing is a guess.
+Phase 2 object blocking is built. The current committed-intent rule is deliberately narrow:
 
-1. COMMIT the working tree first. Three files dirty at session close:
-   CollisionMapBuilder.java, tools/collision-map-v2-report.txt, CHANGELOG_AGENT_NOTES.md.
-   HEAD was 33eb4f8.
+1. Only ignored scenery/object placements: locType 10/11.
+2. Only cache-solid objects: `ObjectDefinition.getInteractType() != 0`.
+3. Only 1x1 footprints. The 2,853 larger-footprint placements are held back.
+4. Ground decoration locType 22, handled wall locTypes, roofs, and other ignored structural
+   locTypes are NOT blocked by this phase.
 
-2. SHIP THE BORDER-RING EXCLUSION. Exclude maxBorderDistance rings 0-2 from the
-   dangerous-direction comparison. This is earned: ring 0 is 89.4% dangerous against a 15.4%
-   interior, a 4.01x separation. It removes ~7,200 false dangerous edges.
-   THIS IS A MEASUREMENT FIX, NOT A MAP FIX - it changes what the comparison counts, not what
-   the builder blocks. Do not touch shapeFor or any blocking rule.
-   Re-run buildCollisionMapV2 afterwards. The remaining number is the FIRST dangerous count
-   worth quoting to anyone.
+Use the backed-up full capture for repeatable measurement:
 
-3. THEN CHASE THE DEEP-INTERIOR RISE. After step 2 there will still be ~12,500 unexplained
-   edges at border distance >= 5, and the rate RISES again in the deep interior (15.44% at 20+
-   vs 11.30% at 10-19). That non-monotonic shape is the open question.
-   First hypothesis to test: building interiors / upper floors. Falador castle sits deep inside
-   its scene and region 46_52 is the only one captured at 100% on all three planes, so the
-   plane-1 and plane-2 rows are the natural split. As always: pre-state the rule, two-part
-   (effect size AND share), constants hard-coded before the run.
+```powershell
+.\gradlew.bat --no-daemon --console=plain buildCollisionMapV2 --args='--live-flags C:\Users\drews\.runelite\drews-live-flags.FULL_20260811.txt'
+```
 
-4. OWED FROM 2026-08-11, small: unit tests for waypointPositionIndex (index 0..4 for
-   waypoint1Position..waypoint5Position, -1 for colour keys / null / empty / waypoint9Position).
-   They were written by the worker into a file outside the staging set and never shipped.
+Final Phase 2 numbers on that capture:
 
-5. OWED, small and real: the ignored-locType door gap. 30 dangerous edges sit on locType 10
-   placements that have an open-style action but that shapeFor() skips entirely, so no edge is
-   written at all. Genuine defect, 30 edges, its own ticket.
+- DANGEROUS: 33,672 -> 29,154 (drop 4,518).
+- DANGEROUS_UNEXPLAINED: 24,674 -> 20,455 (drop 4,219).
+- Strict one-way OVERBLOCK: 4,239 -> 6,837, which FAILS the old one-way gate.
+- Route-aware OVERBLOCK: 2,616 -> 3,944 (rise 1,328), below the abort line 4,277.
+- AGREE_OPEN: 161,245 -> 158,647 (drop 2,598), below the abort line 5,000.
+- Route-aware net: 4,518 dangerous drop > 1,328 route-aware overblock rise, PASS.
+- Phase 2 placements blocked: 5,409. Larger footprints held back: 2,853.
 
-DO NOT REOPEN without new evidence - all measured and closed this session:
-  - terrain completeness (<=20.6% explainable, 79.4% of gap tiles have a blank byte)
-  - locType 9 N/E unblocking (neighbour-clean split refuted it on 389 tiles)
-  - the door-classification gap as an EXPLANATION for the 28k (it is 0.2%)
-  - orientation 3 as a danger (EXONERATED at half the surrounding rate - do not revert it)
-  - SHAPE route ranking (closed on A/B: worsened 249 pairs, improved 14)
+Important caveat: the route map stores N/E edges as undirected. `canMoveSouth(x,y)` reads
+`canMoveNorth(x,y-1)`, and `canMoveWest(x,y)` reads `canMoveEast(x-1,y)`. The live validator's
+strict N/E comparison is one-way, so a blocked source tile can look like an overblock even when
+the route map correctly blocks entering that tile from the opposite side. This is why Phase 2 uses
+the route-aware overblock gate.
 
-STILL PARKED, deliberately: terrain bit 4 (real 44x signal, ~10% of the gap, needs its own
-proof run) and locType 9 orientation-3 N/E (312 clean tiles at ~38% vs 26.6% baseline - only
-+12pp, weak, small prize).
+Saved baseline/report files:
 
-IN-GAME WORK NEEDED FROM MYTHARIUM: none currently. The last capture covers what is needed.
+- `tools/collision-baseline-20260811.txt` - full-capture pre-Phase-2 baseline.
+- `tools/collision-phase2-disabled-baseline-20260811.txt` - same code with Phase 2 disabled.
+- `tools/collision-map-v2-report.txt` - current Phase 2 enabled report.
+
+Next work:
+
+1. Test real routes after the plugin picks up the rebuilt collision map. Any route that worked
+   before and now fails is a rollback-level signal.
+2. Do NOT expand to larger footprints in the same change. The 2,853 held-back objects need their
+   own pre-stated Phase 3 gate.
+3. Do NOT block "other ignored" locTypes as full objects. The broad rule overblocked badly; roofs
+   and structural locTypes need separate classification.
+4. Small owed test still open: unit tests for `waypointPositionIndex`.
+
+IN-GAME WORK NEEDED FROM MYTHARIUM: after this commit is pushed and installed, run one normal route
+through clutter that used to cut through scenery, and one known-good route that should not change.
 
 ## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
 

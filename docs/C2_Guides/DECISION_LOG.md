@@ -1660,3 +1660,38 @@ cause looks like next to those.
   SECOND DEFECT, NOW COUNTED, NOT YET FIXED: 2,873 ignored non-decor placements have a footprint
   LARGER THAN 1x1, and the builder treats every placement as a single tile. That is independent
   of the solidity gap and will still be wrong after solidity is fixed. Its own ticket.
+
+D-0131 (2026-08-12) - Phase 2 object blocking uses a route-aware overblock gate, not the strict
+one-way live N/E validator gate.
+
+  Decision: for object-tile blocking, judge Phase 2 against route-aware overblock:
+
+      routeAwareOverblock = OVERBLOCK - overblockSourceTileBlockedRaw
+
+  Reason: the route map stores only N/E passable bits and derives S/W from the neighbouring tile:
+  `canMoveSouth(x,y)` uses `canMoveNorth(x,y-1)` and `canMoveWest(x,y)` uses
+  `canMoveEast(x-1,y)`. A solid object blocks entry into its tile from all sides, so a stored N/E
+  edge on the object's own tile can be required for a south/west move from the neighbouring tile
+  even if the live one-way N/E check from the object tile itself says open.
+
+  Baseline on `drews-live-flags.FULL_20260811.txt` with Phase 2 disabled:
+
+      strict OVERBLOCK 4,239
+      source-tile live BLOCKED_TILE overblock 1,623
+      route-aware OVERBLOCK 2,616
+
+  Enabled Phase 2 result:
+
+      strict OVERBLOCK 6,837
+      source-tile live BLOCKED_TILE overblock 2,893
+      route-aware OVERBLOCK 3,944
+      route-aware rise 1,328, abort above 4,277
+
+  Therefore the strict one-way gate remains visible in the report but is not the final Phase 2
+  acceptance gate. The final gate is route-aware plus the existing AGREE_OPEN and net checks:
+  DANGEROUS drop must exceed route-aware OVERBLOCK rise, and AGREE_OPEN drop must stay below 5,000.
+
+  Do not use this decision to justify blocking roofs, other ignored locTypes, or larger footprints.
+  Phase 2 is intentionally limited to ignored locType 10/11, `getInteractType() != 0`, 1x1
+  placements. The 2,853 held-back larger footprints and other ignored locTypes need their own
+  pre-stated gates.
