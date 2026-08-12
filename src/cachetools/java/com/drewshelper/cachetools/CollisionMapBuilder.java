@@ -79,6 +79,15 @@ public final class CollisionMapBuilder
     private static final String LIVE_FLAGS_ARG = "--live-flags";
     private static final String DISABLE_PHASE2_SOLID_OBJECTS_ARG = "--disable-phase2-solid-objects";
     private static final String DISABLE_PHASE3_ROOF_BLOCKING_ARG = "--disable-phase3-roof-blocking";
+    private static final String ROOF_LOC_TYPES_ARG = "--roof-loctypes";
+    /*
+     * 12, 13, 14, 16, 17, 18, 19, 21 - the roof locTypes the per-locType proof pass cleared on
+     * 2026-08-12. Overridable from the command line so a single locType can be added or removed
+     * and re-measured without a recompile, which is how the set should be revised: by evidence.
+     */
+    private static final int DEFAULT_ROOF_LOC_TYPE_MASK =
+        (1 << 12) | (1 << 13) | (1 << 14) | (1 << 16)
+        | (1 << 17) | (1 << 18) | (1 << 19) | (1 << 21);
     private static final int STILL_BLOCKED_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_EXAMPLE_LIMIT = 30;
     private static final int DANGEROUS_UNEXPLAINED_EXAMPLE_LIMIT = 20;
@@ -260,6 +269,7 @@ public final class CollisionMapBuilder
         Path liveFlagsFile = defaultLiveFlagsFile();
         boolean phase2SolidObjectBlocking = true;
         boolean phase3RoofBlocking = true;
+        int roofLocTypeMask = DEFAULT_ROOF_LOC_TYPE_MASK;
         List<String> selectorArgs = new ArrayList<>();
         for (int i = selectorStart; i < args.length; i++)
         {
@@ -272,6 +282,12 @@ public final class CollisionMapBuilder
             if (DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg))
             {
                 phase3RoofBlocking = false;
+                continue;
+            }
+            if (arg.startsWith(ROOF_LOC_TYPES_ARG + "="))
+            {
+                roofLocTypeMask = parseRoofLocTypeMask(
+                    arg.substring((ROOF_LOC_TYPES_ARG + "=").length()));
                 continue;
             }
             if (LIVE_FLAGS_ARG.equals(arg))
@@ -300,7 +316,8 @@ public final class CollisionMapBuilder
         {
             TreeSet<Integer> regions = defaultProofRegions(proofEdges);
             return new BuildRequest(
-                outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking, phase3RoofBlocking);
+                outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking,
+                phase3RoofBlocking, roofLocTypeMask);
         }
 
         String selector = joinRegionSelector(selectorArgs);
@@ -308,7 +325,7 @@ public final class CollisionMapBuilder
         {
             return new BuildRequest(
                 outputZip, liveFlagsFile, true, Collections.emptySet(), false, phase2SolidObjectBlocking,
-                phase3RoofBlocking);
+                phase3RoofBlocking, roofLocTypeMask);
         }
 
         TreeSet<Integer> regions = parseRegionIds(selector);
@@ -317,7 +334,8 @@ public final class CollisionMapBuilder
             throw new IOException("No region ids parsed from selector: " + selector);
         }
         return new BuildRequest(
-            outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking, phase3RoofBlocking);
+            outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking, phase3RoofBlocking,
+            roofLocTypeMask);
     }
 
     private static boolean isLiveFlagsArg(String arg)
@@ -329,7 +347,8 @@ public final class CollisionMapBuilder
     {
         return isLiveFlagsArg(arg)
             || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
-            || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg);
+            || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg)
+            || arg.startsWith(ROOF_LOC_TYPES_ARG + "=");
     }
 
     private static Path defaultLiveFlagsFile()
@@ -430,6 +449,7 @@ public final class CollisionMapBuilder
         BuildStats stats = new BuildStats();
         stats.phase2SolidObjectBlockingEnabled = request.phase2SolidObjectBlocking;
         stats.phase3RoofBlockingEnabled = request.phase3RoofBlocking;
+        stats.roofLocTypeMask = request.roofLocTypeMask;
         TreeMap<String, BuiltRegion> regions = new TreeMap<>();
 
         if (request.allRegions)
@@ -681,7 +701,7 @@ public final class CollisionMapBuilder
         boolean phase2SolidObjectBlocking
     )
     {
-        if (stats.phase3RoofBlockingEnabled && isProvenBlockableRoofLocType(locType))
+        if (stats.phase3RoofBlockingEnabled && isProvenBlockableRoofLocType(stats, locType))
         {
             /*
              * Phase 3. Blocked on locType alone, with no interactType and no footprint condition,
@@ -723,7 +743,7 @@ public final class CollisionMapBuilder
         bits.markSolidAllEdges(x, y, plane, stats);
     }
 
-    private static boolean isProvenBlockableRoofLocType(int locType)
+    private static boolean isProvenBlockableRoofLocType(BuildStats stats, int locType)
     {
         /*
          * Measured 2026-08-12 over the 62-region capture with phase 2 off, against NOT_ADJACENT
@@ -741,21 +761,47 @@ public final class CollisionMapBuilder
          * danger bar at 5.3x but it is a wall decoration and is much more likely to be standing
          * next to the wall that actually blocks; it needs its own pass. locTypes 5-8 are
          * inconclusive or vacuous.
+         *
+         * The set is a mask on BuildStats rather than a switch so that --roof-loctypes can add or
+         * remove one locType and re-measure without a recompile.
          */
-        switch (locType)
+        if (locType < 0 || locType >= LOC_TYPE_MASK_BITS)
         {
-            case 12:
-            case 13:
-            case 14:
-            case 16:
-            case 17:
-            case 18:
-            case 19:
-            case 21:
-                return true;
-            default:
-                return false;
+            return false;
         }
+        return (stats.roofLocTypeMask & (1 << locType)) != 0;
+    }
+
+    private static int parseRoofLocTypeMask(String value) throws IOException
+    {
+        int mask = 0;
+        for (String token : value.split(","))
+        {
+            String trimmed = token.trim();
+            if (trimmed.isEmpty())
+            {
+                continue;
+            }
+            mask |= 1 << parseBoundedInt(trimmed, ROOF_LOC_TYPES_ARG, 0, LOC_TYPE_MASK_BITS - 1);
+        }
+        return mask;
+    }
+
+    private static String formatRoofLocTypes(int mask)
+    {
+        StringBuilder text = new StringBuilder();
+        for (int locType = 0; locType < LOC_TYPE_MASK_BITS; locType++)
+        {
+            if ((mask & (1 << locType)) != 0)
+            {
+                if (text.length() > 0)
+                {
+                    text.append(',');
+                }
+                text.append(locType);
+            }
+        }
+        return text.length() == 0 ? "none" : text.toString();
     }
 
     private static boolean shouldBlockIgnoredSolidObject(
@@ -1762,7 +1808,9 @@ public final class CollisionMapBuilder
         report.append("phase2 solid-object blocking: ")
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
             .append('\n');
-        report.append("phase3 roof blocking (locTypes 12,13,14,16,17,18,19,21): ")
+        report.append("phase3 roof blocking (locTypes ")
+            .append(formatRoofLocTypes(request.roofLocTypeMask))
+            .append("): ")
             .append(request.phase3RoofBlocking ? "enabled" : "disabled")
             .append('\n');
         report.append("archive format: ")
@@ -4243,6 +4291,7 @@ public final class CollisionMapBuilder
         private final boolean defaultedRegions;
         private final boolean phase2SolidObjectBlocking;
         private final boolean phase3RoofBlocking;
+        private final int roofLocTypeMask;
 
         private BuildRequest(
             Path outputZip,
@@ -4251,9 +4300,11 @@ public final class CollisionMapBuilder
             Set<Integer> regionIds,
             boolean defaultedRegions,
             boolean phase2SolidObjectBlocking,
-            boolean phase3RoofBlocking
+            boolean phase3RoofBlocking,
+            int roofLocTypeMask
         )
         {
+            this.roofLocTypeMask = roofLocTypeMask;
             this.outputZip = outputZip;
             this.liveFlagsFile = liveFlagsFile;
             this.allRegions = allRegions;
@@ -4276,7 +4327,8 @@ public final class CollisionMapBuilder
                 regionIds,
                 defaultedRegions,
                 false,
-                false
+                false,
+                roofLocTypeMask
             );
         }
     }
@@ -4339,6 +4391,7 @@ public final class CollisionMapBuilder
         private long phase3RoofOpenStylePlacements;
         private boolean phase2SolidObjectBlockingEnabled;
         private boolean phase3RoofBlockingEnabled;
+        private int roofLocTypeMask = DEFAULT_ROOF_LOC_TYPE_MASK;
     }
 
     private static final class RegionSource
