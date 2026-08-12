@@ -11,6 +11,7 @@ import com.drewshelper.routing.DrewsHelperRouteStatus;
 import com.drewshelper.routing.DrewsHelperTransportGraph;
 import com.drewshelper.routing.DrewsHelperTransportPolicy;
 import com.drewshelper.routing.DrewsHelperTraversableTiles;
+import com.drewshelper.routing.DrewsHelperTraversalRecorder;
 import com.drewshelper.routing.DrewsHelperTravelEstimate;
 import com.drewshelper.routing.DrewsHelperWalkingRouteEngine;
 import com.drewshelper.routing.ui.DrewsHelperRouteMapOverlay;
@@ -61,6 +62,7 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
@@ -221,6 +223,9 @@ public class DrewsHelperPlugin extends Plugin
     // consecutive single-unit decrements IS the unit, in ticks. Persisted once learned.
     private static final String STAMINA_UNIT_KEY = "staminaTicksPerDurationUnit";
     private int tickCounter;
+
+    /** Records object interactions and what they actually did. Null until the plugin starts. */
+    private DrewsHelperTraversalRecorder traversalRecorder;
     private int lastStaminaDuration;
     private int lastStaminaDurationTick;
     private int staminaTicksPerUnit;
@@ -255,6 +260,8 @@ public class DrewsHelperPlugin extends Plugin
             log.warn("Drew's Helper: could not reset map validation proof file", ex);
         }
         seedDumpedLiveFlagSceneKeys();
+        traversalRecorder = new DrewsHelperTraversalRecorder(
+            new File(RuneLite.RUNELITE_DIR, "drews-traversals.txt"));
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
             configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
@@ -300,6 +307,7 @@ public class DrewsHelperPlugin extends Plugin
         updateStaminaCalibration();
         markRouteDirtyOnCooldownMinuteChange();
         validateMapDataIfEnabled();
+        recordTraversalIfSettled();
 
         // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
         // which dirties the route and returns early below - so anything downstream of that
@@ -554,6 +562,72 @@ public class DrewsHelperPlugin extends Plugin
             return null;
         }
         return header.group(1);
+    }
+
+    /**
+     * Records what an object interaction actually did, so transport rows can be checked against
+     * observed behaviour instead of against themselves. Gated on the same data-quality toggle as
+     * the collision capture rather than adding a second switch to find.
+     */
+    @Subscribe
+    public void onMenuOptionClicked(MenuOptionClicked event)
+    {
+        if (traversalRecorder == null || !config().validateMapData())
+        {
+            return;
+        }
+        if (!isSceneObjectAction(event.getMenuAction()))
+        {
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null)
+        {
+            return;
+        }
+
+        WorldPoint objectTile = new WorldPoint(
+            client.getBaseX() + event.getParam0(),
+            client.getBaseY() + event.getParam1(),
+            client.getPlane());
+        traversalRecorder.recordClick(event.getMenuOption(), event.getMenuTarget(), event.getId(),
+            objectTile, localPlayer.getWorldLocation(), tickCounter);
+    }
+
+    /**
+     * Only scene-object interactions can correspond to a transport edge. Walking, item use and
+     * dialogue would add rows no edge could ever explain, which is noise rather than evidence.
+     */
+    private static boolean isSceneObjectAction(MenuAction action)
+    {
+        return action == MenuAction.GAME_OBJECT_FIRST_OPTION
+            || action == MenuAction.GAME_OBJECT_SECOND_OPTION
+            || action == MenuAction.GAME_OBJECT_THIRD_OPTION
+            || action == MenuAction.GAME_OBJECT_FOURTH_OPTION
+            || action == MenuAction.GAME_OBJECT_FIFTH_OPTION;
+    }
+
+    private void recordTraversalIfSettled()
+    {
+        if (traversalRecorder == null || !config().validateMapData())
+        {
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null)
+        {
+            traversalRecorder.reset();
+            return;
+        }
+
+        String line = traversalRecorder.onTick(
+            localPlayer.getWorldLocation(), tickCounter, getTransportGraph());
+        if (line != null)
+        {
+            log.info("{}", line);
+        }
     }
 
     private void writeValidationMismatches(DrewsHelperMapValidator.Report report)
