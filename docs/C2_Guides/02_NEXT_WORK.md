@@ -2,86 +2,119 @@
 
 Last updated: 2026-08-12.
 
-## NEXT SESSION - START HERE (written 2026-08-12 02:30, session 2 - list execution)
+## NEXT SESSION - START HERE (written 2026-08-12, session 3 - recorder-first plan adopted)
 
-Four commits landed this session, in order:
+Commits from the 2026-08-12 sessions, in order:
 
       d71a2f1  post-promotion verification of 5bddcf4  (docs only)   PUSHED
       fe7ef81  terrain floor rule verified              (no logic)    PUSHED
       4c2d0d4  rescope + sailing research               (docs only)   PUSHED
-      d20cf36  this handoff document                    (docs only)   PUSHED
+      d20cf36  session 2 handoff document               (docs only)   PUSHED
+      db50b28  handoff push-state and commit table      (docs only)   PUSHED
 
-Repo clean and level with origin/main - everything from this session is pushed. Mytharium
-pushes manually - ask, do not push.
+Mytharium pushes manually - ask, do not push. The table above will not list the commit that
+carries this document; run `git log --oneline origin/main..main` for the true pending set.
 
-### THE LIST - Mytharium's approved work plan, current status
+### WHAT CHANGED THIS SESSION
 
-Items 2, 3 and 6 changed shape DURING the session. Mytharium has NOT yet signed off on the new
-shapes - get his approval before starting any of those three.
+Mytharium drafted an OSRS navigation-recorder plan and asked whether to adopt it. It is
+ADOPTED, in the adapted form recorded as D-0136. That reorders the work: the project stops
+expanding the collision map and starts verifying one pilot region, and the first job is making
+UNKNOWN a real state in the capture so every measurement after it is honest.
+
+Two numbers drove the decision. Live-client ground truth covers 4.20% of shipped regions. And
+on the edges the client positively calls walls we are right 51.86% of the time - the friendlier
+84.03% figure is 70% carried by the client never having said anything, which is a limitation of
+the capture format rather than a property of the map.
+
+### THE LIST - revised 2026-08-12 after adopting the recorder-first plan
+
+The original six items are kept for continuity. Two are closed, three are re-ranked against the
+adopted plan, and one is absorbed. The active work is the A-F sequence, in order.
+
+CLOSED
 
       1. Fix the builder's floor rule            DONE - fe7ef81. Measured, found already
                                                  correct, no fix was needed.
-      2. Add the 1,425 missing regions           RESCOPED to ~74 Varlamore regions. NOT
-                                                 approved in the new shape.
-      3. Re-run the 1,524 existing regions       RESCOPED to 2 regions (52_50, 52_51). NOT
-                                                 approved in the new shape.
-      4. Snap-on-login fix                       OPEN. Small. loadWaypoints() at
-                                                 DrewsHelperPlugin.java:663-673 decodes config
-                                                 with no snap call, so a stored waypoint
-                                                 reloads unsnapped every login.
-      5. Turn count                              OPEN. Smallest real win: measured
-                                                 trueMean 2.04 / trueMax 12 excess turns, NOT
-                                                 the retired "63% / max 33" figure.
-      6. Sailing-aware routing + Requirements    NEW, added by Mytharium mid-session.
-                                                 Researched, not built. Now the cheapest item.
+      4. Snap-on-login fix                       CLOSED - no bug. setWaypoint persists the
+                                                 SNAPPED value: :683 rebinds `point` before
+                                                 the :692 config write, so loadWaypoints
+                                                 reading it raw is harmless. The config
+                                                 panel path self-heals via onConfigChanged.
+                                                 Three unrelated edge cases fell out - see
+                                                 Open items below.
+
+ACTIVE SEQUENCE - in order
+
+      A. UNKNOWN in the capture emitter          ~1 evening. Emit a row for EVERY loaded
+                                                 tile, not only blocked ones. DO THIS FIRST:
+                                                 until it lands, every accuracy number the
+                                                 project produces has to be re-derived by
+                                                 hand. D-0136 RULE 1.
+      B. Traversal verification listener         ~1 day. Compare predicted against actual on
+                                                 every manual traversal and record the
+                                                 contradictions. This is what breaks the
+                                                 4.20% ground-truth ceiling, because it
+                                                 collects during normal play instead of
+                                                 needing a scheduled walk. D-0136 RULE 3.
+      C. Confidence tiers, including INHERITED   ~half day. On the collision map and on the
+                                                 transport rows. D-0136 RULE 5.
+      D. Object and DOOR STATE recorder          ~1 day. Object state, not just object id.
+                                                 A shut door and an open door are different
+                                                 collision worlds and we currently cannot
+                                                 tell which one a capture measured.
+      E. Route-validation harness                ~half day. 1,000 OFFLINE structural
+                                                 validations plus about 25 hand-walked.
+                                                 ABSORBS old item 5 (turn count) as its
+                                                 optimality metric. D-0136 RULE 4.
+      F. Pilot region to zero known errors       The gate. Nothing expands anywhere else
+                                                 until the pilot area passes.
+
+CARRIED, RE-RANKED
+
+      6. Sailing-aware routing + Requirements    Sequenced AFTER C. It needs movement modes
+                                                 and confidence tiers to land cleanly, and
+                                                 D-0136 RULE 7 fixes the search shape it
+                                                 depends on. Research complete - parked 30.
+      3. 2 regions 52_50 / 52_51                 OFF the critical path - Al Kharid, outside
+                                                 the pilot area. Otherwise unchanged: ~30
+                                                 minutes, fixes 137 of 171 known leaks,
+                                                 available whenever wanted.
+      2. ~74 Varlamore regions                   DEPRIORITISED. Cache-derived expansion is
+                                                 exactly what the adopted plan defers, and
+                                                 it still needs a capture walk first.
 
 ### Recommended order to pick up, with the reasoning
 
-The recommendation CHANGED during the session. Sailing was not on the list when the session
-started; it was added mid-session, and once researched it turned out to be both the cheapest
-item and the only one that produces something a user can see. That reordered everything.
+**Start with A.** One evening, and it is the only item that changes what every other measurement
+means. Right now the capture cannot distinguish "we checked, it is open" from "we never went
+there", so the two most quotable accuracy figures the project has differ by 32 points depending
+on which reading is taken. Fixing the emitter retires that ambiguity permanently instead of
+re-deriving around it every time somebody asks.
 
-**First choice - Sailing (item 6).** It is now the cheapest item AND the only one that produces
-a user-visible feature; everything else is plumbing. All the data is published and
-cross-validated (see parked item 30 for every source). Estimated an afternoon. Concrete steps:
+**Then B, because it compounds.** Every other item is a fixed amount of work for a fixed payoff.
+B changes the collection RATE for the rest of the project's life - ground truth stops being an
+errand that has to be scheduled and becomes a by-product of playing. If only two things ever get
+built, build A and B.
 
-      1. Add a `SAILING` constant to the transport category enum. Leave it OUT of the
-         opt-in set in DrewsHelperTransportPolicy so it is capability-gated on real account
-         state, per that class's stated philosophy at :10-13.
-      2. Add `Skill.SAILING` to `ROUTE_RELEVANT_SKILLS`, DrewsHelperPlugin.java:111-114.
-         One line. Without it a Sailing level-up does not invalidate the cached route and
-         newly-unlocked docks stay invisible. Silent bug if missed.
-      3. Generate the dock rows. 57 docks, all-pairs is the correct model because sailing is
-         free-roam - any dock reaches any dock subject only to the destination's level gate.
-         57x56 = 3,192 generated rows, not hand-authored. Use the existing 11-column schema
-         with `Sailing=NN` in the `skills` column - no new columns needed.
-      4. Duration: first pass, price each leg by straight-line distance divided by boat
-         speed (boats run roughly 0.5-1x running speed). This is genuinely unsolved upstream
-         too - their issue #370 - so an estimate is acceptable and should be labelled as one.
-      5. Do NOT double-add what upstream already ships: 5 island rowboat pairs, Port Sarim
-         and Musa Point to The Pandemonium, the Sailors' amulet teleports, sailing-island
-         bank chests. All merged upstream 2026-05-24.
+**C, D and E are the plan's machinery**, and that order matters: tiers before the object recorder
+so object data lands already labelled, and the harness last so it has something to validate.
 
-**Second choice - Slice 0 (item 3 rescoped).** ~30 minutes, two regions `52_50,52_51`, carries
-137 of the 171 known floor-rule leaks. Both already in the shipped map so the merge is a pure
-REPLACE, entry count stays 1,524 and D-0132's guardrail is satisfied literally. Existing route
-fixtures and live capture already cover the area. Expect a mixed result: 52_50 is net -1,450
-edges all-planes but +235 at plane 0, so re-run its capture.
+**Sailing (item 6) is still the only user-visible feature on the list.** It sits after C purely
+because C and RULE 7 give it the right shape. If something visible is wanted sooner, moving it
+ahead of C is a reasonable call and costs little. Build steps are unchanged - parked 30 and the
+session 2 notes.
 
-**Needs Mytharium in game before it can proceed - item 2 / Slice 1.** The ~74 Varlamore regions
-have zero live-client ground truth. One capture walk through Varlamore is required before
-shipping them, otherwise unverified geometry replaces safe-blocked space. Route: enable
-Validate Map Data, walk Civitas illa Fortis and the surrounding area, back up the capture,
-then re-run those regions with `--live-flags <newcapture>`.
+**Needs Mytharium in game - item 2 / Slice 1.** Unchanged: the ~74 Varlamore regions have zero
+live-client ground truth and need one capture walk before shipping. Deprioritised, not dropped.
 
-**Blocked on a prerequisite - any expansion.** The zip merge has no script and no gradle task;
-it was done by hand during 5bddcf4 and the recipe survives only as prose in D-0132. A
-`promoteCollisionMap` task must exist before adding NEW entries, because the hand-recipe assumes
-the patch is a subset of the runtime zip and that assumption inverts for a growth patch. Full
-spec is in D-0170.
+**Blocked on a prerequisite - any expansion.** Unchanged: the zip merge has no script and no
+gradle task. A `promoteCollisionMap` task must exist before adding NEW entries. Spec in D-0170.
 
-### Where everything from this session is written down
+### Where everything from these sessions is written down
 
+      D-0136  DECISION   adopt the recorder-first plan - eight rules, four unbuildable
+                         targets restated, and what already exists and must not be rebuilt
       D-0169  CHANGELOG  floor rule measured and verified, 98.086% / 100.000%
       D-0134  DECISION   the rule is verified - do not "improve" it, plus two method traps
       D-0170  CHANGELOG  region census, ocean hazard, Varlamore correction, slicing plan
@@ -94,7 +127,7 @@ spec is in D-0170.
       parked  31  "Requirements:" needs the near-miss retained - display is free,
                   diagnosis needs building
 
-### Corrections made this session that supersede earlier notes
+### Corrections that supersede earlier notes
 
 - **There is no `--regions` flag.** The builder's region selector is positional; tokens are
   `rx_ry`, a bare id, or the literal `all`.
@@ -107,12 +140,36 @@ spec is in D-0170.
 - **The ocean is not blocked by the client either** - only a 1-2 tile coastline band. Our map and
   the client agree there at 98.1%. Any future "the map thinks water is walkable" report must
   check the client's own flags before being treated as a disagreement.
+- **Parked item 26 is FALSE as written.** It claims 21 of the 24 rebuilt regions have no live
+  data. All 24 have live-client rows, from 187 to 15,724 each; region 47_50 has 2,414. The claim
+  held only for `POST_20260812` read in isolation. Defensible version: no rebuilt region has FULL
+  ground truth - aggregate plane-0 coverage across the 24 is 39,405/98,304 = 40.1%, best 70.7%,
+  worst 4.6%, and none reaches 99%.
+- **D-0169's stated sample size does not reconcile.** It reports 233,067 covered tiles minus
+  40,113 sentinel rows leaving 192,061, but that subtraction gives 192,954 - a gap of 893 - and
+  neither input reproduces from the three named capture files. The 98.086% / 100.000% confusion
+  matrix is internally consistent and stands on its own arithmetic; the SAMPLE SIZE must be
+  re-derived before it is quoted again.
+- **D-0170's "13 stale entries, all of them 32,784-byte legacy entries" is wrong on size.** The
+  13 region ids are correct. Measured entry lengths run 143 to 1,506 bytes and no entry in the
+  zip is 32,784 bytes - that figure is the decoded in-memory size, not the zip entry size.
+- **The 82.97% v2 figure is not a clean "our data" score.** That scene spans 6 regions of which
+  only 4 are rebuilt; 45_49 and 46_49 are untouched legacy shipping identical bytes on both
+  sides, which dilutes the delta. The figure UNDERSTATES the rebuild.
 
-### One open question for Mytharium
+### Open items for Mytharium
 
-Sailing edges fix "route me to that island". They do NOT fix "I dropped a marker in open sea
-where there is no dock" - that is still the snap problem. Decide whether the snap also needs a
-reachability-gated water seal, or whether dock routing is enough.
+- **Sailing versus the open-sea marker.** Sailing edges fix "route me to that island". They do
+  NOT fix "I dropped a marker in open sea where there is no dock" - that is still the snap
+  problem. Decide whether the snap also needs a reachability-gated water seal, or whether dock
+  routing is enough. D-0136 RULE 4 rules out a water map, so any seal is a snap-side fix.
+- **Three snap edge cases found while closing item 4**, none actioned and none yet parked:
+  `snapToTraversable` swallows an IOException and persists the UNSNAPPED coordinate when
+  collision data is missing at set time; editing the position field while the plugin is toggled
+  OFF skips `onConfigChanged`, so the raw value is never re-snapped; and a tile snapped under one
+  collision build can become non-standable under a newer one.
+- **Confirm the pilot region overlap.** rx45-48 / ry49-52 is coordinate arithmetic, not a lookup.
+  Five minutes, and it should happen before any work starts inside the pilot area.
 
 ## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
 

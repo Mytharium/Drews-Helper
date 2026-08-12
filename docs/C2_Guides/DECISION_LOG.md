@@ -1856,3 +1856,116 @@ bulk-build or bulk-rebuild collision regions.
   text that says otherwise.
 
   Cross-reference: build notes are `D-0170` in `CHANGELOG_AGENT_NOTES.md`.
+
+D-0136 (2026-08-12) - Adopt the recorder-first navigation plan: verify one pilot region before
+expanding, and make UNKNOWN a first-class state.
+
+  Mytharium drafted an OSRS navigation-recorder plan and asked whether to adopt it. Verdict:
+  ADOPT, with four of its targets restated and four gaps filled. It was written without the
+  coverage measurements and independently reached the same conclusion those measurements force
+  - stop expanding, start verifying - which is why it is adopted whole rather than mined for
+  parts. These rules are the adapted form. Where this entry and the source plan disagree, this
+  entry wins.
+
+  RULE 1 - UNKNOWN IS A FIRST-CLASS STATE. ABSENCE OF A ROW MEANS "NOT OBSERVED", NEVER
+  "PASSABLE". This is the single highest-value change available to the project. D-0133 RULE 1
+  records that the capture emits a row only when at least one direction is blocked, so the
+  format cannot distinguish observed-open from never-loaded. Measured consequences:
+
+      AGREE_OPEN                                        158,647 of 226,350 edges = 70.09%
+      ...which is most of the headline 84.03% agreement
+      edges the client POSITIVELY calls blocked           60,866
+          we agree                                        31,565 = 51.86%
+          we are wrong (DANGEROUS)                        29,154 = 47.90%
+      edges OUR map blocks                                38,402
+          client confirms                                 31,565 = 82.20%
+          we over-block                                    6,837 = 17.80%
+
+  51.86% is the honest accuracy figure; 84.03% is carried by silence. The fix is one change in
+  the emitter - write a row for EVERY loaded tile. Capture files grow roughly 5-10x, which is
+  cheap. Do this BEFORE any further accuracy work, because every number measured before it has
+  to be re-derived by hand afterwards. This does not supersede D-0133's polarity rule, which is
+  still correct; it changes what the capture is permitted to CONCLUDE from an absent row.
+
+  RULE 2 - STOP EXPANDING THE MAP UNTIL ONE PILOT REGION IS VERIFIED. Measured state: 1,524
+  regions shipped, 24 of them ours (1.57%), live-client ground truth on 64 regions (4.20% of
+  shipped, 1.40% by plane-0 tile). Expanding coverage while 96% of it is unmeasured adds
+  unverified geometry, not capability. The pilot area is Port Sarim / Draynor / southern
+  Falador, roughly rx45-48 / ry49-52, chosen because it already sits inside both the capture
+  footprint (rx45-52 / ry48-55) and the 24 rebuilt regions, so setup cost is near zero. NOT YET
+  CONFIRMED: that region range is coordinate arithmetic, not a lookup. Confirm the exact overlap
+  before committing work inside it.
+
+  RULE 3 - COLLECT GROUND TRUTH PASSIVELY. DEDICATED CAPTURE WALKS ARE THE BOTTLENECK. 49 scenes
+  across several sessions bought 4.20% coverage, because each walk is a deliberate errand that
+  has to be chosen and scheduled. A listener that compares predicted against actual on every
+  manual traversal accrues the same data at zero marginal cost during normal play, and it is the
+  only route to object-interaction truth - what actually happens when a door is opened, as
+  opposed to what the collision map says about that door's tile. NEVER automate movement or
+  interaction to speed this up. That is a ban risk and the source plan is right to forbid it.
+
+  RULE 4 - FOUR TARGETS IN THE SOURCE PLAN ARE NOT BUILDABLE AS WRITTEN. Restate, do not adopt:
+
+      "static collision data >= 99.9% accurate" - no oracle and no denominator, and the plan's
+          own opening paragraph forbids single-percentage targets. Restate as a PAIR: coverage%
+          and agreement-on-observed%.
+      "500-1,000 route tests physically completable in-game" - roughly 30 hours of walking, and
+          automating it is correctly forbidden, so the target can never be measured. Substitute
+          1,000 OFFLINE structural validations plus about 25 hand-walked.
+      "whether the tile appears to be navigable Sailing water" - no such flag exists. Jagex
+          rejected boat collision and steering is free-roam. Inferring it from no-land-and-no-
+          collision is exactly the ASSUMED TRAVERSABLE the plan forbids. Sailing is modelled as
+          dock-to-dock edges with NO water map (parked 30).
+      "zero cases where the pathfinder recommends an unusable traversal" - achievable for STATIC
+          requirements only (skill, quest, item, equipment, membership). Dynamic state such as a
+          door another player shut, or world-hop instance state, is out of reach for any system.
+          Scope the target to static or it stays permanently red.
+
+  RULE 5 - THE CONFIDENCE LADDER NEEDS A RUNG BELOW INFERRED, CALLED INHERITED. 1,500 of the
+  1,524 shipped entries (98.43%) are 2021 Runemoro data that we have never derived or checked,
+  and parked item 29 puts 147 of the 171 known floor leaks inside it. Inherited data is
+  measurably worse than our own derivation and must not share a tier with it. Related:
+  provenance today is an ACCIDENT - the only discriminator between ours and inherited is the zip
+  entry timestamp (1980-01-01 = rebuilt by us, 2021-04-23 = inherited). That is luck, not
+  versioning. Record provenance explicitly and apply it retroactively to what already ships.
+
+  RULE 6 - HYBRID SOURCING. THE CACHE IS THE BASELINE, OBSERVATION IS THE CORRECTOR. Recording
+  from client flags has ZERO decode error by construction because it copies rather than derives;
+  our 12.88% DANGEROUS rate exists precisely because we build from the cache and compare against
+  the client. The two sources trade off cleanly:
+
+      cache-derived   complete coverage immediately, unknown error rate, decode bugs
+      observed        no decode error at all, coverage grows only at walking speed
+
+  Do not choose between them. Cache-derived is the INFERRED baseline, observed is the CONFIRMED
+  overlay, and the observed data feeds back as the corrector for the cache decoder. The existing
+  live-flag pipeline is already this shape; only the confidence tiers were missing.
+
+  RULE 7 - MOVEMENT MODES ARE A TWO-LAYER GRAPH, NOT A GENERAL STATE SPACE. The source plan's
+  STATE + LOCATION -> ACTION -> NEW STATE + LOCATION + COST is the right frame, but implemented
+  literally it is an exponential search. Practical form: mode is a small enum (WALK, SAIL) so the
+  graph is layered, and account requirements are STATIC at route time so they are a pre-search
+  filter. This preserves the already-approved shape - filter edges before search rather than
+  adding requirement conditionals inside A*.
+
+  RULE 8 - DECIDE THE MERGE-CONFLICT POLICY BEFORE FREEZING THE EXPORT FORMAT. The source plan
+  wants recordings from multiple players and multiple sessions combined, but never says what
+  happens when two recordings disagree about the same edge. Newest wins, highest confidence
+  wins, or CONTRADICTED until re-observed? Left unanswered the format is not actually mergeable,
+  and this cannot be retrofitted cheaply once recordings exist in the wild.
+
+  WHAT ALREADY EXISTS - DO NOT REBUILD IT. The source plan's development order reads greenfield,
+  and a literal reading restarts work that is largely done. Already shipped: eight-directional
+  data (capture column 3 is the client's raw flag int, carrying all eight direction bits plus the
+  object and floor bits - the <N><E> pair is only a summary), edge-based rather than tile-based
+  storage, per-edge requirements with the two-gate family/capability filter, the
+  false-positive-over-false-negative axis (DANGEROUS 12.88% vs OVERBLOCK 3.02%), object
+  extraction via Route B (353 gates, 1,793 doors, 78 gaps, 192 wilderness ditch), and route
+  rendering. The recorder is an EXTENSION of the existing live-flag capture, not a new plugin.
+
+  ONE GAP THE PLAN LISTS BUT NEVER TESTS. Movement cost and optimality are named as metrics 5
+  and 6, and the validation section checks neither. That is the old item 5 - turn count, measured
+  trueMean 2.04 / trueMax 12 excess - and it is measurable offline today. It belongs inside the
+  validation harness rather than standing as its own item.
+
+  Cross-reference: the revised work sequence is THE LIST in `02_NEXT_WORK.md`.
