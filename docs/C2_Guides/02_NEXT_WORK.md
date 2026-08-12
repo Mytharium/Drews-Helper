@@ -2,68 +2,115 @@
 
 Last updated: 2026-08-12.
 
-## NEXT SESSION - START HERE (written 2026-08-12, collision/routing track)
+## NEXT SESSION - START HERE (written 2026-08-12 02:30, session 2 - list execution)
 
-Phase 2 object blocking is built and wired into the runtime collision resource. The current
-committed rule is deliberately narrow:
+Three commits landed this session, in order:
 
-1. Only ignored scenery/object placements: locType 10/11.
-2. Only cache-solid objects: `ObjectDefinition.getInteractType() != 0`.
-3. Only 1x1 footprints. The 2,853 larger-footprint placements are held back.
-4. Ground decoration locType 22, handled wall locTypes, roofs, and other ignored structural
-   locTypes are NOT blocked by this phase.
+      d71a2f1  post-promotion verification of 5bddcf4  (docs only)   PUSHED
+      fe7ef81  terrain floor rule verified              (no logic)    unpushed
+      4c2d0d4  rescope + sailing research               (docs only)   unpushed
 
-Use the backed-up full capture for repeatable measurement:
+Repo clean, `main` is **ahead 2** of `origin/main`. Mytharium pushes manually - ask, do not push.
 
-```powershell
-.\gradlew.bat --no-daemon --console=plain buildCollisionMapV2 --args='--live-flags C:\Users\drews\.runelite\drews-live-flags.FULL_20260811.txt'
-```
+### THE LIST - Mytharium's approved work plan, current status
 
-Final Phase 2 numbers on that capture:
+Items 2, 3 and 6 changed shape DURING the session. Mytharium has NOT yet signed off on the new
+shapes - get his approval before starting any of those three.
 
-- DANGEROUS: 33,672 -> 29,154 (drop 4,518).
-- DANGEROUS_UNEXPLAINED: 24,674 -> 20,455 (drop 4,219).
-- Strict one-way OVERBLOCK: 4,239 -> 6,837, which FAILS the old one-way gate.
-- Route-aware OVERBLOCK: 2,616 -> 3,944 (rise 1,328), below the abort line 4,277.
-- AGREE_OPEN: 161,245 -> 158,647 (drop 2,598), below the abort line 5,000.
-- Route-aware net: 4,518 dangerous drop > 1,328 route-aware overblock rise, PASS.
-- Phase 2 placements blocked: 5,409. Larger footprints held back: 2,853.
+      1. Fix the builder's floor rule            DONE - fe7ef81. Measured, found already
+                                                 correct, no fix was needed.
+      2. Add the 1,425 missing regions           RESCOPED to ~74 Varlamore regions. NOT
+                                                 approved in the new shape.
+      3. Re-run the 1,524 existing regions       RESCOPED to 2 regions (52_50, 52_51). NOT
+                                                 approved in the new shape.
+      4. Snap-on-login fix                       OPEN. Small. loadWaypoints() at
+                                                 DrewsHelperPlugin.java:663-673 decodes config
+                                                 with no snap call, so a stored waypoint
+                                                 reloads unsnapped every login.
+      5. Turn count                              OPEN. Smallest real win: measured
+                                                 trueMean 2.04 / trueMax 12 excess turns, NOT
+                                                 the retired "63% / max 33" figure.
+      6. Sailing-aware routing + Requirements    NEW, added by Mytharium mid-session.
+                                                 Researched, not built. Now the cheapest item.
 
-Important caveat: the route map stores N/E edges as undirected. `canMoveSouth(x,y)` reads
-`canMoveNorth(x,y-1)`, and `canMoveWest(x,y)` reads `canMoveEast(x-1,y)`. The live validator's
-strict N/E comparison is one-way, so a blocked source tile can look like an overblock even when
-the route map correctly blocks entering that tile from the opposite side. This is why Phase 2 uses
-the route-aware overblock gate.
+### Recommended order to pick up, with the reasoning
 
-Saved baseline/report files:
+The recommendation CHANGED during the session. Sailing was not on the list when the session
+started; it was added mid-session, and once researched it turned out to be both the cheapest
+item and the only one that produces something a user can see. That reordered everything.
 
-- `tools/collision-baseline-20260811.txt` - full-capture pre-Phase-2 baseline.
-- `tools/collision-phase2-disabled-baseline-20260811.txt` - same code with Phase 2 disabled.
-- `tools/collision-map-v2-report.txt` - current Phase 2 enabled report.
+**First choice - Sailing (item 6).** It is now the cheapest item AND the only one that produces
+a user-visible feature; everything else is plumbing. All the data is published and
+cross-validated (see parked item 30 for every source). Estimated an afternoon. Concrete steps:
 
-Runtime state:
+      1. Add a `SAILING` constant to the transport category enum. Leave it OUT of the
+         opt-in set in DrewsHelperTransportPolicy so it is capability-gated on real account
+         state, per that class's stated philosophy at :10-13.
+      2. Add `Skill.SAILING` to `ROUTE_RELEVANT_SKILLS`, DrewsHelperPlugin.java:111-114.
+         One line. Without it a Sailing level-up does not invalidate the cached route and
+         newly-unlocked docks stay invisible. Silent bug if missed.
+      3. Generate the dock rows. 57 docks, all-pairs is the correct model because sailing is
+         free-roam - any dock reaches any dock subject only to the destination's level gate.
+         57x56 = 3,192 generated rows, not hand-authored. Use the existing 11-column schema
+         with `Sailing=NN` in the `skills` column - no new columns needed.
+      4. Duration: first pass, price each leg by straight-line distance divided by boat
+         speed (boats run roughly 0.5-1x running speed). This is genuinely unsolved upstream
+         too - their issue #370 - so an estimate is acceptable and should be labelled as one.
+      5. Do NOT double-add what upstream already ships: 5 island rowboat pairs, Port Sarim
+         and Musa Point to The Pandemonium, the Sailors' amulet teleports, sailing-island
+         bank chests. All merged upstream 2026-05-24.
 
-- `build/collision-map-v2.zip` is a 24-region patch selected from the FULL proof capture, NOT a
-  standalone world map.
-- `src/main/resources/collision-map.zip` remains the runtime resource and still has 1,524 regions.
-  The 24 rebuilt v2 entries were merged into it; the other 1,500 entries were preserved.
-- The shipped archive must stay in the two-flag runtime format (north/east passability only). The
-  builder may keep door flags in memory/report, but writing four flags into the shipped zip makes
-  the current loader decode those regions incorrectly and can turn valid routes into `NO_PATH`.
+**Second choice - Slice 0 (item 3 rescoped).** ~30 minutes, two regions `52_50,52_51`, carries
+137 of the 171 known floor-rule leaks. Both already in the shipped map so the merge is a pure
+REPLACE, entry count stays 1,524 and D-0132's guardrail is satisfied literally. Existing route
+fixtures and live capture already cover the area. Expect a mixed result: 52_50 is net -1,450
+edges all-planes but +235 at plane 0, so re-run its capture.
 
-Next work:
+**Needs Mytharium in game before it can proceed - item 2 / Slice 1.** The ~74 Varlamore regions
+have zero live-client ground truth. One capture walk through Varlamore is required before
+shipping them, otherwise unverified geometry replaces safe-blocked space. Route: enable
+Validate Map Data, walk Civitas illa Fortis and the surrounding area, back up the capture,
+then re-run those regions with `--live-flags <newcapture>`.
 
-1. Myth should launch the dev plugin and test real routes now. Any route that worked before and
-   now fails is a rollback-level signal.
-2. Do NOT expand to larger footprints in the same change. The 2,853 held-back objects need their
-   own pre-stated Phase 3 gate.
-3. Do NOT block "other ignored" locTypes as full objects. The broad rule overblocked badly; roofs
-   and structural locTypes need separate classification.
-4. Small owed test still open: unit tests for `waypointPositionIndex`.
+**Blocked on a prerequisite - any expansion.** The zip merge has no script and no gradle task;
+it was done by hand during 5bddcf4 and the recipe survives only as prose in D-0132. A
+`promoteCollisionMap` task must exist before adding NEW entries, because the hand-recipe assumes
+the patch is a subset of the runtime zip and that assumption inverts for a growth patch. Full
+spec is in D-0170.
 
-IN-GAME WORK NEEDED FROM MYTHARIUM: after this commit is pushed, launch the dev plugin, run one
-normal route through clutter that used to cut through scenery, and one known-good route that should
-not change.
+### Where everything from this session is written down
+
+      D-0169  CHANGELOG  floor rule measured and verified, 98.086% / 100.000%
+      D-0134  DECISION   the rule is verified - do not "improve" it, plus two method traps
+      D-0170  CHANGELOG  region census, ocean hazard, Varlamore correction, slicing plan
+      D-0135  DECISION   five rules: absence is safe, never bulk, positional selector,
+                         the Phase 2 gate is 24-region-only, Zeah shipped / Varlamore missing
+      parked  27  cross-region seam drops S/W edges, 18 in rebuilt regions
+      parked  28  526 false positives, likely cause of parked item 24's regression
+      parked  29  legacy regions hold 147 of 171 leaks, concentrated 52_50 / 52_51
+      parked  30  full sailing research including every published data source
+      parked  31  "Requirements:" needs the near-miss retained - display is free,
+                  diagnosis needs building
+
+### Corrections made this session that supersede earlier notes
+
+- **There is no `--regions` flag.** The builder's region selector is positional; tokens are
+  `rx_ry`, a bare id, or the literal `all`.
+- **Zeah/Kourend is shipped. Varlamore is the gap.** Any guide text saying Zeah is missing is
+  wrong.
+- **The "63% of routes over-turn, max 33 excess" figure is retired.** Obstacle-aware measurement
+  gives trueMean 2.04, trueMedian 1.50, trueMax 12.
+- **`useShips` / `useBoats` / `useCharterShips` / `useAgilityShortcuts` do not exist in the
+  code.** They are stale orphans in the RuneLite profile, like the deleted `routeSolverMode`.
+- **The ocean is not blocked by the client either** - only a 1-2 tile coastline band. Our map and
+  the client agree there at 98.1%. Any future "the map thinks water is walkable" report must
+  check the client's own flags before being treated as a disagreement.
+
+### One open question for Mytharium
+
+Sailing edges fix "route me to that island". They do NOT fix "I dropped a marker in open sea
+where there is no dock" - that is still the snap problem. Decide whether the snap also needs a
+reachability-gated water seal, or whether dock routing is enough.
 
 ## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
 
