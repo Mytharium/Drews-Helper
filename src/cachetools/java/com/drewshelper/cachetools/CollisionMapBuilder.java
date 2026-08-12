@@ -81,6 +81,14 @@ public final class CollisionMapBuilder
     private static final String DISABLE_PHASE3_ROOF_BLOCKING_ARG = "--disable-phase3-roof-blocking";
     private static final String ROOF_LOC_TYPES_ARG = "--roof-loctypes";
     /*
+     * The cache has no map or loc archive for a handful of regions that the SHIPPED archive still
+     * contains, so an all-region rebuild is not a superset of it. Measured 2026-08-12: 13 such
+     * regions, and 275 transport endpoints land inside three of them. Overwriting the shipped
+     * archive would silently delete map data that cannot be regenerated, so the ship path carries
+     * those entries across verbatim instead.
+     */
+    private static final String MERGE_FROM_ARG = "--merge-from";
+    /*
      * 12, 13, 14, 16, 17, 18, 19, 21 - the roof locTypes the per-locType proof pass cleared on
      * 2026-08-12. Overridable from the command line so a single locType can be added or removed
      * and re-measured without a recompile, which is how the set should be revised: by evidence.
@@ -203,7 +211,8 @@ public final class CollisionMapBuilder
         {
             BuildResult result = build(store, request);
             writeZip(request.outputZip, result.regions);
-            String roundTrip = verifyRoundTrip(request.outputZip, result.regions);
+            String roundTrip = verifyRoundTrip(request.outputZip, result.regions)
+                + mergeMissingRegions(request.outputZip, request.mergeFrom);
             Comparison comparison = compareProofEdges(proofEdges, result.regions);
             DangerousDirectionComparison dangerousComparison = compareDangerousDirections(request.liveFlagsFile, result);
             Phase2Baseline phase2Baseline = measurePhase2Baseline(store, request, proofEdges);
@@ -270,6 +279,7 @@ public final class CollisionMapBuilder
         boolean phase2SolidObjectBlocking = true;
         boolean phase3RoofBlocking = true;
         int roofLocTypeMask = DEFAULT_ROOF_LOC_TYPE_MASK;
+        Path mergeFrom = null;
         List<String> selectorArgs = new ArrayList<>();
         for (int i = selectorStart; i < args.length; i++)
         {
@@ -288,6 +298,16 @@ public final class CollisionMapBuilder
             {
                 roofLocTypeMask = parseRoofLocTypeMask(
                     arg.substring((ROOF_LOC_TYPES_ARG + "=").length()));
+                continue;
+            }
+            if (arg.startsWith(MERGE_FROM_ARG + "="))
+            {
+                String value = arg.substring((MERGE_FROM_ARG + "=").length());
+                if (value.isEmpty())
+                {
+                    throw new IOException(MERGE_FROM_ARG + " requires a non-empty path");
+                }
+                mergeFrom = resolve(project, value);
                 continue;
             }
             if (LIVE_FLAGS_ARG.equals(arg))
@@ -317,7 +337,7 @@ public final class CollisionMapBuilder
             TreeSet<Integer> regions = defaultProofRegions(proofEdges);
             return new BuildRequest(
                 outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking,
-                phase3RoofBlocking, roofLocTypeMask);
+                phase3RoofBlocking, roofLocTypeMask, mergeFrom);
         }
 
         String selector = joinRegionSelector(selectorArgs);
@@ -325,7 +345,7 @@ public final class CollisionMapBuilder
         {
             return new BuildRequest(
                 outputZip, liveFlagsFile, true, Collections.emptySet(), false, phase2SolidObjectBlocking,
-                phase3RoofBlocking, roofLocTypeMask);
+                phase3RoofBlocking, roofLocTypeMask, mergeFrom);
         }
 
         TreeSet<Integer> regions = parseRegionIds(selector);
@@ -335,7 +355,7 @@ public final class CollisionMapBuilder
         }
         return new BuildRequest(
             outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking, phase3RoofBlocking,
-            roofLocTypeMask);
+            roofLocTypeMask, mergeFrom);
     }
 
     private static boolean isLiveFlagsArg(String arg)
@@ -348,7 +368,8 @@ public final class CollisionMapBuilder
         return isLiveFlagsArg(arg)
             || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
             || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg)
-            || arg.startsWith(ROOF_LOC_TYPES_ARG + "=");
+            || arg.startsWith(ROOF_LOC_TYPES_ARG + "=")
+            || arg.startsWith(MERGE_FROM_ARG + "=");
     }
 
     private static Path defaultLiveFlagsFile()
@@ -1081,6 +1102,105 @@ public final class CollisionMapBuilder
                 zip.closeEntry();
             }
         }
+    }
+
+    private static String mergeMissingRegions(Path outputZip, Path mergeFrom) throws IOException
+    {
+        if (mergeFrom == null)
+        {
+            return "";
+        }
+        if (!Files.isRegularFile(mergeFrom))
+        {
+            throw new IOException(MERGE_FROM_ARG + " file missing: " + mergeFrom);
+        }
+
+        /*
+         * Runs AFTER verifyRoundTrip on purpose. That method throws on any entry it did not build,
+         * so carried entries have to arrive once it has already passed on the built set. They are
+         * copied as raw stored bytes and never decoded, then read back and compared byte for byte
+         * - the build cannot vouch for their contents, only that it did not alter them.
+         */
+        TreeMap<String, byte[]> entries = new TreeMap<>();
+        try (ZipInputStream zip = new ZipInputStream(Files.newInputStream(outputZip)))
+        {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null)
+            {
+                if (entry.isDirectory())
+                {
+                    continue;
+                }
+                entries.put(entry.getName(), readAll(zip));
+            }
+        }
+        int builtCount = entries.size();
+
+        TreeMap<String, byte[]> carried = new TreeMap<>();
+        try (ZipInputStream zip = new ZipInputStream(Files.newInputStream(mergeFrom)))
+        {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null)
+            {
+                if (entry.isDirectory() || entries.containsKey(entry.getName()))
+                {
+                    continue;
+                }
+                carried.put(entry.getName(), readAll(zip));
+            }
+        }
+        if (carried.isEmpty())
+        {
+            return " MERGE 0 carried (built " + builtCount + " already covers " + mergeFrom.getFileName() + ")";
+        }
+
+        entries.putAll(carried);
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(outputZip)))
+        {
+            for (String name : entries.keySet())
+            {
+                ZipEntry out = new ZipEntry(name);
+                out.setTime(0L);
+                zip.putNextEntry(out);
+                zip.write(entries.get(name));
+                zip.closeEntry();
+            }
+        }
+
+        int verified = 0;
+        try (ZipInputStream zip = new ZipInputStream(Files.newInputStream(outputZip)))
+        {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null)
+            {
+                byte[] expected = carried.get(entry.getName());
+                if (expected == null)
+                {
+                    continue;
+                }
+                byte[] actual = readAll(zip);
+                if (actual.length != expected.length)
+                {
+                    throw new IOException("Carried region length changed during merge: " + entry.getName());
+                }
+                for (int i = 0; i < expected.length; i++)
+                {
+                    if (actual[i] != expected[i])
+                    {
+                        throw new IOException("Carried region bytes changed during merge: " + entry.getName());
+                    }
+                }
+                verified++;
+            }
+        }
+        if (verified != carried.size())
+        {
+            throw new IOException("Carried region count mismatch: wrote " + carried.size()
+                + ", verified " + verified);
+        }
+
+        return " MERGE " + carried.size() + " regions carried byte-verified from "
+            + mergeFrom.getFileName() + " (built " + builtCount + ", total " + entries.size() + ")";
     }
 
     private static byte[] gzip(byte[] bytes) throws IOException
@@ -1817,6 +1937,9 @@ public final class CollisionMapBuilder
         report.append('\n');
         report.append("phase2 solid-object blocking: ")
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
+            .append('\n');
+        report.append("merge source: ")
+            .append(request.mergeFrom == null ? "none" : request.mergeFrom.toString())
             .append('\n');
         report.append("phase3 roof blocking (locTypes ")
             .append(formatRoofLocTypes(request.roofLocTypeMask))
@@ -4335,6 +4458,7 @@ public final class CollisionMapBuilder
         private final boolean phase2SolidObjectBlocking;
         private final boolean phase3RoofBlocking;
         private final int roofLocTypeMask;
+        private final Path mergeFrom;
 
         private BuildRequest(
             Path outputZip,
@@ -4347,6 +4471,23 @@ public final class CollisionMapBuilder
             int roofLocTypeMask
         )
         {
+            this(outputZip, liveFlagsFile, allRegions, regionIds, defaultedRegions,
+                phase2SolidObjectBlocking, phase3RoofBlocking, roofLocTypeMask, null);
+        }
+
+        private BuildRequest(
+            Path outputZip,
+            Path liveFlagsFile,
+            boolean allRegions,
+            Set<Integer> regionIds,
+            boolean defaultedRegions,
+            boolean phase2SolidObjectBlocking,
+            boolean phase3RoofBlocking,
+            int roofLocTypeMask,
+            Path mergeFrom
+        )
+        {
+            this.mergeFrom = mergeFrom;
             this.roofLocTypeMask = roofLocTypeMask;
             this.outputZip = outputZip;
             this.liveFlagsFile = liveFlagsFile;
@@ -4371,7 +4512,8 @@ public final class CollisionMapBuilder
                 defaultedRegions,
                 false,
                 false,
-                roofLocTypeMask
+                roofLocTypeMask,
+                mergeFrom
             );
         }
     }
