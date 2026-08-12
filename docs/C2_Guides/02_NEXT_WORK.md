@@ -849,6 +849,14 @@ section has been changed. Append new findings here as they come up; strike them 
     instead of a boolean, or run a second unrestricted-capability solve on failure and diff the
     two. The display is free; the diagnosis needs building. Parked, not built.
 
+32. **The level and route-leg records are temporary instrumentation (2026-08-12).**
+    `writePlayerLevelsIfChanged` appends real (unboosted) levels to `drews-player-levels.txt`
+    on change, and `writeRouteLegsIfChanged` appends the transport hops of the live route to
+    `drews-route-legs.txt`. Both run unconditionally rather than behind the Validate Map Data
+    toggle, which is deliberate: it is what let the Falador wall work resolve the requirements
+    gate from stored state instead of asking. Neither is a feature. **Remove both before this
+    plugin is called finished.** Agreed with Mytharium 2026-08-12. Parked, not built.
+
 ### Unconfirmed - status needs checking before acting
 
 14. **Route-speed baseline before the heuristic change.** The prior recommendation was to bank a clean

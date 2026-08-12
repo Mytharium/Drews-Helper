@@ -170,6 +170,13 @@ public class DrewsHelperPlugin extends Plugin
     /** Last row written to drews-player-levels.txt, so only a genuine change appends. */
     private String lastPlayerLevelsRow;
     private boolean playerLevelsWriteWarned;
+
+    /** Ticks between route-leg polls. Walking a long path every tick would be wasted work. */
+    private static final int ROUTE_LEG_POLL_TICKS = 25;
+
+    /** Last set of legs written, so a route only records once rather than on every poll. */
+    private String lastRouteLegsBlock;
+    private boolean routeLegsWriteWarned;
     private boolean validationFileWriteWarned;
     private boolean liveFlagFileWriteWarned;
 
@@ -258,6 +265,8 @@ public class DrewsHelperPlugin extends Plugin
         validationWriteLimitWarned = false;
         lastPlayerLevelsRow = null;
         playerLevelsWriteWarned = false;
+        lastRouteLegsBlock = null;
+        routeLegsWriteWarned = false;
         validationFileWriteWarned = false;
         liveFlagFileWriteWarned = false;
         try
@@ -318,6 +327,7 @@ public class DrewsHelperPlugin extends Plugin
         validateMapDataIfEnabled();
         recordTraversalIfSettled();
         writePlayerLevelsIfChanged();
+        writeRouteLegsIfChanged();
 
         // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
         // which dirties the route and returns early below - so anything downstream of that
@@ -488,6 +498,11 @@ public class DrewsHelperPlugin extends Plugin
      * what a transport requirement is checked against - the same value the capability snapshot
      * uses. Append-only and change-gated, so the file is a history rather than a current-state
      * blob: a route recorded last week can be read against the levels held at the time.
+     *
+     * <p>TEMPORARY INSTRUMENTATION. This is a development aid, not a feature, and it runs
+     * unconditionally rather than behind the data-quality toggle so a requirement question can
+     * be answered from stored state instead of asking. Remove it - and the route leg record -
+     * before this plugin is called finished. Agreed 2026-08-12; parked item 32.
      */
     private void writePlayerLevelsIfChanged()
     {
@@ -709,6 +724,90 @@ public class DrewsHelperPlugin extends Plugin
         {
             log.info("{}", line);
         }
+    }
+
+    /**
+     * Appends the transport hops the current route uses, with the tiles they run between.
+     *
+     * <p>The HUD's Actions rows carry the label alone, so "Jump Wall" on a 326-tile route cannot
+     * be told from any other wall - which is exactly what a route-crossed-a-wall report asks. The
+     * interesting row is the one with no matching edge: the router moved between two tiles that no
+     * transport connects, which means it reached one of them some other way.
+     *
+     * <p>TEMPORARY INSTRUMENTATION, same as the level record - see parked item 32.
+     */
+    private void writeRouteLegsIfChanged()
+    {
+        if (tickCounter % ROUTE_LEG_POLL_TICKS != 0)
+        {
+            return;
+        }
+
+        DrewsHelperRouteSnapshot snapshot = routeSnapshot;
+        DrewsHelperTransportGraph graph = getTransportGraph();
+        if (snapshot == null || graph == null || !snapshot.hasPath())
+        {
+            return;
+        }
+
+        List<WorldPoint> path = snapshot.getPath();
+        List<String> legs = new ArrayList<>();
+        for (int i = 1; i < path.size(); i++)
+        {
+            WorldPoint from = path.get(i - 1);
+            WorldPoint to = path.get(i);
+            if (!DrewsHelperRouteSnapshot.isTransportJump(from, to))
+            {
+                continue;
+            }
+
+            String label = DrewsHelperTravelEstimate.transportLabel(graph, from, to);
+            // The path index is deliberately NOT recorded: it shifts as walked tiles are consumed,
+            // and a signature that moves every tick would append the same route over and over.
+            legs.add("DREW_ROUTELEG v1 #" + (legs.size() + 1)
+                + " from=" + pointText(from)
+                + " to=" + pointText(to)
+                + " objId=" + DrewsHelperTravelEstimate.targetId(graph, from, to)
+                + " label=" + (label == null ? "NO_MATCHING_EDGE" : label));
+        }
+
+        if (legs.isEmpty() || legs.toString().equals(lastRouteLegsBlock))
+        {
+            return;
+        }
+        lastRouteLegsBlock = legs.toString();
+
+        List<WorldPoint> destinations = snapshot.getDestinations();
+        List<String> rows = new ArrayList<>();
+        rows.add("DREW_ROUTELEG v1 route tick=" + tickCounter
+            + " legs=" + legs.size()
+            + " path=" + path.size()
+            + " dest=" + (destinations.isEmpty()
+                ? "-" : pointText(destinations.get(destinations.size() - 1))));
+        rows.addAll(legs);
+
+        try
+        {
+            Files.write(new File(RuneLite.RUNELITE_DIR, "drews-route-legs.txt").toPath(),
+                rows, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        }
+        catch (IOException ex)
+        {
+            if (!routeLegsWriteWarned)
+            {
+                routeLegsWriteWarned = true;
+                log.warn("Drew's Helper: could not write the route leg record", ex);
+            }
+        }
+    }
+
+    private static String pointText(WorldPoint point)
+    {
+        if (point == null)
+        {
+            return "-";
+        }
+        return point.getX() + "," + point.getY() + "," + point.getPlane();
     }
 
     private void writeValidationMismatches(
