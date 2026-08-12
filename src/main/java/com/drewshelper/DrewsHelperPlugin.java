@@ -16,6 +16,7 @@ import com.drewshelper.routing.DrewsHelperWalkingRouteEngine;
 import com.drewshelper.routing.ui.DrewsHelperRouteMapOverlay;
 import com.drewshelper.routing.ui.DrewsHelperRouteMinimapOverlay;
 import com.drewshelper.routing.ui.DrewsHelperRouteTileOverlay;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.awt.Rectangle;
@@ -36,6 +37,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -145,6 +148,13 @@ public class DrewsHelperPlugin extends Plugin
     private static final int MAX_VALIDATION_ROWS_WRITTEN = 50000;
     private static final int VALIDATION_REVALIDATE_TICKS = 100;
 
+    /**
+     * The scene header {@link #writeLiveFlagsIfNeeded} writes, for example
+     * {@code DREW_LIVE_FLAGS scene 2912:3160:0 size=104 covered=103}. Group 1 is the scene key.
+     */
+    private static final Pattern LIVE_FLAG_SCENE_HEADER = Pattern.compile(
+        "^DREW_LIVE_FLAGS\\s+scene\\s+(-?\\d+:-?\\d+:-?\\d+)\\s+size=\\d+\\s+covered=\\d+\\s*$");
+
     /** Scene and tick the validator last checked, so it can re-sample open doors without running every tick. */
     private String lastValidatedSceneKey;
     private int lastValidationTick;
@@ -244,14 +254,7 @@ public class DrewsHelperPlugin extends Plugin
         {
             log.warn("Drew's Helper: could not reset map validation proof file", ex);
         }
-        try
-        {
-            Files.deleteIfExists(new File(RuneLite.RUNELITE_DIR, "drews-live-flags.txt").toPath());
-        }
-        catch (IOException ex)
-        {
-            log.warn("Drew's Helper: could not reset live collision dump file", ex);
-        }
+        seedDumpedLiveFlagSceneKeys();
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
             configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
@@ -492,6 +495,65 @@ public class DrewsHelperPlugin extends Plugin
                 log.warn("Drew's Helper: could not write live collision dump rows", ex);
             }
         }
+    }
+
+    /**
+     * The live collision dump is an accumulating record, not per-session scratch. Coverage is only
+     * worth collecting if it survives a client restart, and start-up used to delete the file
+     * outright. The dumped-scene set is rebuilt from the file's own headers rather than persisted
+     * separately, so archiving or deleting the file is all that is needed to begin a clean capture.
+     */
+    private void seedDumpedLiveFlagSceneKeys()
+    {
+        File dump = new File(RuneLite.RUNELITE_DIR, "drews-live-flags.txt");
+        if (!dump.isFile())
+        {
+            return;
+        }
+
+        int seeded = 0;
+        try (BufferedReader reader = Files.newBufferedReader(dump.toPath(), StandardCharsets.UTF_8))
+        {
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                String sceneKey = parseLiveFlagSceneKey(line);
+                if (sceneKey != null && dumpedLiveFlagSceneKeys.add(sceneKey))
+                {
+                    seeded++;
+                }
+            }
+        }
+        catch (IOException ex)
+        {
+            // A dump we cannot read is no reason to stop recording. Re-dumping a scene costs disk
+            // but not correctness: the builder keys tiles by coordinate and collapses duplicates.
+            log.warn("Drew's Helper: could not read the existing live collision dump;"
+                + " already-captured scenes may be recorded again", ex);
+            return;
+        }
+
+        log.info("Drew's Helper: live collision dump holds {} scenes in {} KB - appending to it,"
+            + " not resetting it", seeded, dump.length() / 1024);
+    }
+
+    /**
+     * Returns the {@code baseX:baseY:plane} key of a live-flag scene header, or null for any other
+     * line. Static and package-private so the parse is testable without touching a filesystem.
+     */
+    static String parseLiveFlagSceneKey(String line)
+    {
+        if (line == null)
+        {
+            return null;
+        }
+
+        Matcher header = LIVE_FLAG_SCENE_HEADER.matcher(line);
+        if (!header.matches())
+        {
+            return null;
+        }
+        return header.group(1);
     }
 
     private void writeValidationMismatches(DrewsHelperMapValidator.Report report)
