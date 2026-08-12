@@ -1,0 +1,82 @@
+COLLISION MAP v2 - BASELINE SNAPSHOT
+Recorded 2026-08-11, before any Phase 2 blocking change.
+
+WHY THIS FILE EXISTS
+  The plugin deletes ~/.runelite/drews-live-flags.txt on every startUp(). That destroyed the
+  original 881,752-byte Falador capture and with it the ability to reproduce the pre-change
+  numbers. This file is version-controlled so the same thing cannot happen twice. Any run that
+  could alter an input must snapshot its comparison numbers here FIRST.
+
+SOURCE CAPTURE
+  file    ~/.runelite/drews-live-flags.FULL_20260811.txt
+  bytes   4,860,120
+  sha256  2D9AB484CFE72FEADDFA368C6E1F03C9D67DB944878A51709C99D57389DF0A94
+  scenes  47      rows 220,398      unique covered tiles 217,458
+  raw flag coverage  100.000% (220398/220398)
+  areas   Lumbridge, Al Kharid, Draynor (incl. basement), Varrock (incl. sewers), Falador
+          (castle planes 0/1/2), both Lum bridges, planes 0/1/2/3, two underground scenes.
+  NOT covered: Lumbridge Swamp Caves (needs a rope).
+
+BUILDER STATE
+  shapeFor() md5  f2f4eb7d6013c28c0db6b6e819730515   (walls only: locTypes 0,1,2,3,9)
+  commit at time of snapshot: 2370da4 (capture upgrade), on top of 25ae786 (Phase 1)
+  No blocking rule has been changed at any point up to this snapshot.
+
+=== HEADLINE COUNTERS (post border-ring exclusion) ===
+  comparedEdges              226350
+  DANGEROUS                   33672
+  DOOR_SHUT                     158
+  AGREE_BLOCKED               27036
+  AGREE_OPEN                 161245
+  OVERBLOCK                    4239
+  dangerousRateAll          14.876%
+  closure: 33672 + 158 + 27036 + 161245 + 4239 == 226350
+
+  borderExcludedEdges         19482
+  borderExcludedDangerous     11520
+  borderExcludedDangerousUnexplained  11443
+
+=== DANGEROUS SPLIT ===
+  DANGEROUS_DOOR_CAPABLE         87  (0.3%)
+  DANGEROUS_CONFLICTED         8911  (26.5%)
+  DANGEROUS_UNEXPLAINED       24674  (73.3%)
+  closure: 87 + 8911 + 24674 == 33672
+
+=== THE CONFIRMED FINDING - object solidity ===
+  bucket                edges   DANGEROUS   unexplRate    ratio    share   overblockRate
+  ADJ_SOLID_FLAGGED     25972      15560      57.959%   11.942x   61.01%     1.140%
+  ADJ_NONSOLID_ONLY      6098        836       3.149%    0.649x    0.78%     1.640%
+  ADJ_IGNORED (union)   32070      16396      47.537%    9.795x   61.79%     1.235%
+  ADJ_SCENERY           22444      11117      45.340%    9.342x   41.24%     0.918%
+  ADJ_OTHER_IGNORED      9626       5279      52.659%       â€”     20.54%     1.974%
+  NOT_ADJACENT         194280      17276       4.853%       â€”     38.21%     1.978%
+
+  ADJ_SOLID_FLAGGED vs NOT_ADJACENT: CONFIRMED (11.942x >= 3.0x, share 61.01% >= 40%)
+  Overblock control PASS: ADJ_SCENERY 0.918% <= NOT_ADJACENT 1.978% * 1.5
+
+  REPLICATION NOTE: the object finding was formed on the Falador-only capture (10.958x,
+  57.24% share) and re-tested here on a capture that is ~75% ground the original never
+  covered. It got STRONGER: 11.942x and 61.01%. Every rival hypothesis got weaker.
+
+=== RIVAL HYPOTHESES, ALL STILL DEAD OR UNPROVEN ON THE LARGER DATA ===
+  border artifact                 INCONCLUSIVE  (unchanged verdict)
+  INTERIOR (combined)             REFUTED   9.842% vs OUTDOOR 21.442%
+  UPPER alone                     REFUTED   8.501% vs 21.442%
+  UNDER_STRUCTURE alone           REFUTED  17.822% vs 21.442%
+  occupied upper floors           REFUTED  22.592% vs 21.442% = 1.05x
+     (this was INCONCLUSIVE on the smaller capture; more data killed it outright)
+
+=== SECOND DEFECT, COUNTED NOT FIXED ===
+  placements with footprint larger than 1x1: 2873
+  The builder treats every placement as a single tile. Independent of solidity.
+
+=== PHASE 2 ABORT THRESHOLDS, derived from the numbers above ===
+  OVERBLOCK is 4239. ABORT if it exceeds 5900 (+40%).
+  AGREE_OPEN is 161245. ABORT if it drops by more than 5000 - that is real walkable
+    ground being closed off.
+  NET CRITERION: DANGEROUS must fall by MORE than OVERBLOCK rises. If it does not, the
+    change is net-negative and is reverted regardless of how good the headline looks.
+  EXPECTED if the fix works: DANGEROUS 33672 -> roughly 18000; DANGEROUS_UNEXPLAINED
+    24674 -> roughly 10000 (up to 15053 solid-adjacent edges resolved).
+  Route tests must still solve. Any route working before and broken after = revert.
+  ROLLBACK POINT: commit 2370da4.
