@@ -1354,6 +1354,13 @@ public final class CollisionMapBuilder
             && borderDistances.maxBorderDistance <= BORDER_MAX_DISTANCE;
         boolean dangerous = liveBlocked && passable;
         boolean overblock = !liveBlocked && !passable;
+        /*
+         * The client says this edge is open and so do we. These are the edges a NEW blocking rule
+         * would turn into overblocks, which is the one thing the per-locType table could not see:
+         * its overblock column only counts blocking the current build already does, so a build
+         * with the rule switched off reports zero cost for that rule by construction.
+         */
+        boolean agreeOpen = !liveBlocked && passable;
         boolean dangerousUnexplained = dangerous
             && classifyDangerousEdge(comparison, stats, tile, direction) == DangerousSplit.UNEXPLAINED;
 
@@ -1428,7 +1435,8 @@ public final class CollisionMapBuilder
             direction,
             dangerous,
             dangerousUnexplained,
-            overblock
+            overblock,
+            agreeOpen
         );
     }
 
@@ -1465,7 +1473,8 @@ public final class CollisionMapBuilder
         char direction,
         boolean dangerous,
         boolean dangerousUnexplained,
-        boolean overblock
+        boolean overblock,
+        boolean agreeOpen
     )
     {
         int otherX = tile.x;
@@ -1495,7 +1504,8 @@ public final class CollisionMapBuilder
             ignoredLocTypeMaskForEdge(stats, tile, otherX, otherY),
             dangerous,
             dangerousUnexplained,
-            overblock
+            overblock,
+            agreeOpen
         );
         recordIgnoredObjectDefinitionFlagMeasurements(
             comparison.sceneryAdjacencyMeasurement,
@@ -2704,6 +2714,21 @@ public final class CollisionMapBuilder
             .append("already above the overblock bar. Blocking there would deepen the ")
             .append("sealed-building failure and needs its own pass first.")
             .append('\n');
+        report.append("      - UNSAFE-COST: clears the danger bar but does not pay for itself. ")
+            .append("projectedNewOverblock is the AGREE_OPEN count on this locType's tiles - ")
+            .append("edges the client says are open and this build also says are open, every one ")
+            .append("of which becomes an overblock the moment the locType is blocked. ")
+            .append("benefitPerNewOverblock = DANGEROUS_UNEXPLAINED / projectedNewOverblock; ")
+            .append("below ")
+            .append(BORDER_CONFIRMED_RATE_MULTIPLIER)
+            .append(" the locType is UNSAFE-COST.")
+            .append('\n');
+        report.append("      The overblockRate column measures what THIS build already overblocks, ")
+            .append("so on a run with the rule switched off it reads zero for that rule by ")
+            .append("construction. projectedNewOverblock is the column that can see the cost of a ")
+            .append("rule that is not enabled yet, and it is the one the verdict uses. Added ")
+            .append("2026-08-12 after the earlier set was chosen on the blind column.")
+            .append('\n');
         report.append("      - INCONCLUSIVE: anything else.").append('\n');
         if (stats.phase2SolidObjectBlockingEnabled)
         {
@@ -2721,7 +2746,8 @@ public final class CollisionMapBuilder
             .append(formatRateWithCounts(notAdjacent.overblock, notAdjacent.comparedEdges))
             .append('\n');
         report.append("      locType phase2Handled comparedEdges DANGEROUS ")
-            .append("dangerousUnexplainedRate unexplainedRatio overblockRate overblockRatio verdict")
+            .append("dangerousUnexplainedRate unexplainedRatio overblockRate overblockRatio ")
+            .append("projectedNewOverblock benefitPerNewOverblock verdict")
             .append('\n');
         for (int locType = 0; locType < LOC_TYPE_MASK_BITS; locType++)
         {
@@ -2743,6 +2769,8 @@ public final class CollisionMapBuilder
                 .append(sceneryAdjacencyRateRatio(unexplainedRate, notAdjacentUnexplainedRate))
                 .append(' ').append(formatRateWithCounts(counts.overblock, counts.comparedEdges))
                 .append(' ').append(sceneryAdjacencyRateRatio(overblockRate, notAdjacentOverblockRate))
+                .append(' ').append(counts.agreeOpen)
+                .append(' ').append(formatBenefitPerNewOverblock(counts))
                 .append(' ').append(ignoredLocTypeVerdict(
                     counts,
                     unexplainedRate,
@@ -2782,7 +2810,22 @@ public final class CollisionMapBuilder
         {
             return "UNSAFE-OVERBLOCK";
         }
+        if (counts.agreeOpen > 0
+            && (double) counts.dangerousUnexplained / (double) counts.agreeOpen
+                < BORDER_CONFIRMED_RATE_MULTIPLIER)
+        {
+            return "UNSAFE-COST";
+        }
         return "BLOCKABLE";
+    }
+
+    private static String formatBenefitPerNewOverblock(SceneryAdjacencyBucketCounts counts)
+    {
+        if (counts.agreeOpen == 0)
+        {
+            return "no-cost";
+        }
+        return formatMultiplier((double) counts.dangerousUnexplained / (double) counts.agreeOpen);
     }
 
     private static long multiLocTypeTileCount(BuildStats stats)
@@ -5133,8 +5176,24 @@ public final class CollisionMapBuilder
         private long dangerous;
         private long dangerousUnexplained;
         private long overblock;
+        private long agreeOpen;
 
         private void record(boolean dangerous, boolean dangerousUnexplained, boolean overblock)
+        {
+            /*
+             * agreeOpen is left false on this overload. Only the per-locType measurement needs it,
+             * and its zero must not be read as "no cost" anywhere else - the callers of this
+             * overload do not display the column.
+             */
+            record(dangerous, dangerousUnexplained, overblock, false);
+        }
+
+        private void record(
+            boolean dangerous,
+            boolean dangerousUnexplained,
+            boolean overblock,
+            boolean agreeOpen
+        )
         {
             comparedEdges++;
             if (dangerous)
@@ -5149,6 +5208,10 @@ public final class CollisionMapBuilder
             {
                 this.overblock++;
             }
+            if (agreeOpen)
+            {
+                this.agreeOpen++;
+            }
         }
 
         private void add(SceneryAdjacencyBucketCounts counts)
@@ -5157,6 +5220,7 @@ public final class CollisionMapBuilder
             dangerous += counts.dangerous;
             dangerousUnexplained += counts.dangerousUnexplained;
             overblock += counts.overblock;
+            agreeOpen += counts.agreeOpen;
         }
     }
 
@@ -5195,19 +5259,20 @@ public final class CollisionMapBuilder
             int mask,
             boolean dangerous,
             boolean dangerousUnexplained,
-            boolean overblock
+            boolean overblock,
+            boolean agreeOpen
         )
         {
             if (mask == 0)
             {
-                notAdjacent.record(dangerous, dangerousUnexplained, overblock);
+                notAdjacent.record(dangerous, dangerousUnexplained, overblock, agreeOpen);
                 return;
             }
             for (int locType = 0; locType < byLocType.length; locType++)
             {
                 if ((mask & (1 << locType)) != 0)
                 {
-                    byLocType[locType].record(dangerous, dangerousUnexplained, overblock);
+                    byLocType[locType].record(dangerous, dangerousUnexplained, overblock, agreeOpen);
                 }
             }
         }
