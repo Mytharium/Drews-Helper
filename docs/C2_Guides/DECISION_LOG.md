@@ -2421,3 +2421,42 @@ D-0146 (2026-08-13) - Terrain completeness audit finds no shippable terrain-bit 
   tools/collision-map-v2-report.txt. Next candidate work is an object-profile pass using the
   all-region named-solid ranking, with exact route checks for trees/hedges/boulders before any
   shipped map change.
+
+
+D-0147 (2026-08-13) - Expand object-profile blockers with no-cost scenery profiles
+
+  RULE 1 - KEEP THE OBJECT BLOCKER PROFILE-BASED. Do not restore broad locType 10/11, all
+  named-solid, all 1x1, or old Phase 2 object blocking. Object blockers ship only as explicit
+  object-id plus locType profiles whose measured benefit survives the all-region report.
+
+  RULE 2 - THIS PASS ONLY SHIPS ZERO-COST RANKER WINNERS THAT KEEP PINNED ROUTES STABLE. The
+  frozen all-region capture showed many named scenery profiles with projectedNewOverblock=0. The
+  first trial included trees, but that moved the pinned Falador southeast live-route fork, so tree
+  and tree-stump profiles stay out even when the cost column says no-cost. Paid profiles with
+  projected overblock, including hedges, stools, shelves, crates and similar indoor/outdoor
+  scenery, also stay out until they get their own proof batch. Wilderness_Ditch 23271/10 stays out
+  despite a no-cost row because it is traversal/transport-like geometry, not ordinary object
+  blocking.
+
+  RULE 3 - FOOTPRINT EXPANSION IS STILL SEPARATE. The current blocker marks the object anchor
+  tile through the same edge-suppression path used by the table/bench/chair pass. It does not
+  invent footprint expansion for large objects in this decision. If a tree/boulder needs wider
+  geometry than the cache anchor exposes, prove that in a later pass.
+
+  PROOF. Frozen capture build/frozen-live-flags-object-profile-pass.txt was 26,141,222 bytes
+  with SHA256 48033D0FCB248997626E6F9099686C8944BA853E1E53F90D8FEA97395E0390A7. Existing
+  shipped furniture profiles produced DANGEROUS_UNEXPLAINED 78,069, OVERBLOCK 20,437,
+  route-aware OVERBLOCK 7,468, and 764 blocked object placements. The shipped expanded list
+  produced DANGEROUS_UNEXPLAINED 75,184, OVERBLOCK 20,437, route-aware OVERBLOCK 7,468, and
+  7,850 blocked placements. That is 2,885 additional dangerous-unexplained edges fixed with 0 new
+  measured OVERBLOCK and 0 new route-aware OVERBLOCK versus the current furniture map. Against
+  the no-object diagnostic baseline, DANGEROUS_UNEXPLAINED drops 114,922 -> 75,184 while
+  route-aware OVERBLOCK rises 6,857 -> 7,468, so the net gate remains OK (39,738 > 611).
+
+  RULE 4 - KEEP THE OLD SWITCH NAME AS AN ALIAS. --disable-object-profile-blocking is now the
+  accurate diagnostic flag name, but --disable-furniture-object-blocking remains accepted so old
+  scripts and notes do not break while reports move to the broader object-profile wording.
+
+  Cross-reference: extends D-0142 and follows D-0146. Report snapshot:
+  tools/collision-map-v2-report.txt. Shipped map SHA256:
+  FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC.

@@ -79,6 +79,8 @@ public final class CollisionMapBuilder
     private static final String REPORT_FILE = "tools/collision-map-v2-report.txt";
     private static final String LIVE_FLAGS_ARG = "--live-flags";
     private static final String DISABLE_PHASE2_SOLID_OBJECTS_ARG = "--disable-phase2-solid-objects";
+    private static final String DISABLE_OBJECT_PROFILE_BLOCKING_ARG =
+        "--disable-object-profile-blocking";
     private static final String DISABLE_FURNITURE_OBJECT_BLOCKING_ARG =
         "--disable-furniture-object-blocking";
     private static final String DISABLE_PHASE3_ROOF_BLOCKING_ARG = "--disable-phase3-roof-blocking";
@@ -120,13 +122,14 @@ public final class CollisionMapBuilder
     private static final int GROUND_DECOR_LOC_TYPE = 22;
     /*
      * Narrow replacement for the rejected broad phase 2 object pass. These exact object/locType
-     * profiles came from the ranked object report: 1104/10 Bench at 9.000x fixes per projected
-     * overblock, 595/10 Table at 5.833x, and 1088 Chair at 2.397x-2.658x. Do not widen this back
-     * to "all named 1x1 scenery" or "all solid locType 10/11"; those rules were measured and were
-     * too blunt, including sealing the Ruins of Unkah ferry beach.
+     * profiles came from the ranked object report. The first slice was table/bench/chair; the
+     * second slice adds only no-cost scenery profiles whose measured projectedNewOverblock was 0
+     * on the frozen all-region live capture and which did not move a pinned live-matching route.
+     * Do not widen this back to "all named 1x1 scenery" or "all solid locType 10/11"; those rules
+     * were measured and were too blunt, including sealing the Ruins of Unkah ferry beach.
      */
-    private static final Set<Integer> DEFAULT_FURNITURE_OBJECT_PROFILE_KEYS =
-        defaultFurnitureObjectProfileKeys();
+    private static final Set<Integer> DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS =
+        defaultObjectProfileBlockingKeys();
     /*
      * The phase 2 gate used to compare against hardcoded baselines measured on a 24-region run
      * (DANGEROUS 33672, AGREE_OPEN 161245, OVERBLOCK 4239, route-aware OVERBLOCK 2616). On any
@@ -297,6 +300,7 @@ public final class CollisionMapBuilder
         {
             String arg = args[i];
             if (DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
+                || DISABLE_OBJECT_PROFILE_BLOCKING_ARG.equals(arg)
                 || DISABLE_FURNITURE_OBJECT_BLOCKING_ARG.equals(arg))
             {
                 phase2SolidObjectBlocking = false;
@@ -380,6 +384,7 @@ public final class CollisionMapBuilder
     {
         return isLiveFlagsArg(arg)
             || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
+            || DISABLE_OBJECT_PROFILE_BLOCKING_ARG.equals(arg)
             || DISABLE_FURNITURE_OBJECT_BLOCKING_ARG.equals(arg)
             || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg)
             || arg.startsWith(ROOF_LOC_TYPES_ARG + "=")
@@ -865,7 +870,7 @@ public final class CollisionMapBuilder
         return text.length() == 0 ? "none" : text.toString();
     }
 
-    private static String formatFurnitureObjectProfileKeys(Set<Integer> profileKeys)
+    private static String formatObjectProfileBlockingKeys(Set<Integer> profileKeys)
     {
         TreeSet<String> labels = new TreeSet<>();
         for (Integer profileKey : profileKeys)
@@ -876,13 +881,33 @@ public final class CollisionMapBuilder
         return labels.isEmpty() ? "none" : String.join(",", labels);
     }
 
-    private static Set<Integer> defaultFurnitureObjectProfileKeys()
+    private static Set<Integer> defaultObjectProfileBlockingKeys()
     {
         HashSet<Integer> keys = new HashSet<>();
-        keys.add(objectProfileKey(595, 10));   // Table, 245 fixes / 42 projected overblocks.
-        keys.add(objectProfileKey(1104, 10));  // Bench, 81 fixes / 9 projected overblocks.
-        keys.add(objectProfileKey(1088, 10));  // Chair, 151 fixes / 63 projected overblocks.
-        keys.add(objectProfileKey(1088, 11));  // Chair, 101 fixes / 38 projected overblocks.
+        keys.add(objectProfileKey(595, 10));    // Table, proven in D-0142.
+        keys.add(objectProfileKey(1104, 10));   // Bench, proven in D-0142.
+        keys.add(objectProfileKey(1088, 10));   // Chair, proven in D-0142.
+        keys.add(objectProfileKey(1088, 11));   // Chair, proven in D-0142.
+
+        keys.add(objectProfileKey(1329, 10));   // Tropical leaves, no projected overblock.
+        keys.add(objectProfileKey(1369, 10));   // Plant, no projected overblock.
+        keys.add(objectProfileKey(1391, 10));   // Plant, no projected overblock.
+        keys.add(objectProfileKey(1392, 10));   // Plant, no projected overblock.
+        keys.add(objectProfileKey(1394, 10));   // Plant, no projected overblock.
+        keys.add(objectProfileKey(1122, 10));   // Bush, no projected overblock.
+        keys.add(objectProfileKey(1123, 10));   // Bush, no projected overblock.
+        keys.add(objectProfileKey(1118, 10));   // Bush, no projected overblock.
+        keys.add(objectProfileKey(11911, 10));  // Bush, no projected overblock.
+        keys.add(objectProfileKey(1405, 10));   // Cactus, no projected overblock.
+        keys.add(objectProfileKey(1406, 10));   // Cactus, no projected overblock.
+
+        keys.add(objectProfileKey(10790, 10));  // Boulder, no projected overblock.
+        keys.add(objectProfileKey(10791, 10));  // Boulder, no projected overblock.
+        keys.add(objectProfileKey(11190, 10));  // Rockslide, no projected overblock.
+        keys.add(objectProfileKey(11192, 10));  // Rockslide, no projected overblock.
+        keys.add(objectProfileKey(11193, 10));  // Rockslide, no projected overblock.
+        keys.add(objectProfileKey(18895, 10));  // Rockslide, no projected overblock.
+        keys.add(objectProfileKey(879, 10));    // Fountain, no projected overblock.
         return Collections.unmodifiableSet(keys);
     }
 
@@ -898,8 +923,9 @@ public final class CollisionMapBuilder
             return false;
         }
         /*
-         * Furniture blocking is deliberately limited to measured object profiles. Other ignored
-         * locTypes include roofs, structural encodings, and unnamed terrain/decor cache objects.
+         * Object-profile blocking is deliberately limited to measured object profiles. Other
+         * ignored locTypes include roofs, structural encodings, and unnamed terrain/decor cache
+         * objects.
          */
         if (locType != 10 && locType != 11)
         {
@@ -910,7 +936,7 @@ public final class CollisionMapBuilder
             stats.phase2SolidObjectMissingDefinitionSkipped++;
             return false;
         }
-        if (!DEFAULT_FURNITURE_OBJECT_PROFILE_KEYS.contains(objectProfileKey(objectId, locType)))
+        if (!DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS.contains(objectProfileKey(objectId, locType)))
         {
             return false;
         }
@@ -2221,11 +2247,11 @@ public final class CollisionMapBuilder
             appendRegionList(report, request.regionIds);
         }
         report.append('\n');
-        report.append("furniture object blocking: ")
+        report.append("object profile blocking: ")
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
             .append('\n');
-        report.append("furniture object profiles: ")
-            .append(formatFurnitureObjectProfileKeys(DEFAULT_FURNITURE_OBJECT_PROFILE_KEYS))
+        report.append("object profile keys: ")
+            .append(formatObjectProfileBlockingKeys(DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS))
             .append('\n');
         report.append("merge source: ")
             .append(request.mergeFrom == null ? "none" : request.mergeFrom.toString())
@@ -2391,13 +2417,13 @@ public final class CollisionMapBuilder
     {
         if (!stats.phase2SolidObjectBlockingEnabled && !stats.phase3RoofBlockingEnabled)
         {
-            report.append("  object-blocking diagnostic: NOT APPLICABLE - furniture and phase 3 ")
+            report.append("  object-blocking diagnostic: NOT APPLICABLE - object profiles and phase 3 ")
                 .append("are both disabled, so this run IS the baseline.").append('\n');
             return;
         }
         if (baseline == null || baseline.dangerous.skipped || comparison.skipped)
         {
-            report.append("  furniture route-aware object diagnostic: NOT APPLICABLE - no live ")
+            report.append("  route-aware object diagnostic: NOT APPLICABLE - no live ")
                 .append("baseline was measured for this run.").append('\n');
             return;
         }
@@ -2414,7 +2440,7 @@ public final class CollisionMapBuilder
         boolean netOk = unexplainedDrop > Math.max(0L, routeAwareRise);
         boolean proofOk = proofCurrent >= proofBaseline;
 
-        report.append("  object-blocking diagnostic (furniture=")
+        report.append("  object-blocking diagnostic (objectProfiles=")
             .append(stats.phase2SolidObjectBlockingEnabled ? "on" : "off")
             .append(" phase3=")
             .append(stats.phase3RoofBlockingEnabled ? "on" : "off")
@@ -3151,11 +3177,11 @@ public final class CollisionMapBuilder
         report.append("      - INCONCLUSIVE: anything else.").append('\n');
         if (stats.phase2SolidObjectBlockingEnabled)
         {
-            report.append("      WARNING: furniture blocking is ENABLED, so the overblock ")
+            report.append("      WARNING: object profile blocking is ENABLED, so the overblock ")
                 .append("column for locTypes 10 and 11 counts edges this build wrote itself. ")
                 .append("Read this ")
                 .append("table from a run with ")
-                .append(DISABLE_FURNITURE_OBJECT_BLOCKING_ARG)
+                .append(DISABLE_OBJECT_PROFILE_BLOCKING_ARG)
                 .append(".")
                 .append('\n');
         }
@@ -3545,9 +3571,9 @@ public final class CollisionMapBuilder
              * edges for the ignored-object set this control assumes is unwritten, so with
              * phase 2 on it reports FAIL by construction rather than by evidence.
              */
-            report.append("    union overblock control: NOT APPLICABLE - furniture object ")
+            report.append("    union overblock control: NOT APPLICABLE - object profile ")
                 .append("blocking is ENABLED. Re-run with ")
-                .append(DISABLE_FURNITURE_OBJECT_BLOCKING_ARG)
+                .append(DISABLE_OBJECT_PROFILE_BLOCKING_ARG)
                 .append(" to evaluate it.")
                 .append('\n');
         }
@@ -3961,10 +3987,10 @@ public final class CollisionMapBuilder
              * Measured 2026-08-12 over the same 62 regions and the same capture: ADJ_SCENERY
              * overblockRate 0.912% with phase 2 off against 14.026% with phase 2 on.
              */
-            report.append("    overblock control: NOT APPLICABLE - furniture object blocking ")
+            report.append("    overblock control: NOT APPLICABLE - object profile blocking ")
                 .append("is ENABLED, so the premise above does not hold and the rates shown are ")
                 .append("informational only. Re-run with ")
-                .append(DISABLE_FURNITURE_OBJECT_BLOCKING_ARG)
+                .append(DISABLE_OBJECT_PROFILE_BLOCKING_ARG)
                 .append(" to evaluate this control.")
                 .append('\n');
             return;
@@ -4377,13 +4403,13 @@ public final class CollisionMapBuilder
             .append(stats.phase3RoofPlacementsByPlane[3]).append('\n');
         report.append("  Phase 3 roof open-style placements blocked: ")
             .append(stats.phase3RoofOpenStylePlacements).append('\n');
-        report.append("  furniture object placements blocked: ")
+        report.append("  object profile placements blocked: ")
             .append(stats.phase2SolidObjectPlacements).append('\n');
-        report.append("  furniture object open-style placements blocked: ")
+        report.append("  object profile open-style placements blocked: ")
             .append(stats.phase2SolidObjectOpenStylePlacements).append('\n');
-        report.append("  furniture object missing-definition placements skipped: ")
+        report.append("  object profile missing-definition placements skipped: ")
             .append(stats.phase2SolidObjectMissingDefinitionSkipped).append('\n');
-        report.append("  furniture object footprint-held-back placements: ")
+        report.append("  object profile footprint-held-back placements: ")
             .append(stats.phase2SolidObjectFootprintHeldBackPlacements).append('\n');
         report.append("  door-capable placement tiles: ")
             .append(stats.doorCapableLocTypeByTile.size()).append('\n');

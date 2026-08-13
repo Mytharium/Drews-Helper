@@ -684,24 +684,32 @@ public class DrewsHelperWalkingRouteEngineTest
     }
 
     @Test
-    public void shippedCollisionMapBlocksMeasuredFurnitureWithoutSealingUnkahBeach()
+    public void shippedCollisionMapBlocksMeasuredObjectProfilesWithoutSealingUnkahBeach()
         throws Exception
     {
         DrewsHelperCollisionMap map = DrewsHelperCollisionMap.loadDefault();
 
-        assertFalse("chair tile should not accept a north step",
-            map.canMoveNorth(2573, 3245, 0));
-        assertFalse("chair tile should not accept an east step",
-            map.canMoveEast(2573, 3245, 0));
-        assertFalse("chair tile should not accept a south step",
-            map.canMoveSouth(2573, 3245, 0));
-        assertFalse("chair tile should not accept a west step",
-            map.canMoveWest(2573, 3245, 0));
+        assertTileFullyBlocked(map, 2573, 3245, 0, "chair");
 
         assertTrue("Ruins of Unkah ferry landing must remain walkable",
             map.canMoveSouth(3148, 2843, 0));
         assertTrue("Ruins of Unkah beach strip must remain walkable",
             map.canMoveEast(3155, 2839, 0));
+    }
+
+    private static void assertTileFullyBlocked(
+        DrewsHelperCollisionMap map,
+        int x,
+        int y,
+        int plane,
+        String label
+    )
+    {
+        String tile = label + " tile " + x + "," + y + "," + plane;
+        assertFalse(tile + " should not accept a north step", map.canMoveNorth(x, y, plane));
+        assertFalse(tile + " should not accept an east step", map.canMoveEast(x, y, plane));
+        assertFalse(tile + " should not accept a south step", map.canMoveSouth(x, y, plane));
+        assertFalse(tile + " should not accept a west step", map.canMoveWest(x, y, plane));
     }
 
     @Test
