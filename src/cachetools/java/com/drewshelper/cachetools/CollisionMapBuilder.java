@@ -79,6 +79,8 @@ public final class CollisionMapBuilder
     private static final String REPORT_FILE = "tools/collision-map-v2-report.txt";
     private static final String LIVE_FLAGS_ARG = "--live-flags";
     private static final String DISABLE_PHASE2_SOLID_OBJECTS_ARG = "--disable-phase2-solid-objects";
+    private static final String DISABLE_FURNITURE_OBJECT_BLOCKING_ARG =
+        "--disable-furniture-object-blocking";
     private static final String DISABLE_PHASE3_ROOF_BLOCKING_ARG = "--disable-phase3-roof-blocking";
     private static final String ROOF_LOC_TYPES_ARG = "--roof-loctypes";
     /*
@@ -116,6 +118,15 @@ public final class CollisionMapBuilder
      * the candidate ignored-placement set on purpose.
      */
     private static final int GROUND_DECOR_LOC_TYPE = 22;
+    /*
+     * Narrow replacement for the rejected broad phase 2 object pass. These exact object/locType
+     * profiles came from the ranked object report: 1104/10 Bench at 9.000x fixes per projected
+     * overblock, 595/10 Table at 5.833x, and 1088 Chair at 2.397x-2.658x. Do not widen this back
+     * to "all named 1x1 scenery" or "all solid locType 10/11"; those rules were measured and were
+     * too blunt, including sealing the Ruins of Unkah ferry beach.
+     */
+    private static final Set<Integer> DEFAULT_FURNITURE_OBJECT_PROFILE_KEYS =
+        defaultFurnitureObjectProfileKeys();
     /*
      * The phase 2 gate used to compare against hardcoded baselines measured on a 24-region run
      * (DANGEROUS 33672, AGREE_OPEN 161245, OVERBLOCK 4239, route-aware OVERBLOCK 2616). On any
@@ -251,9 +262,9 @@ public final class CollisionMapBuilder
         }
 
         /*
-         * The gate asks "is enabling phase 2 better than not enabling it, on THIS region set".
-         * Only a baseline measured on the same regions and the same capture can answer that, so
-         * the build is simply run again with phase 2 forced off. No zip is written for it.
+         * The diagnostic asks "what did object blocking buy on THIS region set". Only a baseline
+         * measured on the same regions and the same capture can answer that, so the build is run
+         * again with object blocking forced off. No zip is written for it.
          */
         BuildResult baselineResult = build(store, request.withObjectBlockingDisabled());
         return new Phase2Baseline(
@@ -285,7 +296,8 @@ public final class CollisionMapBuilder
         for (int i = selectorStart; i < args.length; i++)
         {
             String arg = args[i];
-            if (DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg))
+            if (DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
+                || DISABLE_FURNITURE_OBJECT_BLOCKING_ARG.equals(arg))
             {
                 phase2SolidObjectBlocking = false;
                 continue;
@@ -368,6 +380,7 @@ public final class CollisionMapBuilder
     {
         return isLiveFlagsArg(arg)
             || DISABLE_PHASE2_SOLID_OBJECTS_ARG.equals(arg)
+            || DISABLE_FURNITURE_OBJECT_BLOCKING_ARG.equals(arg)
             || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg)
             || arg.startsWith(ROOF_LOC_TYPES_ARG + "=")
             || arg.startsWith(MERGE_FROM_ARG + "=");
@@ -694,7 +707,7 @@ public final class CollisionMapBuilder
         int y = baseY + location.getPosition().getY();
         long key = tileKey(x, y, plane);
         stats.placementTileKeys.add(key);
-        recordIgnoredNonDecorDefinitionPlacement(stats, key, location.getType(), def);
+        recordIgnoredNonDecorDefinitionPlacement(stats, key, location.getId(), location.getType(), def);
         recordIgnoredPlacementTile(stats, x, y, plane, location.getType());
         if (location.getType() == 1 && location.getOrientation() == 3)
         {
@@ -716,6 +729,7 @@ public final class CollisionMapBuilder
         if (shape.length == 0)
         {
             applyIgnoredSolidObjectBlocking(
+                location.getId(),
                 location.getType(),
                 def,
                 openable,
@@ -736,6 +750,7 @@ public final class CollisionMapBuilder
     }
 
     private static void applyIgnoredSolidObjectBlocking(
+        int objectId,
         int locType,
         ObjectDefinition def,
         boolean openable,
@@ -772,7 +787,7 @@ public final class CollisionMapBuilder
         {
             return;
         }
-        if (!shouldBlockIgnoredSolidObject(locType, def, stats))
+        if (!shouldBlockIgnoredSolidObject(objectId, locType, def, stats))
         {
             return;
         }
@@ -850,7 +865,29 @@ public final class CollisionMapBuilder
         return text.length() == 0 ? "none" : text.toString();
     }
 
+    private static String formatFurnitureObjectProfileKeys(Set<Integer> profileKeys)
+    {
+        TreeSet<String> labels = new TreeSet<>();
+        for (Integer profileKey : profileKeys)
+        {
+            int key = profileKey.intValue();
+            labels.add((key / LOC_TYPE_MASK_BITS) + "/" + (key % LOC_TYPE_MASK_BITS));
+        }
+        return labels.isEmpty() ? "none" : String.join(",", labels);
+    }
+
+    private static Set<Integer> defaultFurnitureObjectProfileKeys()
+    {
+        HashSet<Integer> keys = new HashSet<>();
+        keys.add(objectProfileKey(595, 10));   // Table, 245 fixes / 42 projected overblocks.
+        keys.add(objectProfileKey(1104, 10));  // Bench, 81 fixes / 9 projected overblocks.
+        keys.add(objectProfileKey(1088, 10));  // Chair, 151 fixes / 63 projected overblocks.
+        keys.add(objectProfileKey(1088, 11));  // Chair, 101 fixes / 38 projected overblocks.
+        return Collections.unmodifiableSet(keys);
+    }
+
     private static boolean shouldBlockIgnoredSolidObject(
+        int objectId,
         int locType,
         ObjectDefinition def,
         BuildStats stats
@@ -861,9 +898,8 @@ public final class CollisionMapBuilder
             return false;
         }
         /*
-         * Phase 2 is deliberately limited to standard scenery/object placements. Other ignored
-         * locTypes include roofs and structural encodings that are not safe to treat as full-tile
-         * blockers without their own proof pass.
+         * Furniture blocking is deliberately limited to measured object profiles. Other ignored
+         * locTypes include roofs, structural encodings, and unnamed terrain/decor cache objects.
          */
         if (locType != 10 && locType != 11)
         {
@@ -874,13 +910,16 @@ public final class CollisionMapBuilder
             stats.phase2SolidObjectMissingDefinitionSkipped++;
             return false;
         }
-        if (def.getInteractType() == 0)
+        if (!DEFAULT_FURNITURE_OBJECT_PROFILE_KEYS.contains(objectProfileKey(objectId, locType)))
         {
             return false;
         }
-        if (def.getSizeX() != 1 || def.getSizeY() != 1)
+        if (!isNamedObject(def) || def.getInteractType() == 0)
         {
-            stats.phase2SolidObjectFootprintHeldBackPlacements++;
+            return false;
+        }
+        if (firstOpenStyleAction(def) != null)
+        {
             return false;
         }
         return true;
@@ -889,6 +928,7 @@ public final class CollisionMapBuilder
     private static void recordIgnoredNonDecorDefinitionPlacement(
         BuildStats stats,
         long key,
+        int objectId,
         int locType,
         ObjectDefinition def
     )
@@ -929,6 +969,15 @@ public final class CollisionMapBuilder
         {
             stats.obstructsGroundTileKeys.add(key);
         }
+        recordIgnoredSceneryNameFlags(
+            stats,
+            key,
+            locType,
+            objectId,
+            def,
+            interactType,
+            blocksProjectile
+        );
 
         if (interactType == 0)
         {
@@ -968,6 +1017,98 @@ public final class CollisionMapBuilder
         {
             stats.ignoredNonDecorBlockingMaskPlacements++;
         }
+    }
+
+    private static void recordIgnoredSceneryNameFlags(
+        BuildStats stats,
+        long key,
+        int locType,
+        int objectId,
+        ObjectDefinition def,
+        int interactType,
+        boolean blocksProjectile
+    )
+    {
+        if (locType != 10 && locType != 11)
+        {
+            return;
+        }
+
+        if (!isNamedObject(def))
+        {
+            stats.unnamedSceneryTileKeys.add(key);
+            return;
+        }
+
+        stats.namedSceneryTileKeys.add(key);
+        if (interactType != 0)
+        {
+            stats.namedSolidSceneryTileKeys.add(key);
+            recordNamedSolidSceneryObjectProfile(
+                stats,
+                key,
+                objectId,
+                locType,
+                def,
+                blocksProjectile
+            );
+            if (def.getSizeX() == 1 && def.getSizeY() == 1)
+            {
+                stats.namedSolidOneByOneSceneryTileKeys.add(key);
+            }
+        }
+        if (!blocksProjectile)
+        {
+            stats.namedNonProjectileSceneryTileKeys.add(key);
+            if (interactType != 0)
+            {
+                stats.namedNonProjectileSolidSceneryTileKeys.add(key);
+                if (def.getSizeX() == 1 && def.getSizeY() == 1)
+                {
+                    stats.namedNonProjectileSolidOneByOneSceneryTileKeys.add(key);
+                }
+            }
+        }
+    }
+
+    private static boolean isNamedObject(ObjectDefinition def)
+    {
+        if (def == null)
+        {
+            return false;
+        }
+        String name = def.getName();
+        return name != null
+            && !name.trim().isEmpty()
+            && !"null".equalsIgnoreCase(name.trim());
+    }
+
+    private static void recordNamedSolidSceneryObjectProfile(
+        BuildStats stats,
+        long tileKey,
+        int objectId,
+        int locType,
+        ObjectDefinition def,
+        boolean blocksProjectile
+    )
+    {
+        int profileKey = objectProfileKey(objectId, locType);
+        stats.namedSolidSceneryProfiles.putIfAbsent(
+            profileKey,
+            new ObjectProfile(
+                profileKey,
+                objectId,
+                locType,
+                def.getName(),
+                def.getSizeX(),
+                def.getSizeY(),
+                blocksProjectile,
+                firstOpenStyleAction(def)
+            )
+        );
+        stats.namedSolidSceneryObjectKeysByTile
+            .computeIfAbsent(tileKey, ignored -> new TreeSet<>())
+            .add(profileKey);
     }
 
     private static void recordIgnoredPlacementTile(BuildStats stats, int x, int y, int plane, int locType)
@@ -1672,8 +1813,49 @@ public final class CollisionMapBuilder
             bucket,
             dangerous,
             dangerousUnexplained,
-            overblock
+            overblock,
+            agreeOpen
         );
+        recordNamedSolidSceneryObjectMeasurement(
+            comparison.namedSolidSceneryObjectMeasurement,
+            stats,
+            tile,
+            otherX,
+            otherY,
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+    }
+
+    private static void recordNamedSolidSceneryObjectMeasurement(
+        ObjectProfileMeasurement measurement,
+        BuildStats stats,
+        LiveTile tile,
+        int otherX,
+        int otherY,
+        boolean dangerous,
+        boolean dangerousUnexplained,
+        boolean overblock,
+        boolean agreeOpen
+    )
+    {
+        TreeSet<Integer> profileKeys = new TreeSet<>();
+        addProfileKeys(profileKeys, stats.namedSolidSceneryObjectKeysByTile.get(tile.key()));
+        addProfileKeys(
+            profileKeys,
+            stats.namedSolidSceneryObjectKeysByTile.get(tileKey(otherX, otherY, tile.plane))
+        );
+        measurement.record(profileKeys, dangerous, dangerousUnexplained, overblock, agreeOpen);
+    }
+
+    private static void addProfileKeys(Set<Integer> destination, Set<Integer> source)
+    {
+        if (source != null)
+        {
+            destination.addAll(source);
+        }
     }
 
     private static SceneryAdjacencyBucket classifySceneryAdjacencyBucket(
@@ -1707,7 +1889,8 @@ public final class CollisionMapBuilder
         SceneryAdjacencyBucket bucket,
         boolean dangerous,
         boolean dangerousUnexplained,
-        boolean overblock
+        boolean overblock,
+        boolean agreeOpen
     )
     {
         if (bucket == SceneryAdjacencyBucket.NOT_ADJACENT)
@@ -1746,7 +1929,8 @@ public final class CollisionMapBuilder
             interactTypeNonZero,
             dangerous,
             dangerousUnexplained,
-            overblock
+            overblock,
+            agreeOpen
         );
         recordIgnoredObjectFlagMeasurement(
             measurement,
@@ -1754,7 +1938,8 @@ public final class CollisionMapBuilder
             edgeTouchesTileKey(stats.blocksProjectileTileKeys, tile, otherX, otherY),
             dangerous,
             dangerousUnexplained,
-            overblock
+            overblock,
+            agreeOpen
         );
         recordIgnoredObjectFlagMeasurement(
             measurement,
@@ -1762,7 +1947,71 @@ public final class CollisionMapBuilder
             edgeTouchesTileKey(stats.obstructsGroundTileKeys, tile, otherX, otherY),
             dangerous,
             dangerousUnexplained,
-            overblock
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.NAMED_SCENERY,
+            edgeTouchesTileKey(stats.namedSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.UNNAMED_SCENERY,
+            edgeTouchesTileKey(stats.unnamedSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.NAMED_SOLID_SCENERY,
+            edgeTouchesTileKey(stats.namedSolidSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.NAMED_NON_PROJECTILE_SCENERY,
+            edgeTouchesTileKey(stats.namedNonProjectileSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.NAMED_NON_PROJECTILE_SOLID_SCENERY,
+            edgeTouchesTileKey(stats.namedNonProjectileSolidSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.NAMED_SOLID_ONE_BY_ONE_SCENERY,
+            edgeTouchesTileKey(stats.namedSolidOneByOneSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
+        );
+        recordIgnoredObjectFlagMeasurement(
+            measurement,
+            IgnoredObjectFlag.NAMED_NON_PROJECTILE_SOLID_ONE_BY_ONE_SCENERY,
+            edgeTouchesTileKey(stats.namedNonProjectileSolidOneByOneSceneryTileKeys, tile, otherX, otherY),
+            dangerous,
+            dangerousUnexplained,
+            overblock,
+            agreeOpen
         );
     }
 
@@ -1772,14 +2021,15 @@ public final class CollisionMapBuilder
         boolean marked,
         boolean dangerous,
         boolean dangerousUnexplained,
-        boolean overblock
+        boolean overblock,
+        boolean agreeOpen
     )
     {
         if (!marked)
         {
             return;
         }
-        measurement.recordIgnoredObjectFlag(flag, dangerous, dangerousUnexplained, overblock);
+        measurement.recordIgnoredObjectFlag(flag, dangerous, dangerousUnexplained, overblock, agreeOpen);
     }
 
     private static int ignoredLocTypeMaskForEdge(
@@ -1971,8 +2221,11 @@ public final class CollisionMapBuilder
             appendRegionList(report, request.regionIds);
         }
         report.append('\n');
-        report.append("phase2 solid-object blocking: ")
+        report.append("furniture object blocking: ")
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
+            .append('\n');
+        report.append("furniture object profiles: ")
+            .append(formatFurnitureObjectProfileKeys(DEFAULT_FURNITURE_OBJECT_PROFILE_KEYS))
             .append('\n');
         report.append("merge source: ")
             .append(request.mergeFrom == null ? "none" : request.mergeFrom.toString())
@@ -2138,13 +2391,13 @@ public final class CollisionMapBuilder
     {
         if (!stats.phase2SolidObjectBlockingEnabled && !stats.phase3RoofBlockingEnabled)
         {
-            report.append("  object-blocking gate: NOT APPLICABLE - phase 2 and phase 3 are both ")
-                .append("disabled, so this run IS the baseline.").append('\n');
+            report.append("  object-blocking diagnostic: NOT APPLICABLE - furniture and phase 3 ")
+                .append("are both disabled, so this run IS the baseline.").append('\n');
             return;
         }
         if (baseline == null || baseline.dangerous.skipped || comparison.skipped)
         {
-            report.append("  Phase 2 route-aware solid-object gate: NOT APPLICABLE - no live ")
+            report.append("  furniture route-aware object diagnostic: NOT APPLICABLE - no live ")
                 .append("baseline was measured for this run.").append('\n');
             return;
         }
@@ -2161,13 +2414,14 @@ public final class CollisionMapBuilder
         boolean netOk = unexplainedDrop > Math.max(0L, routeAwareRise);
         boolean proofOk = proofCurrent >= proofBaseline;
 
-        report.append("  object-blocking gate (phase2=")
+        report.append("  object-blocking diagnostic (furniture=")
             .append(stats.phase2SolidObjectBlockingEnabled ? "on" : "off")
             .append(" phase3=")
             .append(stats.phase3RoofBlockingEnabled ? "on" : "off")
             .append("): ")
-            .append(netOk && proofOk ? "PASS" : "ABORT")
-            .append(" (baseline measured live: same regions, same capture, phase 2 forced off)")
+            .append(netOk ? "NET-PASS" : "NET-ABORT")
+            .append(proofOk ? " / PROOF-OK" : " / PROOF-BELOW-NO-BLOCKING-CONTROL")
+            .append(" (baseline measured live: same regions, same capture, object blocking off)")
             .append('\n');
         report.append("    DANGEROUS_UNEXPLAINED: baseline ")
             .append(baseline.dangerous.dangerousUnexplained)
@@ -2187,9 +2441,9 @@ public final class CollisionMapBuilder
             .append("OVERBLOCK rise) -> ").append(okFail(netOk))
             .append(" (").append(unexplainedDrop)
             .append(" > ").append(Math.max(0L, routeAwareRise)).append(")").append('\n');
-        report.append("    proof criterion: the proof-edge fixed rate must not fall below the ")
-            .append("baseline. A phase that trades route-proven open edges back into blocked ")
-            .append("ones is not an improvement whatever the aggregate counts do.").append('\n');
+        report.append("    proof control: no-object baseline is intentionally strict and any ")
+            .append("real blocker can lower it. Use this with route tests and cost columns, ")
+            .append("not as the only ship gate.").append('\n');
     }
 
     private static void appendBorderHistogramInterpretationRule(StringBuilder report)
@@ -2818,7 +3072,13 @@ public final class CollisionMapBuilder
             bucketOverblockTotal
         );
         appendSceneryAdjacencyClosureAssertions(report, measurement);
-        appendSceneryAdjacencyVerdicts(report, stats, measurement, bucketDangerousUnexplainedTotal);
+        appendSceneryAdjacencyVerdicts(
+            report,
+            stats,
+            measurement,
+            comparison.namedSolidSceneryObjectMeasurement,
+            bucketDangerousUnexplainedTotal
+        );
         appendSceneryAdjacencyOverblockControl(report, stats, measurement);
         appendSceneryAdjacencyCensus(report, stats, measurement);
         appendIgnoredLocTypeProofPass(report, stats, comparison);
@@ -2891,10 +3151,11 @@ public final class CollisionMapBuilder
         report.append("      - INCONCLUSIVE: anything else.").append('\n');
         if (stats.phase2SolidObjectBlockingEnabled)
         {
-            report.append("      WARNING: phase 2 is ENABLED, so the overblock column for ")
-                .append("locTypes 10 and 11 counts edges this build wrote itself. Read this ")
+            report.append("      WARNING: furniture blocking is ENABLED, so the overblock ")
+                .append("column for locTypes 10 and 11 counts edges this build wrote itself. ")
+                .append("Read this ")
                 .append("table from a run with ")
-                .append(DISABLE_PHASE2_SOLID_OBJECTS_ARG)
+                .append(DISABLE_FURNITURE_OBJECT_BLOCKING_ARG)
                 .append(".")
                 .append('\n');
         }
@@ -3239,6 +3500,7 @@ public final class CollisionMapBuilder
         StringBuilder report,
         BuildStats stats,
         SceneryAdjacencyMeasurement measurement,
+        ObjectProfileMeasurement objectMeasurement,
         long dangerousUnexplainedTotal
     )
     {
@@ -3283,9 +3545,9 @@ public final class CollisionMapBuilder
              * edges for the ignored-object set this control assumes is unwritten, so with
              * phase 2 on it reports FAIL by construction rather than by evidence.
              */
-            report.append("    union overblock control: NOT APPLICABLE - phase 2 ")
-                .append("solid-object blocking is ENABLED. Re-run with ")
-                .append(DISABLE_PHASE2_SOLID_OBJECTS_ARG)
+            report.append("    union overblock control: NOT APPLICABLE - furniture object ")
+                .append("blocking is ENABLED. Re-run with ")
+                .append(DISABLE_FURNITURE_OBJECT_BLOCKING_ARG)
                 .append(" to evaluate it.")
                 .append('\n');
         }
@@ -3295,6 +3557,12 @@ public final class CollisionMapBuilder
         }
         appendIgnoredSoliditySplit(report, measurement, notAdjacent, dangerousUnexplainedTotal);
         appendIgnoredObjectFlagDiscriminationTable(report, measurement, notAdjacent);
+        appendNamedSolidSceneryObjectProfileTable(
+            report,
+            stats,
+            measurement,
+            objectMeasurement
+        );
     }
 
     private static void appendSceneryAdjacencyUnionOverblockControl(
@@ -3409,8 +3677,11 @@ public final class CollisionMapBuilder
         SceneryAdjacencyBucketCounts notAdjacent
     )
     {
-        report.append("    flag discrimination - higher ratio = better separator:").append('\n');
-        report.append("      flag markedAdjIgnoredEdges dangerousUnexplainedRate ratioAgainstNOT_ADJACENT")
+        report.append("    flag discrimination - higher ratio = better separator; ")
+            .append("benefit column estimates the cost of turning that flag into a blocker:")
+            .append('\n');
+        report.append("      flag markedAdjIgnoredEdges dangerousUnexplainedRate ratioAgainstNOT_ADJACENT ")
+            .append("projectedNewOverblock benefitPerNewOverblock")
             .append('\n');
         for (IgnoredObjectFlag flag : IgnoredObjectFlag.values())
         {
@@ -3428,6 +3699,7 @@ public final class CollisionMapBuilder
         SceneryAdjacencyBucketCounts counts = measurement.ignoredObjectFlagCounts(flag);
         double candidateRate = rate(counts.dangerousUnexplained, counts.comparedEdges);
         double notAdjacentRate = rate(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges);
+        long projectedNewOverblock = counts.agreeOpen;
         report.append("      ")
             .append(ignoredObjectFlagLabel(flag))
             .append(": ")
@@ -3436,7 +3708,92 @@ public final class CollisionMapBuilder
             .append(formatRateWithCounts(counts.dangerousUnexplained, counts.comparedEdges))
             .append(' ')
             .append(sceneryAdjacencyRateRatio(candidateRate, notAdjacentRate))
+            .append(' ')
+            .append(projectedNewOverblock)
+            .append(' ')
+            .append(formatBenefitPerNewOverblock(counts.dangerousUnexplained, projectedNewOverblock))
             .append('\n');
+    }
+
+    private static void appendNamedSolidSceneryObjectProfileTable(
+        StringBuilder report,
+        BuildStats stats,
+        SceneryAdjacencyMeasurement sceneryMeasurement,
+        ObjectProfileMeasurement objectMeasurement
+    )
+    {
+        SceneryAdjacencyBucketCounts notAdjacent =
+            sceneryMeasurement.counts(SceneryAdjacencyBucket.NOT_ADJACENT);
+        double notAdjacentRate = rate(notAdjacent.dangerousUnexplained, notAdjacent.comparedEdges);
+        List<Map.Entry<Integer, SceneryAdjacencyBucketCounts>> rows =
+            new ArrayList<>(objectMeasurement.countsByProfileKey.entrySet());
+        rows.removeIf(entry -> !stats.namedSolidSceneryProfiles.containsKey(entry.getKey()));
+        rows.sort(Comparator
+            .<Map.Entry<Integer, SceneryAdjacencyBucketCounts>>comparingLong(
+                entry -> entry.getValue().dangerousUnexplained)
+            .reversed()
+            .thenComparing(entry -> stats.namedSolidSceneryProfiles
+                .get(entry.getKey()).name)
+            .thenComparingInt(Map.Entry::getKey));
+
+        report.append("    named-solid scenery object ranking:").append('\n');
+        report.append("      Rows overlap: an edge touching two object ids is counted in both rows. ")
+            .append("This is a diagnostic ranker, not a proposed rule.")
+            .append('\n');
+        report.append("      rank objectId locType name size blocksProjectile openAction comparedEdges ")
+            .append("dangerousUnexplainedRate ratioAgainstNOT_ADJACENT projectedNewOverblock ")
+            .append("benefitPerNewOverblock currentOverblock")
+            .append('\n');
+
+        int emitted = 0;
+        for (Map.Entry<Integer, SceneryAdjacencyBucketCounts> row : rows)
+        {
+            ObjectProfile profile = stats.namedSolidSceneryProfiles.get(row.getKey());
+            if (profile == null)
+            {
+                continue;
+            }
+            SceneryAdjacencyBucketCounts counts = row.getValue();
+            if (counts.dangerousUnexplained == 0 && counts.agreeOpen == 0)
+            {
+                continue;
+            }
+            if (emitted >= 50)
+            {
+                break;
+            }
+            emitted++;
+            double candidateRate = rate(counts.dangerousUnexplained, counts.comparedEdges);
+            report.append("      ").append(emitted)
+                .append(' ').append(profile.objectId)
+                .append(' ').append(profile.locType)
+                .append(' ').append(reportToken(profile.name))
+                .append(' ').append(profile.sizeX).append('x').append(profile.sizeY)
+                .append(' ').append(profile.blocksProjectile)
+                .append(' ').append(reportToken(profile.openStyleAction))
+                .append(' ').append(counts.comparedEdges)
+                .append(' ').append(formatRateWithCounts(
+                    counts.dangerousUnexplained,
+                    counts.comparedEdges
+                ))
+                .append(' ').append(sceneryAdjacencyRateRatio(candidateRate, notAdjacentRate))
+                .append(' ').append(counts.agreeOpen)
+                .append(' ')
+                .append(formatBenefitPerNewOverblock(counts.dangerousUnexplained, counts.agreeOpen))
+                .append(' ').append(counts.overblock)
+                .append('\n');
+        }
+        report.append("      emitted top rows: ").append(emitted)
+            .append(" of ").append(rows.size()).append(" named-solid object profiles").append('\n');
+    }
+
+    private static String reportToken(String text)
+    {
+        if (text == null || text.trim().isEmpty())
+        {
+            return "none";
+        }
+        return text.trim().replaceAll("\\s+", "_");
     }
 
     private static String ignoredObjectFlagLabel(IgnoredObjectFlag flag)
@@ -3449,9 +3806,32 @@ public final class CollisionMapBuilder
                 return "isBlocksProjectile()";
             case OBSTRUCTS_GROUND:
                 return "isObstructsGround()";
+            case NAMED_SCENERY:
+                return "locType10/11 named";
+            case UNNAMED_SCENERY:
+                return "locType10/11 unnamed";
+            case NAMED_SOLID_SCENERY:
+                return "locType10/11 named + getInteractType() != 0";
+            case NAMED_NON_PROJECTILE_SCENERY:
+                return "locType10/11 named + !isBlocksProjectile()";
+            case NAMED_NON_PROJECTILE_SOLID_SCENERY:
+                return "locType10/11 named + !isBlocksProjectile() + getInteractType() != 0";
+            case NAMED_SOLID_ONE_BY_ONE_SCENERY:
+                return "locType10/11 named + getInteractType() != 0 + size 1x1";
+            case NAMED_NON_PROJECTILE_SOLID_ONE_BY_ONE_SCENERY:
+                return "locType10/11 named + !isBlocksProjectile() + getInteractType() != 0 + size 1x1";
             default:
                 throw new IllegalArgumentException("Unhandled ignored object flag " + flag);
         }
+    }
+
+    private static String formatBenefitPerNewOverblock(long dangerousUnexplained, long projectedNewOverblock)
+    {
+        if (projectedNewOverblock == 0)
+        {
+            return "no-cost";
+        }
+        return formatMultiplier((double) dangerousUnexplained / (double) projectedNewOverblock);
     }
 
     private static String sceneryAdjacencyVerdict(
@@ -3581,10 +3961,10 @@ public final class CollisionMapBuilder
              * Measured 2026-08-12 over the same 62 regions and the same capture: ADJ_SCENERY
              * overblockRate 0.912% with phase 2 off against 14.026% with phase 2 on.
              */
-            report.append("    overblock control: NOT APPLICABLE - phase 2 solid-object blocking ")
+            report.append("    overblock control: NOT APPLICABLE - furniture object blocking ")
                 .append("is ENABLED, so the premise above does not hold and the rates shown are ")
                 .append("informational only. Re-run with ")
-                .append(DISABLE_PHASE2_SOLID_OBJECTS_ARG)
+                .append(DISABLE_FURNITURE_OBJECT_BLOCKING_ARG)
                 .append(" to evaluate this control.")
                 .append('\n');
             return;
@@ -3997,13 +4377,13 @@ public final class CollisionMapBuilder
             .append(stats.phase3RoofPlacementsByPlane[3]).append('\n');
         report.append("  Phase 3 roof open-style placements blocked: ")
             .append(stats.phase3RoofOpenStylePlacements).append('\n');
-        report.append("  Phase 2 solid-object placements blocked: ")
+        report.append("  furniture object placements blocked: ")
             .append(stats.phase2SolidObjectPlacements).append('\n');
-        report.append("  Phase 2 solid-object open-style placements blocked: ")
+        report.append("  furniture object open-style placements blocked: ")
             .append(stats.phase2SolidObjectOpenStylePlacements).append('\n');
-        report.append("  Phase 2 solid-object missing-definition placements skipped: ")
+        report.append("  furniture object missing-definition placements skipped: ")
             .append(stats.phase2SolidObjectMissingDefinitionSkipped).append('\n');
-        report.append("  Phase 2 solid-object footprint-held-back placements: ")
+        report.append("  furniture object footprint-held-back placements: ")
             .append(stats.phase2SolidObjectFootprintHeldBackPlacements).append('\n');
         report.append("  door-capable placement tiles: ")
             .append(stats.doorCapableLocTypeByTile.size()).append('\n');
@@ -4432,6 +4812,11 @@ public final class CollisionMapBuilder
         return (((long) x) << 34) | (((long) y) << 4) | (plane & 0xFL);
     }
 
+    private static int objectProfileKey(int objectId, int locType)
+    {
+        return objectId * LOC_TYPE_MASK_BITS + locType;
+    }
+
     private static String formatRegionId(int regionId)
     {
         return regionId + " (" + (regionId >> 8) + "_" + (regionId & 0xFF) + ")";
@@ -4476,7 +4861,14 @@ public final class CollisionMapBuilder
     {
         INTERACT_TYPE_NONZERO,
         BLOCKS_PROJECTILE,
-        OBSTRUCTS_GROUND
+        OBSTRUCTS_GROUND,
+        NAMED_SCENERY,
+        UNNAMED_SCENERY,
+        NAMED_SOLID_SCENERY,
+        NAMED_NON_PROJECTILE_SCENERY,
+        NAMED_NON_PROJECTILE_SOLID_SCENERY,
+        NAMED_SOLID_ONE_BY_ONE_SCENERY,
+        NAMED_NON_PROJECTILE_SOLID_ONE_BY_ONE_SCENERY
     }
 
     private static final class EmptyDirectionArray
@@ -4581,6 +4973,16 @@ public final class CollisionMapBuilder
         private final Set<Long> interactTypeNonZeroTileKeys = new HashSet<>();
         private final Set<Long> blocksProjectileTileKeys = new HashSet<>();
         private final Set<Long> obstructsGroundTileKeys = new HashSet<>();
+        private final Set<Long> namedSceneryTileKeys = new HashSet<>();
+        private final Set<Long> unnamedSceneryTileKeys = new HashSet<>();
+        private final Set<Long> namedSolidSceneryTileKeys = new HashSet<>();
+        private final Set<Long> namedNonProjectileSceneryTileKeys = new HashSet<>();
+        private final Set<Long> namedNonProjectileSolidSceneryTileKeys = new HashSet<>();
+        private final Set<Long> namedSolidOneByOneSceneryTileKeys = new HashSet<>();
+        private final Set<Long> namedNonProjectileSolidOneByOneSceneryTileKeys = new HashSet<>();
+        private final Map<Long, TreeSet<Integer>> namedSolidSceneryObjectKeysByTile =
+            new HashMap<>();
+        private final Map<Integer, ObjectProfile> namedSolidSceneryProfiles = new HashMap<>();
         private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
         private final Map<Long, Integer> ignoredLocTypeMaskByTile = new HashMap<>();
         private final TreeMap<String, Long> ignoredNonDecorFootprintHistogram = new TreeMap<>();
@@ -5489,6 +5891,61 @@ public final class CollisionMapBuilder
         }
     }
 
+    private static final class ObjectProfile
+    {
+        private final int profileKey;
+        private final int objectId;
+        private final int locType;
+        private final String name;
+        private final int sizeX;
+        private final int sizeY;
+        private final boolean blocksProjectile;
+        private final String openStyleAction;
+
+        private ObjectProfile(
+            int profileKey,
+            int objectId,
+            int locType,
+            String name,
+            int sizeX,
+            int sizeY,
+            boolean blocksProjectile,
+            String openStyleAction
+        )
+        {
+            this.profileKey = profileKey;
+            this.objectId = objectId;
+            this.locType = locType;
+            this.name = name;
+            this.sizeX = sizeX;
+            this.sizeY = sizeY;
+            this.blocksProjectile = blocksProjectile;
+            this.openStyleAction = openStyleAction;
+        }
+    }
+
+    private static final class ObjectProfileMeasurement
+    {
+        private final TreeMap<Integer, SceneryAdjacencyBucketCounts> countsByProfileKey =
+            new TreeMap<>();
+
+        private void record(
+            Collection<Integer> profileKeys,
+            boolean dangerous,
+            boolean dangerousUnexplained,
+            boolean overblock,
+            boolean agreeOpen
+        )
+        {
+            for (int profileKey : profileKeys)
+            {
+                countsByProfileKey
+                    .computeIfAbsent(profileKey, ignored -> new SceneryAdjacencyBucketCounts())
+                    .record(dangerous, dangerousUnexplained, overblock, agreeOpen);
+            }
+        }
+    }
+
     private static final class SceneryAdjacencyMeasurement
     {
         private final SceneryAdjacencyBucketCounts[] bucketCounts =
@@ -5551,10 +6008,11 @@ public final class CollisionMapBuilder
             IgnoredObjectFlag flag,
             boolean dangerous,
             boolean dangerousUnexplained,
-            boolean overblock
+            boolean overblock,
+            boolean agreeOpen
         )
         {
-            ignoredObjectFlagCounts(flag).record(dangerous, dangerousUnexplained, overblock);
+            ignoredObjectFlagCounts(flag).record(dangerous, dangerousUnexplained, overblock, agreeOpen);
         }
 
         private SceneryAdjacencyBucketCounts counts(SceneryAdjacencyBucket bucket)
@@ -5782,6 +6240,8 @@ public final class CollisionMapBuilder
             new SceneryAdjacencyMeasurement();
         private final IgnoredLocTypeMeasurement ignoredLocTypeMeasurement =
             new IgnoredLocTypeMeasurement();
+        private final ObjectProfileMeasurement namedSolidSceneryObjectMeasurement =
+            new ObjectProfileMeasurement();
 
         private long comparedEdges;
         private long borderExcludedEdges;

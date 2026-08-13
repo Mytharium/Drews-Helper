@@ -2265,3 +2265,39 @@ D-0141 (2026-08-13) - Defer normalized edges across region seams
   regions were not built or merged.
 
   Cross-reference: extends D-0140 and closes Mytharium's 3019,3390 -> 3019,3401 wall report.
+
+
+D-0142 (2026-08-13) - Ship furniture blocking as a measured object-profile allowlist
+
+  RULE 1 - DO NOT RESTORE BROAD PHASE 2. The old locType/size rule fixed some furniture but
+  also sealed the Ruins of Unkah ferry beach. The replacement is exact object id plus locType:
+  595/10 Table, 1104/10 Bench, 1088/10 Chair, and 1088/11 Chair. Names and locTypes are
+  guards, not the rule; the measured profile key is the rule.
+
+  RULE 2 - BLOCK THE ANCHOR TILE ONLY UNTIL FOOTPRINT EXPANSION IS PROVEN. Tables and benches
+  in this first allowlist include 2x1 profiles, but the builder still blocks only the anchor
+  tile. Expanding the full footprint would be a separate map-writing change with its own cost
+  column and route checks.
+
+  RULE 3 - OPEN-STYLE OBJECTS STAY OUT. The allowlist still requires a real name, non-zero
+  interactType, and no Open/Close style action. Doors, chests, ferries, banks, and other
+  action surfaces are not admitted by this pass.
+
+  PROOF. Against the same frozen capture and roofs-on shipped baseline, furniture blocking
+  changed DANGEROUS_UNEXPLAINED 77,880 -> 77,295, OVERBLOCK 20,072 -> 20,231, route-aware
+  OVERBLOCK 7,478 -> 7,524, and proof edges fixed 14,898 -> 14,854. That is 585 fewer
+  unexplained-dangerous edges for 159 added over-blocks, or 3.68x on the cost column, while
+  only 46 of those were route-aware over-blocks. The build blocked 764 furniture placements
+  and no open-style placements.
+
+  SHIP CHECKS. The shipped map grew 1,188,463 -> 1,189,982 bytes. The new test pins the
+  Ardougne chair at 2573,3245 as blocked and the Ruins of Unkah ferry landing/beach as still
+  walkable. The full suite now has 197 tests with exactly the one accepted failure,
+  shapeRankingShadowExposesDistinctSameLengthRandomChainRoute.
+
+  NOTE. The no-object proof control still reports lower proof percentage whenever any real
+  blocker is enabled. That control is useful as a warning light, not as the sole ship gate;
+  use it with frozen A/B numbers, exact route checks, and the full test suite.
+
+  Cross-reference: extends D-0140 and D-0141. Closes backlog item 33's first shippable slice;
+  remaining slices are other named objects such as stools, shelves, hedges, and trees.

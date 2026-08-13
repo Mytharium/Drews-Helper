@@ -684,6 +684,27 @@ public class DrewsHelperWalkingRouteEngineTest
     }
 
     @Test
+    public void shippedCollisionMapBlocksMeasuredFurnitureWithoutSealingUnkahBeach()
+        throws Exception
+    {
+        DrewsHelperCollisionMap map = DrewsHelperCollisionMap.loadDefault();
+
+        assertFalse("chair tile should not accept a north step",
+            map.canMoveNorth(2573, 3245, 0));
+        assertFalse("chair tile should not accept an east step",
+            map.canMoveEast(2573, 3245, 0));
+        assertFalse("chair tile should not accept a south step",
+            map.canMoveSouth(2573, 3245, 0));
+        assertFalse("chair tile should not accept a west step",
+            map.canMoveWest(2573, 3245, 0));
+
+        assertTrue("Ruins of Unkah ferry landing must remain walkable",
+            map.canMoveSouth(3148, 2843, 0));
+        assertTrue("Ruins of Unkah beach strip must remain walkable",
+            map.canMoveEast(3155, 2839, 0));
+    }
+
+    @Test
     public void loadsBaselineTransportResourceAndFiltersWildernessToggle() throws Exception
     {
         WorldPoint ardougneLever = new WorldPoint(2561, 3311, 0);

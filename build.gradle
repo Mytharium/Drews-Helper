@@ -126,6 +126,13 @@ tasks.register('probeRouteShape', JavaExec) {
     mainClass = 'com.drewshelper.cachetools.RouteShapeProbe'
 }
 
+tasks.register('probeObjectPlacements', JavaExec) {
+    group = 'drewshelper'
+    description = 'Dump cache object placements in targeted boxes for collision-map rule work.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.cachetools.ObjectPlacementProbe'
+}
+
 tasks.register('buildCollisionMapV2', JavaExec) {
     group = 'drewshelper'
     description = 'Build a v2 collision map from the OSRS cache and compare it to proof edges.'
