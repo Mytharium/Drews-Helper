@@ -2331,3 +2331,31 @@ D-0143 (2026-08-13) - Transport gates are checked from account capability, not r
 
   Cross-reference: follows D-0142 live test 2. Next live test should use Mytharium's account:
   the raft/grapple shortcut should disappear unless the skill and item requirements are met.
+
+
+D-0144 (2026-08-13) - Shortcut corridors are not ordinary walking edges
+
+  RULE 1 - REQUIREMENT FILTERING IS NOT ENOUGH WHEN COLLISION SAYS THE WATER IS OPEN. The
+  live Broken Raft report still routed 3246,3184 -> 3260,3175 after D-0143 because the route
+  did not use a transport edge at all. The recorded route walked 3246,3179 -> 3259,3179 one
+  tile at a time, so the grapple row was correctly filtered out but the collision map still
+  exposed the same shortcut corridor as normal ground.
+
+  RULE 2 - AGILITY AND GRAPPLE SHORTCUT CORRIDORS BELONG TO THE TRANSPORT LAYER. Ordinary
+  walking now refuses adjacent steps that lie on an AGILITY_SHORTCUT or GRAPPLE_SHORTCUT row's
+  source-to-destination corridor. Qualified accounts still cross through the gated transport
+  edge; unqualified accounts must detour instead of walking over the same water, wall, gap,
+  stepping stones or raft tiles.
+
+  RULE 3 - KEEP THIS DATA-DRIVEN. The blocker is derived from drewshelper-transports.tsv and
+  not from the Broken Raft coordinates. This preserves Mytharium's global shortcut policy:
+  player capability decides the transport edge, and shortcut geometry is not also available
+  as plain walking.
+
+  PROOF. New regression tests pin both sides of Broken Raft 17068. Without the grapple kit,
+  the route from 3246,3184 to 3260,3175 no longer walks through the 3246..3259,3179 raft
+  corridor. With Agility/Ranged/Strength plus crossbow and mithril grapple, the same route
+  uses the expected transport step 3246,3179 -> 3259,3179.
+
+  Cross-reference: extends D-0143 and closes the live screenshot where the route still drew
+  across the Broken Raft after item/skill transport filtering shipped.

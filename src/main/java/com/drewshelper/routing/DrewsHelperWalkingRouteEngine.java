@@ -1263,6 +1263,11 @@ public final class DrewsHelperWalkingRouteEngine
 
     private boolean canMove(int x, int y, int plane, Move move)
     {
+        if (DrewsHelperTransportGraph.blocksShortcutWalkingStep(x, y, plane, move.x, move.y))
+        {
+            return false;
+        }
+
         if (move.x < 0 && move.y == 0)
         {
             return movementMap.canMoveWest(x, y, plane);

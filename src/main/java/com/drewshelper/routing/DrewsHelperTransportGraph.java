@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,6 +23,11 @@ public final class DrewsHelperTransportGraph
 
     /** Parsed once, then filtered per policy/capability. Immutable once assigned. */
     private static volatile List<DrewsHelperTransportEdge> masterEdges;
+    /**
+     * Adjacent walking edges covered by shortcut transports. These are blocked as ordinary
+     * walking so an agility/grapple route can only cross them through the gated transport row.
+     */
+    private static volatile Set<Long> shortcutWalkingBlockers;
 
     private final Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesBySource;
     private final Map<WorldPoint, List<DrewsHelperTransportEdge>> edgesByDestination;
@@ -215,6 +221,148 @@ public final class DrewsHelperTransportGraph
                 into.add(trimmed);
             }
         }
+    }
+
+    static boolean blocksShortcutWalkingStep(WorldPoint from, WorldPoint to)
+    {
+        if (from == null || to == null || from.getPlane() != to.getPlane())
+        {
+            return false;
+        }
+        return blocksShortcutWalkingStep(
+            from.getX(), from.getY(), from.getPlane(),
+            to.getX() - from.getX(), to.getY() - from.getY()
+        );
+    }
+
+    static boolean blocksShortcutWalkingStep(int x, int y, int plane, int moveX, int moveY)
+    {
+        int dx = Math.abs(moveX);
+        int dy = Math.abs(moveY);
+        if (dx > 1 || dy > 1 || (dx == 0 && dy == 0))
+        {
+            return false;
+        }
+
+        try
+        {
+            return shortcutWalkingBlockers().contains(adjacentEdgeKey(
+                x, y, x + moveX, y + moveY, plane
+            ));
+        }
+        catch (IOException ex)
+        {
+            return false;
+        }
+    }
+
+    private static Set<Long> shortcutWalkingBlockers() throws IOException
+    {
+        Set<Long> cached = shortcutWalkingBlockers;
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        synchronized (DrewsHelperTransportGraph.class)
+        {
+            if (shortcutWalkingBlockers == null)
+            {
+                shortcutWalkingBlockers = Collections.unmodifiableSet(buildShortcutWalkingBlockers());
+            }
+            return shortcutWalkingBlockers;
+        }
+    }
+
+    private static Set<Long> buildShortcutWalkingBlockers() throws IOException
+    {
+        Set<Long> blockers = new HashSet<>();
+        for (DrewsHelperTransportEdge edge : masterEdges())
+        {
+            if (!isShortcutCorridor(edge))
+            {
+                continue;
+            }
+            addShortcutCorridor(blockers, edge.getSource(), edge.getDestination());
+        }
+        return blockers;
+    }
+
+    private static boolean isShortcutCorridor(DrewsHelperTransportEdge edge)
+    {
+        DrewsHelperTransportCategory category = edge.getCategory();
+        return category == DrewsHelperTransportCategory.AGILITY_SHORTCUT
+            || category == DrewsHelperTransportCategory.GRAPPLE_SHORTCUT;
+    }
+
+    private static void addShortcutCorridor(Set<Long> blockers, WorldPoint source, WorldPoint destination)
+    {
+        if (source == null || destination == null || source.equals(ANYWHERE)
+            || destination.equals(ANYWHERE) || source.getPlane() != destination.getPlane())
+        {
+            return;
+        }
+
+        int deltaX = destination.getX() - source.getX();
+        int deltaY = destination.getY() - source.getY();
+        int steps = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+        if (steps == 0)
+        {
+            return;
+        }
+
+        int previousX = source.getX();
+        int previousY = source.getY();
+        for (int step = 1; step <= steps; step++)
+        {
+            int nextX = source.getX() + (int) Math.round(deltaX * step / (double) steps);
+            int nextY = source.getY() + (int) Math.round(deltaY * step / (double) steps);
+            addAdjacentEdgeKey(blockers, previousX, previousY, nextX, nextY, source.getPlane());
+            previousX = nextX;
+            previousY = nextY;
+        }
+    }
+
+    private static void addAdjacentEdgeKey(
+        Set<Long> blockers,
+        int fromX,
+        int fromY,
+        int toX,
+        int toY,
+        int plane
+    )
+    {
+        if (Math.abs(toX - fromX) > 1 || Math.abs(toY - fromY) > 1
+            || (fromX == toX && fromY == toY))
+        {
+            return;
+        }
+        blockers.add(adjacentEdgeKey(fromX, fromY, toX, toY, plane));
+    }
+
+    private static long adjacentEdgeKey(WorldPoint a, WorldPoint b)
+    {
+        return adjacentEdgeKey(a.getX(), a.getY(), b.getX(), b.getY(), a.getPlane());
+    }
+
+    private static long adjacentEdgeKey(int ax, int ay, int bx, int by, int plane)
+    {
+        if (by < ay || (by == ay && bx < ax))
+        {
+            int swapX = ax;
+            int swapY = ay;
+            ax = bx;
+            ay = by;
+            bx = swapX;
+            by = swapY;
+        }
+
+        long key = plane & 0x3L;
+        key = (key << 15) | (ax & 0x7FFFL);
+        key = (key << 15) | (ay & 0x7FFFL);
+        key = (key << 2) | ((bx - ax + 1) & 0x3L);
+        key = (key << 2) | ((by - ay + 1) & 0x3L);
+        return key;
     }
 
     /** Every edge in the resource, unfiltered. Parsed on first use and then reused. */
