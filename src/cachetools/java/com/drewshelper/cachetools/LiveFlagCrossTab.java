@@ -45,7 +45,7 @@ public final class LiveFlagCrossTab
         "^DREW_LIVE_FLAGS\\s+scene\\s+(-?\\d+):(-?\\d+):(-?\\d+)\\s+size=(\\d+)\\s+covered=(\\d+)\\s*$"
     );
     private static final Pattern DATA_ROW = Pattern.compile(
-        "^(-?\\d+),(-?\\d+),(-?\\d+)\\s+([01])([01])\\s*$"
+        "^(-?\\d+),(-?\\d+),(-?\\d+)\\s+([01])([01])(?:\\s+\\d+)?\\s*$"
     );
 
     private static final KeyProvider ZERO_KEYS = regionId -> new int[]{0, 0, 0, 0};

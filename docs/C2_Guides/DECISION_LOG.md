@@ -2386,3 +2386,38 @@ D-0145 (2026-08-13) - Audit all shortcut corridors as transport-only geometry
 
   Cross-reference: extends D-0144 from the Broken Raft one-case proof to the full shortcut
   corpus. Report snapshot: tools/shortcut-corridor-audit.txt.
+
+
+D-0146 (2026-08-13) - Terrain completeness audit finds no shippable terrain-bit rule
+
+  RULE 1 - THE LIVE-FLAG FORMAT IS APPEND-ONLY. DrewsHelperPlugin already writes an optional raw
+  collision-flag word after the two stored edge bits. LiveFlagCrossTab must accept both formats
+  so an older two-token capture and a newer three-token capture stay usable. The raw flag is
+  additive evidence, not a reason to reject the row.
+
+  RULE 2 - BIT-0 FLOOR BLOCKING STILL HOLDS. The new 379-scene capture gives the existing
+  terrain rule 189,245 usable edge checks, 181,696 agreements, and 96.0% agreement. The bridge
+  lowering branch is still a small sample at 96 tiles, but it also agrees 361/384 = 94.0%.
+  That is not a reason to alter the bit-0 terrain rule.
+
+  RULE 3 - THE REVERSE MISS SET DOES NOT JUSTIFY A NEW TERRAIN BIT. Of 109,156 no-wall tiles
+  where live blocks all four edges but the terrain rule did not mark the tile, 95,898 carry
+  tileSetting 0x00. Bit 4 is enriched compared to clean controls (8,349 target tiles, 7.7%,
+  versus 759 controls, 0.1%), but it explains only a narrow slice of the miss set and is not
+  enough by itself to ship a broad floor-blocking rule.
+
+  RULE 4 - THE BIG REMAINING FALSE-OPEN CLASS IS IGNORED SCENERY, NOT FLOOR TERRAIN. The
+  all-region dangerous pass reports 78,069 DANGEROUS_UNEXPLAINED edges after border exclusion.
+  ADJ_SCENERY accounts for 37,020 of those at 45.061% dangerous-unexplained rate versus
+  NOT_ADJACENT at 2.661%, a 16.931x ratio. ADJ_SOLID_FLAGGED accounts for 36,958 with the
+  nonsolid-only control reading like NOT_ADJACENT. That points to named object profiles, not a
+  global terrain-bit change.
+
+  RULE 5 - DO NOT SHIP THIS AUDIT AS A MAP. The audit produced reports and one parser
+  compatibility fix only. No collision-map.zip was copied into src/main/resources, and no
+  runtime route behavior changed.
+
+  Cross-reference: follows D-0145. Report snapshots: tools/live-flag-crosstab.txt and
+  tools/collision-map-v2-report.txt. Next candidate work is an object-profile pass using the
+  all-region named-solid ranking, with exact route checks for trees/hedges/boulders before any
+  shipped map change.

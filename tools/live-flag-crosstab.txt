@@ -5,145 +5,153 @@ project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
 report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\live-flag-crosstab.txt
 
 input summary:
-  rows parsed: 57979
-  scene headers: 14
-  scenes found: 14
-  covered tile observations: 148526
-  covered tiles unique: 100974
+  rows parsed: 1168904
+  scene headers: 379
+  scenes found: 379
+  covered tile observations: 4020811
+  covered tiles unique: 940216
   duplicate data rows: 0
   duplicate row conflicts: 0
-  overlapping live N/E conflicts: 9717 (N=4912, E=4805)
+  overlapping live N/E conflicts: 784946 (N=391017, E=393929)
 
 cache and exclusion summary:
   cache regions loaded: 2936
   cache regions missing: 62600
   map regions loaded: 2936
   loc regions loaded: 2936
-  covered tiles inside cache regions: 100974
-  covered tiles outside any cache region: 0
-  wall placements seen: 836033
-  wall placements covered: 10081
-  wall placements excluded uncovered: 825952
+  covered tiles inside cache regions: 882832
+  covered tiles outside any cache region: 57384
+  wall placements seen: 836030
+  wall placements covered: 37255
+  wall placements excluded uncovered: 798775
   wall placements skipped invalid plane: 0
-  covered openable wall placements: 170
-  no-wall covered tiles: 90914
-  single-wall covered tiles: 10039
-  multi-wall covered tiles excluded from locType tables: 21 tiles / 42 placements
-  terrain rule source tiles: 4175936
-  terrain rule covered marks: 6938
-  terrain rule covered unique tiles: 6938
-  terrain rule tiles excluded uncovered: 4168998
+  covered openable wall placements: 550
+  no-wall covered tiles: 845639
+  single-wall covered tiles: 37131
+  multi-wall covered tiles excluded from locType tables: 62 tiles / 124 placements
+  terrain rule source tiles: 4176103
+  terrain rule covered marks: 47459
+  terrain rule covered unique tiles: 47459
+  terrain rule tiles excluded uncovered: 4128644
   bridge-branch source tiles: 132865
   bridge-branch negative-plane skips: 69065
-  bridge-branch covered marks: 0
-  bridge-branch covered unique tiles: 0
+  bridge-branch covered marks: 96
+  bridge-branch covered unique tiles: 96
   duplicate terrain covered marks: 0
   duplicate bridge covered marks: 0
 
 null baseline over covered tiles with no wall placement:
   group           group    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  no-wall                  90914        0 24174/90914    26.6% 24274/90914    26.7% 23081/90278    25.6% 23047/90111    25.6%
-  derived-edge skips in baseline: N=0, E=0, S=636, W=803
+  no-wall                 845639        0 204511/845639    24.2% 206060/845639    24.4% 199512/841613    23.7% 200892/841811    23.9%
+  derived-edge skips in baseline: N=0, E=0, S=4026, W=3828
   Percentages below should be read against this baseline.
 
 Q1 locType 1 single-placement live edge rates:
   group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  orient 0                   371        0     246/371    66.3%      65/371    17.5%      65/369    17.6%      58/366    15.8%
-  orient 1                   343        0     222/343    64.7%     219/343    63.8%      71/341    20.8%      73/341    21.4%
-  orient 2                   346        0      63/346    18.2%     211/346    61.0%      69/343    20.1%      65/341    19.1%
-  orient 3                   348        0      61/348    17.5%      62/348    17.8%      53/345    15.4%      53/343    15.5%
-  combined                  1408        0    592/1408    42.0%    557/1408    39.6%    258/1398    18.5%    249/1391    17.9%
-  derived-edge skips in this table: N=0, E=0, S=10, W=17
+  orient 0                  1234        0    843/1234    68.3%    394/1234    31.9%    341/1234    27.6%    318/1230    25.9%
+  orient 1                  1187        0    805/1187    67.8%    797/1187    67.1%    348/1186    29.3%    335/1187    28.2%
+  orient 2                  1178        0    352/1178    29.9%    790/1178    67.1%    297/1177    25.2%    301/1178    25.6%
+  orient 3                  1246        0    393/1246    31.5%    397/1246    31.9%    331/1246    26.6%    327/1243    26.3%
+  combined                  4845        0   2393/4845    49.4%   2378/4845    49.1%   1317/4843    27.2%   1281/4838    26.5%
+  derived-edge skips in this table: N=0, E=0, S=2, W=7
 
 locType 0 positive control: expected orientation peaks are {0:W, 1:N, 2:E, 3:S}. If locType 0 does not come out clean against live data, the harness itself is wrong and the locType 1 numbers cannot be trusted.
 locType 0 single-placement live edge rates:
   group        expected    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  orient 0            W     1691       50    449/1691    26.6%    405/1691    24.0%    398/1683    23.6%   1613/1664    96.9%
-  orient 1            N     1595       47   1569/1595    98.4%    446/1595    28.0%    365/1593    22.9%    382/1587    24.1%
-  orient 2            E     1678       35    507/1678    30.2%   1661/1678    99.0%    448/1668    26.9%    434/1668    26.0%
-  orient 3            S     1735       37    426/1735    24.6%    526/1735    30.3%   1664/1706    97.5%    468/1729    27.1%
-  combined        mixed     6699      169   2951/6699    44.1%   3038/6699    45.4%   2875/6650    43.2%   2897/6648    43.6%
-  derived-edge skips in this table: N=0, E=0, S=49, W=51
+  orient 0            W     6366      159   2026/6366    31.8%   1904/6366    29.9%   1845/6349    29.1%   6165/6364    96.9%
+  orient 1            N     6437      139   6314/6437    98.1%   2081/6437    32.3%   2000/6434    31.1%   1873/6421    29.2%
+  orient 2            E     6176      110   2002/6176    32.4%   6075/6176    98.4%   1828/6163    29.7%   1799/6174    29.1%
+  orient 3            S     6356      135   1877/6356    29.5%   2029/6356    31.9%   6172/6349    97.2%   1863/6339    29.4%
+  combined        mixed    25335      543 12219/25335    48.2% 12089/25335    47.7% 11845/25295    46.8% 11700/25298    46.2%
+  derived-edge skips in this table: N=0, E=0, S=40, W=37
 
 Q4 locType 9 is the diagonal-wall shape. The builder currently blocks ALL FOUR edges on every locType 9 placement regardless of orientation, so this table decides whether that is over-blocking or simply correct. INTERPRETATION RULE, stated before the numbers: if all four edges sit far above the no-wall baseline on every orientation, the all-four rule is CORRECT and there is no win here - report that and stop. Only a per-orientation split, where some edges lift and others sit at baseline, justifies a narrower rule.
 Q4 locType 9 single-placement live edge rates:
   group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  orient 0                   315        0      91/315    28.9%      79/315    25.1%     313/313   100.0%     310/310   100.0%
-  orient 1                   321        0     135/321    42.1%     140/321    43.6%     319/319   100.0%     318/318   100.0%
-  orient 2                   280        0      78/280    27.9%      89/280    31.8%     277/277   100.0%     275/275   100.0%
-  orient 3                   365        1     143/365    39.2%     140/365    38.4%     361/362    99.7%     359/360    99.7%
-  combined                  1281        1    447/1281    34.9%    448/1281    35.0%   1270/1271    99.9%   1262/1263    99.9%
-  derived-edge skips in this table: N=0, E=0, S=10, W=18
+  orient 0                  1015        3    307/1015    30.2%    309/1015    30.4%   1002/1015    98.7%    997/1010    98.7%
+  orient 1                  1012        1    371/1012    36.7%    359/1012    35.5%    997/1011    98.6%    998/1012    98.6%
+  orient 2                   982        2     277/982    28.2%     300/982    30.5%     961/980    98.1%     963/982    98.1%
+  orient 3                  1117        1    403/1117    36.1%    398/1117    35.6%   1102/1116    98.7%   1099/1113    98.7%
+  combined                  4126        7   1358/4126    32.9%   1366/4126    33.1%   4062/4122    98.5%   4057/4117    98.5%
+  derived-edge skips in this table: N=0, E=0, S=4, W=9
 
 Q5 splits Q4 on neighbour contamination. Q4 showed S and W blocked ~100% on EVERY orientation while N and E sat at baseline. That split is orientation-INVARIANT, which no real geometric rule can be - locType 0 peaks move with orientation. The suspected cause is that S and W are DERIVED from the neighbour tile, and diagonal walls are corner fillers that sit beside other walls. NEIGHBOUR-CLEAN below means neither the S (y-1) nor the W (x-1) neighbour carries any wall placement of its own.
 INTERPRETATION RULE, stated before the numbers: if S and W stay near 100% on the NEIGHBOUR-CLEAN table, the confound is refuted and locType 9 genuinely blocks S+W only - a narrower rule is then justified and must still pass the 2,248-edge proof. If S and W COLLAPSE toward the no-wall baseline once contaminated neighbours are removed, the confound is confirmed, the existing all-four rule is correct, and locType 9 closes as a dead lever. A clean-sample size below ~40 placements is too small to conclude either way - say so rather than reading noise.
 Q5a locType 9 NEIGHBOUR-CLEAN (no wall on S or W neighbour):
   group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  orient 0                    22        0       15/22    68.2%       18/22    81.8%       20/20   100.0%       22/22   100.0%
-  orient 1                    40        0       36/40    90.0%       34/40    85.0%       40/40   100.0%       39/39   100.0%
-  orient 2                    15        0       12/15    80.0%       11/15    73.3%       15/15   100.0%       10/10   100.0%
-  orient 3                   312        1     120/312    38.5%     118/312    37.8%     308/309    99.7%     309/310    99.7%
-  combined                   389        1     183/389    47.0%     181/389    46.5%     383/384    99.7%     380/381    99.7%
-  derived-edge skips in this table: N=0, E=0, S=5, W=8
+  orient 0                    46        2       27/46    58.7%       28/46    60.9%       46/46   100.0%       46/46   100.0%
+  orient 1                    52        0       40/52    76.9%       37/52    71.2%       52/52   100.0%       52/52   100.0%
+  orient 2                    25        0       12/25    48.0%       11/25    44.0%       24/25    96.0%       24/25    96.0%
+  orient 3                   967        1     349/967    36.1%     344/967    35.6%     954/966    98.8%     951/963    98.8%
+  combined                  1090        3    428/1090    39.3%    420/1090    38.5%   1076/1089    98.8%   1073/1086    98.8%
+  derived-edge skips in this table: N=0, E=0, S=1, W=4
 
 Q5b locType 9 NEIGHBOUR-CONTAMINATED (wall on S and/or W neighbour):
   group         UNKNOWN    tiles     open N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  orient 0                   293        0      76/293    25.9%      61/293    20.8%     293/293   100.0%     288/288   100.0%
-  orient 1                   281        0      99/281    35.2%     106/281    37.7%     279/279   100.0%     279/279   100.0%
-  orient 2                   265        0      66/265    24.9%      78/265    29.4%     262/262   100.0%     265/265   100.0%
-  orient 3                    53        0       23/53    43.4%       22/53    41.5%       53/53   100.0%       50/50   100.0%
-  combined                   892        0     264/892    29.6%     267/892    29.9%     887/887   100.0%     882/882   100.0%
-  derived-edge skips in this table: N=0, E=0, S=5, W=10
+  orient 0                   969        1     280/969    28.9%     281/969    29.0%     956/969    98.7%     951/964    98.7%
+  orient 1                   960        1     331/960    34.5%     322/960    33.5%     945/959    98.5%     946/960    98.5%
+  orient 2                   957        2     265/957    27.7%     289/957    30.2%     937/955    98.1%     939/957    98.1%
+  orient 3                   150        0      54/150    36.0%      54/150    36.0%     148/150    98.7%     148/150    98.7%
+  combined                  3036        4    930/3036    30.6%    946/3036    31.2%   2986/3033    98.5%   2984/3031    98.4%
+  derived-edge skips in this table: N=0, E=0, S=3, W=5
 
 Q2 terrain floor-blocking rule:
   group          sample    tiles N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  terrain           all     6938   6370/6938    91.8%   6359/6938    91.7%   6909/6909   100.0%   6880/6880   100.0%
-  lift vs null baseline: N=+65.2pp, E=+65.0pp, S=+74.4pp, W=+74.4pp
-  derived-edge skips in this sample: N=0, E=0, S=29, W=58
-  terrain agreement: edges 26518/27665 (95.9%); all-four live 5875/6851 (85.8%)
-  terrain sample count: 6938 covered unique tiles
+  terrain           all    47459 43583/47459    91.8% 43786/47459    92.3% 47033/47033   100.0% 47294/47294   100.0%
+  lift vs null baseline: N=+67.6pp, E=+67.9pp, S=+76.3pp, W=+76.1pp
+  derived-edge skips in this sample: N=0, E=0, S=426, W=165
+  terrain agreement: edges 181696/189245 (96.0%); all-four live 40235/46870 (85.8%)
+  terrain sample count: 47459 covered unique tiles
 
 Q2 bridge branch using plane-1 convention:
-  bridge sample count: 0 covered unique tiles; source branch tiles=132865, negative-plane skips=69065
+  bridge sample count: 96 covered unique tiles; source branch tiles=132865, negative-plane skips=69065
   bridge sample is small; read the counts before the percentages.
   group          sample    tiles N block/use       N% E block/use       E% S block/use       S% W block/use       W%
-  bridge        plane-1        0         0/0     0.0%         0/0     0.0%         0/0     0.0%         0/0     0.0%
-  lift vs null baseline: N=-26.6pp, E=-26.7pp, S=-25.6pp, W=-25.6pp
+  bridge        plane-1       96       81/96    84.4%       88/96    91.7%       96/96   100.0%       96/96   100.0%
+  lift vs null baseline: N=+60.2pp, E=+67.3pp, S=+76.3pp, W=+76.1pp
   derived-edge skips in this sample: N=0, E=0, S=0, W=0
-  bridge agreement: edges 0/0 (0.0%); all-four live 0/0 (0.0%)
+  bridge agreement: edges 361/384 (94.0%); all-four live 75/96 (78.1%)
 
 Q2 reverse terrain miss direction:
-  covered cache tiles checked: 100974
-  skipped because S/W neighbour was uncovered: 1603
-  tiles with all four live edges usable: 99371
-  live blocks all four edges: 16801
-  live-all-four tiles not terrain-marked: 10926 of 16801 (65.0%)
-  no-wall subset of live-all-four not terrain-marked: 10116
-  with-wall subset of live-all-four not terrain-marked: 810
+  covered cache tiles checked: 882832
+  skipped because S/W neighbour was uncovered: 7905
+  tiles with all four live edges usable: 874927
+  live blocks all four edges: 153912
+  live-all-four tiles not terrain-marked: 113677 of 153912 (73.9%)
+  no-wall subset of live-all-four not terrain-marked: 109156
+  with-wall subset of live-all-four not terrain-marked: 4521
 
 Q3 terrain completeness - tileSetting bits
-  target total: 10116; with tileSetting: 10116; missing tileSetting: 0
-  control total: 56343; with tileSetting: 56343; missing tileSetting: 0
+  target total: 109156; with tileSetting: 109089; missing tileSetting: 67
+  control total: 566723; with tileSetting: 564889; missing tileSetting: 1834
   per-bit set counts:
   bit 0: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
-  bit 1: target 81 (0.8%) | control 178 (0.3%) | delta +0.5pp
-  bit 2: target 885 (8.7%) | control 1542 (2.7%) | delta +6.0pp
-  bit 3: target 98 (1.0%) | control 36 (0.1%) | delta +0.9pp
-  bit 4: target 1023 (10.1%) | control 131 (0.2%) | delta +9.9pp
+  bit 1: target 254 (0.2%) | control 1237 (0.2%) | delta +0.0pp
+  bit 2: target 3944 (3.6%) | control 6651 (1.2%) | delta +2.4pp
+  bit 3: target 658 (0.6%) | control 1102 (0.2%) | delta +0.4pp
+  bit 4: target 8349 (7.7%) | control 759 (0.1%) | delta +7.5pp
   bit 5: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
   bit 6: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
   bit 7: target 0 (0.0%) | control 0 (0.0%) | delta +0.0pp
   target exact tileSetting byte values (top 15):
     byte          count      pct
-    0x00 (0)       8029    79.4%
-    0x10 (16)      1023    10.1%
-    0x04 (4)        885     8.7%
-    0x08 (8)         98     1.0%
-    0x02 (2)         81     0.8%
+    0x00 (0)      95898    87.9%
+    0x10 (16)      8345     7.6%
+    0x04 (4)       3931     3.6%
+    0x08 (8)        656     0.6%
+    0x02 (2)        245     0.2%
+    0x06 (6)          8     0.0%
+    0x14 (20)         4     0.0%
+    0x0A (10)         1     0.0%
+    0x0C (12)         1     0.0%
   control exact tileSetting byte values (top 15):
     byte          count      pct
-    0x00 (0)      54456    96.7%
-    0x04 (4)       1542     2.7%
-    0x02 (2)        178     0.3%
-    0x10 (16)       131     0.2%
-    0x08 (8)         36     0.1%
+    0x00 (0)     555487    98.3%
+    0x04 (4)       6309     1.1%
+    0x08 (8)       1087     0.2%
+    0x02 (2)        917     0.2%
+    0x10 (16)       742     0.1%
+    0x06 (6)        315     0.1%
+    0x14 (20)        17     0.0%
+    0x0C (12)        10     0.0%
+    0x0A (10)         5     0.0%
