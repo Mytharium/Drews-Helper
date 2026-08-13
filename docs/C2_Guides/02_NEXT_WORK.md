@@ -870,6 +870,22 @@ section has been changed. Append new findings here as they come up; strike them 
     gate from stored state instead of asking. Neither is a feature. **Remove both before this
     plugin is called finished.** Agreed with Mytharium 2026-08-12. Parked, not built.
 
+33. **Furniture needs its own blocking rule (2026-08-12).** Requested by Mytharium right after
+    the D-0140 ship. Phase 2 was dropped because it sealed real ground - 14 tiles of the Ruins
+    of Unkah pier, which made the whole southern Kharidian Desert unreachable - but dropping it
+    also unblocked interior scenery. The Ardougne mansion chair at 2573,3245,0 is walkable in
+    the shipped map, and that interior went from heavily blocked to almost fully open: x=2572
+    over y=3240-3252 reads 0020013303444 on the old map and 4444433334444 on the new one.
+    Phase 2's locTypes 10 and 11 were too blunt in both directions - they blocked a beach, and
+    they were also the only thing blocking a chair. The replacement has to block small interior
+    scenery without blocking outdoor terrain, which is a narrower rule than either state we
+    have measured, so it needs its own cost-column pass rather than a flag flip.
+    Note the second-order effect, because it is what a user actually notices: waypoint snapping
+    only fires on a tile with no legal move out, so a waypoint typed on that chair used to be
+    corrected to 2572,3245,0 and now stays put, and the router walks you into the furniture.
+    That is not a snapping bug - snapToTraversable is behaving exactly as specified - it is this
+    map error surfacing through it, and fixing this item fixes that too. Requested, not built.
+
 ### Unconfirmed - status needs checking before acting
 
 14. **Route-speed baseline before the heuristic change.** The prior recommendation was to bank a clean
