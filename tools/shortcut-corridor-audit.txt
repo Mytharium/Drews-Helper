@@ -1,0 +1,40 @@
+Shortcut corridor audit - 2026-08-13
+
+Scope
+  Source resource: src/main/resources/drewshelper-transports.tsv
+  Corridor categories: AGILITY_SHORTCUT, GRAPPLE_SHORTCUT
+  Policy: these rows describe physical shortcuts. Their source-to-destination corridor is
+  not ordinary walking. The player may cross only through the filtered transport edge.
+
+Counts
+  AGILITY_SHORTCUT rows             : 557
+  GRAPPLE_SHORTCUT rows             : 15
+  shortcut rows total               : 572
+
+  same-plane AGILITY_SHORTCUT rows  : 481
+  same-plane GRAPPLE_SHORTCUT rows  : 11
+  same-plane corridor rows total    : 492
+
+  plane-changing AGILITY rows       : 76
+  plane-changing GRAPPLE rows       : 4
+  plane-changing rows total         : 80
+
+  AGILITY corridor walking steps    : 2,892
+  GRAPPLE corridor walking steps    : 89
+  corridor walking steps total      : 2,981
+
+Result
+  unblocked same-plane shortcut corridor steps: 0
+
+Decision
+  The transport-only blocker is correctly scoped to AGILITY_SHORTCUT and GRAPPLE_SHORTCUT.
+  Other transport categories are travel networks, teleports, doors/access rows, boats, gliders,
+  balloons, quetzals, fairy rings, spirit trees, mushtrees, canoes, and Wilderness systems.
+  They are still capability-gated as transport edges, but they are not treated as straight
+  shortcut corridors unless the TSV category says they are.
+
+Regression gate
+  DrewsHelperShortcutCorridorAuditTest pins the counts above and checks every adjacent step
+  on every same-plane shortcut corridor with DrewsHelperTransportGraph.blocksShortcutWalkingStep.
+  If the TSV changes, that test forces a fresh audit instead of silently leaving new shortcut
+  rows walkable as normal ground.

@@ -2359,3 +2359,30 @@ D-0144 (2026-08-13) - Shortcut corridors are not ordinary walking edges
 
   Cross-reference: extends D-0143 and closes the live screenshot where the route still drew
   across the Broken Raft after item/skill transport filtering shipped.
+
+
+D-0145 (2026-08-13) - Audit all shortcut corridors as transport-only geometry
+
+  RULE 1 - THE WORD SHORTCUT IS THE SCOPE BOUNDARY. The transport resource has exactly two
+  corridor families: AGILITY_SHORTCUT and GRAPPLE_SHORTCUT. Those rows describe physical
+  crossings such as logs, rocks, walls, rafts, gaps and stepping stones. Their corridor is
+  not ordinary walking; it is transport-layer geometry gated by account capability.
+
+  RULE 2 - OTHER TRANSPORT FAMILIES STAY OUT OF THE CORRIDOR BLOCKER. Canoes, balloons,
+  gliders, quetzals, fairy rings, spirit trees, mushtrees, Wilderness systems and baseline
+  access rows are still filtered by skills, items, quests, varbits and varplayers. They are
+  not straight shortcut corridors unless the TSV category says they are. Blocking their
+  source-to-destination line as walking would invent walls through normal travel networks.
+
+  RULE 3 - THE AUDIT IS NOW A REGRESSION GATE. DrewsHelperShortcutCorridorAuditTest parses the
+  active drewshelper-transports.tsv and checks every adjacent step in every same-plane
+  shortcut row through DrewsHelperTransportGraph.blocksShortcutWalkingStep. It also proves
+  that a zero-capability account loads no AGILITY_SHORTCUT or GRAPPLE_SHORTCUT transports.
+
+  PROOF. Current TSV counts: 557 AGILITY_SHORTCUT rows and 15 GRAPPLE_SHORTCUT rows. Of those,
+  481 agility rows and 11 grapple rows are same-plane corridors; 76 agility rows and 4 grapple
+  rows change plane and cannot be crossed as ordinary same-plane walking. The same-plane rows
+  expand to 2,981 adjacent walking steps, and the audit found 0 unblocked steps.
+
+  Cross-reference: extends D-0144 from the Broken Raft one-case proof to the full shortcut
+  corpus. Report snapshot: tools/shortcut-corridor-audit.txt.
