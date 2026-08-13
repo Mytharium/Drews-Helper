@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.ItemID;
 import org.junit.Test;
 
 public class DrewsHelperTransportPolicyTest
@@ -123,6 +124,7 @@ public class DrewsHelperTransportPolicyTest
     {
         // The plugin snapshots exactly these, so an empty list would mean nothing gets checked.
         assertTrue(DrewsHelperTransportGraph.requiredQuestNames().size() >= 39);
+        assertTrue(DrewsHelperTransportGraph.requiredItemRequirements().size() >= 15);
         assertTrue(DrewsHelperTransportGraph.requiredVarbitIds().size() >= 40);
         assertFalse(DrewsHelperTransportGraph.requiredVarPlayerIds().isEmpty());
 
@@ -131,6 +133,48 @@ public class DrewsHelperTransportPolicyTest
         {
             assertTrue("varbit id must be positive, got " + id, id > 0);
         }
+    }
+
+    @Test
+    public void shortcutEdgesAreFilteredByPlayerCapabilityBeforeRouting() throws Exception
+    {
+        DrewsHelperTransportPolicy policy = DrewsHelperTransportPolicy.baselineOnly();
+        WorldPoint agilitySource = new WorldPoint(2722, 3592, 0);
+        WorldPoint agilityDestination = new WorldPoint(2722, 3596, 0);
+        WorldPoint grappleSource = new WorldPoint(3246, 3179, 0);
+        WorldPoint grappleDestination = new WorldPoint(3259, 3179, 0);
+
+        DrewsHelperPlayerCapability agility47 = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 47)
+            .skill("RANGED", 99)
+            .skill("STRENGTH", 99)
+            .build();
+        DrewsHelperPlayerCapability agility48 = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 48)
+            .skill("RANGED", 99)
+            .skill("STRENGTH", 99)
+            .build();
+        DrewsHelperPlayerCapability noGrappleItems = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .skill("RANGED", 99)
+            .skill("STRENGTH", 99)
+            .build();
+        DrewsHelperPlayerCapability grappleKit = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 99)
+            .skill("RANGED", 99)
+            .skill("STRENGTH", 99)
+            .item(ItemID.XBOWS_CROSSBOW_MITHRIL, 1)
+            .item(ItemID.XBOWS_GRAPPLE_TIP_BOLT_MITHRIL_ROPE, 1)
+            .build();
+
+        assertFalse(hasEdge(DrewsHelperTransportGraph.loadDefault(policy, agility47),
+            agilitySource, agilityDestination, "Walk-across Log balance 16542"));
+        assertTrue(hasEdge(DrewsHelperTransportGraph.loadDefault(policy, agility48),
+            agilitySource, agilityDestination, "Walk-across Log balance 16542"));
+        assertFalse(hasEdge(DrewsHelperTransportGraph.loadDefault(policy, noGrappleItems),
+            grappleSource, grappleDestination, "Grapple Broken Raft 17068"));
+        assertTrue(hasEdge(DrewsHelperTransportGraph.loadDefault(policy, grappleKit),
+            grappleSource, grappleDestination, "Grapple Broken Raft 17068"));
     }
 
     @Test
@@ -211,5 +255,22 @@ public class DrewsHelperTransportPolicyTest
             }
         }
         return matches;
+    }
+
+    private static boolean hasEdge(
+        DrewsHelperTransportGraph graph,
+        WorldPoint source,
+        WorldPoint destination,
+        String label
+    )
+    {
+        for (DrewsHelperTransportEdge edge : graph.edgesFrom(source))
+        {
+            if (destination.equals(edge.getDestination()) && label.equals(edge.getLabel()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

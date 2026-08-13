@@ -1376,7 +1376,8 @@ public class DrewsHelperPlugin extends Plugin
 
     /**
      * Snapshots the account state the router cares about. MUST be called on the client thread.
-     * Quests and unlock varbits are deliberately absent - those are attested by the checkboxes.
+     * Skills, carried/equipped items, quest completion and unlock vars are all checked against
+     * the transport resource before pathfinding sees an edge.
      */
     private DrewsHelperPlayerCapability buildCapability()
     {
@@ -1394,6 +1395,7 @@ public class DrewsHelperPlugin extends Plugin
         addItems(builder, client.getItemContainer(InventoryID.INV));
         ItemContainer worn = client.getItemContainer(InventoryID.WORN);
         addItems(builder, worn);
+        addTrackedItemRequirements(builder);
         addUnlockState(builder);
 
         return builder
@@ -1512,6 +1514,29 @@ public class DrewsHelperPlugin extends Plugin
             return known;
         }
         return elapsed;
+    }
+
+    /**
+     * Tracks every item requirement expression in the transport resource in the capability
+     * signature. The edge filter itself still evaluates the exact requirement per edge; this
+     * only prevents the cached filtered graph from surviving an inventory/equipment change that
+     * flips a bare item-id, quantity or alternative requirement.
+     */
+    private void addTrackedItemRequirements(DrewsHelperPlayerCapability.Builder builder)
+    {
+        try
+        {
+            for (String requirement : DrewsHelperTransportGraph.requiredItemRequirements())
+            {
+                builder.trackedItemRequirement(requirement);
+            }
+        }
+        catch (IOException ex)
+        {
+            // The graph resource is unreadable; routing will fail louder elsewhere. Leaving the
+            // tracked item list empty preserves the previous cache behaviour for this one solve.
+            log.warn("Drew's Helper: could not read transport item requirements", ex);
+        }
     }
 
     /**

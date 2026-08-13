@@ -2301,3 +2301,33 @@ D-0142 (2026-08-13) - Ship furniture blocking as a measured object-profile allow
 
   Cross-reference: extends D-0140 and D-0141. Closes backlog item 33's first shippable slice;
   remaining slices are other named objects such as stools, shelves, hedges, and trees.
+
+
+D-0143 (2026-08-13) - Transport gates are checked from account capability, not route reports
+
+  RULE 1 - EXACT TILES ARE DEBUGGING PROOF, NOT THE FIX. Mytharium rejected a route-specific
+  raft patch and restated the original design: every shortcut/transport edge must be filtered
+  against the player's real skills, carried/equipped items, quests, varbits and varplayers
+  before pathfinding ranks it. Route coordinates are useful only to identify the row and pin a
+  regression test.
+
+  RULE 2 - ITEM REQUIREMENTS MUST PARTICIPATE IN THE ROUTE-ENGINE CACHE KEY. The graph already
+  filtered each edge through DrewsHelperPlayerCapability, but the capability signature only
+  tracked broad item symbols and coin tiers. That was not enough for all upstream item rows:
+  bare item ids, quantities and OR alternatives could flip without changing the cached graph
+  key. The plugin now snapshots every distinct item requirement expression from the transport
+  resource into the capability signature as a satisfied/unsatisfied bit.
+
+  RULE 3 - THE REQUIREMENT SOURCE IS STILL THE TSV. Do not hardcode OSRS shortcut tables. The
+  resource owns the skills, quests, items, varbits, varplayers and wilderness caps; the plugin
+  derives the quest names, var ids and item requirement expressions from that same data so an
+  upstream row change does not need a new hand-coded gate.
+
+  PROOF. New regression tests pin both sides of the report class: the Agility 48 log-balance
+  row at 2722,3592 -> 2722,3596 is absent at Agility 47 and present at Agility 48, and
+  Grapple Broken Raft 17068 at 3246,3179 -> 3259,3179 is absent without crossbow plus mithril
+  grapple and present with both items. Another test proves a bare item-id quantity changes the
+  capability signature, which is the stale-cache case the old symbol-only signature missed.
+
+  Cross-reference: follows D-0142 live test 2. Next live test should use Mytharium's account:
+  the raft/grapple shortcut should disappear unless the skill and item requirements are met.

@@ -2,8 +2,11 @@ package com.drewshelper.routing;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * An immutable snapshot of the account state that decides which transport edges are usable.
@@ -25,6 +28,7 @@ public final class DrewsHelperPlayerCapability
     public static final DrewsHelperPlayerCapability UNRESTRICTED =
         new DrewsHelperPlayerCapability(true, Collections.emptyMap(), Collections.emptyMap(),
             Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(),
+            Collections.emptySet(),
             0, 10_000, true, false, false, 0, 0, 0, 0);
 
     /** Graceful's set bonus caps the restoration bonus at 30% (20% from pieces, 10% for the set). */
@@ -39,6 +43,7 @@ public final class DrewsHelperPlayerCapability
     private final Map<String, Boolean> questsFinished;
     private final Map<Integer, Integer> varbits;
     private final Map<Integer, Integer> varPlayers;
+    private final Set<String> trackedItemRequirements;
 
     // Energy inputs. Carried here so the travel-time work does not need to reopen this type.
     private final int weightKg;
@@ -64,6 +69,7 @@ public final class DrewsHelperPlayerCapability
         Map<String, Boolean> questsFinished,
         Map<Integer, Integer> varbits,
         Map<Integer, Integer> varPlayers,
+        Set<String> trackedItemRequirements,
         int weightKg,
         int energyUnits,
         boolean running,
@@ -81,6 +87,8 @@ public final class DrewsHelperPlayerCapability
         this.questsFinished = Collections.unmodifiableMap(new TreeMap<>(questsFinished));
         this.varbits = Collections.unmodifiableMap(new TreeMap<>(varbits));
         this.varPlayers = Collections.unmodifiableMap(new TreeMap<>(varPlayers));
+        this.trackedItemRequirements =
+            Collections.unmodifiableSet(new TreeSet<>(trackedItemRequirements));
         this.weightKg = weightKg;
         this.energyUnits = energyUnits;
         this.running = running;
@@ -422,9 +430,10 @@ public final class DrewsHelperPlayerCapability
     /**
      * Stable fingerprint for the route and engine cache keys.
      *
-     * <p>Deliberately coarse on items: it records whether each symbol is held at all, and
-     * buckets coins to the thresholds the data actually uses. Encoding an exact coin count
-     * would rebuild the route every time you picked up a coin.
+     * <p>Items are folded in two ways. The broad symbol bits keep old cache behaviour stable,
+     * then the tracked requirement bits record whether each item requirement in the transport
+     * data is currently satisfied. That second part is what makes bare item ids, quantities and
+     * item alternatives rebuild the filtered graph instead of reusing a stale one.
      */
     public String signature()
     {
@@ -453,6 +462,11 @@ public final class DrewsHelperPlayerCapability
             builder.append(countOf(variation.name()) > 0 ? '1' : '0');
         }
         builder.append('|').append(coinTier());
+        builder.append('|');
+        for (String requirement : trackedItemRequirements)
+        {
+            builder.append(meetsItems(requirement) ? '1' : '0');
+        }
 
         // Unlock state moves rarely but must invalidate the route when it does - finishing a
         // quest can open a whole transport network. TreeMap iteration keeps this stable.
@@ -508,6 +522,7 @@ public final class DrewsHelperPlayerCapability
         private final Map<String, Boolean> questsFinished = new HashMap<>();
         private final Map<Integer, Integer> varbits = new HashMap<>();
         private final Map<Integer, Integer> varPlayers = new HashMap<>();
+        private final Set<String> trackedItemRequirements = new HashSet<>();
         private int weightKg;
         private int energyUnits = 10_000;
         // Defaults to running: that is the prior behaviour, and it keeps a capability built
@@ -534,6 +549,22 @@ public final class DrewsHelperPlayerCapability
             if (quantity > 0)
             {
                 itemCounts.merge(itemId, quantity, Integer::sum);
+            }
+            return this;
+        }
+
+        /**
+         * Adds an item requirement from the transport resource to the route-cache signature.
+         *
+         * <p>The actual allow/deny decision still happens in {@link #meetsItems(String)} for
+         * every edge. This only guarantees that when a requirement's truth value changes, the
+         * cached filtered graph is rebuilt.
+         */
+        public Builder trackedItemRequirement(String requirement)
+        {
+            if (requirement != null && !requirement.trim().isEmpty())
+            {
+                trackedItemRequirements.add(requirement.trim());
             }
             return this;
         }
@@ -627,7 +658,7 @@ public final class DrewsHelperPlayerCapability
         public DrewsHelperPlayerCapability build()
         {
             return new DrewsHelperPlayerCapability(false, skillLevels, itemCounts,
-                questsFinished, varbits, varPlayers,
+                questsFinished, varbits, varPlayers, trackedItemRequirements,
                 weightKg, energyUnits, running, staminaActive, ringOfEndurance,
                 gracefulRestorePercent, autoRunThresholdPercent, staminaTicksRemaining,
                 currentEpochMinute);

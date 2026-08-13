@@ -112,6 +112,23 @@ public class DrewsHelperPlayerCapabilityTest
     }
 
     @Test
+    public void trackedItemRequirementsChangeTheSignatureForBareIdsAndQuantities()
+    {
+        String one = base()
+            .trackedItemRequirement("1543=2")
+            .item(1543, 1)
+            .build()
+            .signature();
+        String two = base()
+            .trackedItemRequirement("1543=2")
+            .item(1543, 2)
+            .build()
+            .signature();
+
+        assertNotEquals(one, two);
+    }
+
+    @Test
     public void capabilityFiltersTheLoadedGraph() throws Exception
     {
         // Canoes are always loaded now, so the capability is the only thing gating them.

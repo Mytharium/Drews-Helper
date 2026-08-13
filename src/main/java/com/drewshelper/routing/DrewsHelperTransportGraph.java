@@ -137,6 +137,26 @@ public final class DrewsHelperTransportGraph
         return Collections.unmodifiableSet(names);
     }
 
+    /**
+     * Distinct item requirement expressions referenced anywhere in the resource.
+     *
+     * <p>The capability snapshots these expressions into its route-cache signature, so a
+     * capability change that flips any edge's item gate rebuilds the filtered graph.
+     */
+    public static Set<String> requiredItemRequirements() throws IOException
+    {
+        Set<String> requirements = new TreeSet<>();
+        for (DrewsHelperTransportEdge edge : masterEdges())
+        {
+            String items = edge.getItems();
+            if (items != null && !items.trim().isEmpty())
+            {
+                requirements.add(items.trim());
+            }
+        }
+        return Collections.unmodifiableSet(requirements);
+    }
+
     /** Varbit ids referenced anywhere in the resource. */
     public static Set<Integer> requiredVarbitIds() throws IOException
     {
