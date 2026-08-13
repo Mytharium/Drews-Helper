@@ -2189,3 +2189,51 @@ D-0139 (2026-08-12) - Roofs are the upper-floor blocker, and phase 2 is the weak
 
   Cross-reference: extends D-0138 and answers it. Supersedes nothing. Commits a469d96
   (per-locType proof pass, three control fixes, live gate baseline) and b48b4bd (phase 3 roofs).
+
+D-0140 (2026-08-12) - Ship the all-region map: roofs on, phase 2 dropped, doors passable
+
+  RULE 1 - A DOOR IS NOT A WALL. markDoor clears FLAG_*_PASSABLE and sets FLAG_*_DOOR, and
+  archiveFlags copied only the PASSABLE bits into the shipped zip, so every door in the game
+  was written as a solid wall and the runtime had no way to tell. archivePassable now
+  collapses the two flags for the archive writer and for verifyRoundTrip, which has to agree
+  or it fails on its own output. A door is passable until a door-aware reader can charge the
+  tick that opening one costs.
+
+  RULE 2 - EDGE COUNTS CANNOT SEE THAT A DOOR IS LOAD-BEARING. In one 26-tile box around the
+  Ardougne mansion the rebuild opened 501 edges and closed 28 - eighteen to one - and six of
+  those 28 were three door pairs, one being the only way out of the building. The aggregate
+  over-block number looked excellent while a route teleported out of a room. Reachability
+  needs a check of its own.
+
+  RULE 3 - PHASE 2 IS DROPPED, AND NOT ON A RATIO. On a frozen capture, so both configs read
+  identical input: phase 2 fixes 16,495 unexplained-dangerous edges for 9,320 new over-blocks
+  (1.77x), roofs fix 32,931 for 4,468 (7.37x), and phase 2 loses on proof edges and on
+  over-block at the same time. The naming defect is concrete: phase 2 seals x 3142-3155,
+  y 2839-2841, the pier at the Ruins of Unkah where the ferry from 3271,3144 lands, leaving
+  no route into the southern Kharidian Desert at all.
+
+  RULE 4 - REPLAY A WORKING ROUTE TILE BY TILE TO FIND WHAT A MAP REFUSES. Recording the
+  shipped map's 169-tile route and asking each rebuild "can you take this step" put the break
+  on steps 96-104 in a single run. Nine consecutive refusals starting one tile off the boat
+  is an address, not a ratio. The same method found the mansion door, and four hypotheses had
+  already died on that route before it.
+
+  RULE 5 - A MEASUREMENT MUST DESCRIBE THE BUILD THAT SHIPS. compareLiveEdge still read
+  bits.isPassable after the archive began writing doors passable, so DANGEROUS and OVERBLOCK
+  graded a map nobody would run. Fixed, and proven report-only by hashing both all-region
+  archives before and after the edit: byte-identical. Fifth instance of this defect class in
+  this one file in a single day.
+
+  RULE 6 - FREEZE A GROWING INPUT BEFORE AN A/B. drews-live-flags.txt accumulates while the
+  reporter plays, and a number that could not be affected by a report-only change still moved
+  by 757 between runs. Both phase 2 builds read a frozen SHA256-verified copy of the capture.
+
+  ACCEPTED COSTS, stated rather than hidden. The shape-ranking coordinate pin stays red: the
+  route lands on 2990,3286 where the fixture pins 2991,3286, one tile on a tie, with equal
+  walking distance and every other assertion passing, and it fails if and only if phase 2 is
+  off across four full-suite runs. The mansion wall at 2573,3245 becomes walkable - it is a
+  solid object rather than a wall type, so only phase 2 held it up. One wall, one continent.
+
+  Cross-reference: extends D-0139. Commits 7de78e8 (doors passable in the archive), e01c157
+  (doors passable in the report), 9c22f72 (the map: 1,524 -> 2,949 regions, 907,178 ->
+  1,182,273 bytes).
