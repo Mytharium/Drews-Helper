@@ -2237,3 +2237,31 @@ D-0140 (2026-08-12) - Ship the all-region map: roofs on, phase 2 dropped, doors 
   Cross-reference: extends D-0139. Commits 7de78e8 (doors passable in the archive), e01c157
   (doors passable in the report), 9c22f72 (the map: 1,524 -> 2,949 regions, 907,178 ->
   1,182,273 bytes).
+
+
+D-0141 (2026-08-13) - Defer normalized edges across region seams
+
+  RULE 1 - WALLS CAN BELONG TO THE NEIGHBOUR REGION. The Falador north-wall report at
+  3019,3391 -> 3019,3392 proved the shipped map had the edge open while the live client
+  blocked it. The cache classifier named a solid locType 0 wall object, id 24029, but the
+  object lived in region 47_53 while the normalized stored edge lives in region 47_52.
+
+  RULE 2 - NORMALIZING SOUTH AND WEST EDGES MUST NOT DROP THEM. The builder stores only
+  NORTH and EAST passability, so SOUTH becomes y-1/NORTH and WEST becomes x-1/EAST.
+  Before this decision, RegionBits.edgeIfInside rejected that normalized edge when it
+  landed outside the current region. That skipped seam walls, doors, roof edges, and
+  terrain edges whenever the object was seen from the other side of a 64-tile boundary.
+
+  RULE 3 - DEFER, THEN APPLY TO THE REGION THAT OWNS THE STORED EDGE. markEdge now emits a
+  DeferredEdge when the normalized edge belongs to another built region. After all selected
+  regions are built, applyDeferredNeighbourEdges writes those edges into their owner region
+  and still skips only when the owner region was not built. Solid-over-door precedence stays
+  on the same markStoredEdge path as in-region writes.
+
+  PROOF. A two-region rebuild of 47_52 and 47_53 applied 36 deferred edges and changed
+  3019,3391,0 from north-open to north-blocked. The route from 3019,3390 to 3019,3401
+  stopped being the 11-tile wall line and became a 145-step detour. The all-region rebuild
+  deferred 166,441 neighbour edges, applied 116,788, and skipped 49,653 edges whose owner
+  regions were not built or merged.
+
+  Cross-reference: extends D-0140 and closes Mytharium's 3019,3390 -> 3019,3401 wall report.

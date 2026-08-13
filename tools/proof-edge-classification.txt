@@ -1,93 +1,99 @@
-proof edges parsed: 2248
-inside cache regions: 2248
+proof edges parsed: 23078
+inside cache regions: 23078
 missing cache-region edges: 0
-classified edges: 2248
+classified edges: 23078
 
 bucket counts (percent of classified edges):
-  NOTHING  1444 (64.2%)
-  OPENABLE 17 (0.8%)
-  SOLID    787 (35.0%)
+  NOTHING  17436 (75.6%)
+  OPENABLE 47 (0.2%)
+  SOLID    5595 (24.2%)
 
 top 15 object names in OPENABLE bucket:
-  12  Castle door  ids: 24059=3, 24060=3, 24062=3, 24064=3
-  4  Door  ids: 24058=2, 8695=1, 24057=1
+  37  Door  ids: 1535=7, 24050=7, 1540=6, 11773=4, 24057=4, 11780=2, 24058=2, 40178=2, 2706=1, 8695=1, 11775=1
+  6  Castle door  ids: 24059=2, 24064=2, 24060=1, 24062=1
+  2  Gate  ids: 1560=1, 1561=1
   1  Guild Door  ids: 14910=1
+  1  Large door  ids: 1524=1
 
 top 15 object names in SOLID bucket:
-  878  null  ids: 24029=103, 24175=84, 24176=81, 24191=67, 23994=48, 24035=47, 24026=46, 24013=45, 24242=36, 814=33, 24186=31, 23997=20, +46 more ids
+  6162  null  ids: 980=530, 1602=390, 979=310, 981=188, 9623=187, 24029=182, 9539=171, 24175=165, 24191=155, 24035=141, 24026=137, 1911=132, +234 more ids
+  3  Washing Line  ids: 4059=3
+  1  Wall  ids: 17052=1
 
 example NOTHING edges:
-  2929,3298,0 N
-  2929,3299,0 N
-  2929,3299,0 E
-  2929,3300,0 N
-  2929,3300,0 E
-  2929,3301,0 N
-  2929,3301,0 E
-  2929,3312,0 N
-  2929,3316,0 N
-  2929,3322,0 N
-  2929,3349,0 N
-  2929,3350,0 N
-  2929,3350,0 E
-  2929,3351,0 N
-  2929,3351,0 E
-  2929,3365,0 N
-  2929,3366,0 N
-  2929,3366,0 E
-  2929,3367,0 N
-  2929,3367,0 E
+  2601,3280,0 N
+  2601,3281,0 N
+  2601,3281,0 E
+  2601,3282,0 E
+  2601,3289,1 N
+  2601,3307,0 E
+  2601,3308,0 N
+  2601,3308,0 E
+  2601,3314,1 N
+  2601,3327,0 E
+  2601,3336,0 E
+  2601,3337,0 E
+  2601,3338,0 E
+  2601,3339,0 E
+  2601,3340,0 E
+  2602,3277,0 N
+  2602,3286,0 E
+  2602,3287,0 E
+  2602,3289,1 N
+  2602,3314,1 N
 
-reading: NOTHING edges are places where the proof edge has no cache wall placement on either tile, so those are rebuild wins if the shipped map is stale. OPENABLE edges are the door-aware prize because the cache sees an Open/Close wall object there. SOLID is 787, so those edges are the orientation hypothesis test below: either true blockers, or wall placements facing other sides of the two tiles.
+reading: NOTHING edges are places where the proof edge has no cache wall placement on either tile, so those are rebuild wins if the shipped map is stale. OPENABLE edges are the door-aware prize because the cache sees an Open/Close wall object there. SOLID is 5595, so those edges are the orientation hypothesis test below: either true blockers, or wall placements facing other sides of the two tiles.
 
 object definition fields in OPENABLE bucket:
   interactType:
-    2 -> 22
+    2 -> 74
   blockingMask:
-    0 -> 22
+    0 -> 74
   wallOrDoor:
-    1 -> 17
-    0 -> 5
+    1 -> 47
+    0 -> 27
   blocksProjectile:
-    true -> 22
+    true -> 71
+    false -> 3
 
 object definition fields in SOLID bucket:
   interactType:
-    2 -> 1159
-    0 -> 7
-    1 -> 4
+    2 -> 8269
+    0 -> 77
+    1 -> 63
   blockingMask:
-    0 -> 1170
+    0 -> 8409
   wallOrDoor:
-    0 -> 1170
+    0 -> 8405
+    1 -> 4
   blocksProjectile:
-    true -> 982
-    false -> 188
+    true -> 5339
+    false -> 3070
 
 interactType == 0 hypothesis:
-  SOLID edges where EVERY wall placement on the edge has interactType == 0: 7
+  SOLID edges where EVERY wall placement on the edge has interactType == 0: 72
   Reading guide: close to the SOLID bucket count above points to non-blocking scenery; near zero points to a decode disagreement.
 
 orientation-facing split (edge counts):
-  OPENABLE_FACING      10 (58.8% of OPENABLE)
-  OPENABLE_NOT_FACING  7 (41.2% of OPENABLE)
-  SOLID_FACING         294 (37.4% of SOLID)
-  SOLID_NOT_FACING     493 (62.6% of SOLID)
+  OPENABLE_FACING      12 (25.5% of OPENABLE)
+  OPENABLE_NOT_FACING  35 (74.5% of OPENABLE)
+  SOLID_FACING         2308 (41.3% of SOLID)
+  SOLID_NOT_FACING     3287 (58.7% of SOLID)
   Mapping used: orientation 0=W, 1=N, 2=E, 3=S. Invalid orientation values are counted below and never assumed to face the edge.
 
 locType distribution by SOLID orientation split (wall placements):
   SOLID_FACING:
-    9 -> 228
-    1 -> 119
-    3 -> 62
-    0 -> 35
-    2 -> 3
+    9 -> 1133
+    3 -> 888
+    0 -> 802
+    1 -> 737
+    2 -> 32
   SOLID_NOT_FACING:
-    9 -> 298
-    0 -> 279
-    1 -> 117
-    3 -> 19
-    2 -> 10
+    0 -> 2170
+    9 -> 1512
+    1 -> 859
+    3 -> 185
+    2 -> 91
 
 invalid orientation values by orientation split (wall placements):
   OPENABLE_FACING:
@@ -101,8 +107,8 @@ invalid orientation values by orientation split (wall placements):
 
 orientation caveat:
   This facing test is rigorous only for locType 0 straight walls. locTypes 1, 2, 3 and 9 are corners or diagonals, where one orientation value does not fully describe every blocked side.
-  SOLID_FACING: locType 9 is 228/447 placements. That bucket is dominated by locType 9, so treat its facing number as caveated.
-  SOLID_NOT_FACING: locType 9 is 298/723 placements. No single locType dominates, so keep the shape caveat attached.
+  SOLID_FACING: locType 9 is 1133/3592 placements. No single locType dominates, so keep the shape caveat attached.
+  SOLID_NOT_FACING: locType 0 is 2170/4817 placements. No single locType dominates, so keep the shape caveat attached.
 
 orientation conclusion:
-  SOLID_NOT_FACING dominates (493/787 SOLID edges), so the classifier was blind to orientation, most SOLID is walls facing elsewhere, and the rebuild case is unaffected or stronger.
+  SOLID_NOT_FACING dominates (3287/5595 SOLID edges), so the classifier was blind to orientation, most SOLID is walls facing elsewhere, and the rebuild case is unaffected or stronger.

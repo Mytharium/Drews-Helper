@@ -498,6 +498,8 @@ public final class CollisionMapBuilder
                 + " requested regions.");
         }
 
+        applyDeferredNeighbourEdges(regions, stats);
+
         stats.totalRegionsBuilt = regions.size();
         for (BuiltRegion region : regions.values())
         {
@@ -505,6 +507,28 @@ public final class CollisionMapBuilder
             stats.doorEdgesWritten += region.countDoorEdges();
         }
         return new BuildResult(regions, stats);
+    }
+
+    private static void applyDeferredNeighbourEdges(TreeMap<String, BuiltRegion> regions, BuildStats stats)
+    {
+        for (DeferredEdge deferred : stats.deferredNeighbourEdges)
+        {
+            StoredEdge edge = deferred.edge;
+            BuiltRegion region = regions.get(regionNameFor(edge.x, edge.y));
+            if (region == null || !region.bits.contains(edge.x, edge.y, edge.plane))
+            {
+                stats.outOfRegionNeighbourSkips++;
+                continue;
+            }
+
+            region.bits.markStoredEdge(edge, deferred.openable);
+            stats.outOfRegionNeighbourEdgesApplied++;
+        }
+    }
+
+    private static String regionNameFor(int x, int y)
+    {
+        return Math.floorDiv(x, REGION_SIZE) + "_" + Math.floorDiv(y, REGION_SIZE);
     }
 
     private static void loadAndBuild(
@@ -3987,6 +4011,10 @@ public final class CollisionMapBuilder
             .append(stats.doorCapableTileCollisions).append('\n');
         report.append("  terrain-blocked count: ").append(stats.terrainBlockedTiles).append('\n');
         report.append("  bridge-branch count: ").append(stats.bridgeBranchTiles).append('\n');
+        report.append("  out-of-region neighbour edges deferred: ")
+            .append(stats.outOfRegionNeighbourEdgesDeferred).append('\n');
+        report.append("  out-of-region neighbour edges applied: ")
+            .append(stats.outOfRegionNeighbourEdgesApplied).append('\n');
         report.append("  out-of-region neighbour skips: ").append(stats.outOfRegionNeighbourSkips).append('\n');
         report.append("  total edges made passable: ").append(stats.totalEdgesMadePassable).append('\n');
         report.append("  door edges written: ").append(stats.doorEdgesWritten).append('\n');
@@ -4556,6 +4584,7 @@ public final class CollisionMapBuilder
         private final Map<Long, Integer> doorCapableLocTypeByTile = new HashMap<>();
         private final Map<Long, Integer> ignoredLocTypeMaskByTile = new HashMap<>();
         private final TreeMap<String, Long> ignoredNonDecorFootprintHistogram = new TreeMap<>();
+        private final List<DeferredEdge> deferredNeighbourEdges = new ArrayList<>();
 
         private long locType1EdgesBlockedTotal;
         private long locType1Orientation3Placements;
@@ -4579,6 +4608,8 @@ public final class CollisionMapBuilder
         private long doorCapableTileCollisions;
         private long terrainBlockedTiles;
         private long bridgeBranchTiles;
+        private long outOfRegionNeighbourEdgesDeferred;
+        private long outOfRegionNeighbourEdgesApplied;
         private long outOfRegionNeighbourSkips;
         private long totalEdgesMadePassable;
         private long doorEdgesWritten;
@@ -4758,12 +4789,24 @@ public final class CollisionMapBuilder
             BuildStats stats
         )
         {
-            StoredEdge edge = storedEdgeFor(x, y, plane, direction, stats);
+            StoredEdge edge = storedEdgeFor(x, y, plane, direction);
             if (edge == null)
             {
                 return;
             }
 
+            if (!contains(edge.x, edge.y, edge.plane))
+            {
+                stats.deferredNeighbourEdges.add(new DeferredEdge(edge, openable));
+                stats.outOfRegionNeighbourEdgesDeferred++;
+                return;
+            }
+
+            markStoredEdge(edge, openable);
+        }
+
+        private void markStoredEdge(StoredEdge edge, boolean openable)
+        {
             if (openable)
             {
                 markDoor(edge);
@@ -4778,8 +4821,7 @@ public final class CollisionMapBuilder
             int x,
             int y,
             int plane,
-            Direction direction,
-            BuildStats stats
+            Direction direction
         )
         {
             if (plane < 0 || plane >= PLANE_COUNT)
@@ -4790,34 +4832,16 @@ public final class CollisionMapBuilder
             switch (direction)
             {
                 case NORTH:
-                    return edgeIfInside(x, y, plane, FLAG_NORTH_PASSABLE, FLAG_NORTH_DOOR, 0, stats);
+                    return new StoredEdge(x, y, plane, FLAG_NORTH_PASSABLE, FLAG_NORTH_DOOR, 0);
                 case EAST:
-                    return edgeIfInside(x, y, plane, FLAG_EAST_PASSABLE, FLAG_EAST_DOOR, 1, stats);
+                    return new StoredEdge(x, y, plane, FLAG_EAST_PASSABLE, FLAG_EAST_DOOR, 1);
                 case SOUTH:
-                    return edgeIfInside(x, y - 1, plane, FLAG_NORTH_PASSABLE, FLAG_NORTH_DOOR, 0, stats);
+                    return new StoredEdge(x, y - 1, plane, FLAG_NORTH_PASSABLE, FLAG_NORTH_DOOR, 0);
                 case WEST:
-                    return edgeIfInside(x - 1, y, plane, FLAG_EAST_PASSABLE, FLAG_EAST_DOOR, 1, stats);
+                    return new StoredEdge(x - 1, y, plane, FLAG_EAST_PASSABLE, FLAG_EAST_DOOR, 1);
                 default:
                     throw new IllegalArgumentException("Unhandled direction " + direction);
             }
-        }
-
-        private StoredEdge edgeIfInside(
-            int x,
-            int y,
-            int plane,
-            int passableFlag,
-            int doorFlag,
-            int storedEdgeOrdinal,
-            BuildStats stats
-        )
-        {
-            if (!contains(x, y, plane))
-            {
-                stats.outOfRegionNeighbourSkips++;
-                return null;
-            }
-            return new StoredEdge(x, y, plane, passableFlag, doorFlag, storedEdgeOrdinal);
         }
 
         private void markSolid(StoredEdge edge)
@@ -4931,6 +4955,18 @@ public final class CollisionMapBuilder
             this.passableFlag = passableFlag;
             this.doorFlag = doorFlag;
             this.storedEdgeOrdinal = storedEdgeOrdinal;
+        }
+    }
+
+    private static final class DeferredEdge
+    {
+        private final StoredEdge edge;
+        private final boolean openable;
+
+        private DeferredEdge(StoredEdge edge, boolean openable)
+        {
+            this.edge = edge;
+            this.openable = openable;
         }
     }
 
