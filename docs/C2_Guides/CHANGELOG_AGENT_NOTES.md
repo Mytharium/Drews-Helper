@@ -2227,3 +2227,24 @@ D-0182 (2026-08-14) - Staged broader route-shape validation Batch A. NO CODE CHA
   rows. Exact matches and benign same-time permutations should not trigger route changes. Repeated
   legal equal-length misses across different areas point at the route ranker. Illegal/static-map
   disagreements or object-edge misses should go to the object-profile/collision-map pass instead.
+
+D-0183 (2026-08-14) - Classified broader Batch A route-shape results. NO CODE CHANGED.
+
+  Myth hand-walked all six Batch A routes using repeated visible-tile clicks to reach the final
+  waypoint. The completed rows were useful, but they also proved the current one-route benchmark is
+  too coarse for whole-system diagnosis when a long trip involves multiple player clicks, manual
+  door opening, and objects that block the mouse from selecting the plugin's preferred tile.
+
+  Result summary: A1 Varrock to GE was a non-benign legal shape miss (`exp=73`, `actual=74`,
+  `maxDev=7`); A2 Lumbridge to Draynor was a mixed object/door/ranker problem (`exp=137`,
+  `actual=155`) with Myth reporting a Lumbridge dining-table leak; A3 Draynor to Manor was mixed
+  object/ranker evidence (`exp=111`, `actual=125`) with dead-tree leaks; A4 Lumbridge east to
+  Al Kharid was mostly benign (`exp=109`, `actual=109`); A5 Falador to Barbarian Village was a
+  mild long-route miss (`exp=135`, `actual=139`); A6 Varrock east to Sawmill was another
+  non-benign legal shape miss (`exp=88`, `actual=94`) where `shapeShadow` looked better but still
+  should not be promoted globally from this mixed set.
+
+  The next work is not another route-window patch. Build segment-aware/passive route validation so
+  the plugin records clicked/observed route segments and can classify route-ranker misses,
+  object-profile misses, door/traversal-state requirements, and true collision-map errors before
+  tree/dead-tree/table profile changes ship.

@@ -6,6 +6,31 @@ Last updated: 2026-08-09.
 
 As of the 2026-08-07 UI-only reset plus Myth's waypoint/route follow-ups, Drew's Helper is the visible plugin UI/config shell, five Drew-owned world-map waypoints, and a Drew-owned route graph built from walking collision plus selected baseline transport edges.
 
+## 2026-08-14 Batch A Route-Shape Validation
+
+Batch A closed the question of whether the Falador southeast fix was only a local tree-pocket
+issue. It was not. Myth hand-walked six longer routes with the benchmark recorder on, and the
+completed `DREW_ROUTE_BENCH reason=target` rows showed multiple non-Falador route mismatches:
+
+- A1 Varrock to Grand Exchange: `exp=73`, `actual=74`, `full=false`, `lenDelta=1`, `maxDev=7`;
+  first miss was legal but longer from `(3212,3424,0)` toward `(3165,3484,0)`.
+- A2 Lumbridge to Draynor bank: `exp=137`, `actual=155`, `lenDelta=18`, `maxDev=5`; Myth also
+  saw a Lumbridge dining-table leak and had to open doors manually.
+- A3 Draynor bank to Draynor Manor: `exp=111`, `actual=125`, `lenDelta=14`, `maxDev=5`; Myth
+  reported dead-tree leaks near the Manor approach.
+- A4 Lumbridge east to Al Kharid bank: `exp=109`, `actual=109`, `lenDelta=0`, `maxDev=2`; mostly
+  benign route-shape noise.
+- A5 Falador square to Barbarian Village: `exp=135`, `actual=139`, `lenDelta=4`, `maxDev=2`;
+  mild long-route shape miss.
+- A6 Varrock east bank to Sawmill: `exp=88`, `actual=94`, `lenDelta=6`, `maxDev=6`; a non-benign
+  legal shape miss where `shapeShadow` looked better than visible.
+
+Interpretation: do not keep adding one-off route windows for Batch A. The route system needs a
+segment-aware/passive recorder before the next behavioral patch so we can separate player
+multi-click segmentation from solver ranker misses, object-profile misses, door/traversal-state
+requirements, and true collision-map errors. Tree/dead-tree/table profile changes remain gated by
+live route pins and should not ship from raw Batch A notes alone.
+
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.

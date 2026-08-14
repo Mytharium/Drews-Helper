@@ -7,12 +7,12 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Run broader route-shape validation Batch A before more per-route patches. Keep
-in-game run OFF, turn `Log Benchmark Movement` OFF while staging, and turn it ON only for the
-measured route. Start with Varrock-to-GE, Lumbridge-to-Draynor, Draynor-to-Manor,
-Lumbridge-to-Al-Kharid, Falador-to-Barbarian-Village, and Varrock-east-to-Sawmill rows below.
-Use those rows to decide whether the current issue is still isolated to Falador tree-line pockets
-or needs a general route-ranker / object-profile fix before tree/tree-stump profiles ship.
+**WHAT'S NEXT:** Build segment-aware route validation before more per-route patches. Batch A
+proved this is not just the Falador southeast tree pocket: A1/A6 show non-benign legal route-shape
+misses, A2/A3 show object and door-state problems around Lumbridge/Draynor scenery, A4 is mostly
+benign, and A5 is a mild long-route miss. Do not add more local windows from Batch A. The next
+coding step is a passive/segment recorder that can separate "the player clicked another visible
+tile" from "the solver drew through an object, door, wall, table, tree, or bad ranker choice."
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -76,6 +76,49 @@ Interpretation rule: exact matches and benign same-time permutations do not just
 If several non-Falador rows show the same legal equal-length route-shape miss, stop adding local
 windows and work the route ranker. If failures are illegal/static-map disagreements or object-edge
 misses, classify them for the object-profile/collision-map pass instead.
+
+Live Batch A result from Myth, checked 2026-08-14:
+
+```text
+A1 Varrock -> GE
+row: exp=73 actual=74 full=false lenDelta=1 maxDev=7 turnDelta=5
+first miss: idx=1 predicted=(3211,3425,0) actual=(3211,3424,0), legal=true, delta=1
+classification: route-shape/ranker evidence; not a chunk-boundary-only explanation.
+
+A2 Lumbridge -> Draynor bank
+row: exp=137 actual=155 full=false lenDelta=18 maxDev=5 turnDelta=30
+first miss: idx=7 predicted=(3215,3219,0) actual=(3215,3218,0), legal=true, delta=1
+classification: mixed route-shape plus object/door-state evidence; Myth saw a Lumbridge dining
+table route leak and had to click doors manually.
+
+A3 Draynor bank -> Draynor Manor
+row: exp=111 actual=125 full=false lenDelta=14 maxDev=5 turnDelta=25
+first miss: idx=3 predicted=(3091,3248,0) actual=(3091,3247,0), legal=true, delta=0
+classification: mixed route-shape plus object-profile evidence; Myth saw dead-tree leaks near
+Draynor Manor.
+
+A4 Lumbridge east -> Al Kharid bank
+row: exp=109 actual=109 full=false lenDelta=0 maxDev=2 turnDelta=3
+first miss: idx=11 predicted=(3235,3219,0) actual=(3235,3220,0), legal=true, delta=0
+classification: mostly benign same-time permutation, not worth patching by itself.
+
+A5 Falador square -> Barbarian Village
+row: exp=135 actual=139 full=false lenDelta=4 maxDev=2 turnDelta=13
+first miss: idx=18 predicted=(2968,3396,0) actual=(2968,3395,0), legal=true, delta=1
+classification: mild long-route route-shape miss; keep as evidence, do not add a window.
+
+A6 Varrock east bank -> Sawmill
+row: exp=88 actual=94 full=false lenDelta=6 maxDev=6 turnDelta=13
+first miss: idx=24 predicted=(3272,3428,0) actual=(3272,3429,0), legal=true, delta=0
+classification: route-shape/ranker evidence; shapeShadow was better here, but still not enough
+to promote globally because A2/A3/A5 need object and segment evidence too.
+```
+
+Batch A conclusion: the long-route rows are useful, but the current one-route benchmark is too
+coarse for whole-system diagnosis when Myth has to click multiple visible tiles, open doors, or
+route around objects that block the mouse. Build the segment/passive recorder next, then use it to
+classify solver issues as route-ranker, object-profile, door/traversal-state, or collision-map
+errors before shipping tree/dead-tree/table profile changes.
 
 Commits from the 2026-08-13 Mytharium route/collision session, in order:
 

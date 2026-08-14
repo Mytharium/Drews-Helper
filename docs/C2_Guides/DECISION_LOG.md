@@ -2533,3 +2533,29 @@ D-0180 (2026-08-14) - Falador southeast creative route-shape controls stay scope
 
   Cross-reference: D-0175 benchmark evidence contract, D-0177 exact target-aware route-shape
   rule, D-0180 implementation note in CHANGELOG_AGENT_NOTES.
+
+
+D-0183 (2026-08-14) - Batch A shifts route work from local windows to segment-aware classification
+
+  RULE 1 - DO NOT PATCH BATCH A AS SIX LOCAL WINDOWS. Batch A was intentionally a broader system
+  check. A1 and A6 show non-Falador legal route-shape misses, while A2 and A3 include object and
+  door-state evidence. Treat these rows as classifier input, not as permission to keep adding
+  target-aware windows.
+
+  RULE 2 - LONG ROUTES NEED SEGMENT-AWARE EVIDENCE. Myth had to click the farthest visible tile
+  repeatedly, open doors manually, and sometimes choose around trees that blocked mouse selection.
+  The current one-route benchmark compares the original displayed full route to the full walked
+  path, which is valid for proof that a mismatch exists but not precise enough to assign root cause
+  across a long trip.
+
+  RULE 3 - CLASSIFY BEFORE CHANGING BEHAVIOR. The next implementation step is a passive/segment
+  recorder that can classify divergences into route-ranker misses, object-profile misses,
+  door/traversal-state requirements, or static collision-map errors. Do not promote `shapeShadow`,
+  add broad tree/dead-tree/table profiles, or mutate map data from Batch A alone.
+
+  RULE 4 - OBJECT PROFILES STILL NEED LIVE PIN GATES. Tables, dead trees, and tree/stump profiles
+  are valid suspects after Batch A, but D-0147 still applies: object-profile additions must survive
+  pinned live-route checks and route-aware overblock checks before shipping.
+
+  Cross-reference: D-0147 object-profile gates, D-0175 benchmark evidence contract, D-0177/D-0180
+  local window limits, and D-0182 Batch A procedure.
