@@ -7,12 +7,12 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Build segment-aware route validation before more per-route patches. Batch A
-proved this is not just the Falador southeast tree pocket: A1/A6 show non-benign legal route-shape
-misses, A2/A3 show object and door-state problems around Lumbridge/Draynor scenery, A4 is mostly
-benign, and A5 is a mild long-route miss. Do not add more local windows from Batch A. The next
-coding step is a passive/segment recorder that can separate "the player clicked another visible
-tile" from "the solver drew through an object, door, wall, table, tree, or bad ranker choice."
+**WHAT'S NEXT:** Restart the Drew's Helper dev client, enable `Settings` -> `Log Route Segments`,
+then rerun short segment walks through the Batch A problem spots. The new D-0184 recorder writes
+one `DREW_ROUTE_SEGMENT` row per clicked destination into `drews-route-segments.txt` and the
+Gradle log. Keep `Log Benchmark Movement` OFF for this pass unless a whole-route comparison is
+specifically requested. Use the segment rows to decide whether the table/dead-tree/tree evidence
+is object-profile work, route-ranker work, door/traversal-state work, or static collision-map work.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -120,6 +120,53 @@ route around objects that block the mouse. Build the segment/passive recorder ne
 classify solver issues as route-ranker, object-profile, door/traversal-state, or collision-map
 errors before shipping tree/dead-tree/table profile changes.
 
+### ROUTE-SEGMENT VALIDATION BATCH B
+
+D-0184 added `Settings` -> `Log Route Segments`, default OFF. When enabled, Drew records each
+clicked walking destination as its own `DREW_ROUTE_SEGMENT v1` row. Rows are written to:
+
+```text
+%USERPROFILE%\.runelite\drews-route-segments.txt
+```
+
+and mirrored to the Gradle log. Each row includes the clicked destination, the current route target,
+the displayed route slice for that click, the actual tiles walked, `route={...}` summary,
+`divergence={...}`, `edgeValidation={...}`, and a first-pass classification such as `match`,
+`click-destination-off-route`, `legal-detour-or-object-pressure`,
+`legal-route-ranker-or-click-shape`, or `static-map-disagrees-with-live-step`.
+
+Run procedure for Batch B:
+
+1. Keep in-game run OFF.
+2. Keep `Log Benchmark Movement` OFF.
+3. Enable `Settings` -> `Log Route Segments`.
+4. Put one waypoint on the final route target.
+5. Walk by clicking the highlighted tile you would naturally click next, waiting for that segment
+   to finish before clicking again.
+6. If a door or object must be clicked first, click it normally; `Validate Map Data` can be enabled
+   only when we specifically need `DREW_TRAVERSAL` object rows too.
+7. Send the `DREW_ROUTE_SEGMENT` rows around any visible mismatch, especially rows with
+   `classification` not equal to `match`.
+
+First useful Batch B spots:
+
+```text
+B1 Lumbridge dining room table pressure
+Start near: 3222,3218,0
+Route to:   3092,3245,0
+Goal:       capture the segment where the displayed route tries to use the dining-table tile.
+
+B2 Draynor Manor dead-tree pressure
+Start near: 3092,3245,0
+Route to:   3109,3352,0
+Goal:       capture the segment where the displayed route tries to cut through dead trees.
+
+B3 Varrock east/Sawmill legal shape pressure
+Start near: 3253,3420,0
+Route to:   3307,3491,0
+Goal:       capture one non-object legal route-shape miss from A6.
+```
+
 Commits from the 2026-08-13 Mytharium route/collision session, in order:
 
       d2225cf  fix collision map region seam edges              PUSHED
@@ -192,18 +239,18 @@ rule, so tree profiles need their own pass.
 
 ### NEXT CODING ORDER
 
-1. **Broader route-shape validation sweep.** Do not keep adding Falador-only windows blindly. Walk
-   longer routes in different areas and compare `expectedPath` against `actualPath` to see whether
-   route-shape misses generalize beyond the Falador southeast tree-line pocket.
-2. **Tree/tree-stump object-profile pass.** Keep it separate from the shipped 22-profile expansion.
+1. **Route-segment validation Batch B.** Use `Log Route Segments` to collect clicked segment rows
+   around Lumbridge tables, Draynor dead trees, and Varrock/Sawmill legal shape pressure before
+   changing object profiles or route ranking.
+2. **Tree/tree-stump/table object-profile pass.** Keep it separate from the shipped 22-profile expansion.
    Trees can ship only if their measured profile batch keeps the pinned Falador route stable in
    both the actual walked path and the displayed route.
 3. **Next paid object-profile batches.** Hedges, stools, shelves, crates and similar profiles were
    intentionally not shipped tonight because they need their own cost-column batch and live-route
    pins.
-4. **Recorder-first plan items B-F.** Still valid once the immediate route-display issue is done:
-   traversal verification listener, confidence tiers, object/door-state recorder,
-   route-validation harness, then pilot region to zero known errors.
+4. **Recorder-first plan items C-F.** Still valid once segment evidence is usable: confidence
+   tiers, object/door-state recorder, route-validation harness, then pilot region to zero known
+   errors.
 
 Do not reopen tonight's rejected paths without new evidence: broad Phase 2, global locType 10/11
 blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut hardcodes.
@@ -229,6 +276,8 @@ blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut h
       D-0180  DECISION   creative controls stay scoped to observed paths
       D-0181  CHANGELOG  live-validate reverse and east-pressure controls
       D-0182  CHANGELOG  stage broader route-shape validation Batch A
+      D-0183  DECISION   Batch A shifts route work to segment classification
+      D-0184  CHANGELOG  add passive route-segment recorder
 
 ## Historical Handoff - 2026-08-12 Recorder-First Plan
 

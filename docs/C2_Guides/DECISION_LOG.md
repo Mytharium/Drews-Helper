@@ -2559,3 +2559,27 @@ D-0183 (2026-08-14) - Batch A shifts route work from local windows to segment-aw
 
   Cross-reference: D-0147 object-profile gates, D-0175 benchmark evidence contract, D-0177/D-0180
   local window limits, and D-0182 Batch A procedure.
+
+
+D-0184 (2026-08-14) - Route-segment logs are evidence, not behaviour changes
+
+  RULE 1 - SEGMENTS ARE THE UNIT FOR LONG-ROUTE DIAGNOSIS. When a route is walked through repeated
+  visible-tile clicks, each clicked destination must be logged separately. Do not infer root cause
+  from a whole-route `expectedPath`/`actualPath` row when the player had to click several times,
+  open doors manually, or pick around scenery blocking mouse selection.
+
+  RULE 2 - THE RECORDER STAYS DEFAULT OFF. `Log Route Segments` is a diagnostic switch under
+  Settings, not a gameplay feature. It may write detailed `DREW_ROUTE_SEGMENT` rows while enabled,
+  but it must not render anything new in-game or run by default.
+
+  RULE 3 - SEGMENT ROWS DO NOT CHANGE ROUTING. Segment classifications are evidence labels only.
+  They do not add route windows, object profiles, transport rows, collision overrides, or global
+  route-ranker changes.
+
+  RULE 4 - CLASSIFICATION IS COARSE UNTIL LIVE PINS EXIST. Treat `click-destination-off-route`,
+  `legal-detour-or-object-pressure`, `legal-route-ranker-or-click-shape`, and
+  `static-map-disagrees-with-live-step` as triage labels. A table, dead-tree, tree, or ranker
+  change still needs a focused live pin and the D-0147 route-aware overblock gate before shipping.
+
+  Cross-reference: D-0147 object-profile gates, D-0175 route benchmark evidence contract, and
+  D-0183 Batch A segment-classification rule.

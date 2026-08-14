@@ -5,6 +5,7 @@ import com.drewshelper.routing.DrewsHelperCollisionMap;
 import com.drewshelper.routing.DrewsHelperMapValidator;
 import com.drewshelper.routing.DrewsHelperPlayerCapability;
 import com.drewshelper.routing.DrewsHelperRouteBenchmark;
+import com.drewshelper.routing.DrewsHelperRouteSegmentRecorder;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
 import com.drewshelper.routing.DrewsHelperRouteSearchMetrics;
 import com.drewshelper.routing.DrewsHelperRouteStatus;
@@ -56,6 +57,7 @@ import net.runelite.api.Point;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -239,6 +241,8 @@ public class DrewsHelperPlugin extends Plugin
 
     /** Records object interactions and what they actually did. Null until the plugin starts. */
     private DrewsHelperTraversalRecorder traversalRecorder;
+    /** Records clicked walk segments against the route visible at click time. */
+    private DrewsHelperRouteSegmentRecorder routeSegmentRecorder;
     private int lastStaminaDuration;
     private int lastStaminaDurationTick;
     private int staminaTicksPerUnit;
@@ -279,6 +283,8 @@ public class DrewsHelperPlugin extends Plugin
         seedDumpedLiveFlagSceneKeys();
         traversalRecorder = new DrewsHelperTraversalRecorder(
             new File(RuneLite.RUNELITE_DIR, "drews-traversals.txt"));
+        routeSegmentRecorder = new DrewsHelperRouteSegmentRecorder(
+            new File(RuneLite.RUNELITE_DIR, "drews-route-segments.txt"));
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
             configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
@@ -309,6 +315,11 @@ public class DrewsHelperPlugin extends Plugin
         }
         routeSnapshot = DrewsHelperRouteSnapshot.disabled();
         clearRouteBenchmark();
+        if (routeSegmentRecorder != null)
+        {
+            routeSegmentRecorder.reset();
+            routeSegmentRecorder = null;
+        }
         removeWaypointMarkers();
         overlayManager.remove(routeTileOverlay);
         overlayManager.remove(routeMinimapOverlay);
@@ -333,6 +344,7 @@ public class DrewsHelperPlugin extends Plugin
         // replacement route, so the original journey capture must see this position first.
         updateEtaDebugCapture();
         recordRouteBenchmarkPosition();
+        recordRouteSegmentIfEnabled();
 
         // Runs before the dirty check so arriving at a waypoint takes effect immediately,
         // rather than waiting for whatever solve is already queued.
@@ -750,6 +762,51 @@ public class DrewsHelperPlugin extends Plugin
     }
 
     /**
+     * Records one row per clicked walk segment, using RuneLite's current local destination as the
+     * segment boundary. This is deliberately independent of `Log Benchmark Movement`: the
+     * benchmark answers "did this whole route match?", while segment rows answer "which player
+     * click disagreed with which slice of the displayed route?".
+     */
+    private void recordRouteSegmentIfEnabled()
+    {
+        if (routeSegmentRecorder == null)
+        {
+            return;
+        }
+
+        if (!config().routeSegmentValidationEnabled())
+        {
+            routeSegmentRecorder.reset();
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null || localPlayer.getWorldLocation() == null)
+        {
+            routeSegmentRecorder.reset();
+            return;
+        }
+
+        List<String> lines = routeSegmentRecorder.onTick(
+            localPlayer.getWorldLocation(),
+            currentWalkDestination(),
+            routeSnapshot,
+            routeEngine,
+            tickCounter
+        );
+        for (String line : lines)
+        {
+            log.info("{}", line);
+        }
+    }
+
+    private WorldPoint currentWalkDestination()
+    {
+        LocalPoint destination = client.getLocalDestinationLocation();
+        return destination == null ? null : WorldPoint.fromLocalInstance(client, destination);
+    }
+
+    /**
      * Appends the transport hops the current route uses, with the tiles they run between.
      *
      * <p>The HUD's Actions rows carry the label alone, so "Jump Wall" on a 326-tile route cannot
@@ -987,6 +1044,12 @@ public class DrewsHelperPlugin extends Plugin
             || isTransportConfigKey(event.getKey()))
         {
             markRouteDirty();
+        }
+
+        if ("routeSegmentValidationEnabled".equals(event.getKey())
+            && routeSegmentRecorder != null)
+        {
+            routeSegmentRecorder.reset();
         }
     }
 

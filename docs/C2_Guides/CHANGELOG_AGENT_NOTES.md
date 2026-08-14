@@ -2248,3 +2248,21 @@ D-0183 (2026-08-14) - Classified broader Batch A route-shape results. NO CODE CH
   the plugin records clicked/observed route segments and can classify route-ranker misses,
   object-profile misses, door/traversal-state requirements, and true collision-map errors before
   tree/dead-tree/table profile changes ship.
+
+D-0184 (2026-08-14) - Added passive route-segment validation logging.
+
+  Added `Settings` -> `Log Route Segments`, default OFF. When enabled, `DrewsHelperPlugin` watches
+  RuneLite's local walking destination and `DrewsHelperRouteSegmentRecorder` writes one
+  `DREW_ROUTE_SEGMENT v1` row per clicked walking segment to `drews-route-segments.txt` and the
+  Gradle log.
+
+  Segment rows compare the displayed current-leg route slice for that click against the tiles the
+  player actually walked. They include endpoint anchors, expected/actual segment paths,
+  route-summary metrics, divergence details, observed-edge validation, and a coarse evidence
+  classification. This keeps Batch A follow-up focused on the exact segment that failed instead
+  of treating a long multi-click route as one giant mismatch.
+
+  This is diagnostic only. It does not change route selection, add object profiles, promote
+  `shapeShadow`, or write collision/transport override rows. Next live pass should use `Log Route
+  Segments` around Lumbridge table pressure, Draynor dead-tree pressure, and Varrock/Sawmill legal
+  route-shape pressure before the object-profile proof pass.

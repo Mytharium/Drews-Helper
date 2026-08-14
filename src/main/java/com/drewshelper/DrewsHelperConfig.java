@@ -301,6 +301,12 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
+    @ConfigItem(keyName = "routeSegmentValidationEnabled", name = "Log Route Segments", description = "Log each clicked walking segment against the displayed route. Off by default - enable when collecting route-shape/object-profile evidence.", section = waypointSettings, position = 12)
+    default boolean routeSegmentValidationEnabled()
+    {
+        return false;
+    }
+
     // ETA accuracy logging stays ON permanently: it is two lines per journey, and its whole
     // purpose is catching a forecast that starts drifting when nobody is watching.
 

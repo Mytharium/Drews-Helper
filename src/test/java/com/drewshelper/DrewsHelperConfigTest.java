@@ -130,6 +130,21 @@ public class DrewsHelperConfigTest
     }
 
     @Test
+    public void routeSegmentValidationControlDefaultsOffAndSitsBelowBenchmark() throws Exception
+    {
+        DrewsHelperConfig config = new DrewsHelperConfig() {};
+        Method method = DrewsHelperConfig.class.getMethod("routeSegmentValidationEnabled");
+        ConfigItem item = method.getAnnotation(ConfigItem.class);
+
+        assertNotNull(item);
+        assertEquals("routeSegmentValidationEnabled", item.keyName());
+        assertEquals("Log Route Segments", item.name());
+        assertEquals("waypointSettings", item.section());
+        assertEquals(12, item.position());
+        assertFalse(config.routeSegmentValidationEnabled());
+    }
+
+    @Test
     public void routeSolverConfigAndEtaToggleAreRemoved() throws Exception
     {
         for (Method method : DrewsHelperConfig.class.getMethods())

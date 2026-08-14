@@ -31,6 +31,32 @@ multi-click segmentation from solver ranker misses, object-profile misses, door/
 requirements, and true collision-map errors. Tree/dead-tree/table profile changes remain gated by
 live route pins and should not ship from raw Batch A notes alone.
 
+## 2026-08-14 Segment-Aware Route Validation
+
+D-0184 adds a second default-OFF route diagnostic: `Settings` -> `Log Route Segments`.
+
+When enabled, Drew watches RuneLite's local walking destination and records each clicked walking
+segment against the displayed current-leg route slice that was visible when the click started. It
+writes `DREW_ROUTE_SEGMENT v1` rows to `%USERPROFILE%\.runelite\drews-route-segments.txt` and the
+Gradle log.
+
+The segment row includes:
+
+- `start`, `clickDest`, and `routeTarget`.
+- `routeStart` / `routeDest` anchors showing whether the segment endpoints were exact, near, or
+  off the displayed route.
+- `expectedPath` as the displayed route slice for that one click, not the whole waypoint route.
+- `actualPath` as the tiles the player walked before reaching the click destination, stopping,
+  clearing the destination, hitting the tick limit, or clicking a new destination.
+- `route={...}`, `divergence={...}`, and `edgeValidation={...}` diagnostics.
+- `classification` values such as `match`, `click-destination-off-route`,
+  `legal-detour-or-object-pressure`, `legal-route-ranker-or-click-shape`, and
+  `static-map-disagrees-with-live-step`.
+
+This is evidence-only. It does not change path selection, promote `shapeShadow`, add object
+profiles, or write transport/collision rows. Its job is to split Batch A's whole-route mismatches
+into concrete click segments before table/dead-tree/tree profile work or route-ranker tuning.
+
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.
