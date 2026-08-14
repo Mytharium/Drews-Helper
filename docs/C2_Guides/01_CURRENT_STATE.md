@@ -164,10 +164,32 @@ The harness has two halves:
   count object/door/traversal state rows, and correlate divergent route segments with nearby
   object-state evidence.
 
-Output goes to `tools/route-validation-harness.txt`. `badStructure` and `illegalObservedEdges` are
-hard gates. Divergent hand-walked rows plus nearby object evidence are triage targets for the next
-live test. The harness does not mutate `collision-map.zip`, `collision-map-confidence.tsv`,
-`drewshelper-transports.tsv`, or object-profile allowlists.
+Output goes to `tools/route-validation-harness.txt`. `badStructure` and completed adjacent
+`illegalObservedEdges` are hard gates. Interrupted or non-adjacent `legal=false` rows are now counted
+as `nonPromotableIllegalObservedEdges`; those rows need focused recapture before they can become map
+or object-profile evidence. Divergent hand-walked rows plus nearby object evidence are triage
+targets for the next live test. The harness does not mutate `collision-map.zip`,
+`collision-map-confidence.tsv`, `drewshelper-transports.tsv`, or object-profile allowlists.
+
+## 2026-08-14 Pilot Region Cleanup Gate
+
+D-0193 adds `gradlew pilotRegionCleanup`, a report-only pilot gate layered on the route-validation
+harness. It uses the recorder-first pilot rectangle `rx45-48 / ry49-52` on plane 0, confirms whether
+those 16 regions are present in the shipped collision map, filters current route/object evidence to
+that area, and writes `tools/pilot-region-cleanup.txt`.
+
+Current pilot interpretation from existing logs:
+
+- The shipped D-0188 collision map has all 16 candidate pilot regions present.
+- Current route-segment evidence touches the pilot area, especially region `48_50`.
+- The old `static-map-disagrees-with-live-step` row from `(3092,3245,0)` toward `(3131,3252,0)` is
+  interrupted and reports a non-adjacent actual jump, so it is not a promotable hard gate.
+- Current object/door-state rows overlap the broad pilot rectangle, but the focused `48_50`
+  static-disagreement row still has `nearbyObjects=none`. The next live test should capture object
+  state while rerunning that focused segment.
+
+`pilotRegionCleanup` is evidence-only. It does not rewrite route behavior, collision data,
+transports, object profiles, or confidence sidecars.
 
 ## 2026-08-14 Pre-D-0191 Session Pause Handoff
 

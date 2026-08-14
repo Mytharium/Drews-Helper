@@ -52,6 +52,40 @@ public class DrewsHelperRouteValidationHarnessTest
     }
 
     @Test
+    public void interruptedNonAdjacentIllegalRowsAreNotHardGates()
+    {
+        DrewsHelperRouteValidationHarness.EvidenceReport report =
+            DrewsHelperRouteValidationHarness.analyseEvidence(
+                Collections.singletonList(interruptedNonAdjacentIllegalSegmentLine()),
+                Collections.emptyList()
+            );
+
+        assertEquals(1, report.segmentRows);
+        assertEquals(0, report.completedSegments);
+        assertEquals(1, report.interruptedSegments);
+        assertEquals(0, report.illegalObservedEdges);
+        assertEquals(1, report.nonPromotableIllegalObservedEdges);
+    }
+
+    @Test
+    public void pilotReportFiltersToPilotRegionAndNamesRecaptureNeeded()
+    {
+        DrewsHelperRouteValidationHarness.PilotReport report =
+            DrewsHelperRouteValidationHarness.analysePilot(
+                null,
+                Arrays.asList(interruptedNonAdjacentIllegalSegmentLine(), segmentLine("match")),
+                Collections.singletonList(pilotObjectLine())
+            );
+
+        assertEquals(1, report.segmentRows);
+        assertEquals(1, report.interruptedSegments);
+        assertEquals(1, report.nonPromotableIllegalEdges);
+        assertEquals(1, report.objectRows);
+        assertTrue(report.touchedRegions.containsKey("48_50"));
+        assertEquals("NEEDS_FOCUSED_RECAPTURE", report.verdict());
+    }
+
+    @Test
     public void structuralPathCheckAcceptsLegalStepsAndRejectsBlockedEdges()
     {
         List<WorldPoint> path = Arrays.asList(point(0, 0), point(1, 0), point(2, 0));
@@ -95,6 +129,25 @@ public class DrewsHelperRouteValidationHarnessTest
             + " actualPath=[(0,0,0) -> (0,1,0) -> (1,1,0) -> (2,0,0)]";
     }
 
+    private static String interruptedNonAdjacentIllegalSegmentLine()
+    {
+        return "DREW_ROUTE_SEGMENT v1"
+            + " tick=209 reason=destination-changed completed=false"
+            + " start=(3092,3245,0) clickDest=(3131,3252,0) routeTarget=(3222,3218,0)"
+            + " routeStart=exact:idx=0:dist=0 routeDest=exact:idx=40:dist=0"
+            + " expectedPoints=41 actualPoints=27"
+            + " classification=static-map-disagrees-with-live-step"
+            + " route={first=match 5=0/5 10=0/10 full=false lenDelta=-11 maxDev=2 turnDelta=-2}"
+            + " divergence={idx=1 predicted=(3093,3246,0) actual=(3093,3247,0)"
+            + " mergeBack={expectedIdx=4 actualIdx=2 stepDelta=-2 point=(3095,3248,0)}}"
+            + " edgeValidation={from=(3092,3245,0) actual=(3093,3247,0) target=(3131,3252,0)"
+            + " legal=false type=non-adjacent continuation=found continuationDist=38"
+            + " totalFromFork=39 expectedFromFork=40 delta=-1 longer=false expanded=5069"
+            + " repeat=1 overrideCandidate=false}"
+            + " expectedPath=[(3092,3245,0) -> (3093,3246,0) -> (3093,3247,0)]"
+            + " actualPath=[(3092,3245,0) -> (3093,3247,0)]";
+    }
+
     private static String objectLine()
     {
         return "DREW_OBJECT_STATE v1"
@@ -105,6 +158,18 @@ public class DrewsHelperRouteValidationHarnessTest
             + " orientation=1/0 config=0 hash=100 liveEdges=10 rawFlags=1026"
             + " confidence=CONFIRMED provenance=runelite-scene-live"
             + " mapConfidence=CONTRADICTED mapProvenance=missing-collision-map";
+    }
+
+    private static String pilotObjectLine()
+    {
+        return "DREW_OBJECT_STATE v1"
+            + " tick=25 scene=0:0:0 kind=wall tile=3092,3245,0 sceneTile=20,45"
+            + " objectId=100 activeId=100 activeChanged=false"
+            + " category=door state=CLOSED_OPENABLE name=Door actions=Open"
+            + " varbit=- varp=- objectSize=1x1 definitionSize=1x1"
+            + " orientation=1/0 config=0 hash=100 liveEdges=10 rawFlags=1026"
+            + " confidence=CONFIRMED provenance=runelite-scene-live"
+            + " mapConfidence=CONFIRMED mapProvenance=pilot-test";
     }
 
     private static WorldPoint point(int x, int y)

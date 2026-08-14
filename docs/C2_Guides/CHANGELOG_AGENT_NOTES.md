@@ -2417,3 +2417,20 @@ D-0192 (2026-08-14) - Added the route-validation harness.
   Added focused tests for nested route-segment field parsing, object/door-state correlation, and
   structural path validation. Updated the live C2 guide docs and decision log to make the harness
   report-only and to move the active queue to the pilot-region cleanup pass.
+
+D-0193 (2026-08-14) - Added the pilot-region cleanup gate.
+
+  Added the Gradle task `pilotRegionCleanup`, backed by the existing route-validation harness. The
+  task runs in report-only pilot mode, filters current route/object evidence to `rx45-48 / ry49-52`,
+  writes `tools/pilot-region-cleanup.txt`, and does not mutate route behavior, collision data,
+  transports, object profiles, or confidence sidecars.
+
+  Updated the harness evidence summary so only completed adjacent `legal=false` segment rows count
+  as hard `illegalObservedEdges`. Interrupted rows or non-adjacent actual jumps now count as
+  `nonPromotableIllegalObservedEdges`, because those require a focused recapture before they can
+  justify a map override.
+
+  Current result: the shipped D-0188 map has all 16 candidate pilot regions present. The existing
+  `static-map-disagrees-with-live-step` row in region `48_50` is interrupted and non-adjacent, and
+  current object-state rows do not overlap it. Next action is one focused recapture near
+  `(3092,3245,0) -> (3131,3252,0)` with `Log Route Segments` and `Log Object/Door State` enabled.

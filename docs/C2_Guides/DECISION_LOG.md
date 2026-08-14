@@ -2731,3 +2731,26 @@ D-0192 (2026-08-14) - Route-validation harness is the gate before pilot-region c
   and the shape-ranking solve.
 
   Cross-reference: D-0136 RULE 4, D-0185 segment evidence, and D-0191 object/door-state evidence.
+
+D-0193 (2026-08-14) - Pilot cleanup hard gates require completed adjacent evidence.
+
+  RULE 1 - PILOT CLEANUP IS REPORT-ONLY UNTIL A CLEAN ROW EXISTS. `gradlew pilotRegionCleanup`
+  filters the current route/object evidence to the recorder-first pilot rectangle `rx45-48 /
+  ry49-52`, confirms the shipped map has those regions, and writes `tools/pilot-region-cleanup.txt`.
+  It must not rewrite `collision-map.zip`, `collision-map-confidence.tsv`,
+  `drewshelper-transports.tsv`, route behavior, or object-profile allowlists.
+
+  RULE 2 - INTERRUPTED OR NON-ADJACENT `legal=false` ROWS ARE NOT PROMOTION GATES. They are useful
+  triage evidence, but a row that ended because the destination changed, or whose observed actual
+  jump is non-adjacent, can be click cadence/client-tick compression rather than a single missing
+  collision edge. Count it as `nonPromotableIllegalObservedEdges` and recapture it before promoting
+  a map row.
+
+  RULE 3 - THE CURRENT PILOT TARGET IS `48_50`, NOT AL KHARID OR VARLAMORE. Existing evidence puts
+  the only current static-disagreement-looking row at `(3092,3245,0)` toward `(3131,3252,0)`, inside
+  region `48_50`. The report named it `NEEDS_FOCUSED_RECAPTURE` because the row was interrupted and
+  no object/door-state rows overlapped it. Do not jump to the parked `52_50` / `52_51` Al Kharid
+  slice, Varlamore, broad tree blocking, or held-back object keys from this evidence.
+
+  Cross-reference: D-0136 pilot-region rule, D-0185 interrupted segment handling, D-0191
+  object/door-state rows, and D-0192 route-validation harness.

@@ -34,6 +34,11 @@ public final class DrewsHelperRouteValidationHarness
     private static final int DEFAULT_POINT_STRIDE = 8;
     private static final int EXAMPLE_LIMIT = 12;
     private static final int OBJECT_CORRELATION_RADIUS = 1;
+    private static final int PILOT_MIN_REGION_X = 45;
+    private static final int PILOT_MAX_REGION_X = 48;
+    private static final int PILOT_MIN_REGION_Y = 49;
+    private static final int PILOT_MAX_REGION_Y = 52;
+    private static final int REGION_SIZE = 64;
     private static final Pattern POINT_PATTERN =
         Pattern.compile("\\((-?\\d+),(-?\\d+),(-?\\d+)\\)");
     private static final Pattern TILE_PATTERN =
@@ -50,15 +55,18 @@ public final class DrewsHelperRouteValidationHarness
         DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.empty();
         DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(map, graph);
 
+        List<String> segmentLines = readLinesIfPresent(request.segmentsFile);
+        List<String> objectLines = readLinesIfPresent(request.objectsFile);
+
         OfflineReport offline = request.skipOffline
             ? OfflineReport.skipped(request.sampleLimit)
             : validateOffline(map, graph, engine, request.boxes, request.sampleLimit);
-        EvidenceReport evidence = analyseEvidence(
-            readLinesIfPresent(request.segmentsFile),
-            readLinesIfPresent(request.objectsFile)
-        );
+        EvidenceReport evidence = analyseEvidence(segmentLines, objectLines);
+        PilotReport pilot = request.pilotMode
+            ? analysePilot(map, segmentLines, objectLines)
+            : null;
 
-        String report = renderReport(request, offline, evidence);
+        String report = renderReport(request, offline, evidence, pilot);
         Files.createDirectories(request.outputFile.getParent());
         Files.write(request.outputFile, report.getBytes(StandardCharsets.UTF_8));
         System.out.print(report);
@@ -293,7 +301,14 @@ public final class DrewsHelperRouteValidationHarness
             }
             if (segment.edgeValidation.contains("legal=false"))
             {
-                report.illegalObservedEdges++;
+                if (segment.isCompletedAdjacentIllegal())
+                {
+                    report.illegalObservedEdges++;
+                }
+                else
+                {
+                    report.nonPromotableIllegalObservedEdges++;
+                }
             }
             if (segment.edgeValidation.contains("longer=true"))
             {
@@ -305,6 +320,74 @@ public final class DrewsHelperRouteValidationHarness
             {
                 report.addCorrelation(correlated.format());
             }
+        }
+
+        return report;
+    }
+
+    static PilotReport analysePilot(
+        DrewsHelperCollisionMap map,
+        List<String> segmentLines,
+        List<String> objectLines
+    )
+    {
+        PilotReport report = new PilotReport();
+        report.addCandidateRegions(map);
+
+        for (String line : safeLines(segmentLines))
+        {
+            RouteSegmentEvidence segment = RouteSegmentEvidence.parse(line);
+            if (segment == null || !segment.touchesPilot())
+            {
+                continue;
+            }
+            report.segmentRows++;
+            report.addTouchedRegions(segment.allPoints());
+            increment(report.segmentClassifications, segment.classification);
+            if (segment.completed)
+            {
+                report.completedSegments++;
+            }
+            else
+            {
+                report.interruptedSegments++;
+            }
+
+            if (!"match".equals(segment.classification))
+            {
+                report.divergentSegments++;
+            }
+            if (segment.edgeValidation.contains("legal=false"))
+            {
+                if (segment.isCompletedAdjacentIllegal())
+                {
+                    report.completedAdjacentIllegalEdges++;
+                }
+                else
+                {
+                    report.nonPromotableIllegalEdges++;
+                    report.addExample("non-promotable-illegal " + segment.compact());
+                }
+            }
+            else if (segment.edgeValidation.contains("longer=true"))
+            {
+                report.longerLegalDetours++;
+                report.addExample("longer-legal-detour " + segment.compact());
+            }
+        }
+
+        for (String line : safeLines(objectLines))
+        {
+            ObjectStateEvidence object = ObjectStateEvidence.parse(line);
+            if (object == null || !isPilotPoint(object.tile))
+            {
+                continue;
+            }
+            report.objectRows++;
+            report.addTouchedRegion(object.tile);
+            increment(report.objectCategories, object.category);
+            increment(report.objectStates, object.state);
+            report.addExample("object " + object.compact());
         }
 
         return report;
@@ -550,7 +633,12 @@ public final class DrewsHelperRouteValidationHarness
             || map.canMoveSouthWest(x, y, plane);
     }
 
-    private static String renderReport(Request request, OfflineReport offline, EvidenceReport evidence)
+    private static String renderReport(
+        Request request,
+        OfflineReport offline,
+        EvidenceReport evidence,
+        PilotReport pilot
+    )
     {
         StringBuilder out = new StringBuilder();
         out.append("DREW_ROUTE_VALIDATION_HARNESS v1\n");
@@ -588,6 +676,8 @@ public final class DrewsHelperRouteValidationHarness
             .append(" matches=").append(evidence.matchingSegments)
             .append(" divergent=").append(evidence.divergentSegments)
             .append(" illegalObservedEdges=").append(evidence.illegalObservedEdges)
+            .append(" nonPromotableIllegalObservedEdges=")
+            .append(evidence.nonPromotableIllegalObservedEdges)
             .append(" longerLegalDetours=").append(evidence.longerLegalDetours)
             .append('\n');
         out.append("classificationCounts=").append(formatCounts(evidence.segmentClassifications)).append('\n');
@@ -605,11 +695,19 @@ public final class DrewsHelperRouteValidationHarness
         appendExamples(out, evidence.correlations);
         out.append('\n');
 
+        if (pilot != null)
+        {
+            out.append("PILOT REGION CLEANUP\n");
+            out.append(pilot.format());
+            out.append('\n');
+        }
+
         out.append("HARNESS DECISION\n");
         out.append("This report is evidence-only. It does not promote collision-map rows, object profiles, ")
             .append("or transport rows.\n");
-        out.append("Use badStructure and illegalObservedEdges as hard gates; use divergent hand-walked ")
-            .append("segments plus nearby object rows to pick the next live test target.\n");
+        out.append("Use badStructure and completed-adjacent illegalObservedEdges as hard gates; ")
+            .append("nonPromotableIllegalObservedEdges need focused recapture before promotion.\n");
+        out.append("Use divergent hand-walked segments plus nearby object rows to pick the next live test target.\n");
         return out.toString();
     }
 
@@ -725,6 +823,28 @@ public final class DrewsHelperRouteValidationHarness
         );
     }
 
+    private static boolean isPilotPoint(WorldPoint point)
+    {
+        if (point == null || point.getPlane() != 0)
+        {
+            return false;
+        }
+        int regionX = Math.floorDiv(point.getX(), REGION_SIZE);
+        int regionY = Math.floorDiv(point.getY(), REGION_SIZE);
+        return regionX >= PILOT_MIN_REGION_X && regionX <= PILOT_MAX_REGION_X
+            && regionY >= PILOT_MIN_REGION_Y && regionY <= PILOT_MAX_REGION_Y;
+    }
+
+    private static String regionName(WorldPoint point)
+    {
+        if (point == null)
+        {
+            return "-";
+        }
+        return Math.floorDiv(point.getX(), REGION_SIZE)
+            + "_" + Math.floorDiv(point.getY(), REGION_SIZE);
+    }
+
     private static String formatPoint(WorldPoint point)
     {
         return point == null
@@ -740,6 +860,7 @@ public final class DrewsHelperRouteValidationHarness
         private final List<SearchBox> boxes;
         private final int sampleLimit;
         private final boolean skipOffline;
+        private final boolean pilotMode;
 
         private Request(
             Path outputFile,
@@ -747,7 +868,8 @@ public final class DrewsHelperRouteValidationHarness
             Path objectsFile,
             List<SearchBox> boxes,
             int sampleLimit,
-            boolean skipOffline
+            boolean skipOffline,
+            boolean pilotMode
         )
         {
             this.outputFile = outputFile;
@@ -756,6 +878,7 @@ public final class DrewsHelperRouteValidationHarness
             this.boxes = boxes;
             this.sampleLimit = sampleLimit;
             this.skipOffline = skipOffline;
+            this.pilotMode = pilotMode;
         }
 
         private static Request parse(String[] args, Path project)
@@ -768,12 +891,15 @@ public final class DrewsHelperRouteValidationHarness
             int samples = DEFAULT_SAMPLE_LIMIT;
             boolean skipOffline = false;
             boolean customBoxes = false;
+            boolean pilotMode = false;
+            boolean customOutput = false;
 
             for (String arg : args == null ? new String[0] : args)
             {
                 if (arg.startsWith("--out="))
                 {
                     output = project.resolve(arg.substring("--out=".length())).normalize();
+                    customOutput = true;
                 }
                 else if (arg.startsWith("--segments="))
                 {
@@ -800,6 +926,21 @@ public final class DrewsHelperRouteValidationHarness
                 {
                     skipOffline = true;
                 }
+                else if ("--pilot".equals(arg))
+                {
+                    pilotMode = true;
+                    skipOffline = true;
+                    if (!customOutput)
+                    {
+                        output = project.resolve("tools/pilot-region-cleanup.txt");
+                    }
+                    if (!customBoxes)
+                    {
+                        boxes.clear();
+                        boxes.add(pilotBox());
+                        customBoxes = true;
+                    }
+                }
                 else if (!arg.trim().isEmpty())
                 {
                     throw new IllegalArgumentException("Unknown route validation harness arg: " + arg);
@@ -807,7 +948,7 @@ public final class DrewsHelperRouteValidationHarness
             }
 
             return new Request(output, segments, objects,
-                Collections.unmodifiableList(new ArrayList<>(boxes)), samples, skipOffline);
+                Collections.unmodifiableList(new ArrayList<>(boxes)), samples, skipOffline, pilotMode);
         }
 
         private static List<SearchBox> defaultBoxes()
@@ -817,6 +958,17 @@ public final class DrewsHelperRouteValidationHarness
             boxes.add(new SearchBox(3200, 3200, 3320, 3520, 0));
             boxes.add(new SearchBox(3056, 3304, 3160, 3416, 0));
             return boxes;
+        }
+
+        private static SearchBox pilotBox()
+        {
+            return new SearchBox(
+                PILOT_MIN_REGION_X * REGION_SIZE,
+                PILOT_MIN_REGION_Y * REGION_SIZE,
+                ((PILOT_MAX_REGION_X + 1) * REGION_SIZE) - 1,
+                ((PILOT_MAX_REGION_Y + 1) * REGION_SIZE) - 1,
+                0
+            );
         }
     }
 
@@ -946,7 +1098,7 @@ public final class DrewsHelperRouteValidationHarness
             return solvedClean == 0 ? "-" : String.format(Locale.ROOT, "%.2f", clientTurns / (double) solvedClean);
         }
 
-        private String verdict()
+        String verdict()
         {
             if (attempted == 0)
             {
@@ -977,6 +1129,7 @@ public final class DrewsHelperRouteValidationHarness
         int matchingSegments;
         int divergentSegments;
         int illegalObservedEdges;
+        int nonPromotableIllegalObservedEdges;
         int longerLegalDetours;
         int objectRows;
 
@@ -986,6 +1139,121 @@ public final class DrewsHelperRouteValidationHarness
             {
                 correlations.add(correlation);
             }
+        }
+    }
+
+    static final class PilotReport
+    {
+        final Map<String, String> candidateRegions = new TreeMap<>();
+        final Map<String, Integer> touchedRegions = new TreeMap<>();
+        final Map<String, Integer> segmentClassifications = new TreeMap<>();
+        final Map<String, Integer> objectCategories = new TreeMap<>();
+        final Map<String, Integer> objectStates = new TreeMap<>();
+        final List<String> examples = new ArrayList<>();
+        int segmentRows;
+        int completedSegments;
+        int interruptedSegments;
+        int divergentSegments;
+        int completedAdjacentIllegalEdges;
+        int nonPromotableIllegalEdges;
+        int longerLegalDetours;
+        int objectRows;
+
+        private void addCandidateRegions(DrewsHelperCollisionMap map)
+        {
+            for (int regionX = PILOT_MIN_REGION_X; regionX <= PILOT_MAX_REGION_X; regionX++)
+            {
+                for (int regionY = PILOT_MIN_REGION_Y; regionY <= PILOT_MAX_REGION_Y; regionY++)
+                {
+                    String name = regionX + "_" + regionY;
+                    boolean present = map != null
+                        && map.hasRegion(regionX * REGION_SIZE, regionY * REGION_SIZE);
+                    candidateRegions.put(name, present ? "present" : "missing");
+                }
+            }
+        }
+
+        private void addTouchedRegions(List<WorldPoint> points)
+        {
+            for (WorldPoint point : points)
+            {
+                addTouchedRegion(point);
+            }
+        }
+
+        private void addTouchedRegion(WorldPoint point)
+        {
+            if (isPilotPoint(point))
+            {
+                increment(touchedRegions, regionName(point));
+            }
+        }
+
+        private void addExample(String example)
+        {
+            if (examples.size() < EXAMPLE_LIMIT)
+            {
+                examples.add(example);
+            }
+        }
+
+        private String format()
+        {
+            StringBuilder out = new StringBuilder();
+            out.append("candidateRegions=rx").append(PILOT_MIN_REGION_X).append('-')
+                .append(PILOT_MAX_REGION_X).append("/ry").append(PILOT_MIN_REGION_Y)
+                .append('-').append(PILOT_MAX_REGION_Y)
+                .append(" shipped=").append(formatRegionPresence()).append('\n');
+            out.append("touchedRegions=").append(formatCounts(touchedRegions)).append('\n');
+            out.append("routeSegments=").append(segmentRows)
+                .append(" completed=").append(completedSegments)
+                .append(" interrupted=").append(interruptedSegments)
+                .append(" divergent=").append(divergentSegments)
+                .append(" completedAdjacentIllegalEdges=").append(completedAdjacentIllegalEdges)
+                .append(" nonPromotableIllegalEdges=").append(nonPromotableIllegalEdges)
+                .append(" longerLegalDetours=").append(longerLegalDetours)
+                .append('\n');
+            out.append("routeClassifications=").append(formatCounts(segmentClassifications)).append('\n');
+            out.append("objectRows=").append(objectRows)
+                .append(" categories=").append(formatCounts(objectCategories))
+                .append(" states=").append(formatCounts(objectStates))
+                .append('\n');
+            out.append("verdict=").append(verdict()).append('\n');
+            appendExamples(out, examples);
+            return out.toString();
+        }
+
+        private String formatRegionPresence()
+        {
+            StringBuilder builder = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, String> entry : candidateRegions.entrySet())
+            {
+                if (!first)
+                {
+                    builder.append(' ');
+                }
+                builder.append(entry.getKey()).append('=').append(entry.getValue());
+                first = false;
+            }
+            return builder.append('}').toString();
+        }
+
+        String verdict()
+        {
+            if (completedAdjacentIllegalEdges > 0)
+            {
+                return "BLOCKED_COMPLETED_STATIC_DISAGREEMENT";
+            }
+            if (nonPromotableIllegalEdges > 0)
+            {
+                return "NEEDS_FOCUSED_RECAPTURE";
+            }
+            if (objectRows == 0 && divergentSegments > 0)
+            {
+                return "NEEDS_OBJECT_STATE_CAPTURE";
+            }
+            return "NO_COMPLETED_STATIC_DISAGREEMENT";
         }
     }
 
@@ -1038,6 +1306,54 @@ public final class DrewsHelperRouteValidationHarness
                 parsePath(fields.get("expectedPath")),
                 parsePath(fields.get("actualPath"))
             );
+        }
+
+        private boolean touchesPilot()
+        {
+            for (WorldPoint point : allPoints())
+            {
+                if (isPilotPoint(point))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private List<WorldPoint> allPoints()
+        {
+            List<WorldPoint> points = new ArrayList<>();
+            addIfPresent(points, start);
+            addIfPresent(points, clickDest);
+            addIfPresent(points, routeTarget);
+            points.addAll(expectedPath);
+            points.addAll(actualPath);
+            return points;
+        }
+
+        private boolean isCompletedAdjacentIllegal()
+        {
+            return completed
+                && edgeValidation.contains("legal=false")
+                && !edgeValidation.contains("type=non-adjacent");
+        }
+
+        private String compact()
+        {
+            return "classification=" + classification
+                + " completed=" + completed
+                + " start=" + formatPoint(start)
+                + " clickDest=" + formatPoint(clickDest)
+                + " routeTarget=" + formatPoint(routeTarget)
+                + " edgeValidation=" + edgeValidation;
+        }
+    }
+
+    private static void addIfPresent(List<WorldPoint> points, WorldPoint point)
+    {
+        if (point != null)
+        {
+            points.add(point);
         }
     }
 

@@ -2,15 +2,16 @@
 
 Last updated: 2026-08-14.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0192)
+## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0193)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Start with item F: pilot region cleanup. D-0192 added the route-validation
-harness, so candidate map/ranker work now has a repeatable report-only gate before anything is
-promoted. There are no required Myth reruns until a specific pilot-region target is named. Do not
-reopen route windows, broad tree blocking, or held-back object profiles as the next step.
+**WHAT'S NEXT:** Run one focused pilot-region recapture before promoting anything. D-0193 added
+`gradlew pilotRegionCleanup`, confirmed the `rx45-48 / ry49-52` pilot rectangle is present in the
+shipped map, and reclassified the old interrupted/non-adjacent `static-map-disagrees-with-live-step`
+row as non-promotable until it is recaptured cleanly. Do not reopen route windows, broad tree
+blocking, or held-back object profiles as the next step.
 
 Session close at 2026-08-14 06:56 UTC:
 
@@ -33,6 +34,9 @@ Session close at 2026-08-14 06:56 UTC:
    `%USERPROFILE%\.runelite\drews-object-states.txt`, correlates segment divergence with nearby
    object/door rows, and writes `tools/route-validation-harness.txt`. It is evidence-only and
    does not promote collision, transport, or object-profile rows.
+9. D-0193 added `gradlew pilotRegionCleanup`. The pilot report filters current evidence to
+   `rx45-48 / ry49-52`, writes `tools/pilot-region-cleanup.txt`, and treats interrupted or
+   non-adjacent `legal=false` rows as recapture targets rather than hard promotion gates.
 
 Object/door-state recorder run procedure:
 
@@ -58,10 +62,26 @@ Route-validation harness procedure:
 3. Use `--args="--skip-offline"` only when you want a quick read of live evidence files without
    running the route solves.
 4. Read `tools/route-validation-harness.txt`.
-5. Treat `badStructure` and `illegalObservedEdges` as hard gates.
+5. Treat `badStructure` and completed adjacent `illegalObservedEdges` as hard gates. Treat
+   `nonPromotableIllegalObservedEdges` as focused-recapture work, not promotion evidence.
 6. Treat divergent hand-walked route segments plus nearby object rows as the shortlist for the next
    live test target.
 7. Do not use the harness to auto-promote map, transport, or object-profile data.
+
+Pilot-region cleanup procedure:
+
+1. Run `gradlew pilotRegionCleanup` from the Drew's Helper repo root.
+2. Read `tools/pilot-region-cleanup.txt`.
+3. Current focused recapture target: stand near `(3092,3245,0)`, route/click toward
+   `(3131,3252,0)`, let that one segment complete without re-clicking, and keep the waypoint target
+   on the Lumbridge side route that produced the original row.
+4. Enable `Log Route Segments` and `Log Object/Door State` for that recapture. Leave
+   `Validate Map Data` OFF unless C2 asks for raw traversal rows too.
+5. If the recapture produces a completed adjacent `legal=false` row, treat it as a hard collision
+   candidate. If it only produces legal route-shape/object-pressure rows, use nearby object-state
+   rows to decide the next table/tree/door proof target.
+6. Do not promote collision-map rows, object profiles, or route-ranker changes from an interrupted
+   or non-adjacent row.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -448,8 +468,8 @@ rule, so tree profiles need their own pass.
    worlds; do not record object id alone and call it proof.
 2. **Route-validation harness.** Add the offline structural validations plus the small hand-walked
    check set so candidate maps and route-ranker changes have repeatable gates.
-3. **Pilot region cleanup.** Drive one pilot region to zero known errors before opening the next
-   expansion slice.
+3. **Pilot region cleanup.** D-0193 built the pilot gate. Drive the `48_50` recapture target cleanly
+   before opening the next expansion slice or promoting a collision/object/ranker change.
 4. **Paid or unnamed object-profile batches.** Hedges, stools, shelves, crates, held-back paid
    profiles, and unnamed object rows need their own proof pass and live-route pins.
 5. **Sailing/open-water and snap edge cases.** Revisit after the recorder and harness can tell

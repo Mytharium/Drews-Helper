@@ -1,0 +1,58 @@
+DREW_ROUTE_VALIDATION_HARNESS v1
+output=C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\pilot-region-cleanup.txt
+segmentsFile=C:\Users\drews\.runelite\drews-route-segments.txt
+objectsFile=C:\Users\drews\.runelite\drews-object-states.txt
+
+OFFLINE STRUCTURAL VALIDATIONS
+sampleLimit=1000 candidatePairs=0 attempted=0 solvedClean=0 noPath=0 badStructure=0
+shapeDifferent=0 shapeNoPath=0 shapeShorter=0 shapeFewerTurns=0 maxAbsLengthDelta=0 maxAbsTurnDelta=0
+averageClientDistance=- averageClientTurns=- verdict=SKIPPED
+examples=none
+
+HAND-WALKED ROUTE SEGMENTS
+rows=61 completed=28 interrupted=33 matches=5 divergent=56 illegalObservedEdges=0 nonPromotableIllegalObservedEdges=1 longerLegalDetours=7
+classificationCounts={edge-validation-unavailable=3 expected-start-off-route=3 legal-detour-or-object-pressure=7 legal-route-ranker-or-click-shape=14 match=5 route-shape-mismatch=28 static-map-disagrees-with-live-step=1}
+
+OBJECT AND DOOR STATE EVIDENCE
+rows=99 categories={door=20 object=12 stateful=55 traversal=12}
+states={CLOSED_OPENABLE=46 IMPOSTOR_STATE=24 INTERACTIVE=12 OPEN_CLOSEABLE=3 STATEFUL_ACTION=2 TRAVERSAL_ACTION=12}
+mapConfidence={CONTRADICTED=99}
+
+CORRELATED ROUTE/OBJECT EXAMPLES
+example1=classification=static-map-disagrees-with-live-step start=(3092,3245,0) clickDest=(3131,3252,0) routeTarget=(3222,3218,0) divergenceIdx=1 predicted=(3093,3246,0) actual=(3093,3247,0) nearbyObjects=none
+example2=classification=legal-route-ranker-or-click-shape start=(3142,3251,0) clickDest=(3160,3244,0) routeTarget=(3222,3218,0) divergenceIdx=2 predicted=(3144,3251,0) actual=(3144,3250,0) nearbyObjects=none
+example3=classification=route-shape-mismatch start=(3156,3249,0) clickDest=(3191,3225,0) routeTarget=(3222,3218,0) divergenceIdx=0 predicted=(3155,3249,0) actual=(3156,3249,0) nearbyObjects=none
+example4=classification=route-shape-mismatch start=(3191,3224,0) clickDest=(3198,3218,0) routeTarget=(3222,3218,0) divergenceIdx=0 predicted=(3191,3225,0) actual=(3191,3224,0) nearbyObjects=none
+example5=classification=route-shape-mismatch start=(3195,3223,0) clickDest=(3203,3216,0) routeTarget=(3222,3218,0) divergenceIdx=0 predicted=(3194,3222,0) actual=(3195,3223,0) nearbyObjects=none
+example6=classification=route-shape-mismatch start=(3197,3220,0) clickDest=(3204,3214,0) routeTarget=(3222,3218,0) divergenceIdx=0 predicted=(3196,3220,0) actual=(3197,3220,0) nearbyObjects=none
+example7=classification=legal-route-ranker-or-click-shape start=(3201,3218,0) clickDest=(3207,3217,0) routeTarget=(3222,3218,0) divergenceIdx=3 predicted=(3203,3216,0) actual=(3202,3216,0) nearbyObjects=none
+example8=classification=route-shape-mismatch start=(3207,3219,0) clickDest=(3212,3221,0) routeTarget=(3222,3218,0) divergenceIdx=0 predicted=(3207,3218,0) actual=(3207,3219,0) nearbyObjects=none
+example9=classification=legal-route-ranker-or-click-shape start=(3092,3246,0) clickDest=(3083,3282,0) routeTarget=(3109,3352,0) divergenceIdx=2 predicted=(3091,3248,0) actual=(3091,3247,0) nearbyObjects=none
+example10=classification=route-shape-mismatch start=(3088,3248,0) clickDest=(3082,3255,0) routeTarget=(3109,3352,0) divergenceIdx=0 predicted=(3090,3249,0) actual=(3088,3248,0) nearbyObjects=none
+example11=classification=legal-detour-or-object-pressure start=(3086,3250,0) clickDest=(3083,3282,0) routeTarget=(3109,3352,0) divergenceIdx=2 predicted=(3085,3252,0) actual=(3086,3252,0) nearbyObjects=none
+example12=classification=route-shape-mismatch start=(3083,3266,0) clickDest=(3082,3280,0) routeTarget=(3109,3352,0) divergenceIdx=0 predicted=(3082,3265,0) actual=(3083,3266,0) nearbyObjects=none
+
+PILOT REGION CLEANUP
+candidateRegions=rx45-48/ry49-52 shipped={45_49=present 45_50=present 45_51=present 45_52=present 46_49=present 46_50=present 46_51=present 46_52=present 47_49=present 47_50=present 47_51=present 47_52=present 48_49=present 48_50=present 48_51=present 48_52=present}
+touchedRegions={45_50=6 46_50=73 47_51=14 47_52=4 48_50=467 48_51=589 48_52=244}
+routeSegments=41 completed=22 interrupted=19 divergent=37 completedAdjacentIllegalEdges=0 nonPromotableIllegalEdges=1 longerLegalDetours=5
+routeClassifications={edge-validation-unavailable=2 expected-start-off-route=2 legal-detour-or-object-pressure=5 legal-route-ranker-or-click-shape=7 match=4 route-shape-mismatch=20 static-map-disagrees-with-live-step=1}
+objectRows=63 categories={door=11 object=8 stateful=38 traversal=6} states={CLOSED_OPENABLE=29 IMPOSTOR_STATE=18 INTERACTIVE=8 STATEFUL_ACTION=2 TRAVERSAL_ACTION=6}
+verdict=NEEDS_FOCUSED_RECAPTURE
+example1=non-promotable-illegal classification=static-map-disagrees-with-live-step completed=false start=(3092,3245,0) clickDest=(3131,3252,0) routeTarget=(3222,3218,0) edgeValidation={from=(3092,3245,0) actual=(3093,3247,0) target=(3131,3252,0) legal=false type=non-adjacent continuation=found continuationDist=38 totalFromFork=39 expectedFromFork=40 delta=-1 longer=false expanded=5069 repeat=1 overrideCandidate=false}
+example2=longer-legal-detour classification=legal-detour-or-object-pressure completed=false start=(3086,3250,0) clickDest=(3083,3282,0) routeTarget=(3109,3352,0) edgeValidation={from=(3086,3251,0) actual=(3086,3252,0) target=(3083,3282,0) legal=true type=cardinal continuation=found continuationDist=31 totalFromFork=32 expectedFromFork=31 delta=1 longer=true expanded=3613 repeat=1 overrideCandidate=false}
+example3=longer-legal-detour classification=legal-detour-or-object-pressure completed=true start=(3221,3218,0) clickDest=(3213,3220,0) routeTarget=(3092,3245,0) edgeValidation={from=(3216,3218,0) actual=(3215,3218,0) target=(3214,3220,0) legal=true type=cardinal continuation=found continuationDist=2 totalFromFork=3 expectedFromFork=2 delta=1 longer=true expanded=12 repeat=1 overrideCandidate=false}
+example4=longer-legal-detour classification=legal-detour-or-object-pressure completed=true start=(3211,3221,0) clickDest=(3207,3218,0) routeTarget=(3092,3245,0) edgeValidation={from=(3211,3221,0) actual=(3211,3220,0) target=(3207,3218,0) legal=true type=cardinal continuation=found continuationDist=4 totalFromFork=5 expectedFromFork=4 delta=1 longer=true expanded=63 repeat=1 overrideCandidate=false}
+example5=longer-legal-detour classification=legal-detour-or-object-pressure completed=true start=(3221,3218,0) clickDest=(3213,3220,0) routeTarget=(3092,3245,0) edgeValidation={from=(3216,3218,0) actual=(3215,3218,0) target=(3214,3220,0) legal=true type=cardinal continuation=found continuationDist=2 totalFromFork=3 expectedFromFork=2 delta=1 longer=true expanded=12 repeat=1 overrideCandidate=false}
+example6=longer-legal-detour classification=legal-detour-or-object-pressure completed=true start=(3153,3245,0) clickDest=(3133,3260,0) routeTarget=(3092,3245,0) edgeValidation={from=(3153,3245,0) actual=(3153,3246,0) target=(3133,3259,0) legal=true type=cardinal continuation=found continuationDist=20 totalFromFork=21 expectedFromFork=20 delta=1 longer=true expanded=1029 repeat=1 overrideCandidate=false}
+example7=object tile=(3056,3304,0) category=stateful state=IMPOSTOR_STATE name=Allotment objectId=8551 activeId=8576 liveEdges=11 mapConfidence=CONTRADICTED
+example8=object tile=(3056,3312,0) category=stateful state=IMPOSTOR_STATE name=Compost_Bin objectId=7836 activeId=7808 liveEdges=11 mapConfidence=CONTRADICTED
+example9=object tile=(3057,3304,0) category=stateful state=IMPOSTOR_STATE name=Allotment objectId=8551 activeId=8576 liveEdges=11 mapConfidence=CONTRADICTED
+example10=object tile=(3058,3304,0) category=stateful state=IMPOSTOR_STATE name=Allotment objectId=8551 activeId=8576 liveEdges=11 mapConfidence=CONTRADICTED
+example11=object tile=(3058,3305,0) category=stateful state=IMPOSTOR_STATE name=Allotment objectId=8551 activeId=8576 liveEdges=11 mapConfidence=CONTRADICTED
+example12=object tile=(3058,3306,0) category=stateful state=IMPOSTOR_STATE name=Allotment objectId=8551 activeId=8576 liveEdges=11 mapConfidence=CONTRADICTED
+
+HARNESS DECISION
+This report is evidence-only. It does not promote collision-map rows, object profiles, or transport rows.
+Use badStructure and completed-adjacent illegalObservedEdges as hard gates; nonPromotableIllegalObservedEdges need focused recapture before promotion.
+Use divergent hand-walked segments plus nearby object rows to pick the next live test target.

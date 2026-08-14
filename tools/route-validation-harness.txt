@@ -21,7 +21,7 @@ example11=SHAPE_DIFF (3304,3480,0)->(3272,3232,0) lenDelta=0 turnDelta=34 client
 example12=SHAPE_DIFF (3312,3216,0)->(3288,3464,0) lenDelta=0 turnDelta=30 client=[(3312,3216,0) -> (3312,3217,0) -> (3312,3218,0) -> (3312,3219,0) -> (3312,3220,0) -> (3312,3221,0) -> (3312,3222,0) -> (3311,3223,0) -> (3311,3224,0) -> (3311,3225,0) -> ... total=249] shape=[(3312,3216,0) -> (3312,3217,0) -> (3312,3218,0) -> (3312,3219,0) -> (3312,3220,0) -> (3312,3221,0) -> (3312,3222,0) -> (3311,3223,0) -> (3311,3224,0) -> (3311,3225,0) -> ... total=249]
 
 HAND-WALKED ROUTE SEGMENTS
-rows=61 completed=28 interrupted=33 matches=5 divergent=56 illegalObservedEdges=1 longerLegalDetours=7
+rows=61 completed=28 interrupted=33 matches=5 divergent=56 illegalObservedEdges=0 nonPromotableIllegalObservedEdges=1 longerLegalDetours=7
 classificationCounts={edge-validation-unavailable=3 expected-start-off-route=3 legal-detour-or-object-pressure=7 legal-route-ranker-or-click-shape=14 match=5 route-shape-mismatch=28 static-map-disagrees-with-live-step=1}
 
 OBJECT AND DOOR STATE EVIDENCE
@@ -45,4 +45,5 @@ example12=classification=route-shape-mismatch start=(3083,3266,0) clickDest=(308
 
 HARNESS DECISION
 This report is evidence-only. It does not promote collision-map rows, object profiles, or transport rows.
-Use badStructure and illegalObservedEdges as hard gates; use divergent hand-walked segments plus nearby object rows to pick the next live test target.
+Use badStructure and completed-adjacent illegalObservedEdges as hard gates; nonPromotableIllegalObservedEdges need focused recapture before promotion.
+Use divergent hand-walked segments plus nearby object rows to pick the next live test target.
