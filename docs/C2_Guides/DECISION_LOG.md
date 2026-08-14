@@ -2638,3 +2638,23 @@ D-0186 (2026-08-14) - Object-profile proof stays gated after Batch C
 
   Cross-reference: D-0147 object-profile gates, D-0183 Batch A classification, D-0184 route
   segments, and D-0185 completed/interrupted segment semantics.
+D-0188 (2026-08-14) - D-0186 supported object profiles are promoted; held-back keys stay out
+
+  RULE 1 - THE D-0186 SUPPORTED SET CLEARED THE PROMOTION GATE. The promoted runtime map contains
+  the supported table/tree/dead-tree object-profile additions from D-0186: `596/10`, `10820/10`,
+  `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and `1278/11`. The all-region
+  gate stayed green (`DANGEROUS_UNEXPLAINED` drop `54306` versus route-aware `OVERBLOCK` rise
+  `622`), and Myth's live pins did not expose a blocking regression.
+
+  RULE 2 - LIVE STABILITY MEANS NO NEW STATIC-MAP REGRESSION, NOT PERFECT LONG-ROUTE SHAPE. Falador
+  primary/reverse/east-pressure stayed exact. C1/C2/C3 still contain route-shape/ranker misses, but
+  the post-swap completed rows did not show a new completed `static-map-disagrees-with-live-step`
+  regression. Those remaining shape issues belong to route-ranker/confidence/recorder work, not to
+  rolling back the supported object-profile map.
+
+  RULE 3 - HELD-BACK KEYS REMAIN NON-SHIPPED. `1289/10`, `9661/10`, `7169/10`, `34803/10`,
+  `34804/10`, and unnamed `19143/10` are still excluded. They need their own paid-profile or
+  unnamed-object proof pass before they can enter a candidate map.
+
+  Cross-reference: D-0147 object-profile gates, D-0186 supported candidate rules, and D-0187
+  candidate-map build report.

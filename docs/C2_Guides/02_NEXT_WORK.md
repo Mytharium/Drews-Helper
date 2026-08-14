@@ -7,12 +7,12 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** D-0187 built the gated candidate map at `build/collision-map-v2.zip` with only
-the D-0186 supported profile additions. The map gates passed again, but this is still test-build
-only. Do not promote `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip`
-until Myth live-reruns Falador primary/reverse/east-pressure plus C1/C2/C3 and those routes stay
-stable. Keep `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10`
-out for now.
+**WHAT'S NEXT:** D-0188 promoted the D-0186 supported object-profile collision map into
+`src/main/resources/collision-map.zip` after the map gates stayed green and Myth's live reruns
+stayed stable. Next work is recorder-first item C: add confidence tiers, including `INHERITED`,
+to collision-map data and transport rows. Keep held-back keys `1289/10`, `9661/10`, `7169/10`,
+`34803/10`, `34804/10`, and unnamed `19143/10` out until they get their own paid/unnamed proof
+pass.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed

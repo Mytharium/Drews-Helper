@@ -2340,3 +2340,23 @@ D-0187 (2026-08-14) - Built the gated D-0186 candidate collision map. NO RUNTIME
   `2951,3208,0 -> 2942,3243,0`, Falador east-pressure `2946,3239,0 -> 2951,3208,0`, C1
   `3222,3218,0 -> 3092,3245,0`, C2 `3092,3245,0 -> 3109,3352,0`, and C3
   `3253,3420,0 -> 3307,3491,0`.
+D-0188 (2026-08-14) - Promoted the D-0187 candidate collision map after live pins.
+
+  Myth finished the missing C2 rerun after the D-0187 test swap. The segment log appended four
+  completed rows for target `(3109,3352,0)`: three non-match route-shape/ranker rows and one final
+  exact match. No completed `static-map-disagrees-with-live-step` row appeared in the C2 rerun.
+
+  The full live gate is now satisfied. Falador primary `2942,3243,0 -> 2951,3208,0`, reverse
+  `2951,3208,0 -> 2942,3243,0`, and east-pressure `2946,3239,0 -> 2951,3208,0` stayed exact with
+  `lenDelta=0`, `maxDev=0`, and `divergence={none}`. C1/C2/C3 all produced completed post-swap
+  segment evidence; remaining misses are route-shape/ranker/object-pressure evidence for later work,
+  not a blocker to the supported object-profile map.
+
+  Promoted runtime artifact: `src/main/resources/collision-map.zip`, SHA256
+  `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`, `2936` entries. Previous
+  D-0147 runtime backup remains at `build/collision-map-d0147-before-d0187-test-swap.zip`, SHA256
+  `FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC`.
+
+  Held-back keys remain out: `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed
+  `19143/10`. Next work returns to the recorder-first roadmap: confidence tiers, then object/door
+  state recording.
