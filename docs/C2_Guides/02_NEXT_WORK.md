@@ -7,11 +7,12 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Restart the Drew's Helper dev client with D-0185, enable `Settings` -> `Log Route
-Segments`, and rerun focused Batch C pins around the exact table/dead-tree/Sawmill spots. Read
-only `completed=true` rows as route/object evidence by default. `completed=false` rows are useful
-for click-cadence/mistake analysis, but D-0185 labels them as interrupted rows so normal re-clicks
-do not pollute the object-profile proof pass.
+**WHAT'S NEXT:** Do not promote the D-0186 tree/dead-tree/table trial map yet. The object-profile
+proof pass says the next behavior work should be a gated candidate-map pass: promote only
+`596/10`, `10820/10`, `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and
+`1278/11` into a test build, rerun the pinned Falador southeast routes plus the C1/C2/C3 segment
+pins, and ship only the profiles that keep the live route pins stable. Keep `1289/10`,
+`9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10` out for now.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -206,6 +207,72 @@ C3 Sawmill shape/object pressure exact pin
 Goal: repeat the A6 pressure area, but let the suspect segment finish before re-clicking. Send
 completed=true rows with non-match classification.
 ```
+
+Live Batch C result from Myth, checked 2026-08-14:
+
+```text
+C1 Lumbridge -> Draynor target (3092,3245,0)
+6 completed non-match rows. The clearest object-pressure row was (3211,3221,0) -> (3207,3218,0),
+where the displayed route used the Lumbridge dining-room table line.
+
+C2 Draynor bank -> Manor target (3109,3352,0)
+5 completed rows, 4 non-match and the final segment matched. The strongest object rows were
+(3084,3282,0) -> (3083,3303,0) and (3098,3318,0) -> (3109,3343,0), both through/along the
+Draynor tree/dead-tree clusters.
+
+C3 Varrock east -> Sawmill target (3307,3491,0)
+3 completed non-match rows. The strongest row was (3253,3420,0) -> (3275,3452,0), where the
+displayed route rode the tree line north instead of following the live detour east.
+```
+
+### 2026-08-14 OBJECT-PROFILE PROOF PASS
+
+D-0186 ran the object-placement probe over the completed Batch C divergence windows and rebuilt the
+all-region collision-map report twice against frozen live flags
+`build/frozen-live-flags-object-profile-pass-20260814.txt`
+(`37,459,405` bytes, SHA256
+`E9562CAB1466B2AF0C06EAB981DAC66BB9758A9CBBC005D00F8E0ACCC3397ACD`).
+
+Supported candidate read:
+
+```text
+596/10 Table       - direct C1 table crossing, no projected overblock in focus row.
+10820/10 Oak_tree  - C2 west Draynor object crossing, no projected overblock.
+1282/10 Dead_tree  - C2 north Draynor cluster, no projected overblock.
+1283/10 Dead_tree  - C2 north Draynor cluster, no projected overblock.
+11510/10 Dead_tree - C2 north Draynor cluster, no projected overblock but low sample.
+1276/10 Tree       - C3 Sawmill tree line, no projected overblock.
+1276/11 Tree       - C3 Sawmill tree line, no projected overblock.
+1278/10 Tree       - C3 Sawmill/tree pressure family, no projected overblock.
+1278/11 Tree       - C3 Sawmill/tree pressure family, no projected overblock.
+```
+
+Hold-back read:
+
+```text
+1289/10 Dead_tree  - still useful evidence, but projectedNewOverblock=270 and benefit was below
+                    the 3.0x paid-profile gate in the disabled-object run.
+9661/10 Tree_stump - projectedNewOverblock=107, benefit below gate.
+7169/10 Table      - projectedNewOverblock=20, benefit below gate.
+34803/10 Rubble    - projectedNewOverblock=16, benefit below gate.
+34804/10 Rubble    - projectedNewOverblock=20, benefit below gate.
+19143/10           - missing named-solid profile in the all-region report; do not add by id.
+```
+
+Trial build result with the supported candidate set added by command-line override only:
+
+```text
+DANGEROUS_UNEXPLAINED: baseline 139035 -> trial 84729, drop 54306
+route-aware OVERBLOCK: baseline 8264 -> trial 8886, rise 622
+net gate: OK (54306 > 622)
+object profile placements blocked: 17799
+```
+
+This did **not** promote `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip`.
+The current resource remains the D-0147 map. D-0147 still controls tree-family shipping: a no-cost
+tree row is not enough by itself because an earlier tree trial moved a pinned Falador live-route
+fork. The next implementation pass may create a gated test map from the supported set, but it must
+be live-rerun on Falador primary/reverse/east-pressure plus C1/C2/C3 before shipping.
 
 Commits from the 2026-08-13 Mytharium route/collision session, in order:
 

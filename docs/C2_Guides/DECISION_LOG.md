@@ -2605,3 +2605,36 @@ D-0185 (2026-08-14) - Interrupted route segments are click-cadence evidence firs
 
   Cross-reference: D-0147 object-profile gates, D-0183 Batch A segment-classification rule, and
   D-0184 route-segment logging.
+
+
+D-0186 (2026-08-14) - Object-profile proof stays gated after Batch C
+
+  RULE 1 - COMPLETED SEGMENT ROWS CAN NAME OBJECT CANDIDATES, BUT DO NOT BYPASS D-0147. Batch C
+  produced clean `completed=true` evidence for Lumbridge table, Draynor tree/dead-tree, and
+  Sawmill tree-line pressure. That is enough to run object-profile proof, not enough to ship broad
+  locType 10/11, all named-solid scenery, or all trees.
+
+  RULE 2 - CANDIDATE-MAP TRIALS MUST BE COMMAND-LINE OVERRIDES FIRST. `CollisionMapBuilder`
+  supports `--add-object-profile-keys=objectId/locType,...` for one build and
+  `--object-profile-focus-keys=objectId/locType,...` for exact report rows. Use these switches to
+  test a candidate profile set before hardcoding it into the default allowlist or promoting
+  `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip`.
+
+  RULE 3 - SUPPORTED D-0186 CANDIDATES. The current supported test set is `596/10`, `10820/10`,
+  `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and `1278/11`. In the
+  all-region frozen-live trial these rows drove `DANGEROUS_UNEXPLAINED` from `139035` to `84729`
+  while route-aware `OVERBLOCK` rose only `8264 -> 8886`, so the net gate passed (`54306 > 622`).
+
+  RULE 4 - HOLD BACK PAID OR UNNAMED SUSPECTS. `1289/10`, `9661/10`, `7169/10`, `34803/10`, and
+  `34804/10` stay out because their projected overblock/benefit rows did not clear the paid-profile
+  gate in this pass. Unnamed `19143/10` stays out because it was not a named-solid profile in the
+  all-region report.
+
+  RULE 5 - TREE-FAMILY CANDIDATES STILL NEED LIVE ROUTE STABILITY. Do not treat no-cost tree rows
+  as shippable by themselves. Before promoting a map containing `10820/10`, `1282/10`, `1283/10`,
+  `11510/10`, `1276/10`, `1276/11`, `1278/10`, or `1278/11`, rerun the pinned Falador primary,
+  reverse, and east-pressure routes plus C1/C2/C3. D-0147 already proved a no-cost tree trial can
+  move a pinned live-route fork.
+
+  Cross-reference: D-0147 object-profile gates, D-0183 Batch A classification, D-0184 route
+  segments, and D-0185 completed/interrupted segment semantics.

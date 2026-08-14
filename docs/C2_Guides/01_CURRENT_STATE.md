@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-08-09.
+Last updated: 2026-08-14.
 
 ## Current Runtime Reset
 
@@ -62,6 +62,35 @@ The segment row includes:
 This is evidence-only. It does not change path selection, promote `shapeShadow`, add object
 profiles, or write transport/collision rows. Its job is to split Batch A's whole-route mismatches
 into concrete click segments before table/dead-tree/tree profile work or route-ranker tuning.
+
+## 2026-08-14 Batch C Object-Profile Proof Pass
+
+Myth reran the focused C1/C2/C3 pins with the D-0185 interruption-aware segment logger. The new
+rows were clean `completed=true` evidence, not re-click noise:
+
+- C1 Lumbridge to Draynor: 6 completed non-match rows. The clearest object-pressure row crossed
+  the Lumbridge dining-room table line near `3209,3220..3209,3223`.
+- C2 Draynor bank to Manor: 5 completed rows, 4 non-match and the final segment matched. The
+  strongest misses crossed west/north Draynor oak/dead-tree clusters.
+- C3 Varrock east to Sawmill: 3 completed non-match rows. The strongest miss rode the tree line
+  north where live movement detoured east.
+
+D-0186 probed those windows with `probeObjectPlacements` and added two diagnostic-only
+`CollisionMapBuilder` switches so profile trials can be run without editing the default allowlist:
+`--add-object-profile-keys=` augments the object-profile blocker set for that build, and
+`--object-profile-focus-keys=` forces exact candidate rows into the report even if they are not in
+the top 50.
+
+The supported candidate trial was:
+`596/10`, `10820/10`, `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and
+`1278/11`. On the frozen 2026-08-14 live flags snapshot, it reduced
+`DANGEROUS_UNEXPLAINED` from `139035` to `84729` with route-aware `OVERBLOCK` rising only
+`8264 -> 8886`, so the net gate passed (`54306 > 622`).
+
+No runtime map was promoted in D-0186. The current shipped `src/main/resources/collision-map.zip`
+remains SHA256 `FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC`. Tree-family
+profiles still need a live candidate-map rerun against the pinned Falador routes before they can
+ship, because D-0147 already proved a no-cost tree row can still move a live route fork.
 
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.

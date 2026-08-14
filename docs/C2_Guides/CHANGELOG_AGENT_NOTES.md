@@ -2283,3 +2283,35 @@ D-0185 (2026-08-14) - Made route-segment logging interruption-aware.
   This is diagnostic-only. It does not change route selection, object profiles, collision data,
   transports, or route rendering. It makes the next table/dead-tree/Sawmill proof pass require
   `completed=true` pins by default.
+
+D-0186 (2026-08-14) - Ran Batch C object-profile proof and added candidate-map trial switches.
+
+  Myth reran C1/C2/C3 with D-0185 loaded, producing clean `completed=true` segment rows. The rows
+  confirmed real object-pressure windows at Lumbridge table, Draynor oak/dead-tree clusters, and
+  the Sawmill tree line, while still leaving some route-shape/ranker evidence outside the object
+  crossings.
+
+  `probeObjectPlacements` was run over the exact C1/C2/C3 boxes. It found `596/10` Table in the
+  C1 dining-room crossing; `10820/10` Oak tree plus existing boulder profiles in the Draynor west
+  window; `1282/10`, `1283/10`, `1289/10`, and `11510/10` dead-tree profiles in the Draynor north
+  window; and `1276/10`, `1276/11`, `1278/10`, and `1278/11` tree profiles on the Sawmill pressure
+  line. The Sawmill final small detour also touched unnamed `19143/10`, which is not shippable as a
+  named-solid profile.
+
+  `CollisionMapBuilder` now accepts diagnostic object-profile overrides:
+  `--add-object-profile-keys=objectId/locType,...` adds keys to the current profile set for a
+  single build, and `--object-profile-focus-keys=objectId/locType,...` prints exact candidate rows
+  even when they are not in the top 50 object ranking. This keeps candidate-map proof repeatable
+  without hardcoding temporary trial profiles into the default allowlist.
+
+  The supported candidate set was trialed against
+  `build/frozen-live-flags-object-profile-pass-20260814.txt`:
+  `596/10`, `10820/10`, `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and
+  `1278/11`. The all-region report dropped `DANGEROUS_UNEXPLAINED` from `139035` to `84729`, with
+  route-aware `OVERBLOCK` rising only `8264 -> 8886`; the net gate passed (`54306 > 622`).
+
+  No runtime collision map was promoted. The current shipped `src/main/resources/collision-map.zip`
+  remains the D-0147 map. Hold back `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and
+  unnamed `19143/10`. Before shipping the supported tree-family set, create a gated test build and
+  live-rerun Falador primary/reverse/east-pressure plus the C1/C2/C3 pins, because D-0147 proved
+  no-cost tree rows can still move a live route fork.

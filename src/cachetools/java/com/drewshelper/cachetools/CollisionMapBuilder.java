@@ -83,6 +83,8 @@ public final class CollisionMapBuilder
         "--disable-object-profile-blocking";
     private static final String DISABLE_FURNITURE_OBJECT_BLOCKING_ARG =
         "--disable-furniture-object-blocking";
+    private static final String ADD_OBJECT_PROFILE_KEYS_ARG = "--add-object-profile-keys";
+    private static final String OBJECT_PROFILE_FOCUS_KEYS_ARG = "--object-profile-focus-keys";
     private static final String DISABLE_PHASE3_ROOF_BLOCKING_ARG = "--disable-phase3-roof-blocking";
     private static final String ROOF_LOC_TYPES_ARG = "--roof-loctypes";
     /*
@@ -295,6 +297,8 @@ public final class CollisionMapBuilder
         boolean phase3RoofBlocking = true;
         int roofLocTypeMask = DEFAULT_ROOF_LOC_TYPE_MASK;
         Path mergeFrom = null;
+        Set<Integer> objectProfileBlockingKeys = new TreeSet<>(DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS);
+        Set<Integer> objectProfileFocusKeys = new TreeSet<>();
         List<String> selectorArgs = new ArrayList<>();
         for (int i = selectorStart; i < args.length; i++)
         {
@@ -315,6 +319,22 @@ public final class CollisionMapBuilder
             {
                 roofLocTypeMask = parseRoofLocTypeMask(
                     arg.substring((ROOF_LOC_TYPES_ARG + "=").length()));
+                continue;
+            }
+            if (arg.startsWith(ADD_OBJECT_PROFILE_KEYS_ARG + "="))
+            {
+                objectProfileBlockingKeys.addAll(parseObjectProfileKeys(
+                    arg.substring((ADD_OBJECT_PROFILE_KEYS_ARG + "=").length()),
+                    ADD_OBJECT_PROFILE_KEYS_ARG
+                ));
+                continue;
+            }
+            if (arg.startsWith(OBJECT_PROFILE_FOCUS_KEYS_ARG + "="))
+            {
+                objectProfileFocusKeys.addAll(parseObjectProfileKeys(
+                    arg.substring((OBJECT_PROFILE_FOCUS_KEYS_ARG + "=").length()),
+                    OBJECT_PROFILE_FOCUS_KEYS_ARG
+                ));
                 continue;
             }
             if (arg.startsWith(MERGE_FROM_ARG + "="))
@@ -354,7 +374,8 @@ public final class CollisionMapBuilder
             TreeSet<Integer> regions = defaultProofRegions(proofEdges);
             return new BuildRequest(
                 outputZip, liveFlagsFile, false, regions, true, phase2SolidObjectBlocking,
-                phase3RoofBlocking, roofLocTypeMask, mergeFrom);
+                phase3RoofBlocking, roofLocTypeMask, mergeFrom, objectProfileBlockingKeys,
+                objectProfileFocusKeys);
         }
 
         String selector = joinRegionSelector(selectorArgs);
@@ -362,7 +383,8 @@ public final class CollisionMapBuilder
         {
             return new BuildRequest(
                 outputZip, liveFlagsFile, true, Collections.emptySet(), false, phase2SolidObjectBlocking,
-                phase3RoofBlocking, roofLocTypeMask, mergeFrom);
+                phase3RoofBlocking, roofLocTypeMask, mergeFrom, objectProfileBlockingKeys,
+                objectProfileFocusKeys);
         }
 
         TreeSet<Integer> regions = parseRegionIds(selector);
@@ -372,7 +394,7 @@ public final class CollisionMapBuilder
         }
         return new BuildRequest(
             outputZip, liveFlagsFile, false, regions, false, phase2SolidObjectBlocking, phase3RoofBlocking,
-            roofLocTypeMask, mergeFrom);
+            roofLocTypeMask, mergeFrom, objectProfileBlockingKeys, objectProfileFocusKeys);
     }
 
     private static boolean isLiveFlagsArg(String arg)
@@ -388,6 +410,8 @@ public final class CollisionMapBuilder
             || DISABLE_FURNITURE_OBJECT_BLOCKING_ARG.equals(arg)
             || DISABLE_PHASE3_ROOF_BLOCKING_ARG.equals(arg)
             || arg.startsWith(ROOF_LOC_TYPES_ARG + "=")
+            || arg.startsWith(ADD_OBJECT_PROFILE_KEYS_ARG + "=")
+            || arg.startsWith(OBJECT_PROFILE_FOCUS_KEYS_ARG + "=")
             || arg.startsWith(MERGE_FROM_ARG + "=");
     }
 
@@ -470,6 +494,47 @@ public final class CollisionMapBuilder
         {
             throw new IOException("Invalid " + label + ": " + value, e);
         }
+    }
+
+    private static Set<Integer> parseObjectProfileKeys(String value, String label) throws IOException
+    {
+        if (value == null || value.trim().isEmpty())
+        {
+            throw new IOException(label + " requires objectId/locType entries");
+        }
+
+        TreeSet<Integer> keys = new TreeSet<>();
+        for (String token : value.split("[,;\\s]+"))
+        {
+            if (token.isEmpty())
+            {
+                continue;
+            }
+
+            String[] parts = token.split("[/:]", 2);
+            if (parts.length != 2)
+            {
+                throw new IOException(label + " entry must be objectId/locType: " + token);
+            }
+            int objectId = parseBoundedInt(
+                parts[0],
+                label + " objectId",
+                0,
+                Integer.MAX_VALUE / LOC_TYPE_MASK_BITS
+            );
+            int locType = parseBoundedInt(
+                parts[1],
+                label + " locType",
+                0,
+                LOC_TYPE_MASK_BITS - 1
+            );
+            keys.add(objectProfileKey(objectId, locType));
+        }
+        if (keys.isEmpty())
+        {
+            throw new IOException(label + " parsed no object profile keys from: " + value);
+        }
+        return keys;
     }
 
     private static TreeSet<Integer> defaultProofRegions(List<ProofEdge> proofEdges)
@@ -569,7 +634,13 @@ public final class CollisionMapBuilder
             throw new IOException("Cache has no map or loc archive for region " + formatRegionId(regionId));
         }
 
-        BuiltRegion region = buildRegion(source, objects, stats, request.phase2SolidObjectBlocking);
+        BuiltRegion region = buildRegion(
+            source,
+            objects,
+            stats,
+            request.phase2SolidObjectBlocking,
+            request.objectProfileBlockingKeys
+        );
         regions.put(region.name, region);
     }
 
@@ -603,7 +674,8 @@ public final class CollisionMapBuilder
         RegionSource source,
         Map<Integer, ObjectDefinition> objects,
         BuildStats stats,
-        boolean phase2SolidObjectBlocking
+        boolean phase2SolidObjectBlocking,
+        Set<Integer> objectProfileBlockingKeys
     )
     {
         int regionX = source.regionId >> 8;
@@ -639,7 +711,8 @@ public final class CollisionMapBuilder
                     objects.get(location.getId()),
                     bits,
                     stats,
-                    phase2SolidObjectBlocking
+                    phase2SolidObjectBlocking,
+                    objectProfileBlockingKeys
                 );
             }
         }
@@ -697,7 +770,8 @@ public final class CollisionMapBuilder
         ObjectDefinition def,
         RegionBits bits,
         BuildStats stats,
-        boolean phase2SolidObjectBlocking
+        boolean phase2SolidObjectBlocking,
+        Set<Integer> objectProfileBlockingKeys
     )
     {
         stats.placementsByLocType.merge(location.getType(), 1L, Long::sum);
@@ -743,7 +817,8 @@ public final class CollisionMapBuilder
                 plane,
                 bits,
                 stats,
-                phase2SolidObjectBlocking
+                phase2SolidObjectBlocking,
+                objectProfileBlockingKeys
             );
             return;
         }
@@ -764,7 +839,8 @@ public final class CollisionMapBuilder
         int plane,
         RegionBits bits,
         BuildStats stats,
-        boolean phase2SolidObjectBlocking
+        boolean phase2SolidObjectBlocking,
+        Set<Integer> objectProfileBlockingKeys
     )
     {
         if (stats.phase3RoofBlockingEnabled && isProvenBlockableRoofLocType(stats, locType))
@@ -792,7 +868,7 @@ public final class CollisionMapBuilder
         {
             return;
         }
-        if (!shouldBlockIgnoredSolidObject(objectId, locType, def, stats))
+        if (!shouldBlockIgnoredSolidObject(objectId, locType, def, objectProfileBlockingKeys, stats))
         {
             return;
         }
@@ -915,6 +991,7 @@ public final class CollisionMapBuilder
         int objectId,
         int locType,
         ObjectDefinition def,
+        Set<Integer> objectProfileBlockingKeys,
         BuildStats stats
     )
     {
@@ -936,7 +1013,7 @@ public final class CollisionMapBuilder
             stats.phase2SolidObjectMissingDefinitionSkipped++;
             return false;
         }
-        if (!DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS.contains(objectProfileKey(objectId, locType)))
+        if (!objectProfileBlockingKeys.contains(objectProfileKey(objectId, locType)))
         {
             return false;
         }
@@ -2251,7 +2328,10 @@ public final class CollisionMapBuilder
             .append(request.phase2SolidObjectBlocking ? "enabled" : "disabled")
             .append('\n');
         report.append("object profile keys: ")
-            .append(formatObjectProfileBlockingKeys(DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS))
+            .append(formatObjectProfileBlockingKeys(request.objectProfileBlockingKeys))
+            .append('\n');
+        report.append("object profile focus keys: ")
+            .append(formatObjectProfileBlockingKeys(request.objectProfileFocusKeys))
             .append('\n');
         report.append("merge source: ")
             .append(request.mergeFrom == null ? "none" : request.mergeFrom.toString())
@@ -2274,7 +2354,8 @@ public final class CollisionMapBuilder
             result.stats,
             dangerousComparison,
             comparison,
-            phase2Baseline
+            phase2Baseline,
+            request.objectProfileFocusKeys
         );
         report.append('\n');
         appendBuildStats(report, result.stats);
@@ -2311,7 +2392,8 @@ public final class CollisionMapBuilder
         BuildStats stats,
         DangerousDirectionComparison comparison,
         Comparison proofComparison,
-        Phase2Baseline phase2Baseline
+        Phase2Baseline phase2Baseline,
+        Set<Integer> objectProfileFocusKeys
     )
     {
         report.append("dangerous-direction pass:").append('\n');
@@ -2381,7 +2463,7 @@ public final class CollisionMapBuilder
         appendDangerousSplit(report, comparison);
         appendBorderHistograms(report, comparison);
         appendInteriorMeasurement(report, comparison);
-        appendSceneryAdjacencyMeasurement(report, stats, comparison);
+        appendSceneryAdjacencyMeasurement(report, stats, comparison, objectProfileFocusKeys);
         appendPhase2Gate(report, stats, comparison, proofComparison, phase2Baseline);
         report.append("  dangerousRateAll: ").append(formatRate(dangerousRateAll)).append('\n');
         report.append("  orient-3 tile count: ").append(comparison.orient3TileCount).append('\n');
@@ -3056,7 +3138,8 @@ public final class CollisionMapBuilder
     private static void appendSceneryAdjacencyMeasurement(
         StringBuilder report,
         BuildStats stats,
-        DangerousDirectionComparison comparison
+        DangerousDirectionComparison comparison,
+        Set<Integer> objectProfileFocusKeys
     )
     {
         SceneryAdjacencyMeasurement measurement = comparison.sceneryAdjacencyMeasurement;
@@ -3103,7 +3186,8 @@ public final class CollisionMapBuilder
             stats,
             measurement,
             comparison.namedSolidSceneryObjectMeasurement,
-            bucketDangerousUnexplainedTotal
+            bucketDangerousUnexplainedTotal,
+            objectProfileFocusKeys
         );
         appendSceneryAdjacencyOverblockControl(report, stats, measurement);
         appendSceneryAdjacencyCensus(report, stats, measurement);
@@ -3527,7 +3611,8 @@ public final class CollisionMapBuilder
         BuildStats stats,
         SceneryAdjacencyMeasurement measurement,
         ObjectProfileMeasurement objectMeasurement,
-        long dangerousUnexplainedTotal
+        long dangerousUnexplainedTotal,
+        Set<Integer> objectProfileFocusKeys
     )
     {
         SceneryAdjacencyBucketCounts notAdjacent = measurement.counts(SceneryAdjacencyBucket.NOT_ADJACENT);
@@ -3587,7 +3672,8 @@ public final class CollisionMapBuilder
             report,
             stats,
             measurement,
-            objectMeasurement
+            objectMeasurement,
+            objectProfileFocusKeys
         );
     }
 
@@ -3745,7 +3831,8 @@ public final class CollisionMapBuilder
         StringBuilder report,
         BuildStats stats,
         SceneryAdjacencyMeasurement sceneryMeasurement,
-        ObjectProfileMeasurement objectMeasurement
+        ObjectProfileMeasurement objectMeasurement,
+        Set<Integer> focusKeys
     )
     {
         SceneryAdjacencyBucketCounts notAdjacent =
@@ -3811,6 +3898,66 @@ public final class CollisionMapBuilder
         }
         report.append("      emitted top rows: ").append(emitted)
             .append(" of ").append(rows.size()).append(" named-solid object profiles").append('\n');
+        appendObjectProfileFocusRows(report, stats, objectMeasurement, notAdjacentRate, focusKeys);
+    }
+
+    private static void appendObjectProfileFocusRows(
+        StringBuilder report,
+        BuildStats stats,
+        ObjectProfileMeasurement objectMeasurement,
+        double notAdjacentRate,
+        Set<Integer> focusKeys
+    )
+    {
+        if (focusKeys.isEmpty())
+        {
+            return;
+        }
+
+        report.append("    named-solid object focus rows:").append('\n');
+        report.append("      objectId locType name size blocksProjectile openAction comparedEdges ")
+            .append("dangerousUnexplainedRate ratioAgainstNOT_ADJACENT projectedNewOverblock ")
+            .append("benefitPerNewOverblock currentOverblock")
+            .append('\n');
+        for (int key : new TreeSet<>(focusKeys))
+        {
+            ObjectProfile profile = stats.namedSolidSceneryProfiles.get(key);
+            SceneryAdjacencyBucketCounts counts = objectMeasurement.countsByProfileKey.get(key);
+            if (profile == null)
+            {
+                report.append("      ")
+                    .append(key / LOC_TYPE_MASK_BITS)
+                    .append(' ')
+                    .append(key % LOC_TYPE_MASK_BITS)
+                    .append(" missing none none none 0 0.000000 (0.000%) (0/0) 0.000x 0 no-cost 0")
+                    .append('\n');
+                continue;
+            }
+            if (counts == null)
+            {
+                counts = new SceneryAdjacencyBucketCounts();
+            }
+
+            double candidateRate = rate(counts.dangerousUnexplained, counts.comparedEdges);
+            report.append("      ")
+                .append(profile.objectId)
+                .append(' ').append(profile.locType)
+                .append(' ').append(reportToken(profile.name))
+                .append(' ').append(profile.sizeX).append('x').append(profile.sizeY)
+                .append(' ').append(profile.blocksProjectile)
+                .append(' ').append(reportToken(profile.openStyleAction))
+                .append(' ').append(counts.comparedEdges)
+                .append(' ').append(formatRateWithCounts(
+                    counts.dangerousUnexplained,
+                    counts.comparedEdges
+                ))
+                .append(' ').append(sceneryAdjacencyRateRatio(candidateRate, notAdjacentRate))
+                .append(' ').append(counts.agreeOpen)
+                .append(' ')
+                .append(formatBenefitPerNewOverblock(counts.dangerousUnexplained, counts.agreeOpen))
+                .append(' ').append(counts.overblock)
+                .append('\n');
+        }
     }
 
     private static String reportToken(String text)
@@ -4917,6 +5064,8 @@ public final class CollisionMapBuilder
         private final boolean phase3RoofBlocking;
         private final int roofLocTypeMask;
         private final Path mergeFrom;
+        private final Set<Integer> objectProfileBlockingKeys;
+        private final Set<Integer> objectProfileFocusKeys;
 
         private BuildRequest(
             Path outputZip,
@@ -4926,11 +5075,14 @@ public final class CollisionMapBuilder
             boolean defaultedRegions,
             boolean phase2SolidObjectBlocking,
             boolean phase3RoofBlocking,
-            int roofLocTypeMask
+            int roofLocTypeMask,
+            Set<Integer> objectProfileBlockingKeys,
+            Set<Integer> objectProfileFocusKeys
         )
         {
             this(outputZip, liveFlagsFile, allRegions, regionIds, defaultedRegions,
-                phase2SolidObjectBlocking, phase3RoofBlocking, roofLocTypeMask, null);
+                phase2SolidObjectBlocking, phase3RoofBlocking, roofLocTypeMask, null,
+                objectProfileBlockingKeys, objectProfileFocusKeys);
         }
 
         private BuildRequest(
@@ -4942,7 +5094,9 @@ public final class CollisionMapBuilder
             boolean phase2SolidObjectBlocking,
             boolean phase3RoofBlocking,
             int roofLocTypeMask,
-            Path mergeFrom
+            Path mergeFrom,
+            Set<Integer> objectProfileBlockingKeys,
+            Set<Integer> objectProfileFocusKeys
         )
         {
             this.mergeFrom = mergeFrom;
@@ -4954,6 +5108,10 @@ public final class CollisionMapBuilder
             this.defaultedRegions = defaultedRegions;
             this.phase2SolidObjectBlocking = phase2SolidObjectBlocking;
             this.phase3RoofBlocking = phase3RoofBlocking;
+            this.objectProfileBlockingKeys =
+                Collections.unmodifiableSet(new TreeSet<>(objectProfileBlockingKeys));
+            this.objectProfileFocusKeys =
+                Collections.unmodifiableSet(new TreeSet<>(objectProfileFocusKeys));
         }
 
         private BuildRequest withObjectBlockingDisabled()
@@ -4971,7 +5129,9 @@ public final class CollisionMapBuilder
                 false,
                 false,
                 roofLocTypeMask,
-                mergeFrom
+                mergeFrom,
+                objectProfileBlockingKeys,
+                objectProfileFocusKeys
             );
         }
     }
