@@ -1,8 +1,10 @@
 # Verified additions to the upstream Skretzo/shortest-path transport data.
 #
 # Columns (tab separated, same as the generated resource):
-#   category	source	destination	label	duration	skills	quests	items	varbits	varplayers
+#   category	source	destination	label	duration	skills	quests	items	varbits	varplayers	wildernessLevel	confidence	provenance
 # Trailing requirement columns may be omitted. Blank means "no requirement".
+# Confidence/provenance may also be omitted here; the generator marks override rows CONFIRMED
+# with provenance tools/transport-overrides.tsv by default.
 #
 # RULES FOR ADDING A ROW HERE
 #   1. Prove the tile is blocked in collision-map.zip. A route that merely looks

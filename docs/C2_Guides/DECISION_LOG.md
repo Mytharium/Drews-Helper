@@ -2658,3 +2658,29 @@ D-0188 (2026-08-14) - D-0186 supported object profiles are promoted; held-back k
 
   Cross-reference: D-0147 object-profile gates, D-0186 supported candidate rules, and D-0187
   candidate-map build report.
+
+D-0189 (2026-08-14) - Confidence is explicit route-data metadata.
+
+  RULE 1 - USE THE FOUR D-0136 TIERS. `INHERITED` means copied from an upstream or legacy
+  source we have not independently derived or live-checked. `INFERRED` means generated from
+  current cache/tooling. `CONFIRMED` means live/manual proof supports the row. `CONTRADICTED`
+  is reserved for known disagreements that must not be silently merged away.
+
+  RULE 2 - COLLISION PROVENANCE IS A SIDECAR, NOT ZIP TIMESTAMP FORENSICS. The runtime
+  collision archive remains `collision-map.zip`; provenance lives in
+  `collision-map-confidence.tsv`. A `*` row supplies default provenance for every archive
+  entry, and future region-specific rows may override it. Missing sidecar means legacy
+  `INHERITED`, not a crash.
+
+  RULE 3 - TRANSPORT PROVENANCE RIDES WITH EACH ROW. `drewshelper-transports.tsv` now carries
+  `confidence` and `provenance` columns after `wildernessLevel`. Old 4/10/11-column resources
+  still parse as `INHERITED` so a partial checkout does not break the route graph. The
+  generator emits Skretzo rows as `INHERITED` and `tools/transport-overrides.tsv` rows as
+  `CONFIRMED` by default.
+
+  RULE 4 - MERGE CONFLICTS DO NOT GET AUTO-RESOLVED BY RECENCY. Until the object/door-state
+  recorder lands, a proven disagreement should be represented as `CONTRADICTED` or kept out
+  of the active resource. Do not overwrite a `CONFIRMED` row with an `INFERRED` or
+  `INHERITED` row just because a generator saw it later.
+
+  Cross-reference: implements D-0136 RULE 5 and preserves D-0105 generated-resource rules.

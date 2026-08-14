@@ -119,6 +119,15 @@ C1, C2, and C3 produced completed post-swap segment rows with remaining route-sh
 but no new completed `static-map-disagrees-with-live-step` regression. C2's final post-swap rerun
 added four completed rows: three non-match route-shape/ranker rows and one final exact match.
 
+## 2026-08-14 Confidence Tiers
+
+D-0189 adds the recorder-first confidence ladder from D-0136 to the active route data model.
+
+- `DrewsHelperDataConfidence` defines `INHERITED`, `INFERRED`, `CONFIRMED`, and `CONTRADICTED`.
+- `src/main/resources/collision-map-confidence.tsv` records collision-map provenance. The current D-0188 all-region runtime map uses default `INFERRED` provenance `osrs-cache-live:d0188-all-region-rebuild`.
+- `src/main/resources/drewshelper-transports.tsv` is now confidence-tagged per row. Upstream Skretzo rows are `INHERITED`; the 24 live/manual override rows from `tools/transport-overrides.tsv` are `CONFIRMED`.
+- Runtime loaders remain backward-compatible with older 4/10/11-column transport resources and with a missing collision confidence sidecar; missing confidence falls back to `INHERITED` rather than crashing the route graph.
+
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.
@@ -407,10 +416,11 @@ attestation via the checkbox. Skill levels are **real, not boosted**.
 
 ### Transport resource
 
-`src/main/resources/drewshelper-transports.tsv`, 10 columns, 7,331 edges.
+`src/main/resources/drewshelper-transports.tsv`, 13 columns, 12,424 edges. Confidence split: `INHERITED=12,400`, `CONFIRMED=24`.
 
 ```
-BASELINE 5,800   AGILITY_SHORTCUT 557   HOT_AIR_BALLOON 269   QUETZAL 182
+BASELINE 5,840   AGILITY_SHORTCUT 557   HOT_AIR_BALLOON 269   QUETZAL 182
+FAIRY_RING 3,078   PLANTED_SPIRIT_TREE 1,335   SPIRIT_TREE 640
 GNOME_GLIDER 103   CANOE 45   MAGIC_MUSHTREE 29   GRAPPLE_SHORTCUT 15   WILDERNESS 331
 ```
 

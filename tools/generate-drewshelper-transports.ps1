@@ -8,7 +8,7 @@ param(
 # and durations through instead of discarding them.
 #
 # Output columns (tab separated):
-#   category source destination label duration skills quests items varbits varplayers wildernessLevel
+#   category source destination label duration skills quests items varbits varplayers wildernessLevel confidence provenance
 #
 # Two row shapes exist upstream and both are handled:
 #   1. Direct rows  - Origin and Destination both filled. One row = one edge.
@@ -200,7 +200,8 @@ $missingFiles     = New-Object System.Collections.ArrayList
 function Add-Edge {
     param([string]$Category, [string]$Source, [string]$Destination, [string]$Label,
           [int]$Duration, [string]$Skills, [string]$Quests, [string]$Items,
-          [string]$Varbits, [string]$VarPlayers, [int]$WildernessLevel = -1)
+          [string]$Varbits, [string]$VarPlayers, [int]$WildernessLevel = -1,
+          [string]$Confidence = 'INHERITED', [string]$Provenance = '')
 
     if ($Source -eq $Destination) {
         $script:skippedSelfLoop++
@@ -227,7 +228,21 @@ function Add-Edge {
         varbits     = $Varbits
         varplayers  = $VarPlayers
         wildernesslevel = $WildernessLevel
+        confidence  = (Normalize-Confidence $Confidence 'INHERITED')
+        provenance  = (Format-Field $Provenance)
     })
+}
+
+function Normalize-Confidence {
+    param([string]$Value, [string]$Fallback)
+    $v = ($Value + '').Trim().ToUpperInvariant().Replace('-', '_').Replace(' ', '_')
+    switch ($v) {
+        'INHERITED'    { return 'INHERITED' }
+        'INFERRED'     { return 'INFERRED' }
+        'CONFIRMED'    { return 'CONFIRMED' }
+        'CONTRADICTED' { return 'CONTRADICTED' }
+        default        { return $Fallback }
+    }
 }
 
 foreach ($fileName in $FileCategories.Keys) {
@@ -329,7 +344,8 @@ foreach ($fileName in $FileCategories.Keys) {
             Add-Edge $category $rec.src $rec.dst $rec.label $rec.duration `
                 (Format-SkillMap $rec.skills) `
                 (Merge-ListField $rec.quests $NetworkQuest[$baseCategory]) `
-                $rec.items $rec.varbits $rec.varplayers $rec.wilderness
+                $rec.items $rec.varbits $rec.varplayers $rec.wilderness `
+                'INHERITED' ('skretzo:' + $fileName)
         }
         elseif ($hasSrc) { [void]$originOnly.Add($rec) }
         else             { [void]$destOnly.Add($rec) }
@@ -360,7 +376,8 @@ foreach ($fileName in $FileCategories.Keys) {
                     (Merge-ListField $o.items      $d.items) `
                     (Merge-ListField $o.varbits    $d.varbits) `
                     (Merge-ListField $o.varplayers $d.varplayers) `
-                    ([Math]::Max($o.wilderness, $d.wilderness))
+                    ([Math]::Max($o.wilderness, $d.wilderness)) `
+                    'INHERITED' ('skretzo:' + $fileName)
                 $crossEdges++
             }
         }
@@ -370,7 +387,8 @@ foreach ($fileName in $FileCategories.Keys) {
             Add-Edge $baseCategory $ORIGINLESS_SOURCE $d.dst $d.label $d.duration `
                 (Format-SkillMap $d.skills) `
                 (Merge-ListField $d.quests $NetworkQuest[$baseCategory]) `
-                $d.items $d.varbits $d.varplayers $d.wilderness
+                $d.items $d.varbits $d.varplayers $d.wilderness `
+                'INHERITED' ('skretzo:' + $fileName)
         }
     }
 }
@@ -378,7 +396,7 @@ foreach ($fileName in $FileCategories.Keys) {
 # Upstream's data has real gaps - a gate that exists in game, blocks in the
 # collision map, and has no row anywhere. Hand-editing the generated file would
 # lose the fix on the next regeneration, so verified additions live here and are
-# merged in. Same 10 columns as the output. Every row must cite its evidence.
+# merged in. Same columns as the output. Every row must cite its evidence.
 $overrideCount = 0
 $overridePath  = Join-Path -Path (Split-Path -Parent $PSCommandPath) -ChildPath 'transport-overrides.tsv'
 if (Test-Path -LiteralPath $overridePath) {
@@ -389,14 +407,20 @@ if (Test-Path -LiteralPath $overridePath) {
         $raw = $line.Split($TAB)
         if ($raw.Count -lt 5) { throw "Override row needs at least 5 columns: $line" }
         # Trailing empty requirement columns are optional in the source file.
-        $f = @('') * 10
-        for ($i = 0; $i -lt [Math]::Min($raw.Count, 10); $i++) { $f[$i] = $raw[$i] }
+        $f = @('') * 13
+        for ($i = 0; $i -lt [Math]::Min($raw.Count, 13); $i++) { $f[$i] = $raw[$i] }
         $dur = 1
         [void][int]::TryParse($f[4].Trim(), [ref]$dur)
+        $wilderness = -1
+        $parsedWilderness = 0
+        if ([int]::TryParse($f[10].Trim(), [ref]$parsedWilderness)) { $wilderness = $parsedWilderness }
+        $confidence = Normalize-Confidence $f[11] 'CONFIRMED'
+        $provenance = Format-Field $f[12]
+        if ([string]::IsNullOrWhiteSpace($provenance)) { $provenance = 'tools/transport-overrides.tsv' }
         $before = $rows.Count
         Add-Edge $f[0].Trim() $f[1].Trim() $f[2].Trim() $f[3].Trim() $dur `
             (Format-Field $f[5]) (Format-Field $f[6]) (Format-Field $f[7]) `
-            (Format-Field $f[8]) (Format-Field $f[9])
+            (Format-Field $f[8]) (Format-Field $f[9]) $wilderness $confidence $provenance
         if ($rows.Count -gt $before) { $overrideCount++ }
     }
 }
@@ -405,11 +429,12 @@ $sorted = @($rows) | Sort-Object category, source, destination, label
 
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.Append('# Generated from Skretzo/shortest-path transport TSV files.' + $LF)
-[void]$sb.Append('# Columns: category' + $TAB + 'source' + $TAB + 'destination' + $TAB + 'label' + $TAB + 'duration' + $TAB + 'skills' + $TAB + 'quests' + $TAB + 'items' + $TAB + 'varbits' + $TAB + 'varplayers' + $TAB + 'wildernessLevel' + $LF)
+[void]$sb.Append('# Columns: category' + $TAB + 'source' + $TAB + 'destination' + $TAB + 'label' + $TAB + 'duration' + $TAB + 'skills' + $TAB + 'quests' + $TAB + 'items' + $TAB + 'varbits' + $TAB + 'varplayers' + $TAB + 'wildernessLevel' + $TAB + 'confidence' + $TAB + 'provenance' + $LF)
 [void]$sb.Append('# duration is in game ticks (floored at 1). Blank requirement fields mean no requirement recorded upstream.' + $LF)
+[void]$sb.Append('# confidence tiers: INHERITED from upstream, INFERRED from cache-derived generation, CONFIRMED from live/manual proof, CONTRADICTED for known disagreements.' + $LF)
 
 foreach ($r in $sorted) {
-    [void]$sb.Append(($r.category, $r.source, $r.destination, $r.label, $r.duration, $r.skills, $r.quests, $r.items, $r.varbits, $r.varplayers, $r.wildernesslevel) -join $TAB)
+    [void]$sb.Append(($r.category, $r.source, $r.destination, $r.label, $r.duration, $r.skills, $r.quests, $r.items, $r.varbits, $r.varplayers, $r.wildernesslevel, $r.confidence, $r.provenance) -join $TAB)
     [void]$sb.Append($LF)
 }
 

@@ -18,6 +18,8 @@ public final class DrewsHelperTransportEdge
     private final String varbits;
     private final String varPlayers;
     private final int maxWildernessLevel;
+    private final DrewsHelperDataConfidence confidence;
+    private final String provenance;
 
     DrewsHelperTransportEdge(
         WorldPoint source,
@@ -26,7 +28,8 @@ public final class DrewsHelperTransportEdge
         String label
     )
     {
-        this(source, destination, category, label, 1, "", "", "", "", "");
+        this(source, destination, category, label, 1, "", "", "", "", "",
+            NO_WILDERNESS_LIMIT, DrewsHelperDataConfidence.INHERITED, "");
     }
 
     DrewsHelperTransportEdge(
@@ -43,7 +46,7 @@ public final class DrewsHelperTransportEdge
     )
     {
         this(source, destination, category, label, durationTicks, skills, quests, items,
-            varbits, varPlayers, NO_WILDERNESS_LIMIT);
+            varbits, varPlayers, NO_WILDERNESS_LIMIT, DrewsHelperDataConfidence.INHERITED, "");
     }
 
     DrewsHelperTransportEdge(
@@ -60,6 +63,26 @@ public final class DrewsHelperTransportEdge
         int maxWildernessLevel
     )
     {
+        this(source, destination, category, label, durationTicks, skills, quests, items,
+            varbits, varPlayers, maxWildernessLevel, DrewsHelperDataConfidence.INHERITED, "");
+    }
+
+    DrewsHelperTransportEdge(
+        WorldPoint source,
+        WorldPoint destination,
+        DrewsHelperTransportCategory category,
+        String label,
+        int durationTicks,
+        String skills,
+        String quests,
+        String items,
+        String varbits,
+        String varPlayers,
+        int maxWildernessLevel,
+        DrewsHelperDataConfidence confidence,
+        String provenance
+    )
+    {
         this.source = source;
         this.destination = destination;
         this.category = category;
@@ -71,6 +94,8 @@ public final class DrewsHelperTransportEdge
         this.varbits = varbits == null ? "" : varbits;
         this.varPlayers = varPlayers == null ? "" : varPlayers;
         this.maxWildernessLevel = maxWildernessLevel;
+        this.confidence = confidence == null ? DrewsHelperDataConfidence.INHERITED : confidence;
+        this.provenance = provenance == null ? "" : provenance;
     }
 
     public WorldPoint getSource()
@@ -136,6 +161,16 @@ public final class DrewsHelperTransportEdge
     public String getVarPlayers()
     {
         return varPlayers;
+    }
+
+    public DrewsHelperDataConfidence getConfidence()
+    {
+        return confidence;
+    }
+
+    public String getProvenance()
+    {
+        return provenance;
     }
 
     public boolean isOriginless()

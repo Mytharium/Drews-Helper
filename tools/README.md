@@ -14,7 +14,7 @@ Reads the per-family TSVs from a checkout of the upstream Shortest Path plugin a
 them into one 10-column file:
 
 ```
-category  source  destination  label  duration  skills  quests  items  varbits  varplayers
+category  source  destination  label  duration  skills  quests  items  varbits  varplayers  wildernessLevel  confidence  provenance
 ```
 
 `category` is the family name and must match a constant in `DrewsHelperTransportCategory`.
@@ -45,7 +45,11 @@ Both parameters are required. `-TransportDir` points at the upstream `transports
 - **Output must be UTF-8 with no BOM and LF line endings.** `Set-Content -Encoding UTF8`
   writes a BOM; use `[System.IO.File]::WriteAllText` with `UTF8Encoding($false)`.
 - **PowerShell 5.1 is the target.** `[HashSet[string]]::new($collection)` does not work there
-  and fails silently rather than throwing — use hashtables for set operations.
+  and fails silently rather than throwing - use hashtables for set operations.
+- **Confidence is part of the resource format.** Upstream Skretzo rows emit as `INHERITED`;
+  rows from `tools/transport-overrides.tsv` emit as `CONFIRMED` unless that file explicitly
+  supplies a different tier. Future cache-derived candidate rows should use `INFERRED` until
+  live/manual proof promotes them.
 
 ### Verifying a regeneration
 

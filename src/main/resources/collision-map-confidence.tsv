@@ -1,0 +1,3 @@
+# Columns: region	confidence	provenance
+# "*" applies to every region entry in collision-map.zip unless a later region-specific row overrides it.
+*	INFERRED	osrs-cache-live:d0188-all-region-rebuild

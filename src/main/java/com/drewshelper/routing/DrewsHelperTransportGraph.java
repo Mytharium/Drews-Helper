@@ -405,8 +405,8 @@ public final class DrewsHelperTransportGraph
                     continue;
                 }
 
-                // -1 keeps trailing empty requirement columns. Reads the legacy 4-column
-                // and 10-column resources as well as the current 11-column one.
+                // -1 keeps trailing empty requirement columns. Reads the legacy 4-column,
+                // 10-column, and 11-column resources as well as the current confidence-tagged one.
                 String[] parts = line.split("\t", -1);
                 if (parts.length < 4)
                 {
@@ -432,7 +432,9 @@ public final class DrewsHelperTransportGraph
                     column(parts, 7),
                     column(parts, 8),
                     column(parts, 9),
-                    parseWildernessLevel(column(parts, 10))
+                    parseWildernessLevel(column(parts, 10)),
+                    DrewsHelperDataConfidence.parse(column(parts, 11), DrewsHelperDataConfidence.INHERITED),
+                    column(parts, 12)
                 );
 
                 edges.add(edge);

@@ -7,12 +7,11 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** D-0188 promoted the D-0186 supported object-profile collision map into
-`src/main/resources/collision-map.zip` after the map gates stayed green and Myth's live reruns
-stayed stable. Next work is recorder-first item C: add confidence tiers, including `INHERITED`,
-to collision-map data and transport rows. Keep held-back keys `1289/10`, `9661/10`, `7169/10`,
-`34803/10`, `34804/10`, and unnamed `19143/10` out until they get their own paid/unnamed proof
-pass.
+**WHAT'S NEXT:** D-0189 completed recorder-first item C. Collision-map data now has an
+explicit confidence sidecar, and transport rows now carry `confidence` plus `provenance` columns.
+The next active build is recorder-first item D: object and door-state recording. Keep held-back
+keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10` out until
+they get their own paid/unnamed proof pass.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -493,8 +492,9 @@ ACTIVE SEQUENCE - in order
                                                  4.20% ground-truth ceiling, because it
                                                  collects during normal play instead of
                                                  needing a scheduled walk. D-0136 RULE 3.
-      C. Confidence tiers, including INHERITED   ~half day. On the collision map and on the
-                                                 transport rows. D-0136 RULE 5.
+      C. Confidence tiers, including INHERITED   CLOSED, D-0189. Collision-map provenance is
+                                                 explicit via sidecar, and transport rows carry
+                                                 confidence/provenance columns.
       D. Object and DOOR STATE recorder          ~1 day. Object state, not just object id.
                                                  A shut door and an open door are different
                                                  collision worlds and we currently cannot
@@ -571,6 +571,7 @@ gradle task. A `promoteCollisionMap` task must exist before adding NEW entries. 
 
       D-0136  DECISION   adopt the recorder-first plan - eight rules, four unbuildable
                          targets restated, and what already exists and must not be rebuilt
+      D-0189  CHANGELOG  confidence tiers landed for collision-map provenance and transport rows
       D-0169  CHANGELOG  floor rule measured and verified, 98.086% / 100.000%
       D-0134  DECISION   the rule is verified - do not "improve" it, plus two method traps
       D-0170  CHANGELOG  region census, ocean hazard, Varlamore correction, slicing plan

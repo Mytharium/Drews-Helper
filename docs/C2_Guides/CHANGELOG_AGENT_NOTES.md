@@ -2360,3 +2360,20 @@ D-0188 (2026-08-14) - Promoted the D-0187 candidate collision map after live pin
   Held-back keys remain out: `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed
   `19143/10`. Next work returns to the recorder-first roadmap: confidence tiers, then object/door
   state recording.
+
+D-0189 (2026-08-14) - Added recorder-first confidence tiers to collision-map and transport data.
+
+  Added `DrewsHelperDataConfidence` with the four D-0136 tiers: `INHERITED`, `INFERRED`,
+  `CONFIRMED`, and `CONTRADICTED`. Added `DrewsHelperDataProvenance` as the small carrier
+  object for provenance source text.
+
+  Collision-map provenance is now explicit in `src/main/resources/collision-map-confidence.tsv`.
+  The current D-0188 all-region runtime map is default `INFERRED` with source
+  `osrs-cache-live:d0188-all-region-rebuild`. If an older checkout lacks the sidecar, runtime
+  falls back to `INHERITED` rather than failing route load.
+
+  `drewshelper-transports.tsv` was regenerated with two new columns: `confidence` and
+  `provenance`. Edge identity was checked before/after on `category|source|destination|label`:
+  `12,424` before, `12,424` after, missing `0`, extra `0`. Confidence split after regeneration:
+  `INHERITED=12,400` Skretzo rows and `CONFIRMED=24` override rows from
+  `tools/transport-overrides.tsv`.
