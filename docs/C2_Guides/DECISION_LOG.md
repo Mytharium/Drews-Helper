@@ -2684,3 +2684,27 @@ D-0189 (2026-08-14) - Confidence is explicit route-data metadata.
   `INHERITED` row just because a generator saw it later.
 
   Cross-reference: implements D-0136 RULE 5 and preserves D-0105 generated-resource rules.
+
+D-0191 (2026-08-14) - Object and door-state rows are evidence, not automatic map edits.
+
+  RULE 1 - STATE MUST RIDE WITH IDENTITY. A captured object row must keep the base object id,
+  active impostor id, action tokens, varbit/varp hooks, object kind, world tile, scene tile,
+  orientation/config/hash, live edge flags, and collision-map confidence/provenance. Do not collapse
+  this evidence into "object id was present" because open/closed/pulled/changed state is the useful
+  signal.
+
+  RULE 2 - LIVE SCENE ROWS ARE CONFIRMED OBSERVATIONS, NOT PROMOTED RESOURCES. `DREW_OBJECT_STATE`
+  rows use `confidence=CONFIRMED` with `provenance=runelite-scene-live`, but they do not themselves
+  update `collision-map.zip`, `collision-map-confidence.tsv`, `drewshelper-transports.tsv`, or any
+  object-profile allowlist.
+
+  RULE 3 - CURRENT-STATE DUPLICATES ARE SUPPRESSED PER SESSION. The recorder may scan the loaded
+  scene repeatedly, but identical current-state bodies should not spam the evidence file. A state
+  change still produces a new row because the active id/actions/state body changes.
+
+  RULE 4 - SHARED OBJECT-DEFINITION RESOLUTION LIVES IN ROUTING. Guarded active-impostor lookup is
+  now centralized in `DrewsHelperObjectDefinitions`; callers must check `getImpostorIds()` before
+  using RuneLite's active impostor to avoid unsafe direct `getImpostor()` calls.
+
+  Cross-reference: D-0189 confidence tiers, D-0188 promoted collision map, D-0186 held-back object
+  keys, and the next route-validation harness item.

@@ -145,6 +145,21 @@ public class DrewsHelperConfigTest
     }
 
     @Test
+    public void objectStateRecorderControlDefaultsOffAndSitsBelowRouteSegments() throws Exception
+    {
+        DrewsHelperConfig config = new DrewsHelperConfig() {};
+        Method method = DrewsHelperConfig.class.getMethod("objectStateRecordingEnabled");
+        ConfigItem item = method.getAnnotation(ConfigItem.class);
+
+        assertNotNull(item);
+        assertEquals("objectStateRecordingEnabled", item.keyName());
+        assertEquals("Log Object/Door State", item.name());
+        assertEquals("waypointSettings", item.section());
+        assertEquals(13, item.position());
+        assertFalse(config.objectStateRecordingEnabled());
+    }
+
+    @Test
     public void routeSolverConfigAndEtaToggleAreRemoved() throws Exception
     {
         for (Method method : DrewsHelperConfig.class.getMethods())

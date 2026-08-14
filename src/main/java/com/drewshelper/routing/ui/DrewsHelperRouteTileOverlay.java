@@ -3,6 +3,7 @@ package com.drewshelper.routing.ui;
 import com.drewshelper.DrewsHelperConfig;
 import com.drewshelper.DrewsHelperPlugin;
 import com.drewshelper.DrewsHelperWaypointIcon;
+import com.drewshelper.routing.DrewsHelperObjectDefinitions;
 import com.drewshelper.routing.DrewsHelperRouteSnapshot;
 import com.drewshelper.routing.DrewsHelperTransportEdge;
 import com.drewshelper.routing.DrewsHelperTransportGraph;
@@ -377,12 +378,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
         // getImpostor() throws on any object that has no impostor configuration at all, which is
         // most of them - it must never be called without this guard. matchesObjectId below only
         // survives because it reaches getImpostor() after an identical getImpostorIds() null check.
-        ObjectComposition active = null;
-        if (composition.getImpostorIds() != null)
-        {
-            active = composition.getImpostor();
-        }
-
+        ObjectComposition active = DrewsHelperObjectDefinitions.active(composition);
         if (active == null)
         {
             Boolean cached = doorLikeCache.get(objectId);
@@ -548,7 +544,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
         }
 
         // The currently active impostor, in case the id list is not exhaustive.
-        ObjectComposition active = composition.getImpostor();
+        ObjectComposition active = DrewsHelperObjectDefinitions.active(composition);
         return active != null && active.getId() == targetId;
     }
 

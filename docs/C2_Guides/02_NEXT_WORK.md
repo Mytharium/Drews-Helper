@@ -2,15 +2,15 @@
 
 Last updated: 2026-08-14.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-14, pause after D-0189)
+## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0191)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Start with recorder-first item D: object and door-state recording. D-0189
-completed item C, so collision-map data now has an explicit confidence sidecar and transport rows
-now carry `confidence` plus `provenance` columns. There are no pending Myth reruns before item D.
-Do not reopen route windows, broad tree blocking, or held-back object profiles as the next step.
+**WHAT'S NEXT:** Start with item E: route-validation harness. D-0191 implemented the default-OFF
+object and door-state recorder, so live object state can now be captured as evidence before map or
+transport promotion. There are no required Myth reruns until a test target is named. Do not reopen
+route windows, broad tree blocking, or held-back object profiles as the next step.
 
 Session close at 2026-08-14 06:56 UTC:
 
@@ -24,20 +24,26 @@ Session close at 2026-08-14 06:56 UTC:
    `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
 6. D-0189 added confidence/provenance metadata: collision map default `INFERRED`, Skretzo
    transport rows `INHERITED`, and 24 override rows `CONFIRMED`.
+7. D-0191 added `Settings` -> `Log Object/Door State`, default OFF. When enabled, Drew scans the
+   loaded scene every 25 ticks and writes `DREW_OBJECT_STATE v1` evidence rows to
+   `%USERPROFILE%\.runelite\drews-object-states.txt`. Rows keep base id, active impostor id,
+   actions, varbit/varp hooks, live collision flags, and collision-map confidence/provenance.
 
-Next-session build target:
+Object/door-state recorder run procedure:
 
-1. Read the current route recorder, traversal validation, collision-map provenance, and transport
-   graph code before editing.
-2. Add an off-by-default object/door-state recorder that records object state, not object id alone.
-3. Preserve route behavior while recording; this pass should gather evidence, not auto-merge new
-   map or transport rows.
-4. Use the existing confidence ladder when writing captured evidence: live/manual proof can become
-   `CONFIRMED`, upstream/generator-only data stays `INHERITED` or `INFERRED`, and disagreements
-   should surface as `CONTRADICTED` instead of being silently overwritten.
-5. Keep held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed
+1. Leave `Log Object/Door State` OFF during ordinary play unless C2 asks for a capture.
+2. For a capture, enable `Settings` -> `Log Object/Door State`.
+3. Leave `Validate Map Data` OFF unless C2 also asks for `DREW_TRAVERSAL` or full live-flag rows;
+   the object-state recorder captures its own nearby live edge mask.
+4. Stand in or walk through the loaded scene that contains the door, gate, barrier, shortcut,
+   pulled object, or state-changing obstacle.
+5. Open/close/use the object normally, wait a few seconds after each visible state, then send the
+   `DREW_OBJECT_STATE` rows from `%USERPROFILE%\.runelite\drews-object-states.txt`.
+6. Treat these rows as evidence only. They do not auto-merge collision, transport, or object-profile
+   data and they do not change route behavior by themselves.
+7. Keep held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed
    `19143/10` out until they get their own paid/unnamed proof pass.
-6. Keep the known accepted full-test failure visible:
+8. Keep the known accepted full-test failure visible:
    `shapeRankingShadowExposesDistinctSameLengthRandomChainRoute`.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated

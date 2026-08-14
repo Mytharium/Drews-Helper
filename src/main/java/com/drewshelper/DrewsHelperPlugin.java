@@ -3,6 +3,7 @@ package com.drewshelper;
 import com.google.inject.Provides;
 import com.drewshelper.routing.DrewsHelperCollisionMap;
 import com.drewshelper.routing.DrewsHelperMapValidator;
+import com.drewshelper.routing.DrewsHelperObjectStateRecorder;
 import com.drewshelper.routing.DrewsHelperPlayerCapability;
 import com.drewshelper.routing.DrewsHelperRouteBenchmark;
 import com.drewshelper.routing.DrewsHelperRouteSegmentRecorder;
@@ -150,6 +151,8 @@ public class DrewsHelperPlugin extends Plugin
      */
     private static final int MAX_VALIDATION_ROWS_WRITTEN = 500000;
     private static final int VALIDATION_REVALIDATE_TICKS = 100;
+    /** Object/door state is a scene scan. Keep it slower than route diagnostics while enabled. */
+    private static final int OBJECT_STATE_RECORD_TICKS = 25;
 
     /**
      * The scene header {@link #writeLiveFlagsIfNeeded} writes, for example
@@ -243,6 +246,8 @@ public class DrewsHelperPlugin extends Plugin
     private DrewsHelperTraversalRecorder traversalRecorder;
     /** Records clicked walk segments against the route visible at click time. */
     private DrewsHelperRouteSegmentRecorder routeSegmentRecorder;
+    /** Records stateful scene objects/doors without changing route behaviour. */
+    private DrewsHelperObjectStateRecorder objectStateRecorder;
     private int lastStaminaDuration;
     private int lastStaminaDurationTick;
     private int staminaTicksPerUnit;
@@ -285,6 +290,8 @@ public class DrewsHelperPlugin extends Plugin
             new File(RuneLite.RUNELITE_DIR, "drews-traversals.txt"));
         routeSegmentRecorder = new DrewsHelperRouteSegmentRecorder(
             new File(RuneLite.RUNELITE_DIR, "drews-route-segments.txt"));
+        objectStateRecorder = new DrewsHelperObjectStateRecorder(
+            new File(RuneLite.RUNELITE_DIR, "drews-object-states.txt"));
         // Learned once, then reused - no need to re-measure the stamina unit every session.
         staminaTicksPerUnit = parseStaminaUnit(
             configManager.getConfiguration(CONFIG_GROUP, STAMINA_UNIT_KEY));
@@ -320,6 +327,11 @@ public class DrewsHelperPlugin extends Plugin
             routeSegmentRecorder.reset();
             routeSegmentRecorder = null;
         }
+        if (objectStateRecorder != null)
+        {
+            objectStateRecorder.reset();
+            objectStateRecorder = null;
+        }
         removeWaypointMarkers();
         overlayManager.remove(routeTileOverlay);
         overlayManager.remove(routeMinimapOverlay);
@@ -336,6 +348,7 @@ public class DrewsHelperPlugin extends Plugin
         markRouteDirtyOnCooldownMinuteChange();
         validateMapDataIfEnabled();
         recordTraversalIfSettled();
+        recordObjectStatesIfEnabled();
         writePlayerLevelsIfChanged();
         writeRouteLegsIfChanged();
 
@@ -762,6 +775,45 @@ public class DrewsHelperPlugin extends Plugin
     }
 
     /**
+     * Records live object/door state as evidence. This intentionally does not promote anything
+     * into the route graph: state rows are the input for later confirmed/contradicted decisions.
+     */
+    private void recordObjectStatesIfEnabled()
+    {
+        if (objectStateRecorder == null)
+        {
+            return;
+        }
+
+        if (!config().objectStateRecordingEnabled())
+        {
+            objectStateRecorder.reset();
+            return;
+        }
+
+        if (tickCounter % OBJECT_STATE_RECORD_TICKS != 0)
+        {
+            return;
+        }
+
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            objectStateRecorder.reset();
+            return;
+        }
+
+        List<String> lines = objectStateRecorder.recordScene(client, collisionMap, tickCounter);
+        for (String line : lines)
+        {
+            log.info("{}", line);
+        }
+        if (objectStateRecorder.hasWriteFailed())
+        {
+            log.warn("Drew's Helper: could not write object/door state proof rows");
+        }
+    }
+
+    /**
      * Records one row per clicked walk segment, using RuneLite's current local destination as the
      * segment boundary. This is deliberately independent of `Log Benchmark Movement`: the
      * benchmark answers "did this whole route match?", while segment rows answer "which player
@@ -1050,6 +1102,12 @@ public class DrewsHelperPlugin extends Plugin
             && routeSegmentRecorder != null)
         {
             routeSegmentRecorder.reset();
+        }
+
+        if ("objectStateRecordingEnabled".equals(event.getKey())
+            && objectStateRecorder != null)
+        {
+            objectStateRecorder.reset();
         }
     }
 

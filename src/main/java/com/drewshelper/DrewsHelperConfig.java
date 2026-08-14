@@ -307,6 +307,12 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
+    @ConfigItem(keyName = "objectStateRecordingEnabled", name = "Log Object/Door State", description = "Log live object and door state evidence from the loaded scene. Off by default - enable only when collecting map/state proof.", section = waypointSettings, position = 13)
+    default boolean objectStateRecordingEnabled()
+    {
+        return false;
+    }
+
     // ETA accuracy logging stays ON permanently: it is two lines per journey, and its whole
     // purpose is catching a forecast that starts drifting when nobody is watching.
 

@@ -2390,3 +2390,18 @@ D-0190 (2026-08-14) - Wrote the session-close handoff after confidence tiers. NO
   and door-state recorder, and that state must not be collapsed into object-id-only proof.
 
   No route behavior, collision data, transport data, config, or tests changed in this handoff.
+
+D-0191 (2026-08-14) - Added the object and door-state evidence recorder.
+
+  Added `Settings` -> `Log Object/Door State`, default OFF. When enabled, Drew scans the loaded
+  scene every 25 ticks and writes `DREW_OBJECT_STATE v1` rows to
+  `%USERPROFILE%\.runelite\drews-object-states.txt`, mirrored to the plugin log.
+
+  Added `DrewsHelperObjectStateRecorder` for evidence-only scene scanning and
+  `DrewsHelperObjectDefinitions` for guarded active-impostor/action lookup. Rows include base id,
+  active id, state/category, action tokens, varbit/varp hooks, object kind, tile, orientation/config,
+  live collision flags, and collision-map confidence/provenance.
+
+  Updated the route tile overlay to use the shared guarded object-definition helper instead of
+  keeping its own private impostor-resolution copy. Added focused tests for the config switch,
+  object-definition helper, and recorder row/state formatting.
