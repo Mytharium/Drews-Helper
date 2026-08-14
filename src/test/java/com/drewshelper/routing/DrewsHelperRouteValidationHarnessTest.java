@@ -86,6 +86,25 @@ public class DrewsHelperRouteValidationHarnessTest
     }
 
     @Test
+    public void pilotReportSupersedesOldInterruptedIllegalRowsWithFocusedCleanRecapture()
+    {
+        DrewsHelperRouteValidationHarness.PilotReport report =
+            DrewsHelperRouteValidationHarness.analysePilot(
+                null,
+                Arrays.asList(interruptedNonAdjacentIllegalSegmentLine(), focusedCleanRecaptureLine()),
+                Collections.singletonList(pilotObjectLine())
+            );
+
+        assertEquals(2, report.segmentRows);
+        assertEquals(1, report.completedSegments);
+        assertEquals(1, report.interruptedSegments);
+        assertEquals(0, report.nonPromotableIllegalEdges);
+        assertEquals(1, report.supersededNonPromotableIllegalEdges);
+        assertEquals(0, report.completedAdjacentIllegalEdges);
+        assertEquals("NO_COMPLETED_STATIC_DISAGREEMENT", report.verdict());
+    }
+
+    @Test
     public void structuralPathCheckAcceptsLegalStepsAndRejectsBlockedEdges()
     {
         List<WorldPoint> path = Arrays.asList(point(0, 0), point(1, 0), point(2, 0));
@@ -146,6 +165,24 @@ public class DrewsHelperRouteValidationHarnessTest
             + " repeat=1 overrideCandidate=false}"
             + " expectedPath=[(3092,3245,0) -> (3093,3246,0) -> (3093,3247,0)]"
             + " actualPath=[(3092,3245,0) -> (3093,3247,0)]";
+    }
+
+    private static String focusedCleanRecaptureLine()
+    {
+        return "DREW_ROUTE_SEGMENT v1"
+            + " tick=288 reason=destination completed=true"
+            + " start=(3092,3246,0) clickDest=(3131,3252,0) routeTarget=(3131,3252,0)"
+            + " routeStart=exact:idx=1:dist=0 routeDest=exact:idx=44:dist=0"
+            + " expectedPoints=44 actualPoints=42"
+            + " classification=legal-detour-or-object-pressure"
+            + " route={first=match 5=5/5 10=10/10 full=false lenDelta=-2 maxDev=5 turnDelta=-6}"
+            + " divergence={idx=16 predicted=(3107,3252,0) actual=(3108,3251,0)}"
+            + " edgeValidation={from=(3107,3251,0) actual=(3108,3251,0) target=(3131,3252,0)"
+            + " legal=true type=cardinal continuation=found continuationDist=28"
+            + " totalFromFork=29 expectedFromFork=28 delta=1 longer=true expanded=2265"
+            + " repeat=1 overrideCandidate=false}"
+            + " expectedPath=[(3092,3246,0) -> (3093,3247,0) -> (3131,3252,0)]"
+            + " actualPath=[(3092,3246,0) -> (3108,3251,0) -> (3131,3252,0)]";
     }
 
     private static String objectLine()

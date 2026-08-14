@@ -2434,3 +2434,19 @@ D-0193 (2026-08-14) - Added the pilot-region cleanup gate.
   `static-map-disagrees-with-live-step` row in region `48_50` is interrupted and non-adjacent, and
   current object-state rows do not overlap it. Next action is one focused recapture near
   `(3092,3245,0) -> (3131,3252,0)` with `Log Route Segments` and `Log Object/Door State` enabled.
+
+D-0194 (2026-08-14) - Consumed the focused pilot recapture and closed the stale-row gate.
+
+  Myth reran the focused `48_50` recapture with route segments and object/door-state logging
+  enabled. The new row was `completed=true` from near `(3092,3245,0)` toward `(3131,3252,0)`,
+  with `edgeValidation legal=true` and `classification=legal-detour-or-object-pressure`.
+
+  Updated `DrewsHelperRouteValidationHarness` pilot mode so an old interrupted/non-adjacent
+  `legal=false` row is counted as `supersededNonPromotableIllegalEdges` when a later focused clean
+  recapture covers the same click destination from the same or neighboring start tile. This keeps
+  the stale row visible without leaving the pilot gate stuck on `NEEDS_FOCUSED_RECAPTURE`.
+
+  Current pilot report result: `completedAdjacentIllegalEdges=0`, `nonPromotableIllegalEdges=0`,
+  `supersededNonPromotableIllegalEdges=1`, and `verdict=NO_COMPLETED_STATIC_DISAGREEMENT`. No
+  collision map, object profile, transport row, confidence sidecar, or route-ranker behavior was
+  promoted from this recapture.

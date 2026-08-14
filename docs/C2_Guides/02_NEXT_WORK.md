@@ -2,16 +2,16 @@
 
 Last updated: 2026-08-14.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0193)
+## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0194)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Run one focused pilot-region recapture before promoting anything. D-0193 added
-`gradlew pilotRegionCleanup`, confirmed the `rx45-48 / ry49-52` pilot rectangle is present in the
-shipped map, and reclassified the old interrupted/non-adjacent `static-map-disagrees-with-live-step`
-row as non-promotable until it is recaptured cleanly. Do not reopen route windows, broad tree
-blocking, or held-back object profiles as the next step.
+**WHAT'S NEXT:** Move to sailing-aware routing plus `Requirements:` messaging. D-0194 checked Myth's
+focused `48_50` recapture, taught `gradlew pilotRegionCleanup` to mark the old interrupted
+non-adjacent illegal row as superseded by a clean focused recapture, and confirmed there is no
+completed adjacent static-map disagreement to promote from this pilot pass. Do not patch
+collision-map rows, object profiles, or ranker behavior from the old stale row.
 
 Session close at 2026-08-14 06:56 UTC:
 
@@ -37,6 +37,11 @@ Session close at 2026-08-14 06:56 UTC:
 9. D-0193 added `gradlew pilotRegionCleanup`. The pilot report filters current evidence to
    `rx45-48 / ry49-52`, writes `tools/pilot-region-cleanup.txt`, and treats interrupted or
    non-adjacent `legal=false` rows as recapture targets rather than hard promotion gates.
+10. D-0194 consumed Myth's focused recapture near `(3092,3245,0) -> (3131,3252,0)`. The clean row
+   was `completed=true`, `legal=true`, and `classification=legal-detour-or-object-pressure`; the
+   stale interrupted/non-adjacent illegal row is now reported as
+   `supersededNonPromotableIllegalEdges=1`, with `completedAdjacentIllegalEdges=0` and
+   `verdict=NO_COMPLETED_STATIC_DISAGREEMENT`.
 
 Object/door-state recorder run procedure:
 
@@ -72,10 +77,10 @@ Pilot-region cleanup procedure:
 
 1. Run `gradlew pilotRegionCleanup` from the Drew's Helper repo root.
 2. Read `tools/pilot-region-cleanup.txt`.
-3. Current focused recapture target: stand near `(3092,3245,0)`, route/click toward
-   `(3131,3252,0)`, let that one segment complete without re-clicking, and keep the waypoint target
-   on the Lumbridge side route that produced the original row.
-4. Enable `Log Route Segments` and `Log Object/Door State` for that recapture. Leave
+3. If a stale interrupted/non-adjacent illegal row has a later clean focused recapture with the
+   same click destination from the same/near start tile, treat the stale row as superseded instead
+   of blocking the pilot report forever.
+4. Enable `Log Route Segments` and `Log Object/Door State` for any recapture. Leave
    `Validate Map Data` OFF unless C2 asks for raw traversal rows too.
 5. If the recapture produces a completed adjacent `legal=false` row, treat it as a hard collision
    candidate. If it only produces legal route-shape/object-pressure rows, use nearby object-state
@@ -468,11 +473,13 @@ rule, so tree profiles need their own pass.
    worlds; do not record object id alone and call it proof.
 2. **Route-validation harness.** Add the offline structural validations plus the small hand-walked
    check set so candidate maps and route-ranker changes have repeatable gates.
-3. **Pilot region cleanup.** D-0193 built the pilot gate. Drive the `48_50` recapture target cleanly
-   before opening the next expansion slice or promoting a collision/object/ranker change.
-4. **Paid or unnamed object-profile batches.** Hedges, stools, shelves, crates, held-back paid
+3. **Pilot region cleanup.** CLOSED, D-0194. The focused `48_50` recapture did not produce a
+   completed adjacent static-map disagreement, so no pilot collision/object/ranker patch ships.
+4. **Sailing-aware routing plus `Requirements:` messaging.** Revisit the sailing/open-sea marker
+   decision and make route requirements explicit before opening another data-expansion slice.
+5. **Paid or unnamed object-profile batches.** Hedges, stools, shelves, crates, held-back paid
    profiles, and unnamed object rows need their own proof pass and live-route pins.
-5. **Sailing/open-water and snap edge cases.** Revisit after the recorder and harness can tell
+6. **Snap edge cases.** Revisit after the recorder and harness can tell
    reachable dock routing from bad snap or missing water-side reachability.
 
 Do not reopen tonight's rejected paths without new evidence: broad Phase 2, global locType 10/11
@@ -578,8 +585,10 @@ ACTIVE SEQUENCE - in order
                                                  runs the offline structural gate,
                                                  summarizes hand-walked route segments,
                                                  and correlates nearby object/door rows.
-      F. Pilot region to zero known errors       NEXT. The gate. Nothing expands anywhere else
-                                                 until the pilot area passes.
+      F. Pilot region to zero known errors       CLOSED, D-0194. Focused `48_50` recapture
+                                                 superseded the old interrupted/non-adjacent
+                                                 row and found no completed adjacent static-map
+                                                 disagreement to promote.
       G. Route-vs-actual tracking                DEFERRED until the map is fixed - Mytharium's
                                                  call, 2026-08-12. Not a build, a switch:
                                                  `ROUTE_BENCHMARK_ENABLED` at

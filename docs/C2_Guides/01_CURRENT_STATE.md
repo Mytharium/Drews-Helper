@@ -178,15 +178,18 @@ harness. It uses the recorder-first pilot rectangle `rx45-48 / ry49-52` on plane
 those 16 regions are present in the shipped collision map, filters current route/object evidence to
 that area, and writes `tools/pilot-region-cleanup.txt`.
 
-Current pilot interpretation from existing logs:
+Current pilot interpretation after D-0194:
 
 - The shipped D-0188 collision map has all 16 candidate pilot regions present.
 - Current route-segment evidence touches the pilot area, especially region `48_50`.
 - The old `static-map-disagrees-with-live-step` row from `(3092,3245,0)` toward `(3131,3252,0)` is
-  interrupted and reports a non-adjacent actual jump, so it is not a promotable hard gate.
-- Current object/door-state rows overlap the broad pilot rectangle, but the focused `48_50`
-  static-disagreement row still has `nearbyObjects=none`. The next live test should capture object
-  state while rerunning that focused segment.
+  interrupted and reports a non-adjacent actual jump, so it is not a promotable hard gate. Myth's
+  focused recapture from near that start toward the same click destination completed cleanly with
+  `legal=true` and `classification=legal-detour-or-object-pressure`.
+- The pilot report now distinguishes stale non-promotable illegal rows from rows that still need a
+  recapture. Current result: `completedAdjacentIllegalEdges=0`,
+  `nonPromotableIllegalEdges=0`, `supersededNonPromotableIllegalEdges=1`, and
+  `verdict=NO_COMPLETED_STATIC_DISAGREEMENT`.
 
 `pilotRegionCleanup` is evidence-only. It does not rewrite route behavior, collision data,
 transports, object profiles, or confidence sidecars.

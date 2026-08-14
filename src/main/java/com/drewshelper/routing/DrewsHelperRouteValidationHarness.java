@@ -334,6 +334,7 @@ public final class DrewsHelperRouteValidationHarness
         PilotReport report = new PilotReport();
         report.addCandidateRegions(map);
 
+        List<RouteSegmentEvidence> pilotSegments = new ArrayList<>();
         for (String line : safeLines(segmentLines))
         {
             RouteSegmentEvidence segment = RouteSegmentEvidence.parse(line);
@@ -341,6 +342,11 @@ public final class DrewsHelperRouteValidationHarness
             {
                 continue;
             }
+            pilotSegments.add(segment);
+        }
+
+        for (RouteSegmentEvidence segment : pilotSegments)
+        {
             report.segmentRows++;
             report.addTouchedRegions(segment.allPoints());
             increment(report.segmentClassifications, segment.classification);
@@ -362,6 +368,11 @@ public final class DrewsHelperRouteValidationHarness
                 if (segment.isCompletedAdjacentIllegal())
                 {
                     report.completedAdjacentIllegalEdges++;
+                }
+                else if (hasFocusedCleanRecapture(segment, pilotSegments))
+                {
+                    report.supersededNonPromotableIllegalEdges++;
+                    report.addExample("superseded-non-promotable-illegal " + segment.compact());
                 }
                 else
                 {
@@ -391,6 +402,22 @@ public final class DrewsHelperRouteValidationHarness
         }
 
         return report;
+    }
+
+    private static boolean hasFocusedCleanRecapture(
+        RouteSegmentEvidence suspect,
+        List<RouteSegmentEvidence> pilotSegments
+    )
+    {
+        for (RouteSegmentEvidence candidate : pilotSegments)
+        {
+            if (candidate == suspect || !candidate.isFocusedCleanRecaptureOf(suspect))
+            {
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     static Map<String, String> parseFields(String line, String rowPrefix)
@@ -1156,6 +1183,7 @@ public final class DrewsHelperRouteValidationHarness
         int divergentSegments;
         int completedAdjacentIllegalEdges;
         int nonPromotableIllegalEdges;
+        int supersededNonPromotableIllegalEdges;
         int longerLegalDetours;
         int objectRows;
 
@@ -1211,6 +1239,7 @@ public final class DrewsHelperRouteValidationHarness
                 .append(" divergent=").append(divergentSegments)
                 .append(" completedAdjacentIllegalEdges=").append(completedAdjacentIllegalEdges)
                 .append(" nonPromotableIllegalEdges=").append(nonPromotableIllegalEdges)
+                .append(" supersededNonPromotableIllegalEdges=").append(supersededNonPromotableIllegalEdges)
                 .append(" longerLegalDetours=").append(longerLegalDetours)
                 .append('\n');
             out.append("routeClassifications=").append(formatCounts(segmentClassifications)).append('\n');
@@ -1338,6 +1367,14 @@ public final class DrewsHelperRouteValidationHarness
                 && !edgeValidation.contains("type=non-adjacent");
         }
 
+        private boolean isFocusedCleanRecaptureOf(RouteSegmentEvidence suspect)
+        {
+            return completed
+                && !edgeValidation.contains("legal=false")
+                && sameOrNear(start, suspect.start, 1)
+                && samePoint(clickDest, suspect.clickDest);
+        }
+
         private String compact()
         {
             return "classification=" + classification
@@ -1347,6 +1384,16 @@ public final class DrewsHelperRouteValidationHarness
                 + " routeTarget=" + formatPoint(routeTarget)
                 + " edgeValidation=" + edgeValidation;
         }
+    }
+
+    private static boolean samePoint(WorldPoint first, WorldPoint second)
+    {
+        return first != null && first.equals(second);
+    }
+
+    private static boolean sameOrNear(WorldPoint first, WorldPoint second, int maxDistance)
+    {
+        return samePlaneDistance(first, second) <= maxDistance;
     }
 
     private static void addIfPresent(List<WorldPoint> points, WorldPoint point)

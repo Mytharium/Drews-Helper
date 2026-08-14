@@ -21,13 +21,13 @@ example11=SHAPE_DIFF (3304,3480,0)->(3272,3232,0) lenDelta=0 turnDelta=34 client
 example12=SHAPE_DIFF (3312,3216,0)->(3288,3464,0) lenDelta=0 turnDelta=30 client=[(3312,3216,0) -> (3312,3217,0) -> (3312,3218,0) -> (3312,3219,0) -> (3312,3220,0) -> (3312,3221,0) -> (3312,3222,0) -> (3311,3223,0) -> (3311,3224,0) -> (3311,3225,0) -> ... total=249] shape=[(3312,3216,0) -> (3312,3217,0) -> (3312,3218,0) -> (3312,3219,0) -> (3312,3220,0) -> (3312,3221,0) -> (3312,3222,0) -> (3311,3223,0) -> (3311,3224,0) -> (3311,3225,0) -> ... total=249]
 
 HAND-WALKED ROUTE SEGMENTS
-rows=61 completed=28 interrupted=33 matches=5 divergent=56 illegalObservedEdges=0 nonPromotableIllegalObservedEdges=1 longerLegalDetours=7
-classificationCounts={edge-validation-unavailable=3 expected-start-off-route=3 legal-detour-or-object-pressure=7 legal-route-ranker-or-click-shape=14 match=5 route-shape-mismatch=28 static-map-disagrees-with-live-step=1}
+rows=62 completed=29 interrupted=33 matches=5 divergent=57 illegalObservedEdges=0 nonPromotableIllegalObservedEdges=1 longerLegalDetours=8
+classificationCounts={edge-validation-unavailable=3 expected-start-off-route=3 legal-detour-or-object-pressure=8 legal-route-ranker-or-click-shape=14 match=5 route-shape-mismatch=28 static-map-disagrees-with-live-step=1}
 
 OBJECT AND DOOR STATE EVIDENCE
-rows=99 categories={door=20 object=12 stateful=55 traversal=12}
-states={CLOSED_OPENABLE=46 IMPOSTOR_STATE=24 INTERACTIVE=12 OPEN_CLOSEABLE=3 STATEFUL_ACTION=2 TRAVERSAL_ACTION=12}
-mapConfidence={CONTRADICTED=99}
+rows=369 categories={door=83 object=43 stateful=184 traversal=59}
+states={CLOSED_OPENABLE=143 IMPOSTOR_STATE=96 INTERACTIVE=47 OPEN_CLOSEABLE=8 STATEFUL_ACTION=16 TRAVERSAL_ACTION=59}
+mapConfidence={CONTRADICTED=198 INFERRED=171}
 
 CORRELATED ROUTE/OBJECT EXAMPLES
 example1=classification=static-map-disagrees-with-live-step start=(3092,3245,0) clickDest=(3131,3252,0) routeTarget=(3222,3218,0) divergenceIdx=1 predicted=(3093,3246,0) actual=(3093,3247,0) nearbyObjects=none
@@ -40,7 +40,7 @@ example7=classification=legal-route-ranker-or-click-shape start=(3201,3218,0) cl
 example8=classification=route-shape-mismatch start=(3207,3219,0) clickDest=(3212,3221,0) routeTarget=(3222,3218,0) divergenceIdx=0 predicted=(3207,3218,0) actual=(3207,3219,0) nearbyObjects=none
 example9=classification=legal-route-ranker-or-click-shape start=(3092,3246,0) clickDest=(3083,3282,0) routeTarget=(3109,3352,0) divergenceIdx=2 predicted=(3091,3248,0) actual=(3091,3247,0) nearbyObjects=none
 example10=classification=route-shape-mismatch start=(3088,3248,0) clickDest=(3082,3255,0) routeTarget=(3109,3352,0) divergenceIdx=0 predicted=(3090,3249,0) actual=(3088,3248,0) nearbyObjects=none
-example11=classification=legal-detour-or-object-pressure start=(3086,3250,0) clickDest=(3083,3282,0) routeTarget=(3109,3352,0) divergenceIdx=2 predicted=(3085,3252,0) actual=(3086,3252,0) nearbyObjects=none
+example11=classification=legal-detour-or-object-pressure start=(3086,3250,0) clickDest=(3083,3282,0) routeTarget=(3109,3352,0) divergenceIdx=2 predicted=(3085,3252,0) actual=(3086,3252,0) nearbyObjects=[tile=(3087,3251,0) category=stateful state=IMPOSTOR_STATE name=Saradomin_staff objectId=14908 activeId=7102 liveEdges=10 mapConfidence=INFERRED; tile=(3087,3251,0) category=stateful state=IMPOSTOR_STATE name=Saradomin_staff objectId=14908 activeId=7102 liveEdges=10 mapConfidence=INFERRED]
 example12=classification=route-shape-mismatch start=(3083,3266,0) clickDest=(3082,3280,0) routeTarget=(3109,3352,0) divergenceIdx=0 predicted=(3082,3265,0) actual=(3083,3266,0) nearbyObjects=none
 
 HARNESS DECISION

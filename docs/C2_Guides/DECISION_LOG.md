@@ -2754,3 +2754,24 @@ D-0193 (2026-08-14) - Pilot cleanup hard gates require completed adjacent eviden
 
   Cross-reference: D-0136 pilot-region rule, D-0185 interrupted segment handling, D-0191
   object/door-state rows, and D-0192 route-validation harness.
+
+D-0194 (2026-08-14) - Focused clean recaptures supersede stale interrupted pilot rows.
+
+  RULE 1 - DO NOT LET STALE NON-PROMOTABLE ROWS BLOCK FOREVER. If an interrupted or non-adjacent
+  `legal=false` pilot row later has a focused clean recapture from the same or neighboring start
+  tile to the same clicked destination, keep the stale row visible but count it as
+  `supersededNonPromotableIllegalEdges`, not an unresolved recapture blocker.
+
+  RULE 2 - CLEAN LEGAL RECAPTURE MEANS NO STATIC-MAP PROMOTION. Myth's focused `48_50` recapture
+  near `(3092,3245,0) -> (3131,3252,0)` produced a completed row with `legal=true` and
+  `classification=legal-detour-or-object-pressure`. That disproves the old row as a collision-map
+  promotion gate. It does not justify a collision override, object-profile addition, or route-ranker
+  patch by itself.
+
+  RULE 3 - PILOT OUTPUT MUST PRESERVE BOTH FACTS. The report should show the old row as
+  superseded, while still reporting `completedAdjacentIllegalEdges=0` and
+  `verdict=NO_COMPLETED_STATIC_DISAGREEMENT`. This keeps historical evidence auditable without
+  forcing Myth to clear the log file manually.
+
+  Cross-reference: D-0193 pilot hard gates, D-0185 interrupted segment handling, and D-0192
+  route-validation harness.
