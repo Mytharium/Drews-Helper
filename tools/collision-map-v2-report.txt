@@ -6,7 +6,7 @@ report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\
 region selector: all
 object profile blocking: enabled
 object profile keys: 10790/10,10791/10,10820/10,1088/10,1088/11,1104/10,1118/10,11190/10,11192/10,11193/10,1122/10,1123/10,11510/10,11911/10,1276/10,1276/11,1278/10,1278/11,1282/10,1283/10,1329/10,1369/10,1391/10,1392/10,1394/10,1405/10,1406/10,18895/10,595/10,596/10,879/10
-object profile focus keys: 10790/10,10791/10,10793/10,10820/10,11510/10,1276/10,1276/11,1278/10,1278/11,1282/10,1283/10,1289/10,12962/10,14872/10,19143/10,34803/10,34804/10,5614/10,596/10,7169/10,9661/10
+object profile focus keys: 10820/10,11510/10,1276/10,1276/11,1278/10,1278/11,1282/10,1283/10,596/10
 merge source: none
 phase3 roof blocking (locTypes 12,13,14,16,17,18,19,21): enabled
 archive format: 2 runtime passability flags; door flags are report-only
@@ -382,20 +382,8 @@ dangerous-direction pass:
       1278 11 Tree 2x2 true none 76 0.000000 (0.000%) (0/76) 0.000x 0 no-cost 0
       1282 10 Dead_tree 2x2 true none 1403 0.000000 (0.000%) (0/1403) 0.000x 0 no-cost 0
       1283 10 Dead_tree 2x2 true none 406 0.000000 (0.000%) (0/406) 0.000x 0 no-cost 0
-      1289 10 Dead_tree 1x1 true none 1093 0.542543 (54.254%) (593/1093) 19.288x 270 2.196x 0
-      5614 10 Chair 1x1 false none 26 0.692308 (69.231%) (18/26) 24.613x 6 3.000x 0
-      7169 10 Table 1x1 false none 64 0.421875 (42.188%) (27/64) 14.998x 20 1.350x 0
-      9661 10 Tree_stump 1x1 false none 280 0.503571 (50.357%) (141/280) 17.903x 107 1.318x 0
-      10790 10 Boulder 2x2 false none 312 0.000000 (0.000%) (0/312) 0.000x 0 no-cost 0
-      10791 10 Boulder 2x2 false none 199 0.000000 (0.000%) (0/199) 0.000x 0 no-cost 0
-      10793 10 missing none none none 0 0.000000 (0.000%) (0/0) 0.000x 0 no-cost 0
       10820 10 Oak_tree 3x3 true none 1253 0.000000 (0.000%) (0/1253) 0.000x 0 no-cost 0
       11510 10 Dead_tree 3x3 true none 40 0.000000 (0.000%) (0/40) 0.000x 0 no-cost 0
-      12962 10 Table 2x1 false none 12 0.583333 (58.333%) (7/12) 20.738x 2 3.500x 0
-      14872 10 Stool 1x1 false none 8 0.500000 (50.000%) (4/8) 17.776x 4 1.000x 0
-      19143 10 missing none none none 0 0.000000 (0.000%) (0/0) 0.000x 0 no-cost 0
-      34803 10 Rubble 1x1 true none 56 0.642857 (64.286%) (36/56) 22.855x 16 2.250x 0
-      34804 10 Rubble 1x1 true none 83 0.650602 (65.060%) (54/83) 23.130x 20 2.700x 0
     overblock control rule:
       Missing ignored objects can only make this builder say PASSABLE where the client says BLOCKED; they cannot cause OVERBLOCK because no edge is written for them.
       control PASS if overblockRate(ADJ_SCENERY) <= overblockRate(NOT_ADJACENT) * 1.5.

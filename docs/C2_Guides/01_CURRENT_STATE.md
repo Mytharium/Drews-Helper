@@ -92,6 +92,29 @@ remains SHA256 `FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC
 profiles still need a live candidate-map rerun against the pinned Falador routes before they can
 ship, because D-0147 already proved a no-cost tree row can still move a live route fork.
 
+## 2026-08-14 Gated Candidate Map
+
+D-0187 built the candidate collision map at `build/collision-map-v2.zip` with only the supported
+D-0186 object-profile additions: `596/10`, `10820/10`, `1282/10`, `1283/10`, `11510/10`,
+`1276/10`, `1276/11`, `1278/10`, and `1278/11`.
+
+The candidate artifact is SHA256
+`8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`, contains `2936` entries, and
+round-tripped cleanly. The shipped runtime map was not changed and remains SHA256
+`FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC`.
+
+Gate result:
+
+- `DANGEROUS_UNEXPLAINED`: `139035 -> 84729`, drop `54306`.
+- Route-aware `OVERBLOCK`: `8264 -> 8886`, rise `622`.
+- Net criterion: passed, `54306 > 622`.
+- Held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and `19143/10` were not
+  present in the candidate object-profile key line.
+
+This is still test-build only. Before promotion, Myth must live-rerun Falador primary, Falador
+reverse, Falador east-pressure, C1, C2, and C3 against the candidate map and confirm the route pins
+stay stable.
+
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.

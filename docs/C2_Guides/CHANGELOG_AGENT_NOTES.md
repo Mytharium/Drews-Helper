@@ -2315,3 +2315,28 @@ D-0186 (2026-08-14) - Ran Batch C object-profile proof and added candidate-map t
   unnamed `19143/10`. Before shipping the supported tree-family set, create a gated test build and
   live-rerun Falador primary/reverse/east-pressure plus the C1/C2/C3 pins, because D-0147 proved
   no-cost tree rows can still move a live route fork.
+
+D-0187 (2026-08-14) - Built the gated D-0186 candidate collision map. NO RUNTIME PROMOTION.
+
+  Ran `buildCollisionMapV2` against the frozen live flags snapshot with only the supported D-0186
+  additions supplied through command-line object-profile overrides: `596/10`, `10820/10`,
+  `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and `1278/11`.
+
+  The candidate artifact is `build/collision-map-v2.zip`, SHA256
+  `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`, with `2936` zip entries.
+  `src/main/resources/collision-map.zip` was not changed and remains SHA256
+  `FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC`.
+
+  The report confirmed the held-back keys were not in the object-profile key line:
+  `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and `19143/10`.
+
+  Gate result stayed green: `ROUND TRIP OK 2936 regions`, outside built regions `0`,
+  `DANGEROUS_UNEXPLAINED` dropped `139035 -> 84729` (`54306`), route-aware `OVERBLOCK` rose
+  `8264 -> 8886` (`622`), and the net criterion passed (`54306 > 622`). The proof-control line
+  remains below the no-object baseline (`70.600% -> 64.429%`), so the live route pins remain the
+  deciding ship gate.
+
+  Next live validation is Falador primary `2942,3243,0 -> 2951,3208,0`, Falador reverse
+  `2951,3208,0 -> 2942,3243,0`, Falador east-pressure `2946,3239,0 -> 2951,3208,0`, C1
+  `3222,3218,0 -> 3092,3245,0`, C2 `3092,3245,0 -> 3109,3352,0`, and C3
+  `3253,3420,0 -> 3307,3491,0`.

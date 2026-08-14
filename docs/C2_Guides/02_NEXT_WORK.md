@@ -7,12 +7,12 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Do not promote the D-0186 tree/dead-tree/table trial map yet. The object-profile
-proof pass says the next behavior work should be a gated candidate-map pass: promote only
-`596/10`, `10820/10`, `1282/10`, `1283/10`, `11510/10`, `1276/10`, `1276/11`, `1278/10`, and
-`1278/11` into a test build, rerun the pinned Falador southeast routes plus the C1/C2/C3 segment
-pins, and ship only the profiles that keep the live route pins stable. Keep `1289/10`,
-`9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10` out for now.
+**WHAT'S NEXT:** D-0187 built the gated candidate map at `build/collision-map-v2.zip` with only
+the D-0186 supported profile additions. The map gates passed again, but this is still test-build
+only. Do not promote `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip`
+until Myth live-reruns Falador primary/reverse/east-pressure plus C1/C2/C3 and those routes stay
+stable. Keep `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10`
+out for now.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -273,6 +273,54 @@ The current resource remains the D-0147 map. D-0147 still controls tree-family s
 tree row is not enough by itself because an earlier tree trial moved a pinned Falador live-route
 fork. The next implementation pass may create a gated test map from the supported set, but it must
 be live-rerun on Falador primary/reverse/east-pressure plus C1/C2/C3 before shipping.
+
+D-0187 gated candidate-map result:
+
+```text
+output: build/collision-map-v2.zip
+zip sha256: 8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3
+zip entries: 2936
+runtime map still unchanged: src/main/resources/collision-map.zip
+runtime sha256: FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC
+```
+
+The D-0187 build used only these additional profile keys:
+
+```text
+596/10, 10820/10, 1282/10, 1283/10, 11510/10, 1276/10, 1276/11, 1278/10, 1278/11
+```
+
+Held-back keys were not present in the object-profile key line:
+
+```text
+1289/10, 9661/10, 7169/10, 34803/10, 34804/10, 19143/10
+```
+
+Gate result:
+
+```text
+ROUND TRIP OK 2936 regions
+outside built regions: 0
+DANGEROUS_UNEXPLAINED: baseline 139035 -> current 84729, drop 54306
+route-aware OVERBLOCK: baseline 8264 -> current 8886, rise 622
+net criterion: OK (54306 > 622)
+object profile placements blocked: 17799
+```
+
+Proof control remains below the no-object baseline (`70.600% -> 64.429%`), which is expected for
+real blockers and is not the ship gate by itself. The live route pins are still mandatory before
+runtime promotion.
+
+Live rerun list for the candidate map:
+
+```text
+Falador primary:        2942,3243,0 -> 2951,3208,0
+Falador reverse:        2951,3208,0 -> 2942,3243,0
+Falador east pressure:  2946,3239,0 -> 2951,3208,0
+C1 Lumbridge/Draynor:   3222,3218,0 -> 3092,3245,0
+C2 Draynor Manor:       3092,3245,0 -> 3109,3352,0
+C3 Varrock/Sawmill:     3253,3420,0 -> 3307,3491,0
+```
 
 Commits from the 2026-08-13 Mytharium route/collision session, in order:
 
