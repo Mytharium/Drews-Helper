@@ -2460,3 +2460,70 @@ D-0147 (2026-08-13) - Expand object-profile blockers with no-cost scenery profil
   Cross-reference: extends D-0142 and follows D-0146. Report snapshot:
   tools/collision-map-v2-report.txt. Shipped map SHA256:
   FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC.
+
+
+D-0175 (2026-08-13) - Restore movement benchmark as the one-click route repro recorder
+
+  RULE 1 - SAME KEY BECAUSE IT IS THE SAME QUESTION. `routeBenchmarkEnabled` means "record the
+  displayed waypoint route against the player's actual walked route." That meaning has not changed,
+  so reusing the old key does not violate D-0089. It only revives the same diagnostic Mytharium
+  asked to use before reproducing a route-display bug.
+
+  RULE 2 - FULL TILE TRACE, NOT SCREENSHOT FORENSICS. The start row records the complete proposed
+  route as `expectedPath=[...]`. The completed/limit row records both `expectedPath=[...]` and
+  `actualPath=[...]`. Prefix-only traces remain for in-progress rows, but the row that matters for
+  a completed repro carries every tile.
+
+  RULE 3 - ETA STAYS UNCONDITIONAL. This supersedes only the movement-benchmark half of D-0090.
+  ETA accuracy logging remains always on and still has no config control.
+
+  Cross-reference: D-0090 retired the movement UI after the old route-shape phase; D-0174
+  reactivates it because the Falador southeast display-fidelity repro needs route-vs-actual ground
+  truth again.
+
+
+D-0177 (2026-08-14) - Falador southeast route-shape fix stays exact and target-aware
+
+  RULE 1 - USE THE COMPLETED WALKED TRACE, NOT SCREENSHOT GUESSING. The accepted evidence is
+  Myth's completed `DREW_ROUTE_BENCH reason=target` row for `2942,3243,0 -> 2951,3208,0`. It
+  showed a 36-point displayed path versus a 39-point actual path, with the first repeatable fork
+  from `(2942,3236,0)` to displayed `(2942,3235,0)` versus actual `(2943,3235,0)`.
+
+  RULE 2 - DO NOT TURN THIS INTO BROAD TREE BLOCKING. The tree/tree-stump object-profile pass
+  remains separate because D-0147 proved tree profiles can move a pinned live-route fork. This
+  decision does not add tree profiles, global locType blocking, global named-solid blocking, or
+  terrain-bit rules.
+
+  RULE 3 - DO NOT PROMOTE `shapeShadow` GLOBALLY FROM ONE ROUTE. `shapeShadow` looked better on
+  this sample, but D-0051/D-0057 keep it diagnostic-only until broader route-shape evidence says
+  otherwise.
+
+  RULE 4 - PATCH AS A TARGET-AWARE LOCAL ROUTE WINDOW. The route engine may force Myth's completed
+  walked tile sequence only while solving toward target `(2951,3208,0)`, and only when each next
+  tile is still a legal one-tile walk in the current collision map. That keeps the correction in
+  the existing D-0044 local-override family instead of mutating map data globally.
+
+  Cross-reference: D-0044 local walking overrides, D-0051/D-0057 shape diagnostics, D-0147
+  tree-profile holdback, D-0175 benchmark evidence contract, D-0178 implementation note.
+
+
+D-0180 (2026-08-14) - Falador southeast creative route-shape controls stay scoped to observed paths
+
+  RULE 1 - STAGING WALKS ARE USABLE BUT NOISY. If `Log Benchmark Movement` is left enabled while
+  walking to each test start tile, the captured row may contain staging or multi-waypoint context.
+  Use segment diagnostics and the full `expectedPath`/`actualPath` to identify the intended route,
+  but do not force obvious staging noise such as a one-tile east/back wobble at the starting tile.
+
+  RULE 2 - CLEAN PASSES DO NOT NEED NEW PATCHES. Myth's fork isolate route
+  `2942,3236,0 -> 2951,3208,0` matched the existing forced local window and should remain covered
+  by the D-0177/D-0178 target-aware route. No separate override is needed just because it was part
+  of the creative-control list.
+
+  RULE 3 - REVERSE AND EAST PRESSURE ARE STILL LOCAL ROUTE WINDOWS, NOT MAP DATA. The reverse
+  target `(2942,3243,0)` and east-pressure entry from `(2946,3239,0)` are patched as exact,
+  target-aware local route windows from Myth's observed benchmark traces. They do not add
+  tree/tree-stump object profiles, global named-solid blocking, broad tree blocking, or
+  `shapeShadow` promotion.
+
+  Cross-reference: D-0175 benchmark evidence contract, D-0177 exact target-aware route-shape
+  rule, D-0180 implementation note in CHANGELOG_AGENT_NOTES.

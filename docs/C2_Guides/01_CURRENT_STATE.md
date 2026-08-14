@@ -182,7 +182,7 @@ Myth explicitly asked to rebuild route guidance from placed waypoints, then add 
 - Empty waypoint slots are skipped, preserving ordered route intent without forcing all five slots to exist.
 - The solver defaults to A* over Runemoro's `collision-map.zip` walking collision data plus Drew's `drewshelper-transports.tsv` transport graph.
 - `Routing Options` no longer exposes a route-solver selector. The temporary BFS test mode was removed after Myth's live samples showed it was slower and did not match the client route shape better than the Drew A* solver.
-- `Benchmark Movement` remains default OFF as an opt-in overlay-vs-client diagnostic. It logs `DREW_ROUTE_BENCH` movement comparisons while the player walks the displayed route, but it no longer solves or logs an alternate BFS path.
+- `Settings` -> `Log Benchmark Movement` remains default OFF as an opt-in overlay-vs-client diagnostic. It logs `DREW_ROUTE_BENCH` movement comparisons while the player walks the displayed route, including the complete displayed `expectedPath=[...]` at route start and the completed `actualPath=[...]` after the walk. It no longer solves or logs an alternate BFS path.
 - Benchmark reports compare first-step direction, first 5 and 10 movement ticks, full tile-sequence equality, path-length delta, max lateral deviation, turn-count delta, solve time, and expanded-node count. They also log coordinate traces for route start, target, first 10 expected path tiles, first 10 actual movement tiles, first divergence index, predicted/actual windows around the divergence, legal candidate moves from the fork tile with predicted/actual choices marked, and `edgeValidation` for the observed live edge. Use those logs to identify start/target/click-tile alignment, movement-order tie behavior, and collision-map/live-client disagreement.
 - Baseline click/pay/default transport edges are always available in the route graph. This includes selected maintained Shortest Path rows for click objects/gates/gangplanks, ordinary ships/ferries/boats, charter ships, magic carpets, and minecarts after filtering out rows with explicit skill/quest requirements.
 - Wilderness levers and Wilderness obelisks are the only transport family in this pass behind a visible setting: `Other Transportation` -> `Use: Wilderness Transports`, default OFF.
@@ -201,6 +201,7 @@ Known first-pass limits:
 - There is no partial path display; if an exact segment cannot be found, the overlay reports no route for that segment.
 - The route is committed after calculation. Exact on-route player movement trims every leading route tile before the player's current tile, so walk and run speed both leave the current tile highlighted. Nearby movement variance within 10 tiles of the committed route preserves the route without recalculating. A new background route is submitted only when waypoints/config change or the player is more than 10 tiles away from the committed route.
 - Myth's repeated clean Path 1 / Path 3 samples proved target-specific live-client branches that Drew's static collision graph or equal-length route ranking did not choose. The route engine now has scoped local walking overrides for those target paths: Path 1 toward `(2932,3214,0)` prefers the observed southwest branch through `(2939,3222,0) -> (2938,3221,0)` and the final equal-length tail `(2935,3218,0) -> (2934,3217,0)`; Path 3 toward `(2970,3229,0)` prefers the observed northeast branch through `(2967,3231,0) -> (2968,3230,0)`. These are target-aware route-shape overrides only; they do not replace the collision map globally.
+- D-0177/D-0178 add the same kind of evidence-scoped correction for the Falador southeast tree-line target `(2951,3208,0)`, but as a forced local route window from Myth's completed benchmark trace. D-0180 extends that window to the east-pressure start `(2946,3239,0)` and adds the reverse target `(2942,3243,0)` from Myth's creative-control pass. The solver still checks that each forced step is legal in the collision map; this is not broad tree blocking, not `shapeShadow` promotion, and not a global ranker change.
 
 ### 2026-08-07 21:05 UTC - Path 1 final-tail override added
 - Myth reran Path 1 to (2932,3214,0) after D-0045.
@@ -210,7 +211,7 @@ Known first-pass limits:
 
 ### 2026-08-07 21:28 UTC - Benchmark capture lifecycle and shape diagnostics
 - Myth confirmed Path 1 toward (2932,3214,0) and Path 3 toward (2970,3229,0) now match the live client exactly with no divergence.
-- `Benchmark Movement` capture now starts in a pending-start state. It waits until the player reaches the displayed route start, or one of the first few route tiles, before recording actual movement.
+- `Log Benchmark Movement` capture starts in a pending-start state. It waits until the player reaches the displayed route start, or one of the first few route tiles, before recording actual movement.
 - Off-route pre-start movement is discarded as `reason=stale-start ignored={...}` instead of being reported as a false `idx=0` divergence.
 - `DREW_ROUTE_BENCH` reports now include `shape={...}` diagnostics for completed target samples. The shape diagnostic compares expected route shape against actual client movement using line-error, diagonal/cardinal step distribution, turn count, and a diagnostic-only `winner`.
 - The shape diagnostic is not used for route selection yet. The current route selection still uses A* plus client-style final ranking and the target-aware local overrides from D-0044 through D-0046.
@@ -239,6 +240,22 @@ Known first-pass limits:
 - `DREW_ROUTE_BENCH` divergence strings now include `classification=<...>` and `benign=<...>`. `classification=sameTimePermutation benign=true` means the client took a different local tile order but rejoined the displayed route at the same movement index.
 - `shadow={...}` and `shapeShadow={...}` now include `fit={...}` and use merge-aware route-fit scoring for their `winner`. Exact matches still win, no-merge drift still loses hard, and same-time permutations are scored as low-penalty diagnostics instead of hard route failures.
 - This remains diagnostic-only. The visible route, local Path 1 / Path 3 overrides, `shapeShadow` route solving, waypoint ordering, and benchmark capture lifecycle are unchanged.
+
+### 2026-08-14 00:00 UTC - Falador southeast benchmark trace patched into visible route
+- Myth's completed `DREW_ROUTE_BENCH reason=target` sample for `2942,3243,0 -> 2951,3208,0` showed the visible route took 36 points while the live client walked 39 points and stayed east of the drawn line until merging back near `(2952,3209,0)`.
+- The route engine now has a forced target-aware local route window for target `(2951,3208,0)` using that completed walked tile sequence. This makes the visible route follow the observed client path through the tree-line pocket instead of selecting the shorter-looking equal-legal route shape.
+- The correction remains narrow: it applies only when solving toward `(2951,3208,0)`, requires each step to remain a legal one-tile walking move, and leaves the old control route toward `(2962,3214,0)` unchanged.
+
+### 2026-08-14 00:55 UTC - Falador southeast live rerun validated
+- Myth reran `2942,3243,0 -> 2951,3208,0` after the forced local route window patch. The completed `DREW_ROUTE_BENCH reason=target` row showed displayed `expectedPath` and walked `actualPath` as the same 39-point route.
+- The live result was exact: `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`, and `divergence={none}`. The corrected visible route includes the client-observed fork through `(2943,3235,0)` and no longer cuts tight through the tree-line pocket on this pinned route.
+- Next validation, if Myth wants to keep the game up, is creative route-shape control data with in-game run OFF: reverse `2951,3208,0 -> 2942,3243,0`, fork isolate `2942,3236,0 -> 2951,3208,0`, and east pressure `2946,3239,0 -> 2951,3208,0`. Next coding work after that is the separate tree/tree-stump object-profile proof pass.
+
+### 2026-08-14 01:25 UTC - Falador southeast creative controls patched
+- Myth's creative-control pass showed fork isolate already clean, but reverse `2951,3208,0 -> 2942,3243,0` still diverged and east pressure `2946,3239,0 -> 2951,3208,0` still tried to cut through the tree-line pocket.
+- The reverse benchmark row included one manual east/back wobble at the start while `Log Benchmark Movement` was left on. That wobble was treated as staging noise, not a route to force. The patched reverse route uses the clean walked sequence after returning to `(2951,3208,0)`.
+- The east-pressure row was a multi-waypoint loop because logging stayed enabled while walking to the start tile; the patched target-aware route uses the `2946,3239,0 -> 2951,3208,0` segment from that row.
+- Next live validation should rerun only reverse and east pressure with `Log Benchmark Movement` OFF while staging to the start tile and ON only for the measured route.
 
 ## 2026-08-09 Basic Transportation and Travel ETA
 

@@ -56,6 +56,16 @@ public class DrewsHelperRouteBenchmarkTest
             )
         );
         assertEquals("[]", DrewsHelperRouteBenchmark.formatPathPrefix(null));
+        assertEquals(
+            "[(0,0,0) -> (1,0,0) -> (2,0,0)]",
+            DrewsHelperRouteBenchmark.formatPath(
+                Arrays.asList(
+                    new WorldPoint(0, 0, 0),
+                    new WorldPoint(1, 0, 0),
+                    new WorldPoint(2, 0, 0)
+                )
+            )
+        );
     }
 
     @Test

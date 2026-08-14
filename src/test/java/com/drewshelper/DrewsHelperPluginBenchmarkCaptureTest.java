@@ -219,6 +219,34 @@ public class DrewsHelperPluginBenchmarkCaptureTest
         assertTrue(finalUpdate.logLine().contains("actualRank="));
     }
 
+    @Test
+    public void activeDestinationMatchSurvivesSameJourneyRecalculation() throws Exception
+    {
+        WorldPoint firstWaypoint = point(5, 0);
+        WorldPoint finalWaypoint = point(8, 0);
+        DrewsHelperPlugin.RouteBenchmarkCapture capture = new DrewsHelperPlugin.RouteBenchmarkCapture(
+            Arrays.asList(
+                point(0, 0),
+                point(1, 0),
+                firstWaypoint,
+                point(6, 0),
+                finalWaypoint
+            ),
+            Arrays.asList(firstWaypoint, finalWaypoint),
+            new DrewsHelperWalkingRouteEngine(DrewsHelperCollisionMap.loadDefault()),
+            new HashMap<>()
+        );
+
+        assertFalse(capture.hasStarted());
+        assertNull(capture.record(point(0, 0)));
+
+        assertTrue(capture.hasStarted());
+        assertTrue(capture.matchesActiveDestinations(Arrays.asList(firstWaypoint, finalWaypoint)));
+        assertTrue(capture.matchesActiveDestinations(Arrays.asList(finalWaypoint)));
+        assertFalse(capture.matchesActiveDestinations(Arrays.asList(point(9, 0))));
+        assertFalse(capture.matchesActiveDestinations(Arrays.asList()));
+    }
+
     private static WorldPoint point(int x, int y)
     {
         return new WorldPoint(x, y, 0);

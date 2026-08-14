@@ -295,12 +295,14 @@ public interface DrewsHelperConfig extends Config
         return "";
     }
 
-    // Both logging controls are gone. The movement benchmark did its job - it validated the
-    // overlay against the client's own walking - and is now permanently off behind
-    // ROUTE_BENCHMARK_ENABLED in the plugin. ETA accuracy logging stays ON permanently but
-    // needs no control: it is two lines per journey, and its whole purpose is catching a
-    // forecast that starts drifting when nobody is watching. A control it could be switched
-    // off by is a control that would leave it off.
+    @ConfigItem(keyName = "routeBenchmarkEnabled", name = "Log Benchmark Movement", description = "Log the complete displayed route and the actual tiles walked while following it. Off by default - enable only while reproducing route-shape bugs.", section = waypointSettings, position = 11)
+    default boolean routeBenchmarkEnabled()
+    {
+        return false;
+    }
+
+    // ETA accuracy logging stays ON permanently: it is two lines per journey, and its whole
+    // purpose is catching a forecast that starts drifting when nobody is watching.
 
     default boolean hostedPohTeleports()
     {

@@ -94,13 +94,6 @@ public class DrewsHelperPlugin extends Plugin
     /** How far off the drawn path you may stray before the route is re-solved from where you are. */
     private static final int ROUTE_RECALCULATE_OFF_PATH_DISTANCE = 2;
     /**
-     * The movement benchmark is retired - it existed to prove the overlay's step model matched
-     * the client's, which it now has. The machinery is kept rather than deleted so it can be
-     * turned back on in one line if the walking model is ever changed again.
-     */
-    private static final boolean ROUTE_BENCHMARK_ENABLED = false;
-
-    /**
      * How far the player may be from a benchmark's expected start before that capture is
      * discarded as stale. Deliberately separate from the re-solve distance above - they were one
      * constant, but they answer different questions and tightening the re-solve should not make
@@ -335,11 +328,11 @@ public class DrewsHelperPlugin extends Plugin
         writePlayerLevelsIfChanged();
         writeRouteLegsIfChanged();
 
-        // The ETA clock runs first and unconditionally. Reaching the final waypoint clears it,
-        // which dirties the route and returns early below - so anything downstream of that
-        // never sees the arrival tick, and the re-solve then discards the capture. That is
-        // exactly why every journey logged "eta predicted" and never "eta result".
+        // The diagnostic clocks run before waypoint clearing and route re-solves. Arrival clears
+        // the final waypoint later in this tick, and off-path movement may immediately submit a
+        // replacement route, so the original journey capture must see this position first.
         updateEtaDebugCapture();
+        recordRouteBenchmarkPosition();
 
         // Runs before the dirty check so arriving at a waypoint takes effect immediately,
         // rather than waiting for whatever solve is already queued.
@@ -353,7 +346,6 @@ public class DrewsHelperPlugin extends Plugin
 
         if (routeSnapshot.getStatus() == DrewsHelperRouteStatus.READY)
         {
-            recordRouteBenchmarkPosition();
             advanceCommittedRouteIfNeeded();
         }
 
@@ -991,6 +983,7 @@ public class DrewsHelperPlugin extends Plugin
         }
 
         if ("pathingReplacementEnabled".equals(event.getKey())
+            || "routeBenchmarkEnabled".equals(event.getKey())
             || isTransportConfigKey(event.getKey()))
         {
             markRouteDirty();
@@ -1240,7 +1233,7 @@ public class DrewsHelperPlugin extends Plugin
         DrewsHelperTransportPolicy transportPolicy = transportPolicy();
         // onGameTick runs on the client thread, which is the only place account state may be read.
         DrewsHelperPlayerCapability capability = buildCapability();
-        boolean benchmarkMovement = ROUTE_BENCHMARK_ENABLED;
+        boolean benchmarkMovement = config().routeBenchmarkEnabled();
         String signature = routeSignature(start, destinations, transportPolicy, capability, benchmarkMovement);
         if (!routeDirty && signature.equals(lastRouteSignature))
         {
@@ -1311,9 +1304,13 @@ public class DrewsHelperPlugin extends Plugin
         cancelRouteFuture();
         int requestId = ++routeRequestId;
         List<WorldPoint> routeDestinations = new ArrayList<>(destinations);
+        boolean keepRouteBenchmarkCapture = shouldKeepRouteBenchmarkCapture(routeDestinations);
         DrewsHelperRouteSnapshot previousSnapshot = routeSnapshot;
         routeSnapshot = DrewsHelperRouteSnapshot.calculating(routeDestinations, previousSnapshot.getPath());
-        clearRouteBenchmark();
+        if (!keepRouteBenchmarkCapture)
+        {
+            clearRouteBenchmark();
+        }
         lastRouteSignature = signature;
         routeDirty = false;
 
@@ -1781,6 +1778,15 @@ public class DrewsHelperPlugin extends Plugin
         etaDebugCapture = null;
     }
 
+    private boolean shouldKeepRouteBenchmarkCapture(List<WorldPoint> destinations)
+    {
+        RouteBenchmarkCapture capture = routeBenchmarkCapture;
+        return config().routeBenchmarkEnabled()
+            && capture != null
+            && capture.hasStarted()
+            && capture.matchesActiveDestinations(destinations);
+    }
+
     /**
      * Predicted-versus-actual ETA check, driven off the benchmark's movement lifecycle.
      *
@@ -1846,7 +1852,11 @@ public class DrewsHelperPlugin extends Plugin
 
     private void startRouteBenchmarkIfNeeded(DrewsHelperRouteSnapshot snapshot)
     {
-        clearRouteBenchmark();
+        boolean keepRouteBenchmarkCapture = shouldKeepRouteBenchmarkCapture(snapshot.getDestinations());
+        if (!keepRouteBenchmarkCapture)
+        {
+            clearRouteBenchmark();
+        }
         if (snapshot.getStatus() != DrewsHelperRouteStatus.READY || !snapshot.hasPath())
         {
             return;
@@ -1855,7 +1865,10 @@ public class DrewsHelperPlugin extends Plugin
         // ETA accuracy logging is independent of the movement benchmark. It is two lines per
         // journey, so it can stay on permanently and catch a forecast that starts drifting,
         // rather than only firing when someone remembered to enable the benchmark first.
-        startEtaDebugCapture(snapshot);
+        if (!keepRouteBenchmarkCapture)
+        {
+            startEtaDebugCapture(snapshot);
+        }
 
         // Solve time and expanded-node count were already measured on every solve - they
         // were just only ever printed from inside the movement benchmark, so retiring that
@@ -1864,7 +1877,12 @@ public class DrewsHelperPlugin extends Plugin
             searchMetricsSummary(snapshot.getPrimaryMetrics()),
             routeEngine == null ? "rank=?" : routeEngine.lastPhaseSummary());
 
-        if (!ROUTE_BENCHMARK_ENABLED)
+        if (!config().routeBenchmarkEnabled())
+        {
+            return;
+        }
+
+        if (keepRouteBenchmarkCapture)
         {
             return;
         }
@@ -2148,7 +2166,32 @@ public class DrewsHelperPlugin extends Plugin
                     segmentTargets(),
                     MAX_WAYPOINTS
                 )
-                + " expectedPath10=" + DrewsHelperRouteBenchmark.formatPathPrefix(primaryPath);
+                + " expectedPath=" + DrewsHelperRouteBenchmark.formatPath(primaryPath);
+        }
+
+        boolean hasStarted()
+        {
+            return !actualPath.isEmpty();
+        }
+
+        boolean matchesActiveDestinations(List<WorldPoint> destinations)
+        {
+            List<WorldPoint> targets = segmentTargets();
+            List<WorldPoint> activeDestinations = destinations == null
+                ? Collections.emptyList()
+                : destinations;
+            if (targets.equals(activeDestinations))
+            {
+                return true;
+            }
+
+            if (activeDestinations.isEmpty())
+            {
+                return false;
+            }
+
+            int offset = targets.size() - activeDestinations.size();
+            return offset > 0 && targets.subList(offset, targets.size()).equals(activeDestinations);
         }
 
         RouteBenchmarkUpdate record(WorldPoint point)
@@ -2184,8 +2227,8 @@ public class DrewsHelperPlugin extends Plugin
                 reachedTarget || movementLimitReached,
                 reachedTarget ? "target" : movementLimitReached ? "limit" : "progress",
                 DrewsHelperRouteBenchmark.compare(primaryPath, actualPath),
-                DrewsHelperRouteBenchmark.formatPathPrefix(primaryPath),
-                DrewsHelperRouteBenchmark.formatPathPrefix(actualPath),
+                routePathTrace(primaryPath, reachedTarget || movementLimitReached),
+                routePathTrace(actualPath, reachedTarget || movementLimitReached),
                 DrewsHelperRouteBenchmark.formatDivergence(primaryPath, actualPath, reachedTarget || movementLimitReached),
                 candidateTrace(primaryPath, reachedTarget || movementLimitReached),
                 edgeValidationTrace(primaryPath, reachedTarget || movementLimitReached),
@@ -2237,6 +2280,13 @@ public class DrewsHelperPlugin extends Plugin
             }
 
             return null;
+        }
+
+        private static String routePathTrace(List<WorldPoint> path, boolean complete)
+        {
+            return complete
+                ? DrewsHelperRouteBenchmark.formatPath(path)
+                : DrewsHelperRouteBenchmark.formatPathPrefix(path);
         }
 
         private String candidateTrace(List<WorldPoint> predictedPath, boolean actualComplete)
@@ -2967,8 +3017,8 @@ public class DrewsHelperPlugin extends Plugin
             return "ticks=" + movementTicks
                 + " reason=" + reason
                 + " route={" + primaryReport.summary() + "}"
-                + " expectedPath10=" + primaryPathTrace
-                + " actualPath10=" + actualPathTrace
+                + " expectedPath=" + primaryPathTrace
+                + " actualPath=" + actualPathTrace
                 + " divergence={" + divergenceTrace + "}"
                 + " candidates={" + primaryCandidateTrace + "}"
                 + " edgeValidation={" + edgeValidationTrace + "}"

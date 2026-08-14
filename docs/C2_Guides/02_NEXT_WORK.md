@@ -1,8 +1,135 @@
 # Next Work
 
-Last updated: 2026-08-12.
+Last updated: 2026-08-14.
 
-## NEXT SESSION - START HERE (written 2026-08-12, session 3 - recorder-first plan adopted)
+## CURRENT HANDOFF - START HERE (written 2026-08-13, end-of-night collision/routing pass)
+
+This is the only active start-here block. Older handoffs below are retained for evidence and
+design context; use them only when this section points back to a parked item.
+
+**WHAT'S NEXT:** Restart the Drew's Helper dev client, turn in-game run OFF, enable `Settings` ->
+`Log Benchmark Movement`, and rerun the two patched creative controls: reverse
+`2951,3208,0 -> 2942,3243,0` and east pressure `2946,3239,0 -> 2951,3208,0`. Fork isolate
+`2942,3236,0 -> 2951,3208,0` already matched. For cleaner evidence rows, turn `Log Benchmark
+Movement` OFF while walking to each start tile, then turn it back ON only for the test route.
+
+For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
+that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
+`expectedPath=[...]` trace at route start plus the full walked `actualPath=[...]` trace on
+completion, so the Falador display bug can be compared tile-for-tile instead of from a screenshot.
+D-0176 fixes the recorder lifecycle so off-path route recalculation and waypoint arrival no longer
+erase the original movement capture before the final `reason=target` row. D-0177/D-0178 then use
+that completed row to add a narrow target-aware route-shape correction for the Falador southeast
+target, without enabling broad tree blocking or promoting `shapeShadow`. D-0179 live-validated
+that correction on the primary route. D-0180 extends the same evidence-scoped local route-window
+approach to the reverse and east-pressure creative controls after Myth's 2026-08-14 live pass.
+
+Commits from the 2026-08-13 Mytharium route/collision session, in order:
+
+      d2225cf  fix collision map region seam edges              PUSHED
+      f66d4b8  ship narrow furniture object blocking            PUSHED
+      2118066  harden transport requirement cache filtering     PUSHED
+      3c662d3  block shortcut corridors as walking              PUSHED
+      1555f70  audit shortcut corridors                         PUSHED
+      d407500  audit terrain completeness                       PUSHED
+      7b42c6a  expand measured object profile blockers          PUSHED
+
+Mytharium pushes manually. At handoff, `main` and `origin/main` were even before this docs-only
+writeup. The docs changes from this handoff are not listed in the table above.
+
+### WHAT CHANGED TODAY
+
+The Falador wall report was valid and fixed. The bad edge was `3019,3391,0 N`, between
+`3019,3391` and `3019,3392`. Root cause was a region seam: the wall object was read while
+building region `47_53`, but the normalized stored edge belongs to region `47_52`. Deferred
+neighbour edges now apply to the owning built region. Mytharium confirmed the route from
+`3019,3390,0` to `3019,3401,0` now detours instead of drawing through the wall.
+
+Furniture/object blocking shipped as a measured allowlist, not old Phase 2. The first pass
+blocked only `595/10 Table`, `1104/10 Bench`, `1088/10 Chair`, and `1088/11 Chair`. Mytharium
+confirmed the chair waypoint at `2573,3245,0` snaps west to `2572,3245,0` instead of staying on
+the chair.
+
+Transport eligibility was hardened globally. The route graph still uses
+`drewshelper-transports.tsv` as the source of truth, but capability signatures now include every
+item requirement expression from the TSV so inventory/equipment changes cannot reuse a stale
+filtered graph. When Mytharium still saw Broken Raft routing, the second fix found the real bypass:
+the raft corridor was being walked as normal ground after the gated transport was removed.
+`AGILITY_SHORTCUT` and `GRAPPLE_SHORTCUT` corridors are now transport-only geometry.
+
+The shortcut audit covered the full shortcut corpus: 557 `AGILITY_SHORTCUT` rows plus 15
+`GRAPPLE_SHORTCUT` rows, 572 total. Same-plane rows expanded to 2,981 adjacent walking steps and
+the audit found 0 unblocked shortcut-corridor walking steps.
+
+The terrain completeness audit said not to ship a terrain-bit rule. The existing floor/terrain
+rule still agrees at 181,696/189,245 edges (96.0%), and the bridge branch at 361/384 (94.0%).
+`tileSetting` bit 4 is enriched but explains too small a slice of the miss set, so broad terrain
+blocking would be guesswork. The bigger remaining class is ignored scenery/object blocking.
+
+The object-profile blocker expanded from 4 furniture profiles to 22 measured profiles:
+plants/bushes/cactus, boulders/rockslides/fountain, plus the original table/bench/chair profiles.
+Map size changed `1,189,982 B -> 1,194,815 B`. Frozen A/B versus the current furniture map:
+`DANGEROUS_UNEXPLAINED 78,069 -> 75,184`, fixing 2,885 dangerous-unexplained edges with 0 added
+measured `OVERBLOCK` and 0 added route-aware `OVERBLOCK`.
+
+Trees and tree-stumps were trialed and deliberately held back. Their cost column looked clean,
+but they moved the pinned Falador southeast live-route fork. That violates the no-real-route-seal
+rule, so tree profiles need their own pass.
+
+### LIVE TEST RESULTS FROM MYTHARIUM
+
+1. Chair waypoint: PASS. Waypoint `2573,3245,0` snaps to `2572,3245,0`, west of the chair, in an
+   accessible square.
+2. Ruins of Unkah ferry pier: PASS. Mytharium can still stand on `3148,2843,0`, walk the pier, and
+   route/walk to `3156,2839,0`. The old Phase 2 pier/beach regression did not return.
+3. Falador southeast tree-line route: PASS. The original completed benchmark showed the displayed
+   route was 36 points while Myth's walked route was 39 points, merging back near `2952,3209,0`.
+   D-0177/D-0178 patched the visible route to follow that completed walked path for target
+   `2951,3208,0`. Myth's live rerun after the patch completed with displayed `expectedPath` and
+   walked `actualPath` both 39 points: `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`,
+   `divergence={none}`.
+
+### NEXT CODING ORDER
+
+1. **Optional live route-shape controls before coding.** With in-game run OFF and
+   `Log Benchmark Movement` enabled, walk reverse `2951,3208,0 -> 2942,3243,0`, fork isolate
+   `2942,3236,0 -> 2951,3208,0`, and east pressure `2946,3239,0 -> 2951,3208,0`.
+2. **Tree/tree-stump object-profile pass.** Keep it separate from the shipped 22-profile expansion.
+   Trees can ship only if their measured profile batch keeps the pinned Falador route stable in
+   both the actual walked path and the displayed route.
+3. **Next paid object-profile batches.** Hedges, stools, shelves, crates and similar profiles were
+   intentionally not shipped tonight because they need their own cost-column batch and live-route
+   pins.
+4. **Recorder-first plan items B-F.** Still valid once the immediate route-display issue is done:
+   traversal verification listener, confidence tiers, object/door-state recorder,
+   route-validation harness, then pilot region to zero known errors.
+
+Do not reopen tonight's rejected paths without new evidence: broad Phase 2, global locType 10/11
+blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut hardcodes.
+
+### WHERE TODAY IS WRITTEN DOWN
+
+      D-0141  DECISION   region-seam edges defer to the owning built region
+      D-0142  DECISION   furniture blocker ships as measured object-id/locType allowlist
+      D-0143  DECISION   transport gates are account capability, not route reports
+      D-0144  DECISION   shortcut corridors are not ordinary walking edges
+      D-0145  DECISION   full shortcut corpus audited, 0 unblocked same-plane steps
+      D-0146  DECISION   terrain completeness audit rejects broad terrain-bit change
+      D-0147  DECISION   object-profile expansion ships no-cost non-tree scenery profiles
+      D-0171  CHANGELOG  end-of-night summary, live tests, next work, and backlog updates
+      D-0172  CHANGELOG  docs cleanup: one active handoff, older starts demoted
+      D-0173  CHANGELOG  add top-level what-next line to active handoff
+      D-0174  CHANGELOG  re-enable one-click route-vs-actual benchmark capture
+      D-0175  DECISION   route benchmark restored as the same-key repro recorder
+      D-0176  CHANGELOG  keep benchmark capture alive through off-path recalculation
+      D-0177  DECISION   Falador southeast fix must stay exact, target-aware, and non-global
+      D-0178  CHANGELOG  patch Falador southeast visible route from completed benchmark trace
+      D-0179  CHANGELOG  live-validate Falador southeast visible route patch
+
+## Historical Handoff - 2026-08-12 Recorder-First Plan
+
+Historical note: this block was the active start point on 2026-08-12. The recorder-first plan is
+still valid, but the 2026-08-13 route-display/object-blocker handoff above now comes first.
 
 Commits from the 2026-08-12 sessions, in order:
 
@@ -19,18 +146,19 @@ carries this document; run `git log --oneline origin/main..main` for the true pe
 
 Mytharium drafted an OSRS navigation-recorder plan and asked whether to adopt it. It is
 ADOPTED, in the adapted form recorded as D-0136. That reorders the work: the project stops
-expanding the collision map and starts verifying one pilot region, and the first job is making
-UNKNOWN a real state in the capture so every measurement after it is honest.
+expanding the collision map and starts verifying one pilot region. The first version named
+UNKNOWN-in-capture as item A, but D-0137 later closed A as not a defect; the corrected recorder
+sequence starts at B.
 
-Two numbers drove the decision. Live-client ground truth covers 4.20% of shipped regions. And
-on the edges the client positively calls walls we are right 51.86% of the time - the friendlier
-84.03% figure is 70% carried by the client never having said anything, which is a limitation of
-the capture format rather than a property of the map.
+Two numbers drove the decision. Live-client ground truth covers 4.20% of shipped regions, which
+the D-0137 correction did not change. The agreement figure is 84.03%; 51.86% is blocked-edge
+recall, not a correction of the agreement score.
 
 ### THE LIST - revised 2026-08-12 after adopting the recorder-first plan
 
 The original six items are kept for continuity. Two are closed, three are re-ranked against the
-adopted plan, and one is absorbed. The active work is the A-F sequence, in order.
+adopted plan, and one is absorbed. Within the recorder plan, the active work is B-F; A is retained
+only as a closed correction.
 
 CLOSED
 
@@ -82,6 +210,13 @@ ACTIVE SEQUENCE - in order
                                                  are under-blocks) it would mostly report
                                                  divergences caused by the MAP, not by the
                                                  router, so it is noise until F closes.
+
+                                                 Superseded for the immediate Falador display
+                                                 repro by D-0174/D-0175: the same movement
+                                                 benchmark is available again as
+                                                 `Settings` -> `Log Benchmark Movement`, default
+                                                 OFF, because this case needs tile-for-tile
+                                                 route-vs-actual evidence before the fix.
 
 CARRIED, RE-RANKED
 
@@ -184,9 +319,11 @@ gradle task. A `promoteCollisionMap` task must exist before adding NEW entries. 
 - **Confirm the pilot region overlap.** rx45-48 / ry49-52 is coordinate arithmetic, not a lookup.
   Five minutes, and it should happen before any work starts inside the pilot area.
 
-## Active Handoff - Magic-Tab Spell Teleports From Carried Supplies
+## Historical Handoff - Magic-Tab Spell Teleports From Carried Supplies
 
-Home teleports shipped on 2026-08-09. The next code pass is **magic-tab spell teleports from carried supplies**, then bank-aware teleport routing.
+Historical note: home teleports shipped on 2026-08-09, and this section records the magic-tab and
+bank-aware teleport plan. It is parked context, not the current next code pass while the
+route-display/object-blocker and recorder-first work above it are active.
 
 ### Completed slice: home teleports
 
@@ -281,7 +418,11 @@ If cooldown is active -> treat teleport as locked.
 - Teleport items, jewellery boxes, portals, POH portals, tablets, scrolls, capes, and other bulk transport files come after spells/minigames prove the account-gating model.
 - Retire or repurpose the dead Teleport Options / placeholder Other Transportation toggles only after their transport families are innate in the route graph.
 
-## NEXT SESSION - start here (written 2026-08-10, session close)
+## Historical Handoff - 2026-08-10 Session Close
+
+Historical note: this handoff is superseded by the later 2026-08-12 recorder-first plan and the
+2026-08-13 route-display/object-blocker handoff. Keep it as evidence for map-data decisions, not
+as the current work order.
 
 The map-data work is BUILT but not yet WIRED IN. Route B produces a list; nothing in the
 plugin reads it yet. Everything below is in priority order - do them top down.
@@ -870,21 +1011,33 @@ section has been changed. Append new findings here as they come up; strike them 
     gate from stored state instead of asking. Neither is a feature. **Remove both before this
     plugin is called finished.** Agreed with Mytharium 2026-08-12. Parked, not built.
 
-33. **Furniture needs its own blocking rule (2026-08-12).** Requested by Mytharium right after
-    the D-0140 ship. Phase 2 was dropped because it sealed real ground - 14 tiles of the Ruins
-    of Unkah pier, which made the whole southern Kharidian Desert unreachable - but dropping it
-    also unblocked interior scenery. The Ardougne mansion chair at 2573,3245,0 is walkable in
-    the shipped map, and that interior went from heavily blocked to almost fully open: x=2572
-    over y=3240-3252 reads 0020013303444 on the old map and 4444433334444 on the new one.
-    Phase 2's locTypes 10 and 11 were too blunt in both directions - they blocked a beach, and
-    they were also the only thing blocking a chair. The replacement has to block small interior
-    scenery without blocking outdoor terrain, which is a narrower rule than either state we
-    have measured, so it needs its own cost-column pass rather than a flag flip.
-    Note the second-order effect, because it is what a user actually notices: waypoint snapping
-    only fires on a tile with no legal move out, so a waypoint typed on that chair used to be
-    corrected to 2572,3245,0 and now stays put, and the router walks you into the furniture.
-    That is not a snapping bug - snapToTraversable is behaving exactly as specified - it is this
-    map error surfacing through it, and fixing this item fixes that too. Requested, not built.
+33. ~~**Furniture needs its own blocking rule (2026-08-12).**~~ RESOLVED FIRST TWO SLICES
+    2026-08-13 by D-0142 and D-0147. The original report was the Ardougne mansion chair at
+    `2573,3245,0`: dropping old Phase 2 reopened the chair, but restoring Phase 2 would reseal the
+    Ruins of Unkah ferry beach. The replacement shipped as measured object-id/locType profiles, not
+    a broad locType rule. First slice: `595/10 Table`, `1104/10 Bench`, `1088/10 Chair`,
+    `1088/11 Chair` in commit `f66d4b8`. Second slice: 18 additional non-tree scenery profiles in
+    commit `7b42c6a`.
+    Live verification from Mytharium: waypoint `2573,3245,0` now snaps to `2572,3245,0`, and the
+    Ruins of Unkah pier/beach remains walkable. The general furniture item is closed. Remaining
+    object-profile work is now split into narrower items: route-display fidelity around object
+    blockers, trees/tree-stumps as a separate proof batch, and later paid profiles such as hedges,
+    stools, shelves and crates.
+
+34. **Displayed route line can cut through trees while the player path avoids them (2026-08-13).**
+    Found during the final live check of `7b42c6a`. Test route `2942,3243,0 -> 2951,3208,0` did
+    not make the player walk through trees, which means the actual route/collision path is probably
+    correct. But the displayed route still appeared to go through the trees. Treat this as a
+    route-rendering fidelity issue until proven otherwise: inspect whether the map/world overlay is
+    drawing a coarse segment, smoothing/skipping intermediate path tiles, or showing a different
+    route representation than the tile path the player follows. Do not respond by adding tree
+    blockers blindly; trees were already held back because they moved a pinned route fork.
+
+35. **Trees and tree-stumps need a separate object-profile proof pass (2026-08-13).** The no-cost
+    ranker made trees look attractive, but the trial moved the pinned Falador southeast live-route
+    fork. They are therefore not part of the shipped 22-profile blocker. A future tree pass needs
+    its own frozen A/B, route-aware overblock check, the Falador southeast route pin, and the
+    display-fidelity check from item 34 before any tree/tree-stump profile ships.
 
 ### Unconfirmed - status needs checking before acting
 

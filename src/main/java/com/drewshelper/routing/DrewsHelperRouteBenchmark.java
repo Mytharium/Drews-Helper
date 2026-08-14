@@ -88,6 +88,12 @@ public final class DrewsHelperRouteBenchmark
         return formatPathPrefix(path, DEFAULT_TRACE_TILE_LIMIT);
     }
 
+    public static String formatPath(List<WorldPoint> path)
+    {
+        List<WorldPoint> points = path == null ? Collections.emptyList() : path;
+        return formatPathPrefix(points, points.size());
+    }
+
     public static String formatPathPrefix(List<WorldPoint> path, int limit)
     {
         List<WorldPoint> points = path == null ? Collections.emptyList() : path;

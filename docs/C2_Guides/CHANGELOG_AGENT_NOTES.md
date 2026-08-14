@@ -2033,3 +2033,161 @@ D-0170 (2026-08-12) - Item 2/3 rescoped by measurement: do NOT build the 1,425 m
   CONCLUSION: items 2 and 3 are both rescoped from bulk to targeted, and neither is a bulk job at
   any point in the future. Durable rules: D-0135 in `DECISION_LOG.md`. The sailing research and
   the "Requirements:" message diagnosis are parked as items 30 and 31 in `02_NEXT_WORK.md`.
+
+D-0171 (2026-08-13) - End-of-night collision/routing pass writeup. Seven commits shipped and
+  live testing narrowed the next work to route-display fidelity around object blockers.
+
+  COMMITS FROM THE SESSION:
+      d2225cf  fix collision map region seam edges
+      f66d4b8  ship narrow furniture object blocking
+      2118066  harden transport requirement cache filtering
+      3c662d3  block shortcut corridors as walking
+      1555f70  audit shortcut corridors
+      d407500  audit terrain completeness
+      7b42c6a  expand measured object profile blockers
+
+  FALADOR WALL. Mytharium reported a route standing at `3019,3390,0` going straight through the
+  wall between `3019,3391,0` and `3019,3392,0`. The bad edge was `3019,3391,0 N`. Root cause was
+  cross-region normalized edge storage: the wall object was seen in region `47_53`, but the stored
+  north edge belongs to region `47_52`. `d2225cf` defers neighbour-owned edges and applies them to
+  the owning built region. Mytharium confirmed the route now detours.
+
+  FURNITURE AND OBJECT BLOCKING. `f66d4b8` shipped the first narrow profile set:
+  `595/10 Table`, `1104/10 Bench`, `1088/10 Chair`, `1088/11 Chair`. `7b42c6a` expanded that to 22
+  measured profiles with plants/bushes/cactus, boulders/rockslides/fountain, and the original
+  table/bench/chair profiles. The expanded map changed `1,189,982 B -> 1,194,815 B` and fixed
+  2,885 more dangerous-unexplained edges with 0 added measured `OVERBLOCK` and 0 added route-aware
+  `OVERBLOCK` versus the furniture map. Mytharium confirmed `2573,3245,0` snaps west to
+  `2572,3245,0` and the Ruins of Unkah pier/beach is still walkable.
+
+  TREES HELD BACK. Tree/tree-stump profiles were trialed and rejected for this pass. Their cost
+  column looked clean, but they moved the pinned Falador southeast live-route fork. That violates
+  the "do not seal real routes" rule, so trees remain a separate backlog item with their own proof
+  gate.
+
+  TRANSPORT REQUIREMENTS AND SHORTCUT CORRIDORS. `2118066` made every item requirement expression
+  from `drewshelper-transports.tsv` part of the route capability signature so item/inventory
+  changes cannot reuse a stale filtered graph. When Broken Raft still routed, `3c662d3` found the
+  bypass was not the transport edge at all; the corridor was walkable as normal ground. Agility and
+  grapple shortcut corridors are now transport-only geometry. `1555f70` audited all 557
+  `AGILITY_SHORTCUT` rows and all 15 `GRAPPLE_SHORTCUT` rows, expanding same-plane rows to 2,981
+  adjacent steps with 0 unblocked ordinary-walking steps.
+
+  TERRAIN AUDIT. `d407500` intentionally shipped no terrain map change. The existing terrain rule
+  still agreed at 181,696/189,245 edges (96.0%), and the bridge branch at 361/384 (94.0%).
+  `tileSetting` bit 4 was enriched but not broad enough to justify a terrain blocker. The dominant
+  remaining false-open class is ignored scenery/object adjacency, not floor terrain.
+
+  FINAL LIVE TESTS. Mytharium reported: chair blocker PASS; Ruins of Unkah pier PASS; Falador
+  southeast actual player path did not walk through trees, but the displayed route still appeared
+  to go through trees. That last item is logged as a route-display fidelity issue in
+  `02_NEXT_WORK.md`, not as permission to add tree blockers blindly.
+
+  NEXT WORK. Start with the route-display fidelity bug for `2942,3243,0 -> 2951,3208,0`: determine
+  whether the renderer is smoothing/skipping/coarsening the shown line while the actual tile path
+  detours correctly. After that, run tree/tree-stump object profiles as a separate measured proof
+  batch, then paid profiles such as hedges, stools, shelves and crates. Broad Phase 2, global
+  locType 10/11 blocking and `tileSetting` bit 4 remain rejected without new evidence.
+
+D-0172 (2026-08-13) - Cleaned the Next Work handoff hierarchy. NO CODE CHANGED.
+
+  Scope note: documentation-only cleanup after the 2026-08-13 route/collision handoff. No source,
+  resource, build script, or runtime collision archive changed.
+
+  WHAT CHANGED. `02_NEXT_WORK.md` now has one active `CURRENT HANDOFF - START HERE` block. The
+  older 2026-08-12 recorder-first handoff, the magic-tab teleport handoff, and the 2026-08-10
+  map-data handoff are explicitly labelled historical so they stop competing as "start here"
+  instructions.
+
+  D-0137 CORRECTION FOLDED IN. The recorder-first section now says A is closed as not a defect and
+  B is the first recorder-plan task. It also corrects the stale 51.86%/84.03% wording: 84.03% is
+  the agreement score, 51.86% is blocked-edge recall, and the remaining strategic problem is still
+  the 4.20% live-client ground-truth coverage ceiling.
+
+  CURRENT NEXT WORK. Use the top 2026-08-13 handoff: route-display fidelity through object
+  blockers first, then the tree/tree-stump measured profile pass, then paid object-profile batches.
+  Recorder-first B-F remains valid after those immediate route-display/object-blocker follow-ups.
+
+D-0173 (2026-08-13) - Added the missing top-level WHAT'S NEXT line. NO CODE CHANGED.
+
+  `02_NEXT_WORK.md` now shows the next action before the commit table: reproduce and fix the
+  Falador southeast tree-line route display fidelity bug first, then continue to tree/tree-stump
+  profile proof work and recorder-plan work only after that immediate display issue is resolved.
+
+D-0174 (2026-08-13) - Re-enabled one-click route-vs-actual benchmark capture for the Falador
+  southeast display-fidelity repro.
+
+  Restored the `Settings` -> `Log Benchmark Movement` config item as an off-by-default diagnostic
+  switch using the same `routeBenchmarkEnabled` key and same meaning as the earlier movement
+  benchmark. This supersedes only the movement-benchmark half of D-0090; ETA logging stays
+  unconditional and has no UI toggle.
+
+  The `DREW_ROUTE_BENCH` route-start row now writes the complete displayed tile sequence as
+  `expectedPath=[...]`, not just the first ten tiles. Completed/limit benchmark rows now write both
+  `expectedPath=[...]` and `actualPath=[...]` with the full tile sequence so Mytharium can compare
+  the proposed route against the character's walked route tile-for-tile from one toggle.
+  Durable rule is recorded as D-0175 in `DECISION_LOG.md`.
+
+D-0176 (2026-08-13) - Kept benchmark movement capture alive through route recalculation.
+
+  Fixed the instrumentation gap found during Mytharium's Falador southeast repro: the movement
+  benchmark now records the active capture before waypoint clearing and route-dirty handling, so
+  the arrival tick can produce a final `reason=target` row before the waypoint auto-clears.
+
+  Off-path route recalculation no longer clears an already-started benchmark capture when the
+  active destinations still match the same journey. That lets the original `expectedPath=[...]`
+  stay paired with the player's full `actualPath=[...]` even when the UI re-solves from the
+  current player tile mid-walk.
+
+  Next evidence pass: rerun `2942,3243,0 -> 2951,3208,0` with `Settings` -> `Log Benchmark
+  Movement` enabled and inspect the completed `DREW_ROUTE_BENCH reason=target` row.
+
+D-0178 (2026-08-14) - Patched the Falador southeast visible route from Myth's completed benchmark trace.
+
+  Myth's completed `DREW_ROUTE_BENCH reason=target` row for `2942,3243,0 -> 2951,3208,0`
+  showed the displayed route as a 36-point path while the live client walked a 39-point path. The
+  first repeatable fork was from `(2942,3236,0)`: displayed `(2942,3235,0)`, actual
+  `(2943,3235,0)`, legal true, delta 0. The full trace stayed east of the displayed route and
+  merged back near `(2952,3209,0)`, so this was no longer treated as a harmless same-time
+  permutation.
+
+  `DrewsHelperWalkingRouteEngine` now supports forced target-aware local walking windows inside
+  the existing local-override mechanism. For the Falador southeast target `(2951,3208,0)`, the
+  route solver follows Myth's completed walked tile sequence when each next step is still legal in
+  the collision map. The control route toward `(2962,3214,0)` is covered and remains unchanged.
+
+  This is deliberately not broad tree blocking, not global object-profile expansion, and not
+  `shapeShadow` promotion. Durable rule is recorded as D-0177 in `DECISION_LOG.md`.
+
+  Verified with the focused Falador route regression, local-override control regressions, `build
+  -x test`, `git diff --check`, and full `clean test build`. Full test still reports the known
+  accepted `shapeRankingShadowExposesDistinctSameLengthRandomChainRoute` failure.
+
+D-0179 (2026-08-14) - Live-validated the Falador southeast visible route patch. NO CODE CHANGED.
+
+  Myth reran `2942,3243,0 -> 2951,3208,0` after D-0177/D-0178. The completed
+  `DREW_ROUTE_BENCH reason=target` row reported displayed `expectedPath` and walked `actualPath`
+  as the same 39-point sequence, including the corrected fork through `(2943,3235,0)`.
+
+  The route comparison was exact: `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`,
+  `divergence={none}`, `shape winner=tie`, and `shadow winner=visible`. This closes the primary
+  Falador southeast display-fidelity repro and leaves only optional creative route-shape controls
+  before the separate tree/tree-stump object-profile proof pass.
+
+D-0180 (2026-08-14) - Patched Falador southeast reverse and east-pressure route-shape controls.
+
+  Myth's creative-control pass showed fork isolate clean, but reverse `2951,3208,0 ->
+  2942,3243,0` was still off and east pressure `2946,3239,0 -> 2951,3208,0` still tried to cut
+  through the tree-line pocket. The raw benchmark data also included staging walks because `Log
+  Benchmark Movement` stayed enabled while Myth walked to each start point.
+
+  `DrewsHelperWalkingRouteEngine` now extends the existing forced target-aware local route-window
+  family with a cleaned reverse route toward `(2942,3243,0)` and an east-pressure entry route
+  toward `(2951,3208,0)` from `(2946,3239,0)`. The reverse patch deliberately ignores the one-tile
+  east/back wobble at the start of the benchmark row because it was staging/click noise, not a
+  route-shape instruction.
+
+  This remains narrow route-shape evidence. It does not add tree/tree-stump object profiles, global
+  named-solid blocking, broad tree blocking, or `shapeShadow` promotion. Next live validation is to
+  rerun only reverse and east pressure with benchmark logging OFF while staging and ON for the
+  measured route.

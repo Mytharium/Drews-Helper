@@ -867,6 +867,28 @@ public final class DrewsHelperWalkingRouteEngine
         int plane = from.getPlane();
         int order = 1;
 
+        LocalWalkingOverride forcedOverride = localWalkingOverridesEnabled
+            ? matchingForcedLocalWalkingOverride(from, target)
+            : null;
+        if (forcedOverride != null)
+        {
+            Move move = move(
+                forcedOverride.destination.getX() - from.getX(),
+                forcedOverride.destination.getY() - from.getY()
+            );
+            if (move != null && canMove(x, y, plane, move))
+            {
+                steps.add(new RouteStep(
+                    order,
+                    forcedOverride.destination,
+                    move,
+                    false,
+                    LOCAL_OVERRIDE_PREFERENCE_PENALTY
+                ));
+                return steps;
+            }
+        }
+
         for (LocalWalkingOverride override : localWalkingOverridesEnabled
             ? matchingLocalWalkingOverrides(from, target)
             : Collections.<LocalWalkingOverride>emptyList())
@@ -1456,6 +1478,127 @@ public final class DrewsHelperWalkingRouteEngine
         addLocalOverride(overrides, path3Target, new WorldPoint(2967, 3231, 0), new WorldPoint(2968, 3230, 0));
         addLocalOverride(overrides, path3Target, new WorldPoint(2968, 3230, 0), new WorldPoint(2969, 3229, 0));
         addLocalOverride(overrides, path3Target, new WorldPoint(2969, 3229, 0), path3Target);
+        WorldPoint faladorSoutheastTarget = new WorldPoint(2951, 3208, 0);
+        addForcedLocalPath(overrides, faladorSoutheastTarget,
+            new WorldPoint(2942, 3243, 0),
+            new WorldPoint(2942, 3242, 0),
+            new WorldPoint(2942, 3241, 0),
+            new WorldPoint(2942, 3240, 0),
+            new WorldPoint(2942, 3239, 0),
+            new WorldPoint(2942, 3238, 0),
+            new WorldPoint(2942, 3237, 0),
+            new WorldPoint(2942, 3236, 0),
+            new WorldPoint(2943, 3235, 0),
+            new WorldPoint(2943, 3234, 0),
+            new WorldPoint(2944, 3233, 0),
+            new WorldPoint(2945, 3232, 0),
+            new WorldPoint(2946, 3231, 0),
+            new WorldPoint(2947, 3230, 0),
+            new WorldPoint(2948, 3229, 0),
+            new WorldPoint(2949, 3228, 0),
+            new WorldPoint(2950, 3228, 0),
+            new WorldPoint(2951, 3228, 0),
+            new WorldPoint(2952, 3228, 0),
+            new WorldPoint(2953, 3227, 0),
+            new WorldPoint(2953, 3226, 0),
+            new WorldPoint(2953, 3225, 0),
+            new WorldPoint(2953, 3224, 0),
+            new WorldPoint(2953, 3223, 0),
+            new WorldPoint(2953, 3222, 0),
+            new WorldPoint(2953, 3221, 0),
+            new WorldPoint(2953, 3220, 0),
+            new WorldPoint(2953, 3219, 0),
+            new WorldPoint(2953, 3218, 0),
+            new WorldPoint(2953, 3217, 0),
+            new WorldPoint(2953, 3216, 0),
+            new WorldPoint(2953, 3215, 0),
+            new WorldPoint(2953, 3214, 0),
+            new WorldPoint(2953, 3213, 0),
+            new WorldPoint(2953, 3212, 0),
+            new WorldPoint(2953, 3211, 0),
+            new WorldPoint(2953, 3210, 0),
+            new WorldPoint(2952, 3209, 0),
+            faladorSoutheastTarget
+        );
+        addForcedLocalPath(overrides, faladorSoutheastTarget,
+            new WorldPoint(2946, 3239, 0),
+            new WorldPoint(2946, 3238, 0),
+            new WorldPoint(2946, 3237, 0),
+            new WorldPoint(2946, 3236, 0),
+            new WorldPoint(2946, 3235, 0),
+            new WorldPoint(2946, 3234, 0),
+            new WorldPoint(2946, 3233, 0),
+            new WorldPoint(2946, 3232, 0),
+            new WorldPoint(2946, 3231, 0),
+            new WorldPoint(2947, 3230, 0),
+            new WorldPoint(2948, 3229, 0),
+            new WorldPoint(2949, 3228, 0),
+            new WorldPoint(2950, 3228, 0),
+            new WorldPoint(2951, 3228, 0),
+            new WorldPoint(2952, 3228, 0),
+            new WorldPoint(2953, 3227, 0),
+            new WorldPoint(2953, 3226, 0),
+            new WorldPoint(2953, 3225, 0),
+            new WorldPoint(2953, 3224, 0),
+            new WorldPoint(2953, 3223, 0),
+            new WorldPoint(2953, 3222, 0),
+            new WorldPoint(2953, 3221, 0),
+            new WorldPoint(2953, 3220, 0),
+            new WorldPoint(2953, 3219, 0),
+            new WorldPoint(2953, 3218, 0),
+            new WorldPoint(2953, 3217, 0),
+            new WorldPoint(2953, 3216, 0),
+            new WorldPoint(2953, 3215, 0),
+            new WorldPoint(2953, 3214, 0),
+            new WorldPoint(2953, 3213, 0),
+            new WorldPoint(2953, 3212, 0),
+            new WorldPoint(2953, 3211, 0),
+            new WorldPoint(2953, 3210, 0),
+            new WorldPoint(2952, 3209, 0),
+            faladorSoutheastTarget
+        );
+        WorldPoint faladorNorthwestTarget = new WorldPoint(2942, 3243, 0);
+        addForcedLocalPath(overrides, faladorNorthwestTarget,
+            faladorSoutheastTarget,
+            new WorldPoint(2951, 3209, 0),
+            new WorldPoint(2951, 3210, 0),
+            new WorldPoint(2951, 3211, 0),
+            new WorldPoint(2951, 3212, 0),
+            new WorldPoint(2951, 3213, 0),
+            new WorldPoint(2951, 3214, 0),
+            new WorldPoint(2951, 3215, 0),
+            new WorldPoint(2951, 3216, 0),
+            new WorldPoint(2951, 3217, 0),
+            new WorldPoint(2951, 3218, 0),
+            new WorldPoint(2952, 3219, 0),
+            new WorldPoint(2953, 3220, 0),
+            new WorldPoint(2953, 3221, 0),
+            new WorldPoint(2953, 3222, 0),
+            new WorldPoint(2953, 3223, 0),
+            new WorldPoint(2953, 3224, 0),
+            new WorldPoint(2953, 3225, 0),
+            new WorldPoint(2953, 3226, 0),
+            new WorldPoint(2953, 3227, 0),
+            new WorldPoint(2952, 3227, 0),
+            new WorldPoint(2951, 3227, 0),
+            new WorldPoint(2950, 3227, 0),
+            new WorldPoint(2949, 3228, 0),
+            new WorldPoint(2949, 3229, 0),
+            new WorldPoint(2948, 3230, 0),
+            new WorldPoint(2948, 3231, 0),
+            new WorldPoint(2948, 3232, 0),
+            new WorldPoint(2947, 3233, 0),
+            new WorldPoint(2946, 3234, 0),
+            new WorldPoint(2946, 3235, 0),
+            new WorldPoint(2946, 3236, 0),
+            new WorldPoint(2946, 3237, 0),
+            new WorldPoint(2946, 3238, 0),
+            new WorldPoint(2946, 3239, 0),
+            new WorldPoint(2945, 3240, 0),
+            new WorldPoint(2944, 3241, 0),
+            new WorldPoint(2943, 3242, 0),
+            faladorNorthwestTarget
+        );
         return Collections.unmodifiableList(overrides);
     }
 
@@ -1466,7 +1609,19 @@ public final class DrewsHelperWalkingRouteEngine
         WorldPoint destination
     )
     {
-        overrides.add(new LocalWalkingOverride(target, from, destination));
+        overrides.add(new LocalWalkingOverride(target, from, destination, false));
+    }
+
+    private static void addForcedLocalPath(
+        List<LocalWalkingOverride> overrides,
+        WorldPoint target,
+        WorldPoint... path
+    )
+    {
+        for (int index = 1; index < path.length; index++)
+        {
+            overrides.add(new LocalWalkingOverride(target, path[index - 1], path[index], true));
+        }
     }
 
     private static List<LocalWalkingOverride> matchingLocalWalkingOverrides(WorldPoint from, WorldPoint target)
@@ -1485,6 +1640,18 @@ public final class DrewsHelperWalkingRouteEngine
             }
         }
         return matches;
+    }
+
+    private static LocalWalkingOverride matchingForcedLocalWalkingOverride(WorldPoint from, WorldPoint target)
+    {
+        for (LocalWalkingOverride override : matchingLocalWalkingOverrides(from, target))
+        {
+            if (override.forced)
+            {
+                return override;
+            }
+        }
+        return null;
     }
 
     private static boolean isLocalWalkingOverride(WorldPoint from, WorldPoint destination, WorldPoint target)
@@ -1678,12 +1845,14 @@ public final class DrewsHelperWalkingRouteEngine
         private final WorldPoint target;
         private final WorldPoint from;
         private final WorldPoint destination;
+        private final boolean forced;
 
-        private LocalWalkingOverride(WorldPoint target, WorldPoint from, WorldPoint destination)
+        private LocalWalkingOverride(WorldPoint target, WorldPoint from, WorldPoint destination, boolean forced)
         {
             this.target = target;
             this.from = from;
             this.destination = destination;
+            this.forced = forced;
         }
 
         private boolean matchesFromAndTarget(WorldPoint from, WorldPoint target)
