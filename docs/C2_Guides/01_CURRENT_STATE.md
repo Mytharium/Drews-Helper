@@ -147,6 +147,28 @@ evidence; impostor-driven state changes preserve both base and active ids. Live/
 `confidence=CONFIRMED` and `provenance=runelite-scene-live` so later tools can decide whether a
 map row should become `CONFIRMED`, stay `INFERRED`, or be flagged `CONTRADICTED`.
 
+## 2026-08-14 Route-Validation Harness
+
+D-0192 adds `gradlew validateRoutes`, a report-only route-validation harness owned by
+`com.drewshelper.routing`.
+
+The harness has two halves:
+
+- Offline structural gate: run 1,000 deterministic route solves against the shipped collision map,
+  verify every READY route starts/ends on the requested tiles, and verify every path step is either
+  legal walking or a known transport hop. It also compares the current client-style route ranking
+  against the shape-ranking solve and reports route length/turn deltas so the old turn-count item is
+  measured inside the same gate.
+- Evidence gate: read `%USERPROFILE%\.runelite\drews-route-segments.txt` and
+  `%USERPROFILE%\.runelite\drews-object-states.txt`, count hand-walked segment classifications,
+  count object/door/traversal state rows, and correlate divergent route segments with nearby
+  object-state evidence.
+
+Output goes to `tools/route-validation-harness.txt`. `badStructure` and `illegalObservedEdges` are
+hard gates. Divergent hand-walked rows plus nearby object evidence are triage targets for the next
+live test. The harness does not mutate `collision-map.zip`, `collision-map-confidence.tsv`,
+`drewshelper-transports.tsv`, or object-profile allowlists.
+
 ## 2026-08-14 Pre-D-0191 Session Pause Handoff
 
 The overnight route/collision push is paused after D-0189 with no Myth live reruns pending. The

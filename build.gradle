@@ -126,6 +126,13 @@ tasks.register('probeRouteShape', JavaExec) {
     mainClass = 'com.drewshelper.cachetools.RouteShapeProbe'
 }
 
+tasks.register('validateRoutes', JavaExec) {
+    group = 'drewshelper'
+    description = 'Run offline route structural validations and summarize route/object evidence logs.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.routing.DrewsHelperRouteValidationHarness'
+}
+
 tasks.register('probeObjectPlacements', JavaExec) {
     group = 'drewshelper'
     description = 'Dump cache object placements in targeted boxes for collision-map rule work.'

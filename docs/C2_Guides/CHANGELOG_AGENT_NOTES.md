@@ -2405,3 +2405,15 @@ D-0191 (2026-08-14) - Added the object and door-state evidence recorder.
   Updated the route tile overlay to use the shared guarded object-definition helper instead of
   keeping its own private impostor-resolution copy. Added focused tests for the config switch,
   object-definition helper, and recorder row/state formatting.
+
+D-0192 (2026-08-14) - Added the route-validation harness.
+
+  Added `DrewsHelperRouteValidationHarness` and the Gradle task `validateRoutes`. The harness runs
+  1,000 default offline structural route validations, checks every READY path for legal movement or
+  known transport hops, compares current client-style ranking against shape ranking for length/turn
+  deltas, reads `drews-route-segments.txt`, reads `drews-object-states.txt`, and writes
+  `tools/route-validation-harness.txt`.
+
+  Added focused tests for nested route-segment field parsing, object/door-state correlation, and
+  structural path validation. Updated the live C2 guide docs and decision log to make the harness
+  report-only and to move the active queue to the pilot-region cleanup pass.

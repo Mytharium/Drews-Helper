@@ -2,15 +2,15 @@
 
 Last updated: 2026-08-14.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0191)
+## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0192)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Start with item E: route-validation harness. D-0191 implemented the default-OFF
-object and door-state recorder, so live object state can now be captured as evidence before map or
-transport promotion. There are no required Myth reruns until a test target is named. Do not reopen
-route windows, broad tree blocking, or held-back object profiles as the next step.
+**WHAT'S NEXT:** Start with item F: pilot region cleanup. D-0192 added the route-validation
+harness, so candidate map/ranker work now has a repeatable report-only gate before anything is
+promoted. There are no required Myth reruns until a specific pilot-region target is named. Do not
+reopen route windows, broad tree blocking, or held-back object profiles as the next step.
 
 Session close at 2026-08-14 06:56 UTC:
 
@@ -28,6 +28,11 @@ Session close at 2026-08-14 06:56 UTC:
    loaded scene every 25 ticks and writes `DREW_OBJECT_STATE v1` evidence rows to
    `%USERPROFILE%\.runelite\drews-object-states.txt`. Rows keep base id, active impostor id,
    actions, varbit/varp hooks, live collision flags, and collision-map confidence/provenance.
+8. D-0192 added `gradlew validateRoutes`. The harness runs deterministic offline route
+   structural validations, reads `%USERPROFILE%\.runelite\drews-route-segments.txt`, reads
+   `%USERPROFILE%\.runelite\drews-object-states.txt`, correlates segment divergence with nearby
+   object/door rows, and writes `tools/route-validation-harness.txt`. It is evidence-only and
+   does not promote collision, transport, or object-profile rows.
 
 Object/door-state recorder run procedure:
 
@@ -45,6 +50,18 @@ Object/door-state recorder run procedure:
    `19143/10` out until they get their own paid/unnamed proof pass.
 8. Keep the known accepted full-test failure visible:
    `shapeRankingShadowExposesDistinctSameLengthRandomChainRoute`.
+
+Route-validation harness procedure:
+
+1. Run `gradlew validateRoutes` from the Drew's Helper repo root.
+2. Use `--args="--samples=1000"` to make the sample count explicit; the default is already 1000.
+3. Use `--args="--skip-offline"` only when you want a quick read of live evidence files without
+   running the route solves.
+4. Read `tools/route-validation-harness.txt`.
+5. Treat `badStructure` and `illegalObservedEdges` as hard gates.
+6. Treat divergent hand-walked route segments plus nearby object rows as the shortlist for the next
+   live test target.
+7. Do not use the harness to auto-promote map, transport, or object-profile data.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -533,15 +550,15 @@ ACTIVE SEQUENCE - in order
       C. Confidence tiers, including INHERITED   CLOSED, D-0189. Collision-map provenance is
                                                  explicit via sidecar, and transport rows carry
                                                  confidence/provenance columns.
-      D. Object and DOOR STATE recorder          ~1 day. Object state, not just object id.
-                                                 A shut door and an open door are different
-                                                 collision worlds and we currently cannot
-                                                 tell which one a capture measured.
-      E. Route-validation harness                ~half day. 1,000 OFFLINE structural
-                                                 validations plus about 25 hand-walked.
-                                                 ABSORBS old item 5 (turn count) as its
-                                                 optimality metric. D-0136 RULE 4.
-      F. Pilot region to zero known errors       The gate. Nothing expands anywhere else
+      D. Object and DOOR STATE recorder          CLOSED, D-0191. Object state is now
+                                                 captured in `DREW_OBJECT_STATE v1`
+                                                 evidence rows without changing route
+                                                 behavior.
+      E. Route-validation harness                CLOSED, D-0192. `gradlew validateRoutes`
+                                                 runs the offline structural gate,
+                                                 summarizes hand-walked route segments,
+                                                 and correlates nearby object/door rows.
+      F. Pilot region to zero known errors       NEXT. The gate. Nothing expands anywhere else
                                                  until the pilot area passes.
       G. Route-vs-actual tracking                DEFERRED until the map is fixed - Mytharium's
                                                  call, 2026-08-12. Not a build, a switch:

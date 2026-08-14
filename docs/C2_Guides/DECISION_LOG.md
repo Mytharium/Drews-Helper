@@ -2708,3 +2708,26 @@ D-0191 (2026-08-14) - Object and door-state rows are evidence, not automatic map
 
   Cross-reference: D-0189 confidence tiers, D-0188 promoted collision map, D-0186 held-back object
   keys, and the next route-validation harness item.
+
+D-0192 (2026-08-14) - Route-validation harness is the gate before pilot-region cleanup.
+
+  RULE 1 - THE HARNESS IS REPORT-ONLY. `gradlew validateRoutes` may read shipped route resources,
+  route segment evidence, and object/door-state evidence, and it may write
+  `tools/route-validation-harness.txt`. It must not rewrite `collision-map.zip`,
+  `collision-map-confidence.tsv`, `drewshelper-transports.tsv`, or any object-profile allowlist.
+
+  RULE 2 - OFFLINE STRUCTURAL ERRORS ARE HARD GATES. A READY route whose path does not start/end
+  on the requested tiles, or whose path contains a step that is neither legal walking nor a known
+  transport hop, is a structural failure. Do not promote a candidate map/ranker change while this
+  count is non-zero.
+
+  RULE 3 - HAND-WALKED EVIDENCE IS TRIAGE INPUT, NOT A PROMOTION BY ITSELF. `DREW_ROUTE_SEGMENT`
+  rows classify route-vs-actual behavior. `DREW_OBJECT_STATE` rows describe nearby live object and
+  door state. The harness may correlate them to choose the next live test target, but the rows do
+  not automatically become collision, transport, or object-profile data.
+
+  RULE 4 - TURN COUNT LIVES INSIDE THE HARNESS. The old standalone turn-count item is absorbed by
+  the offline report's route length and turn-delta metrics between the current client-style solve
+  and the shape-ranking solve.
+
+  Cross-reference: D-0136 RULE 4, D-0185 segment evidence, and D-0191 object/door-state evidence.
