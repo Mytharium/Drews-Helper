@@ -10,7 +10,7 @@ Drew's Helper is a RuneLite external plugin in:
 C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
 ```
 
-Use `lcl-ssh` against `mythpc` for live file checks and edits. Do not commit, push, pull, or alter the active RuneLite profile unless Myth explicitly asks for that specific operation.
+Use `lcl-ssh` against `mythpc` for live file checks and edits. Follow `docs/C2_Guides/C2_GIT_COMMIT_POLICY.md` for C2 commit handling: commit completed change-sets on mythpc under the repo's configured identity, never push, and use `[c2-local]` fallback commits only while mythpc SSH is unreachable. Do not pull or alter the active RuneLite profile unless Myth explicitly asks for that specific operation.
 
 ## Build And Run
 
