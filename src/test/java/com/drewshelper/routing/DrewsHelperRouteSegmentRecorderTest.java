@@ -34,6 +34,7 @@ public class DrewsHelperRouteSegmentRecorderTest
         String line = lines.get(0);
         assertTrue(line.contains("DREW_ROUTE_SEGMENT v1"));
         assertTrue(line.contains("reason=destination"));
+        assertTrue(line.contains("completed=true"));
         assertTrue(line.contains("start=(0,0,0)"));
         assertTrue(line.contains("clickDest=(2,0,0)"));
         assertTrue(line.contains("routeStart=exact:idx=0:dist=0"));
@@ -65,7 +66,9 @@ public class DrewsHelperRouteSegmentRecorderTest
         List<String> first = recorder.onTick(point(1, 0), point(4, 0), snapshot, null, 3);
         assertEquals(1, first.size());
         assertTrue(first.get(0).contains("reason=destination-changed"));
+        assertTrue(first.get(0).contains("completed=false"));
         assertTrue(first.get(0).contains("clickDest=(2,0,0)"));
+        assertTrue(first.get(0).contains("classification=interrupted-reclick-clean-prefix"));
 
         assertTrue(recorder.onTick(point(2, 0), point(4, 0), snapshot, null, 4).isEmpty());
         assertTrue(recorder.onTick(point(3, 0), point(4, 0), snapshot, null, 5).isEmpty());
@@ -75,6 +78,31 @@ public class DrewsHelperRouteSegmentRecorderTest
         assertTrue(second.get(0).contains("clickDest=(4,0,0)"));
 
         assertEquals(2, Files.readAllLines(output.toPath(), StandardCharsets.UTF_8).size());
+    }
+
+    @Test
+    public void destinationChangeAfterDivergenceIsLabeledAsInterruptedEvidence() throws Exception
+    {
+        File output = temporaryFolder.newFile();
+        DrewsHelperRouteSegmentRecorder recorder = new DrewsHelperRouteSegmentRecorder(output);
+        DrewsHelperRouteSnapshot snapshot = route(
+            point(0, 0),
+            point(1, 0),
+            point(2, 0),
+            point(3, 0),
+            point(4, 0)
+        );
+
+        assertTrue(recorder.onTick(point(0, 0), point(3, 0), snapshot, null, 1).isEmpty());
+        assertTrue(recorder.onTick(point(0, 1), point(3, 0), snapshot, null, 2).isEmpty());
+
+        List<String> lines = recorder.onTick(point(0, 1), point(4, 0), snapshot, null, 3);
+
+        assertEquals(1, lines.size());
+        assertTrue(lines.get(0).contains("reason=destination-changed"));
+        assertTrue(lines.get(0).contains("completed=false"));
+        assertTrue(lines.get(0).contains("classification=interrupted-reclick-after-divergence"));
+        assertTrue(lines.get(0).contains("divergence={idx=1"));
     }
 
     @Test
@@ -90,6 +118,7 @@ public class DrewsHelperRouteSegmentRecorderTest
 
         assertEquals(1, lines.size());
         assertTrue(lines.get(0).contains("reason=destination-cleared"));
+        assertTrue(lines.get(0).contains("completed=false"));
         assertTrue(lines.get(0).contains("routeDest=off:idx=-1:dist=8"));
         assertTrue(lines.get(0).contains("expectedPoints=0 actualPoints=3"));
         assertTrue(lines.get(0).contains("classification=click-destination-off-route"));

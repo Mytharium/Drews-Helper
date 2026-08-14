@@ -270,6 +270,7 @@ public final class DrewsHelperRouteSegmentRecorder
                 return null;
             }
 
+            boolean completed = hasReachedClickDestination();
             String routeTrace = "unavailable";
             String divergenceTrace = "unavailable";
             String edgeValidationTrace = "none";
@@ -281,14 +282,15 @@ public final class DrewsHelperRouteSegmentRecorder
                 divergenceTrace = DrewsHelperRouteBenchmark.formatDivergence(
                     expectedPath,
                     actualPath,
-                    true
+                    completed
                 );
-                edgeValidationTrace = edgeValidationTrace(routeEngine);
+                edgeValidationTrace = edgeValidationTrace(routeEngine, completed);
             }
 
             return "DREW_ROUTE_SEGMENT v1"
                 + " tick=" + tick
                 + " reason=" + reason
+                + " completed=" + completed
                 + " start=" + DrewsHelperRouteBenchmark.formatPoint(start)
                 + " clickDest=" + DrewsHelperRouteBenchmark.formatPoint(clickDestination)
                 + " routeTarget=" + DrewsHelperRouteBenchmark.formatPoint(routeTarget)
@@ -296,7 +298,7 @@ public final class DrewsHelperRouteSegmentRecorder
                 + " routeDest=" + destinationAnchor.format()
                 + " expectedPoints=" + expectedPath.size()
                 + " actualPoints=" + actualPath.size()
-                + " classification=" + classification(routeEngine)
+                + " classification=" + classification(reason, completed, routeEngine)
                 + " route={" + routeTrace + "}"
                 + " divergence={" + divergenceTrace + "}"
                 + " edgeValidation={" + edgeValidationTrace + "}"
@@ -304,12 +306,21 @@ public final class DrewsHelperRouteSegmentRecorder
                 + " actualPath=" + DrewsHelperRouteBenchmark.formatPath(actualPath);
         }
 
-        private String edgeValidationTrace(DrewsHelperWalkingRouteEngine routeEngine)
+        private boolean hasReachedClickDestination()
+        {
+            return !actualPath.isEmpty()
+                && actualPath.get(actualPath.size() - 1).equals(clickDestination);
+        }
+
+        private String edgeValidationTrace(
+            DrewsHelperWalkingRouteEngine routeEngine,
+            boolean completed
+        )
         {
             int divergenceIndex = DrewsHelperRouteBenchmark.firstDivergenceIndex(
                 expectedPath,
                 actualPath,
-                true
+                completed
             );
             if (divergenceIndex < 1 || routeEngine == null)
             {
@@ -329,7 +340,11 @@ public final class DrewsHelperRouteSegmentRecorder
             );
         }
 
-        private String classification(DrewsHelperWalkingRouteEngine routeEngine)
+        private String classification(
+            String reason,
+            boolean completed,
+            DrewsHelperWalkingRouteEngine routeEngine
+        )
         {
             if (!startAnchor.hasIndex())
             {
@@ -342,6 +357,11 @@ public final class DrewsHelperRouteSegmentRecorder
             if (expectedPath.isEmpty())
             {
                 return "expected-segment-unavailable";
+            }
+
+            if (!completed)
+            {
+                return interruptedClassification(reason);
             }
 
             DrewsHelperRouteBenchmark.Report report =
@@ -384,6 +404,25 @@ public final class DrewsHelperRouteSegmentRecorder
                 return "legal-detour-or-object-pressure";
             }
             return "legal-route-ranker-or-click-shape";
+        }
+
+        private String interruptedClassification(String reason)
+        {
+            int divergenceIndex = DrewsHelperRouteBenchmark.firstDivergenceIndex(
+                expectedPath,
+                actualPath,
+                false
+            );
+            String suffix = divergenceIndex < 0 ? "clean-prefix" : "after-divergence";
+            if ("destination-changed".equals(reason))
+            {
+                return "interrupted-reclick-" + suffix;
+            }
+            if ("limit".equals(reason))
+            {
+                return "segment-limit-" + suffix;
+            }
+            return "client-stopped-" + suffix;
         }
 
         private static List<WorldPoint> expectedSegment(

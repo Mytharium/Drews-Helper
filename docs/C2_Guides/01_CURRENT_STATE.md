@@ -34,6 +34,7 @@ live route pins and should not ship from raw Batch A notes alone.
 ## 2026-08-14 Segment-Aware Route Validation
 
 D-0184 adds a second default-OFF route diagnostic: `Settings` -> `Log Route Segments`.
+D-0185 adds an interruption-aware label so normal re-click cadence does not look like a route bug.
 
 When enabled, Drew watches RuneLite's local walking destination and records each clicked walking
 segment against the displayed current-leg route slice that was visible when the click started. It
@@ -48,10 +49,15 @@ The segment row includes:
 - `expectedPath` as the displayed route slice for that one click, not the whole waypoint route.
 - `actualPath` as the tiles the player walked before reaching the click destination, stopping,
   clearing the destination, hitting the tick limit, or clicking a new destination.
+- `completed=true|false`, where `false` means the player clicked again, stopped, cleared the
+  destination, or hit the diagnostic limit before the original click destination was reached.
 - `route={...}`, `divergence={...}`, and `edgeValidation={...}` diagnostics.
 - `classification` values such as `match`, `click-destination-off-route`,
   `legal-detour-or-object-pressure`, `legal-route-ranker-or-click-shape`, and
-  `static-map-disagrees-with-live-step`.
+  `static-map-disagrees-with-live-step`. If the player clicks again before the segment completes,
+  the row is labeled `interrupted-reclick-clean-prefix` or
+  `interrupted-reclick-after-divergence` instead of being treated as object/profile evidence by
+  default.
 
 This is evidence-only. It does not change path selection, promote `shapeShadow`, add object
 profiles, or write transport/collision rows. Its job is to split Batch A's whole-route mismatches

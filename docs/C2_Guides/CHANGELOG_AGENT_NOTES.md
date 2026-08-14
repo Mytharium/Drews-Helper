@@ -2266,3 +2266,20 @@ D-0184 (2026-08-14) - Added passive route-segment validation logging.
   `shapeShadow`, or write collision/transport override rows. Next live pass should use `Log Route
   Segments` around Lumbridge table pressure, Draynor dead-tree pressure, and Varrock/Sawmill legal
   route-shape pressure before the object-profile proof pass.
+
+D-0185 (2026-08-14) - Made route-segment logging interruption-aware.
+
+  Myth's first Batch B pass intentionally included frequent re-clicking, less frequent clicking,
+  and mistake clicks. The existing segment rows captured that behavior, but `reason=destination-
+  changed` rows could still receive route/object-looking classifications even though the player had
+  interrupted the original click before reaching its destination.
+
+  `DREW_ROUTE_SEGMENT v1` rows now include `completed=true|false`. Completed rows are still
+  compared as object/ranker evidence. Interrupted rows keep their expected/actual paths, route
+  summary, divergence, and edge validation, but classify as `interrupted-reclick-clean-prefix` or
+  `interrupted-reclick-after-divergence` when the destination changes before the clicked tile is
+  reached. `limit` and client-stop rows get equivalent non-completed labels.
+
+  This is diagnostic-only. It does not change route selection, object profiles, collision data,
+  transports, or route rendering. It makes the next table/dead-tree/Sawmill proof pass require
+  `completed=true` pins by default.

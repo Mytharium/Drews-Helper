@@ -7,12 +7,11 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Restart the Drew's Helper dev client, enable `Settings` -> `Log Route Segments`,
-then rerun short segment walks through the Batch A problem spots. The new D-0184 recorder writes
-one `DREW_ROUTE_SEGMENT` row per clicked destination into `drews-route-segments.txt` and the
-Gradle log. Keep `Log Benchmark Movement` OFF for this pass unless a whole-route comparison is
-specifically requested. Use the segment rows to decide whether the table/dead-tree/tree evidence
-is object-profile work, route-ranker work, door/traversal-state work, or static collision-map work.
+**WHAT'S NEXT:** Restart the Drew's Helper dev client with D-0185, enable `Settings` -> `Log Route
+Segments`, and rerun focused Batch C pins around the exact table/dead-tree/Sawmill spots. Read
+only `completed=true` rows as route/object evidence by default. `completed=false` rows are useful
+for click-cadence/mistake analysis, but D-0185 labels them as interrupted rows so normal re-clicks
+do not pollute the object-profile proof pass.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -123,7 +122,9 @@ errors before shipping tree/dead-tree/table profile changes.
 ### ROUTE-SEGMENT VALIDATION BATCH B
 
 D-0184 added `Settings` -> `Log Route Segments`, default OFF. When enabled, Drew records each
-clicked walking destination as its own `DREW_ROUTE_SEGMENT v1` row. Rows are written to:
+clicked walking destination as its own `DREW_ROUTE_SEGMENT v1` row. D-0185 adds
+`completed=true|false` and interruption-aware classifications so normal re-click cadence is not
+misread as a route/object fault. Rows are written to:
 
 ```text
 %USERPROFILE%\.runelite\drews-route-segments.txt
@@ -133,7 +134,8 @@ and mirrored to the Gradle log. Each row includes the clicked destination, the c
 the displayed route slice for that click, the actual tiles walked, `route={...}` summary,
 `divergence={...}`, `edgeValidation={...}`, and a first-pass classification such as `match`,
 `click-destination-off-route`, `legal-detour-or-object-pressure`,
-`legal-route-ranker-or-click-shape`, or `static-map-disagrees-with-live-step`.
+`legal-route-ranker-or-click-shape`, `static-map-disagrees-with-live-step`,
+`interrupted-reclick-clean-prefix`, or `interrupted-reclick-after-divergence`.
 
 Run procedure for Batch B:
 
@@ -141,8 +143,9 @@ Run procedure for Batch B:
 2. Keep `Log Benchmark Movement` OFF.
 3. Enable `Settings` -> `Log Route Segments`.
 4. Put one waypoint on the final route target.
-5. Walk by clicking the highlighted tile you would naturally click next, waiting for that segment
-   to finish before clicking again.
+5. Walk by clicking the highlighted tile you would naturally click next. For object-profile proof,
+   let the segment finish before clicking again. For human-cadence proof, re-click normally; those
+   rows should be interpreted through `completed=false`.
 6. If a door or object must be clicked first, click it normally; `Validate Map Data` can be enabled
    only when we specifically need `DREW_TRAVERSAL` object rows too.
 7. Send the `DREW_ROUTE_SEGMENT` rows around any visible mismatch, especially rows with
@@ -165,6 +168,43 @@ B3 Varrock east/Sawmill legal shape pressure
 Start near: 3253,3420,0
 Route to:   3307,3491,0
 Goal:       capture one non-object legal route-shape miss from A6.
+```
+
+Live Batch B result from Myth, checked 2026-08-14:
+
+```text
+Rows read: 33 from %USERPROFILE%\.runelite\drews-route-segments.txt
+Targets seen: (3222,3218,0), (3109,3352,0), (3307,3491,0)
+
+Most noisy rows ended with reason=destination-changed, which is expected when Myth intentionally
+emulated frequent re-clicking and mistake clicks. Those rows proved the recorder needed a
+completed/interrupted distinction before object-profile proof.
+
+Useful completed evidence:
+- Target (3222,3218,0): several completed route-shape rows remain, including one 37 expected vs
+  42 actual segment with maxDev=7.
+- Target (3109,3352,0): final northbound segment matched exactly, but the dead-tree approach still
+  needs a focused completed pin; most suspicious rows were interrupted.
+- Target (3307,3491,0): final segment was a benign same-time local permutation; the stronger
+  Sawmill/object-pressure rows were interrupted and need a focused completed pin.
+```
+
+### ROUTE-SEGMENT VALIDATION BATCH C
+
+Use D-0185 for cleaner object/ranker pins:
+
+```text
+C1 Lumbridge table exact pin
+Goal: set the waypoint so the highlighted route visibly tries to cross the dining table, then make
+one click that allows that exact segment to finish. Send completed=true rows only.
+
+C2 Draynor dead-tree exact pin
+Goal: stand just before the dead-tree leak, click the highlighted next tile beyond it, and let that
+segment finish. Send completed=true rows only.
+
+C3 Sawmill shape/object pressure exact pin
+Goal: repeat the A6 pressure area, but let the suspect segment finish before re-clicking. Send
+completed=true rows with non-match classification.
 ```
 
 Commits from the 2026-08-13 Mytharium route/collision session, in order:

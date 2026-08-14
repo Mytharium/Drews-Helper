@@ -2583,3 +2583,25 @@ D-0184 (2026-08-14) - Route-segment logs are evidence, not behaviour changes
 
   Cross-reference: D-0147 object-profile gates, D-0175 route benchmark evidence contract, and
   D-0183 Batch A segment-classification rule.
+
+
+D-0185 (2026-08-14) - Interrupted route segments are click-cadence evidence first
+
+  RULE 1 - COMPLETED SEGMENTS ARE THE DEFAULT OBJECT/RANKER PROOF. A `DREW_ROUTE_SEGMENT` row with
+  `completed=true` reached the clicked destination and can be treated as normal route/object
+  evidence. A `completed=false` row stopped because the player re-clicked, the destination cleared,
+  the client settled, or the diagnostic limit fired before the clicked destination was reached.
+
+  RULE 2 - RE-CLICK CADENCE IS NOT A ROUTE BUG BY ITSELF. Myth's first Batch B pass intentionally
+  emulated frequent clicks, sparse clicks, and mistake clicks. Rows ending with
+  `reason=destination-changed` must be labeled as interrupted rows unless the original clicked tile
+  was actually reached. Use `interrupted-reclick-clean-prefix` and
+  `interrupted-reclick-after-divergence` as triage labels, not as route/object changes.
+
+  RULE 3 - FOCUSED OBJECT-PROFILE PINS SHOULD PREFER `completed=true`. Tables, dead trees, trees,
+  and Sawmill/object-pressure changes still need focused completed segment rows plus the D-0147
+  route-aware overblock gate. Interrupted rows can point to where to stand next, but should not
+  ship object-profile or ranker changes by themselves.
+
+  Cross-reference: D-0147 object-profile gates, D-0183 Batch A segment-classification rule, and
+  D-0184 route-segment logging.
