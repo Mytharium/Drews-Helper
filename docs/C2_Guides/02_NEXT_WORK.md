@@ -7,11 +7,12 @@ Last updated: 2026-08-14.
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Restart the Drew's Helper dev client, turn in-game run OFF, enable `Settings` ->
-`Log Benchmark Movement`, and rerun the two patched creative controls: reverse
-`2951,3208,0 -> 2942,3243,0` and east pressure `2946,3239,0 -> 2951,3208,0`. Fork isolate
-`2942,3236,0 -> 2951,3208,0` already matched. For cleaner evidence rows, turn `Log Benchmark
-Movement` OFF while walking to each start tile, then turn it back ON only for the test route.
+**WHAT'S NEXT:** Run broader route-shape validation Batch A before more per-route patches. Keep
+in-game run OFF, turn `Log Benchmark Movement` OFF while staging, and turn it ON only for the
+measured route. Start with Varrock-to-GE, Lumbridge-to-Draynor, Draynor-to-Manor,
+Lumbridge-to-Al-Kharid, Falador-to-Barbarian-Village, and Varrock-east-to-Sawmill rows below.
+Use those rows to decide whether the current issue is still isolated to Falador tree-line pockets
+or needs a general route-ranker / object-profile fix before tree/tree-stump profiles ship.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -23,6 +24,58 @@ that completed row to add a narrow target-aware route-shape correction for the F
 target, without enabling broad tree blocking or promoting `shapeShadow`. D-0179 live-validated
 that correction on the primary route. D-0180 extends the same evidence-scoped local route-window
 approach to the reverse and east-pressure creative controls after Myth's 2026-08-14 live pass.
+D-0181 live-validated those controls and moves the next work from Falador-specific patching to a
+broader route-shape validation sweep.
+
+### ROUTE-SHAPE VALIDATION BATCH A
+
+Run procedure:
+
+1. Keep in-game run OFF.
+2. Keep `Log Benchmark Movement` OFF while walking/teleporting to each start tile.
+3. Turn `Log Benchmark Movement` ON only for the measured route.
+4. Walk the highlighted route normally to the end tile.
+5. Send the completed `DREW_ROUTE_BENCH reason=target` rows, especially any row where `full=false`,
+   `lenDelta` is non-zero, `maxDev` is non-zero, or `divergence` is not `{none}`.
+
+Batch A routes:
+
+```text
+A1 Varrock city -> Grand Exchange
+Start: 3212,3424,0
+End:   3165,3484,0
+Why:   long city/road route with gates, walls, and dense pathing but not the Falador tree pocket.
+
+A2 Lumbridge -> Draynor bank
+Start: 3222,3218,0
+End:   3092,3245,0
+Why:   long open-road route through fences/river-road geometry in the captured low-level area.
+
+A3 Draynor bank -> Draynor Manor entrance
+Start: 3092,3245,0
+End:   3109,3352,0
+Why:   object-heavy manor approach with trees/hedges, useful before tree profiles are revisited.
+
+A4 Lumbridge east side -> Al Kharid bank
+Start: 3224,3219,0
+End:   3270,3167,0
+Why:   desert-gate/road route; direction avoids making Lumbridge Home Teleport the obvious target.
+
+A5 Falador square -> Barbarian Village
+Start: 2964,3378,0
+End:   3081,3421,0
+Why:   long Falador-area control that leaves the fixed southeast tree pocket.
+
+A6 Varrock east bank -> Sawmill
+Start: 3253,3420,0
+End:   3307,3491,0
+Why:   different Varrock-side tree/road clutter, checks whether similar outdoor object pressure repeats.
+```
+
+Interpretation rule: exact matches and benign same-time permutations do not justify route changes.
+If several non-Falador rows show the same legal equal-length route-shape miss, stop adding local
+windows and work the route ranker. If failures are illegal/static-map disagreements or object-edge
+misses, classify them for the object-profile/collision-map pass instead.
 
 Commits from the 2026-08-13 Mytharium route/collision session, in order:
 
@@ -88,12 +141,17 @@ rule, so tree profiles need their own pass.
    `2951,3208,0`. Myth's live rerun after the patch completed with displayed `expectedPath` and
    walked `actualPath` both 39 points: `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`,
    `divergence={none}`.
+4. Creative Falador route-shape controls: PASS after D-0180. Reverse
+   `2951,3208,0 -> 2942,3243,0` completed as an exact 39-point match with `full=true`,
+   `lenDelta=0`, `maxDev=0`, `turnDelta=0`, and `divergence={none}`. East pressure
+   `2946,3239,0 -> 2951,3208,0` completed as an exact 35-point match with the same zero-deviation
+   result. Fork isolate had already matched before D-0180.
 
 ### NEXT CODING ORDER
 
-1. **Optional live route-shape controls before coding.** With in-game run OFF and
-   `Log Benchmark Movement` enabled, walk reverse `2951,3208,0 -> 2942,3243,0`, fork isolate
-   `2942,3236,0 -> 2951,3208,0`, and east pressure `2946,3239,0 -> 2951,3208,0`.
+1. **Broader route-shape validation sweep.** Do not keep adding Falador-only windows blindly. Walk
+   longer routes in different areas and compare `expectedPath` against `actualPath` to see whether
+   route-shape misses generalize beyond the Falador southeast tree-line pocket.
 2. **Tree/tree-stump object-profile pass.** Keep it separate from the shipped 22-profile expansion.
    Trees can ship only if their measured profile batch keeps the pinned Falador route stable in
    both the actual walked path and the displayed route.
@@ -125,6 +183,9 @@ blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut h
       D-0177  DECISION   Falador southeast fix must stay exact, target-aware, and non-global
       D-0178  CHANGELOG  patch Falador southeast visible route from completed benchmark trace
       D-0179  CHANGELOG  live-validate Falador southeast visible route patch
+      D-0180  DECISION   creative controls stay scoped to observed paths
+      D-0181  CHANGELOG  live-validate reverse and east-pressure controls
+      D-0182  CHANGELOG  stage broader route-shape validation Batch A
 
 ## Historical Handoff - 2026-08-12 Recorder-First Plan
 

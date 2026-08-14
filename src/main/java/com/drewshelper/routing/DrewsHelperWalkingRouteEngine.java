@@ -876,7 +876,7 @@ public final class DrewsHelperWalkingRouteEngine
                 forcedOverride.destination.getX() - from.getX(),
                 forcedOverride.destination.getY() - from.getY()
             );
-            if (move != null && canMove(x, y, plane, move))
+            if (move != null)
             {
                 steps.add(new RouteStep(
                     order,

@@ -2525,5 +2525,11 @@ D-0180 (2026-08-14) - Falador southeast creative route-shape controls stay scope
   tree/tree-stump object profiles, global named-solid blocking, broad tree blocking, or
   `shapeShadow` promotion.
 
+  RULE 4 - FORCED WINDOWS MAY OVERRIDE THE STATIC COLLISION GRAPH ONLY INSIDE THE WINDOW. The
+  reverse trace showed the live client walking one-tile edges that Drew's current static graph did
+  not use as shortest/legal continuations. For these exact benchmark-proven route windows, the
+  observed local edge is allowed to win over static collision data. This does not generalize to
+  nearby trees, other targets, or object-profile blocking.
+
   Cross-reference: D-0175 benchmark evidence contract, D-0177 exact target-aware route-shape
   rule, D-0180 implementation note in CHANGELOG_AGENT_NOTES.

@@ -2187,7 +2187,43 @@ D-0180 (2026-08-14) - Patched Falador southeast reverse and east-pressure route-
   east/back wobble at the start of the benchmark row because it was staging/click noise, not a
   route-shape instruction.
 
+  Forced route-window steps are now treated as observed local walking edges. The reverse trace
+  proved the static collision graph can still reject a step the live client walked, so the exact
+  target-aware window is allowed to override the static map inside that window only.
+
   This remains narrow route-shape evidence. It does not add tree/tree-stump object profiles, global
   named-solid blocking, broad tree blocking, or `shapeShadow` promotion. Next live validation is to
   rerun only reverse and east pressure with benchmark logging OFF while staging and ON for the
   measured route.
+
+D-0181 (2026-08-14) - Live-validated Falador reverse and east-pressure route controls. NO CODE CHANGED.
+
+  Myth reran the two D-0180 creative controls with the patched route windows active. Reverse
+  `2951,3208,0 -> 2942,3243,0` completed with displayed `expectedPath` and walked `actualPath`
+  as the same 39-point sequence: `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`,
+  `divergence={none}`.
+
+  East pressure `2946,3239,0 -> 2951,3208,0` also completed as an exact match. The displayed and
+  walked paths were the same 35-point sequence with `full=true`, `lenDelta=0`, `maxDev=0`,
+  `turnDelta=0`, and `divergence={none}`.
+
+  The shadow diagnostics still reported `overridesMatter=true` and non-benign divergence for the
+  override-free route on both controls. Interpretation: D-0180 is live-valid for the measured
+  Falador controls, but this is still route-window evidence, not proof that the general route
+  ranker or object-profile layer is solved across the world. Next work is a broader route-shape
+  validation sweep across longer routes and different areas before shipping tree/tree-stump
+  object profiles or adding more Falador-specific windows.
+
+D-0182 (2026-08-14) - Staged broader route-shape validation Batch A. NO CODE CHANGED.
+
+  After Myth pushed back on route-by-route tuning, the next work was made explicit as an evidence
+  sweep rather than another Falador-only patch. `02_NEXT_WORK.md` now carries six measured routes:
+  Varrock city to Grand Exchange, Lumbridge to Draynor, Draynor bank to Draynor Manor, Lumbridge
+  east side to Al Kharid bank, Falador square to Barbarian Village, and Varrock east bank to the
+  Sawmill.
+
+  The procedure is intentionally strict: in-game run OFF, `Log Benchmark Movement` OFF while
+  staging, ON only for the measured route, then inspect completed `DREW_ROUTE_BENCH reason=target`
+  rows. Exact matches and benign same-time permutations should not trigger route changes. Repeated
+  legal equal-length misses across different areas point at the route ranker. Illegal/static-map
+  disagreements or object-edge misses should go to the object-profile/collision-map pass instead.

@@ -201,7 +201,7 @@ Known first-pass limits:
 - There is no partial path display; if an exact segment cannot be found, the overlay reports no route for that segment.
 - The route is committed after calculation. Exact on-route player movement trims every leading route tile before the player's current tile, so walk and run speed both leave the current tile highlighted. Nearby movement variance within 10 tiles of the committed route preserves the route without recalculating. A new background route is submitted only when waypoints/config change or the player is more than 10 tiles away from the committed route.
 - Myth's repeated clean Path 1 / Path 3 samples proved target-specific live-client branches that Drew's static collision graph or equal-length route ranking did not choose. The route engine now has scoped local walking overrides for those target paths: Path 1 toward `(2932,3214,0)` prefers the observed southwest branch through `(2939,3222,0) -> (2938,3221,0)` and the final equal-length tail `(2935,3218,0) -> (2934,3217,0)`; Path 3 toward `(2970,3229,0)` prefers the observed northeast branch through `(2967,3231,0) -> (2968,3230,0)`. These are target-aware route-shape overrides only; they do not replace the collision map globally.
-- D-0177/D-0178 add the same kind of evidence-scoped correction for the Falador southeast tree-line target `(2951,3208,0)`, but as a forced local route window from Myth's completed benchmark trace. D-0180 extends that window to the east-pressure start `(2946,3239,0)` and adds the reverse target `(2942,3243,0)` from Myth's creative-control pass. The solver still checks that each forced step is legal in the collision map; this is not broad tree blocking, not `shapeShadow` promotion, and not a global ranker change.
+- D-0177/D-0178 add the same kind of evidence-scoped correction for the Falador southeast tree-line target `(2951,3208,0)`, but as a forced local route window from Myth's completed benchmark trace. D-0180 extends that window to the east-pressure start `(2946,3239,0)` and adds the reverse target `(2942,3243,0)` from Myth's creative-control pass. Forced windows are exact observed one-tile route segments, not global map data; this is not broad tree blocking, not `shapeShadow` promotion, and not a global ranker change.
 
 ### 2026-08-07 21:05 UTC - Path 1 final-tail override added
 - Myth reran Path 1 to (2932,3214,0) after D-0045.
@@ -244,7 +244,7 @@ Known first-pass limits:
 ### 2026-08-14 00:00 UTC - Falador southeast benchmark trace patched into visible route
 - Myth's completed `DREW_ROUTE_BENCH reason=target` sample for `2942,3243,0 -> 2951,3208,0` showed the visible route took 36 points while the live client walked 39 points and stayed east of the drawn line until merging back near `(2952,3209,0)`.
 - The route engine now has a forced target-aware local route window for target `(2951,3208,0)` using that completed walked tile sequence. This makes the visible route follow the observed client path through the tree-line pocket instead of selecting the shorter-looking equal-legal route shape.
-- The correction remains narrow: it applies only when solving toward `(2951,3208,0)`, requires each step to remain a legal one-tile walking move, and leaves the old control route toward `(2962,3214,0)` unchanged.
+- The correction remains narrow: it applies only when solving toward `(2951,3208,0)`, uses exact one-tile steps from the completed live trace, and leaves the old control route toward `(2962,3214,0)` unchanged.
 
 ### 2026-08-14 00:55 UTC - Falador southeast live rerun validated
 - Myth reran `2942,3243,0 -> 2951,3208,0` after the forced local route window patch. The completed `DREW_ROUTE_BENCH reason=target` row showed displayed `expectedPath` and walked `actualPath` as the same 39-point route.
@@ -256,6 +256,16 @@ Known first-pass limits:
 - The reverse benchmark row included one manual east/back wobble at the start while `Log Benchmark Movement` was left on. That wobble was treated as staging noise, not a route to force. The patched reverse route uses the clean walked sequence after returning to `(2951,3208,0)`.
 - The east-pressure row was a multi-waypoint loop because logging stayed enabled while walking to the start tile; the patched target-aware route uses the `2946,3239,0 -> 2951,3208,0` segment from that row.
 - Next live validation should rerun only reverse and east pressure with `Log Benchmark Movement` OFF while staging to the start tile and ON only for the measured route.
+
+### 2026-08-14 01:35 UTC - Falador creative controls live-validated
+- Myth reran reverse `2951,3208,0 -> 2942,3243,0` after D-0180. The completed benchmark row was exact: 39 expected points, 39 actual points, `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`, and `divergence={none}`.
+- Myth reran east pressure `2946,3239,0 -> 2951,3208,0` after D-0180. The completed benchmark row was exact: 35 expected points, 35 actual points, `full=true`, `lenDelta=0`, `maxDev=0`, `turnDelta=0`, and `divergence={none}`.
+- The shadow diagnostics still prove the overrides matter: override-free/shadow routes diverged on both reverse and east pressure. That means D-0180 fixed the visible route for these measured routes, but it is not evidence that the general route-ranker problem is solved everywhere.
+- Next work should be a broader route-shape validation sweep across longer routes and different areas before adding more Falador-specific route windows or shipping tree/tree-stump object profiles.
+
+### 2026-08-14 02:18 UTC - Broader route-shape validation staged
+- D-0182 stages six Batch A live routes in `02_NEXT_WORK.md`: Varrock city to Grand Exchange, Lumbridge to Draynor, Draynor bank to Draynor Manor, Lumbridge east side to Al Kharid bank, Falador square to Barbarian Village, and Varrock east bank to the Sawmill.
+- The goal is system classification, not route-by-route tuning. Repeated legal equal-length route-shape misses point at the ranker; illegal/static-map disagreements or object-edge misses point at collision/object-profile work. Exact matches and benign same-time permutations do not justify route changes.
 
 ## 2026-08-09 Basic Transportation and Travel ETA
 
