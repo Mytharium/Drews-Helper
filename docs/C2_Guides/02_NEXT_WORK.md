@@ -2,16 +2,43 @@
 
 Last updated: 2026-08-14.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-13, end-of-night collision/routing pass)
+## CURRENT HANDOFF - START HERE (written 2026-08-14, pause after D-0189)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** D-0189 completed recorder-first item C. Collision-map data now has an
-explicit confidence sidecar, and transport rows now carry `confidence` plus `provenance` columns.
-The next active build is recorder-first item D: object and door-state recording. Keep held-back
-keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10` out until
-they get their own paid/unnamed proof pass.
+**WHAT'S NEXT:** Start with recorder-first item D: object and door-state recording. D-0189
+completed item C, so collision-map data now has an explicit confidence sidecar and transport rows
+now carry `confidence` plus `provenance` columns. There are no pending Myth reruns before item D.
+Do not reopen route windows, broad tree blocking, or held-back object profiles as the next step.
+
+Session close at 2026-08-14 06:56 UTC:
+
+1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
+2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
+3. D-0184/D-0185 shipped passive segment logging with `completed=true|false` so re-click cadence is
+   not mistaken for object/ranker proof.
+4. Batch C and D-0186 proved supported table/tree/dead-tree object-profile candidates.
+5. D-0187/D-0188 promoted only the supported map after the gate and Myth's Falador/C1/C2/C3 live
+   reruns; promoted `src/main/resources/collision-map.zip` is SHA256
+   `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
+6. D-0189 added confidence/provenance metadata: collision map default `INFERRED`, Skretzo
+   transport rows `INHERITED`, and 24 override rows `CONFIRMED`.
+
+Next-session build target:
+
+1. Read the current route recorder, traversal validation, collision-map provenance, and transport
+   graph code before editing.
+2. Add an off-by-default object/door-state recorder that records object state, not object id alone.
+3. Preserve route behavior while recording; this pass should gather evidence, not auto-merge new
+   map or transport rows.
+4. Use the existing confidence ladder when writing captured evidence: live/manual proof can become
+   `CONFIRMED`, upstream/generator-only data stays `INHERITED` or `INFERRED`, and disagreements
+   should surface as `CONTRADICTED` instead of being silently overwritten.
+5. Keep held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed
+   `19143/10` out until they get their own paid/unnamed proof pass.
+6. Keep the known accepted full-test failure visible:
+   `shapeRankingShadowExposesDistinctSameLengthRandomChainRoute`.
 
 For live route-shape checks, enable `Settings` -> `Log Benchmark Movement`. D-0174 reactivated
 that one-click capture switch and made its `DREW_ROUTE_BENCH` rows include the full displayed
@@ -393,18 +420,17 @@ rule, so tree profiles need their own pass.
 
 ### NEXT CODING ORDER
 
-1. **Route-segment validation Batch B.** Use `Log Route Segments` to collect clicked segment rows
-   around Lumbridge tables, Draynor dead trees, and Varrock/Sawmill legal shape pressure before
-   changing object profiles or route ranking.
-2. **Tree/tree-stump/table object-profile pass.** Keep it separate from the shipped 22-profile expansion.
-   Trees can ship only if their measured profile batch keeps the pinned Falador route stable in
-   both the actual walked path and the displayed route.
-3. **Next paid object-profile batches.** Hedges, stools, shelves, crates and similar profiles were
-   intentionally not shipped tonight because they need their own cost-column batch and live-route
-   pins.
-4. **Recorder-first plan items C-F.** Still valid once segment evidence is usable: confidence
-   tiers, object/door-state recorder, route-validation harness, then pilot region to zero known
-   errors.
+1. **Object and door-state recorder.** Record the object identity and state that the live client
+   actually traversed or blocked against. A shut door and an open door are different collision
+   worlds; do not record object id alone and call it proof.
+2. **Route-validation harness.** Add the offline structural validations plus the small hand-walked
+   check set so candidate maps and route-ranker changes have repeatable gates.
+3. **Pilot region cleanup.** Drive one pilot region to zero known errors before opening the next
+   expansion slice.
+4. **Paid or unnamed object-profile batches.** Hedges, stools, shelves, crates, held-back paid
+   profiles, and unnamed object rows need their own proof pass and live-route pins.
+5. **Sailing/open-water and snap edge cases.** Revisit after the recorder and harness can tell
+   reachable dock routing from bad snap or missing water-side reachability.
 
 Do not reopen tonight's rejected paths without new evidence: broad Phase 2, global locType 10/11
 blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut hardcodes.
@@ -432,6 +458,12 @@ blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut h
       D-0182  CHANGELOG  stage broader route-shape validation Batch A
       D-0183  DECISION   Batch A shifts route work to segment classification
       D-0184  CHANGELOG  add passive route-segment recorder
+      D-0185  DECISION   interrupted route segments are click-cadence evidence first
+      D-0186  DECISION   object-profile proof stays gated after Batch C
+      D-0187  CHANGELOG  build gated D-0186 candidate collision map
+      D-0188  DECISION   promote supported object profiles; held-back keys stay out
+      D-0189  DECISION   confidence is explicit route-data metadata
+      D-0190  CHANGELOG  session-close handoff after confidence tiers
 
 ## Historical Handoff - 2026-08-12 Recorder-First Plan
 

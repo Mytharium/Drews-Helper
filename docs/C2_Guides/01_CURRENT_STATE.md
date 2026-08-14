@@ -128,6 +128,24 @@ D-0189 adds the recorder-first confidence ladder from D-0136 to the active route
 - `src/main/resources/drewshelper-transports.tsv` is now confidence-tagged per row. Upstream Skretzo rows are `INHERITED`; the 24 live/manual override rows from `tools/transport-overrides.tsv` are `CONFIRMED`.
 - Runtime loaders remain backward-compatible with older 4/10/11-column transport resources and with a missing collision confidence sidecar; missing confidence falls back to `INHERITED` rather than crashing the route graph.
 
+## 2026-08-14 Session Pause Handoff
+
+The overnight route/collision push is paused after D-0189 with no Myth live reruns pending. The
+promoted runtime collision map is SHA256
+`8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`; the previous D-0147 map
+backup remains at `build/collision-map-d0147-before-d0187-test-swap.zip`, SHA256
+`FC2B4F971F40D1DAE30B54D103B071D722177A1B51DC7071C71D7242F020EECC`.
+
+Resume with recorder-first item D: object and door-state recording. The important carry-forward
+rule is that state matters. A closed door, open door, pulled object, or changed traversal state must
+not be collapsed into "object id was seen" evidence. The next recorder should preserve current
+route behavior while writing live evidence that can later promote rows to `CONFIRMED` or flag
+disagreements as `CONTRADICTED`.
+
+Held-back object keys remain excluded until a separate proof pass: `1289/10`, `9661/10`,
+`7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10`. The known accepted full-test failure
+also remains visible: `shapeRankingShadowExposesDistinctSameLengthRandomChainRoute`.
+
 Runtime shape now:
 - `DrewsHelperPlugin` is the only visible RuneLite plugin entry.
 - `DrewsHelperConfig` keeps the player-facing settings/buttons surface.

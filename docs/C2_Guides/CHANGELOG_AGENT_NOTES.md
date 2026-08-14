@@ -2377,3 +2377,16 @@ D-0189 (2026-08-14) - Added recorder-first confidence tiers to collision-map and
   `12,424` before, `12,424` after, missing `0`, extra `0`. Confidence split after regeneration:
   `INHERITED=12,400` Skretzo rows and `CONFIRMED=24` override rows from
   `tools/transport-overrides.tsv`.
+
+D-0190 (2026-08-14) - Wrote the session-close handoff after confidence tiers. NO CODE CHANGED.
+
+  Myth paused the overnight route/collision session after D-0189 and asked for the state to be
+  written down so work can resume cleanly tomorrow. `02_NEXT_WORK.md` now starts with the current
+  pause point, the exact next build target, the completed D-0183 through D-0189 summary, the
+  promoted collision-map hash, the held-back key list, and the known accepted full-test failure.
+
+  `01_CURRENT_STATE.md` now has a compact session-pause handoff under the current 2026-08-14 route
+  state. It records that no Myth live reruns are pending, that the next active build is the object
+  and door-state recorder, and that state must not be collapsed into object-id-only proof.
+
+  No route behavior, collision data, transport data, config, or tests changed in this handoff.
