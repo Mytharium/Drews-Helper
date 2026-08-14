@@ -84,6 +84,40 @@ public class DrewsHelperWalkingRouteEngineTest
     }
 
     @Test
+    public void noPathReportsRequirementsForCapabilityLockedTransport() throws Exception
+    {
+        WorldPoint dock = new WorldPoint(0, 0, 0);
+        WorldPoint island = new WorldPoint(50, 0, 0);
+        DrewsHelperTransportEdge sailingEdge = new DrewsHelperTransportEdge(
+            dock,
+            island,
+            DrewsHelperTransportCategory.SAILING,
+            "Sail to Deepfin Point",
+            20,
+            "Sailing=67",
+            "",
+            "",
+            "",
+            ""
+        );
+        DrewsHelperPlayerCapability lowSailing =
+            DrewsHelperPlayerCapability.builder().skill("SAILING", 1).build();
+
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(
+            new EdgeMovementMap(),
+            DrewsHelperTransportGraph.empty(),
+            DrewsHelperTransportGraph.of(Collections.singletonList(sailingEdge)),
+            lowSailing,
+            false
+        );
+
+        DrewsHelperRouteSnapshot route = engine.solve(dock, Collections.singletonList(island));
+
+        assertEquals(DrewsHelperRouteStatus.NO_PATH, route.getStatus());
+        assertEquals(Collections.singletonList("Sailing = 67"), route.getRequirements());
+    }
+
+    @Test
     public void originlessTransportIsOfferedAtRouteLegStart() throws Exception
     {
         WorldPoint start = new WorldPoint(0, 0, 0);

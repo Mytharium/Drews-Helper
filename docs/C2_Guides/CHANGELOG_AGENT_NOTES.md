@@ -2450,3 +2450,20 @@ D-0194 (2026-08-14) - Consumed the focused pilot recapture and closed the stale-
   `supersededNonPromotableIllegalEdges=1`, and `verdict=NO_COMPLETED_STATIC_DISAGREEMENT`. No
   collision map, object profile, transport row, confidence sidecar, or route-ranker behavior was
   promoted from this recapture.
+
+D-0195 (2026-08-14) - Added Requirements messaging and SAILING category readiness.
+
+  Added a `requirements` payload to `DrewsHelperRouteSnapshot` and taught the route engine to run a
+  same-policy unrestricted diagnostic solve when the normal capability-filtered solve returns
+  NO_PATH. If the unrestricted path reaches the target through edges the account cannot use, the
+  snapshot carries user-facing lines such as `Agility = 90`, `Sailing = 67`, `Mith grapple = 1`,
+  quest names, or var/cooldown requirements.
+
+  Updated `DrewsHelperOverlay` so the requirement lines render under a separate `Requirements`
+  heading below the waypoint/action display, not inside `Actions`. The text is generated from the
+  same `DrewsHelperPlayerCapability` skill/item/quest/var/cooldown gates used by the route graph.
+
+  Added `SAILING` as a transport category, always enabled it as a capability-gated family, included
+  `Skill.SAILING` in route-cache invalidation, and taught travel labels to display `Sailing (...)`.
+  No active sailing transport rows were shipped; port-task navigation points and wiki pins still
+  need verified walkable dock/gangplank interaction tiles before they are safe Drew route data.

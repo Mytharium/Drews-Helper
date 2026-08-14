@@ -35,6 +35,7 @@ public final class DrewsHelperTransportPolicy
         DrewsHelperTransportCategory.AGILITY_SHORTCUT,
         DrewsHelperTransportCategory.GRAPPLE_SHORTCUT,
         DrewsHelperTransportCategory.CANOE,
+        DrewsHelperTransportCategory.SAILING,
         DrewsHelperTransportCategory.GNOME_GLIDER,
         DrewsHelperTransportCategory.HOT_AIR_BALLOON,
         DrewsHelperTransportCategory.QUETZAL,

@@ -7,6 +7,7 @@ enum DrewsHelperTransportCategory
     AGILITY_SHORTCUT,
     GRAPPLE_SHORTCUT,
     CANOE,
+    SAILING,
     GNOME_GLIDER,
     HOT_AIR_BALLOON,
     MAGIC_MUSHTREE,

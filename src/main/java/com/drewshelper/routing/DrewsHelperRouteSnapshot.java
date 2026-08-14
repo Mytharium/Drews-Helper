@@ -37,6 +37,7 @@ public final class DrewsHelperRouteSnapshot
     private final String message;
     private final int walkingDistance;
     private final DrewsHelperRouteSearchMetrics primaryMetrics;
+    private final List<String> requirements;
 
     private DrewsHelperRouteSnapshot(
         DrewsHelperRouteStatus status,
@@ -52,7 +53,8 @@ public final class DrewsHelperRouteSnapshot
             destinations,
             message,
             walkingDistance,
-            DrewsHelperRouteSearchMetrics.empty()
+            DrewsHelperRouteSearchMetrics.empty(),
+            Collections.emptyList()
         );
     }
 
@@ -65,6 +67,20 @@ public final class DrewsHelperRouteSnapshot
         DrewsHelperRouteSearchMetrics primaryMetrics
     )
     {
+        this(status, path, destinations, message, walkingDistance, primaryMetrics,
+            Collections.emptyList());
+    }
+
+    private DrewsHelperRouteSnapshot(
+        DrewsHelperRouteStatus status,
+        List<WorldPoint> path,
+        List<WorldPoint> destinations,
+        String message,
+        int walkingDistance,
+        DrewsHelperRouteSearchMetrics primaryMetrics,
+        List<String> requirements
+    )
+    {
         this.status = status;
         this.path = Collections.unmodifiableList(new ArrayList<>(path));
         this.destinations = Collections.unmodifiableList(new ArrayList<>(destinations));
@@ -73,6 +89,9 @@ public final class DrewsHelperRouteSnapshot
         this.primaryMetrics = primaryMetrics == null
             ? DrewsHelperRouteSearchMetrics.empty()
             : primaryMetrics;
+        this.requirements = requirements == null
+            ? Collections.emptyList()
+            : Collections.unmodifiableList(new ArrayList<>(requirements));
     }
 
     public static DrewsHelperRouteSnapshot disabled()
@@ -135,12 +154,25 @@ public final class DrewsHelperRouteSnapshot
 
     public static DrewsHelperRouteSnapshot noPath(List<WorldPoint> path, List<WorldPoint> destinations, String message, int walkingDistance)
     {
+        return noPath(path, destinations, message, walkingDistance, Collections.emptyList());
+    }
+
+    public static DrewsHelperRouteSnapshot noPath(
+        List<WorldPoint> path,
+        List<WorldPoint> destinations,
+        String message,
+        int walkingDistance,
+        List<String> requirements
+    )
+    {
         return new DrewsHelperRouteSnapshot(
             DrewsHelperRouteStatus.NO_PATH,
             path,
             destinations,
             message,
-            walkingDistance
+            walkingDistance,
+            DrewsHelperRouteSearchMetrics.empty(),
+            requirements
         );
     }
 
@@ -211,6 +243,11 @@ public final class DrewsHelperRouteSnapshot
         return walkingDistance;
     }
 
+    public List<String> getRequirements()
+    {
+        return requirements;
+    }
+
     public DrewsHelperRouteSnapshot consumeFirstPathTile()
     {
         return consumeLeadingPathTiles(1);
@@ -235,7 +272,8 @@ public final class DrewsHelperRouteSnapshot
             destinations,
             message,
             Math.max(0, walkingDistance - consumedTileCount),
-            primaryMetrics
+            primaryMetrics,
+            requirements
         );
     }
 

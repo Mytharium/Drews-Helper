@@ -494,6 +494,13 @@ public final class DrewsHelperTransportGraph
         }
     }
 
+    private static boolean isNonAdjacentHop(WorldPoint from, WorldPoint to)
+    {
+        return from.getPlane() != to.getPlane()
+            || Math.abs(to.getX() - from.getX()) > 1
+            || Math.abs(to.getY() - from.getY()) > 1;
+    }
+
     public List<DrewsHelperTransportEdge> edgesFrom(WorldPoint source)
     {
         return edgesBySource.getOrDefault(source, Collections.emptyList());
@@ -507,6 +514,34 @@ public final class DrewsHelperTransportGraph
     public List<DrewsHelperTransportEdge> originlessEdges()
     {
         return originlessEdges;
+    }
+
+    public DrewsHelperTransportEdge findTransport(WorldPoint from, WorldPoint to)
+    {
+        if (from == null || to == null)
+        {
+            return null;
+        }
+
+        for (DrewsHelperTransportEdge edge : edgesFrom(from))
+        {
+            if (to.equals(edge.getDestination()))
+            {
+                return edge;
+            }
+        }
+
+        if (isNonAdjacentHop(from, to))
+        {
+            for (DrewsHelperTransportEdge edge : originlessEdges)
+            {
+                if (to.equals(edge.getDestination()))
+                {
+                    return edge;
+                }
+            }
+        }
+        return null;
     }
 
     public boolean isEmpty()

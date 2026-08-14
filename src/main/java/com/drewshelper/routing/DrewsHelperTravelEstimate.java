@@ -386,31 +386,7 @@ public final class DrewsHelperTravelEstimate
         WorldPoint to
     )
     {
-        for (DrewsHelperTransportEdge edge : graph.edgesFrom(from))
-        {
-            if (to.equals(edge.getDestination()))
-            {
-                return edge;
-            }
-        }
-        if (isNonAdjacentHop(from, to))
-        {
-            for (DrewsHelperTransportEdge edge : graph.originlessEdges())
-            {
-                if (to.equals(edge.getDestination()))
-                {
-                    return edge;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static boolean isNonAdjacentHop(WorldPoint from, WorldPoint to)
-    {
-        return from.getPlane() != to.getPlane()
-            || Math.abs(to.getX() - from.getX()) > 1
-            || Math.abs(to.getY() - from.getY()) > 1;
+        return graph == null ? null : graph.findTransport(from, to);
     }
 
     /**
@@ -464,6 +440,8 @@ public final class DrewsHelperTravelEstimate
                 return "Mushtree (" + cleaned + ")";
             case CANOE:
                 return "Canoe (" + cleaned + ")";
+            case SAILING:
+                return "Sailing (" + cleaned + ")";
             default:
                 return cleaned;
         }
@@ -517,6 +495,8 @@ public final class DrewsHelperTravelEstimate
                 return "Grapple";
             case CANOE:
                 return "Canoe";
+            case SAILING:
+                return "Sailing";
             case GNOME_GLIDER:
                 return "Glider";
             case HOT_AIR_BALLOON:

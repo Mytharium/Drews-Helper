@@ -111,8 +111,8 @@ public class DrewsHelperPlugin extends Plugin
      */
     private static final Set<Skill> ROUTE_RELEVANT_SKILLS = EnumSet.of(
         Skill.AGILITY, Skill.CONSTRUCTION, Skill.CRAFTING, Skill.FARMING, Skill.FIREMAKING,
-        Skill.FISHING, Skill.MAGIC, Skill.MINING, Skill.PRAYER, Skill.RANGED, Skill.STRENGTH,
-        Skill.THIEVING, Skill.WOODCUTTING);
+        Skill.FISHING, Skill.MAGIC, Skill.MINING, Skill.PRAYER, Skill.RANGED, Skill.SAILING,
+        Skill.STRENGTH, Skill.THIEVING, Skill.WOODCUTTING);
 
     /** Per-slot graceful run-energy restoration. Totals 20; the complete set adds 10 more. */
     private static final Map<EquipmentInventorySlot, Integer> GRACEFUL_SLOT_PERCENT;
@@ -1482,9 +1482,16 @@ public class DrewsHelperPlugin extends Plugin
         String cacheKey = transportPolicy.signature() + '#' + capability.signature();
         if (routeEngine == null || !routeEngineCacheKey.equals(cacheKey))
         {
+            DrewsHelperTransportGraph usableGraph =
+                DrewsHelperTransportGraph.loadDefault(transportPolicy, capability);
+            DrewsHelperTransportGraph requirementGraph = capability.isUnrestricted()
+                ? usableGraph
+                : DrewsHelperTransportGraph.loadDefault(transportPolicy);
             routeEngine = new DrewsHelperWalkingRouteEngine(
                 collisionMap,
-                DrewsHelperTransportGraph.loadDefault(transportPolicy, capability),
+                usableGraph,
+                requirementGraph,
+                capability,
                 !transportPolicy.allowsWilderness()
             );
             routeEngineCacheKey = cacheKey;

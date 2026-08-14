@@ -4,10 +4,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Set;
 import net.runelite.api.coords.WorldPoint;
 
 public final class DrewsHelperWalkingRouteEngine
@@ -32,6 +34,8 @@ public final class DrewsHelperWalkingRouteEngine
 
     private final DrewsHelperMovementMap movementMap;
     private final DrewsHelperTransportGraph transportGraph;
+    private final DrewsHelperTransportGraph requirementGraph;
+    private final DrewsHelperPlayerCapability capability;
     private final boolean avoidWilderness;
 
     public DrewsHelperWalkingRouteEngine(DrewsHelperMovementMap movementMap)
@@ -50,8 +54,27 @@ public final class DrewsHelperWalkingRouteEngine
         boolean avoidWilderness
     )
     {
+        this(
+            movementMap,
+            transportGraph,
+            DrewsHelperTransportGraph.empty(),
+            DrewsHelperPlayerCapability.UNRESTRICTED,
+            avoidWilderness
+        );
+    }
+
+    public DrewsHelperWalkingRouteEngine(
+        DrewsHelperMovementMap movementMap,
+        DrewsHelperTransportGraph transportGraph,
+        DrewsHelperTransportGraph requirementGraph,
+        DrewsHelperPlayerCapability capability,
+        boolean avoidWilderness
+    )
+    {
         this.movementMap = movementMap;
         this.transportGraph = transportGraph == null ? DrewsHelperTransportGraph.empty() : transportGraph;
+        this.requirementGraph = requirementGraph == null ? DrewsHelperTransportGraph.empty() : requirementGraph;
+        this.capability = capability == null ? DrewsHelperPlayerCapability.UNRESTRICTED : capability;
         this.avoidWilderness = avoidWilderness;
     }
 
@@ -75,7 +98,8 @@ public final class DrewsHelperWalkingRouteEngine
                 primary.path,
                 destinations,
                 primary.message,
-                primary.walkingDistance
+                primary.walkingDistance,
+                primary.requirements
             );
         }
 
@@ -110,7 +134,8 @@ public final class DrewsHelperWalkingRouteEngine
                 primary.path,
                 destinations,
                 primary.message,
-                primary.walkingDistance
+                primary.walkingDistance,
+                primary.requirements
             );
         }
 
@@ -145,7 +170,8 @@ public final class DrewsHelperWalkingRouteEngine
                 primary.path,
                 destinations,
                 primary.message,
-                primary.walkingDistance
+                primary.walkingDistance,
+                primary.requirements
             );
         }
 
@@ -296,6 +322,12 @@ public final class DrewsHelperWalkingRouteEngine
             if (!segment.isFound())
             {
                 String message = "No route to waypoint #" + (index + 1);
+                List<String> requirements = unmetRequirementsForBlockedRoute(
+                    segmentStart,
+                    target,
+                    localWalkingOverridesEnabled,
+                    rankingMode
+                );
                 return RouteComputation.notFound(
                     route,
                     walkingDistance,
@@ -303,7 +335,8 @@ public final class DrewsHelperWalkingRouteEngine
                     DrewsHelperRouteSearchMetrics.notFound(
                         System.nanoTime() - startedAt,
                         expandedNodes
-                    )
+                    ),
+                    requirements
                 );
             }
 
@@ -329,6 +362,56 @@ public final class DrewsHelperWalkingRouteEngine
                 route
             )
         );
+    }
+
+    private List<String> unmetRequirementsForBlockedRoute(
+        WorldPoint segmentStart,
+        WorldPoint target,
+        boolean localWalkingOverridesEnabled,
+        RouteRankingMode rankingMode
+    ) throws InterruptedException
+    {
+        if (capability.isUnrestricted() || requirementGraph.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+
+        DrewsHelperWalkingRouteEngine diagnosticEngine = new DrewsHelperWalkingRouteEngine(
+            movementMap,
+            requirementGraph,
+            DrewsHelperTransportGraph.empty(),
+            DrewsHelperPlayerCapability.UNRESTRICTED,
+            avoidWilderness
+        );
+        SearchResult unrestricted = diagnosticEngine.solveSegmentAStar(
+            segmentStart,
+            target,
+            localWalkingOverridesEnabled,
+            rankingMode
+        );
+        if (!unrestricted.isFound())
+        {
+            return Collections.emptyList();
+        }
+
+        Set<String> requirements = new LinkedHashSet<>();
+        for (int index = 0; index < unrestricted.path.size() - 1; index++)
+        {
+            DrewsHelperTransportEdge edge = requirementGraph.findTransport(
+                unrestricted.path.get(index),
+                unrestricted.path.get(index + 1)
+            );
+            if (edge != null && !capability.satisfies(edge))
+            {
+                requirements.addAll(capability.unmetRequirements(edge));
+            }
+        }
+
+        if (requirements.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+        return Collections.unmodifiableList(new ArrayList<>(requirements));
     }
 
     /**
@@ -1678,18 +1761,21 @@ public final class DrewsHelperWalkingRouteEngine
         private final int walkingDistance;
         private final String message;
         private final DrewsHelperRouteSearchMetrics metrics;
+        private final List<String> requirements;
 
         private RouteComputation(
             List<WorldPoint> path,
             int walkingDistance,
             String message,
-            DrewsHelperRouteSearchMetrics metrics
+            DrewsHelperRouteSearchMetrics metrics,
+            List<String> requirements
         )
         {
             this.path = path == null ? Collections.emptyList() : path;
             this.walkingDistance = walkingDistance;
             this.message = message;
             this.metrics = metrics;
+            this.requirements = requirements == null ? Collections.emptyList() : requirements;
         }
 
         private static RouteComputation found(
@@ -1698,17 +1784,24 @@ public final class DrewsHelperWalkingRouteEngine
             DrewsHelperRouteSearchMetrics metrics
         )
         {
-            return new RouteComputation(path, walkingDistance, "Route ready", metrics);
+            return new RouteComputation(
+                path,
+                walkingDistance,
+                "Route ready",
+                metrics,
+                Collections.emptyList()
+            );
         }
 
         private static RouteComputation notFound(
             List<WorldPoint> partialPath,
             int walkingDistance,
             String message,
-            DrewsHelperRouteSearchMetrics metrics
+            DrewsHelperRouteSearchMetrics metrics,
+            List<String> requirements
         )
         {
-            return new RouteComputation(partialPath, walkingDistance, message, metrics);
+            return new RouteComputation(partialPath, walkingDistance, message, metrics, requirements);
         }
 
         private boolean isRouteFound()

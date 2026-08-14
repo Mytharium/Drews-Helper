@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import java.util.Arrays;
+import java.util.List;
 import net.runelite.api.gameval.ItemID;
 import org.junit.Test;
 
@@ -217,6 +219,42 @@ public class DrewsHelperPlayerCapabilityTest
             unknown.meetsVarPlayers("892@30"));
         assertTrue("ordinary unknown vars stay permissive",
             unknown.meetsVarPlayers("4560=0"));
+    }
+
+    @Test
+    public void unmetRequirementsUsePlayerFacingLines()
+    {
+        DrewsHelperTransportEdge edge = new DrewsHelperTransportEdge(
+            new net.runelite.api.coords.WorldPoint(0, 0, 0),
+            new net.runelite.api.coords.WorldPoint(10, 0, 0),
+            DrewsHelperTransportCategory.GRAPPLE_SHORTCUT,
+            "Grapple Broken Raft 17068",
+            6,
+            "Agility=90;Ranged=70",
+            "The Grand Tree;Unknown Quest",
+            "CROSSBOW=1&MITH_GRAPPLE=1",
+            "100=1;999999=1",
+            "892@30"
+        );
+        DrewsHelperPlayerCapability capability = DrewsHelperPlayerCapability.builder()
+            .skill("AGILITY", 89)
+            .skill("RANGED", 70)
+            .quest("The Grand Tree", false)
+            .varbit(100, 0)
+            .currentEpochMinute(1_000)
+            .varPlayer(892, 980)
+            .build();
+
+        List<String> requirements = capability.unmetRequirements(edge);
+
+        assertEquals(Arrays.asList(
+            "Agility = 90",
+            "Crossbow = 1",
+            "Mith grapple = 1",
+            "Quest: The Grand Tree",
+            "Varbit 100 = 1",
+            "Cooldown: VarPlayer 892 ready after 30m"
+        ), requirements);
     }
 
     @Test

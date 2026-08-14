@@ -89,6 +89,21 @@ public class DrewsHelperRouteSnapshotTest
     }
 
     @Test
+    public void noPathSnapshotCarriesRequirements()
+    {
+        DrewsHelperRouteSnapshot snapshot = DrewsHelperRouteSnapshot.noPath(
+            Arrays.asList(new WorldPoint(100, 100, 0)),
+            Arrays.asList(new WorldPoint(110, 100, 0)),
+            "No route to waypoint #1",
+            0,
+            Arrays.asList("Agility = 90")
+        );
+
+        assertEquals(DrewsHelperRouteStatus.NO_PATH, snapshot.getStatus());
+        assertEquals(Arrays.asList("Agility = 90"), snapshot.getRequirements());
+    }
+
+    @Test
     public void calculatingSnapshotCanCarryPreviousPathForOverlayContinuity()
     {
         DrewsHelperRouteSnapshot snapshot = DrewsHelperRouteSnapshot.calculating(

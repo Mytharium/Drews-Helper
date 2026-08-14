@@ -2775,3 +2775,29 @@ D-0194 (2026-08-14) - Focused clean recaptures supersede stale interrupted pilot
 
   Cross-reference: D-0193 pilot hard gates, D-0185 interrupted segment handling, and D-0192
   route-validation harness.
+
+D-0195 (2026-08-14) - Requirement messaging uses same-policy unrestricted near-miss solves.
+
+  RULE 1 - REQUIREMENTS ARE A SEPARATE BLOCK, NOT AN ACTION. `Requirements` rows describe why a
+  destination cannot currently be reached. They render below the waypoint/action display and must
+  never be numbered as route actions, because the player does not click a missing requirement.
+
+  RULE 2 - DO NOT INVENT A SECOND REQUIREMENT SYSTEM. Requirement text is derived from the same
+  `DrewsHelperPlayerCapability` checks that already allow or deny a transport edge: skills, item
+  alternatives, quests, varbits, varplayers, and cooldown vars. Unknown ordinary quest/var data
+  stays permissive; unknown cooldown vars stay locked.
+
+  RULE 3 - RETAIN NEAR MISSES BY DIAGNOSTIC SOLVE. The normal route graph still filters unusable
+  edges before pathfinding. When that filtered solve returns NO_PATH, the engine runs a second
+  solve with the same transport policy but unrestricted account capability. If that diagnostic path
+  reaches the waypoint through capability-locked edges, the route snapshot carries the missing
+  requirements.
+
+  RULE 4 - SAILING IS CODE-READY, NOT DATA-SHIPPED. `SAILING` is now a supported transport
+  category, it is always policy-enabled like other capability-gated families, it labels as
+  `Sailing (...)`, and `Skill.SAILING` invalidates cached routes. Active `SAILING` rows must not be
+  added until their land-side gangplank/dock interaction tiles are verified. Port-task navigation
+  points and wiki map pins are evidence, not enough to create Drew's land-route edges.
+
+  Cross-reference: D-0143 account capability gates, D-0136 recorder-first route shape, D-0189
+  confidence tiers, and D-0194 closed pilot cleanup.

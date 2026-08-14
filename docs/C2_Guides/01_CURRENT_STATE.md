@@ -194,6 +194,36 @@ Current pilot interpretation after D-0194:
 `pilotRegionCleanup` is evidence-only. It does not rewrite route behavior, collision data,
 transports, object profiles, or confidence sidecars.
 
+## 2026-08-14 Requirements Messaging and Sailing Readiness
+
+D-0195 adds the locked-route diagnosis layer requested for `Requirements:` messaging.
+
+When the normal capability-filtered route cannot reach a waypoint, the route engine now runs a
+second diagnostic solve against the same transport policy but with unrestricted account capability.
+If that unrestricted near-miss can reach the target through an edge the account cannot use, the
+snapshot carries player-facing requirement lines such as:
+
+```text
+Requirements
+  Agility = 90
+  Sailing = 67
+  Mith grapple = 1
+```
+
+`DrewsHelperOverlay` renders this as its own block below the waypoint/action display, not inside
+the `Actions` list. This stays tied to the existing account capability rules: unknown ordinary
+quest/var requirements remain permissive, unknown cooldown vars remain locked, item alternatives
+pick the smallest missing alternative, and requirement text is generated from the same edge metadata
+used to allow or deny routing.
+
+Sailing support is wired at the graph/category level: `SAILING` is now an always-enabled transport
+family, `Skill.SAILING` is route-cache relevant, and sailing labels display as `Sailing (...)`.
+No active sailing transport rows were shipped in D-0195. Upstream Shortest Path still publishes no
+sailing navigation rows, and `nucleon/port-tasks` provides useful port levels/object ids/routes but
+not verified walkable dock interaction tiles for Drew's land-route graph. The safe next sailing
+slice is to capture or otherwise verify gangplank/dock interaction tiles before adding `SAILING`
+rows to `drewshelper-transports.tsv`.
+
 ## 2026-08-14 Pre-D-0191 Session Pause Handoff
 
 The overnight route/collision push is paused after D-0189 with no Myth live reruns pending. The

@@ -2,16 +2,16 @@
 
 Last updated: 2026-08-14.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0194)
+## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0195)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Move to sailing-aware routing plus `Requirements:` messaging. D-0194 checked Myth's
-focused `48_50` recapture, taught `gradlew pilotRegionCleanup` to mark the old interrupted
-non-adjacent illegal row as superseded by a clean focused recapture, and confirmed there is no
-completed adjacent static-map disagreement to promote from this pilot pass. Do not patch
-collision-map rows, object profiles, or ranker behavior from the old stale row.
+**WHAT'S NEXT:** Next high-value coding work is the paid/unnamed object-profile proof batch
+(hedges, stools, shelves, crates) or the parked Varlamore Slice 1 capture prep. D-0195 closed the
+generic `Requirements:` messaging gate and made `SAILING` a supported transport family, but active
+sailing rows are still parked until gangplank/dock interaction tiles are verified. Do not invent
+sailing dock tiles from map pins or port-task navigation waypoints.
 
 Session close at 2026-08-14 06:56 UTC:
 
@@ -42,6 +42,12 @@ Session close at 2026-08-14 06:56 UTC:
    stale interrupted/non-adjacent illegal row is now reported as
    `supersededNonPromotableIllegalEdges=1`, with `completedAdjacentIllegalEdges=0` and
    `verdict=NO_COMPLETED_STATIC_DISAGREEMENT`.
+11. D-0195 added locked-route requirement messaging. When the filtered route cannot reach a
+   waypoint, the solver does a same-policy unrestricted diagnostic solve; if the only viable route
+   uses capability-locked transport/shortcut edges, the overlay shows a separate `Requirements`
+   block below the waypoint/action display. `SAILING` is now a supported transport category and
+   `Skill.SAILING` invalidates cached routes, but no active sailing transport rows were added
+   without verified dock interaction tiles.
 
 Object/door-state recorder run procedure:
 
@@ -475,11 +481,13 @@ rule, so tree profiles need their own pass.
    check set so candidate maps and route-ranker changes have repeatable gates.
 3. **Pilot region cleanup.** CLOSED, D-0194. The focused `48_50` recapture did not produce a
    completed adjacent static-map disagreement, so no pilot collision/object/ranker patch ships.
-4. **Sailing-aware routing plus `Requirements:` messaging.** Revisit the sailing/open-sea marker
-   decision and make route requirements explicit before opening another data-expansion slice.
-5. **Paid or unnamed object-profile batches.** Hedges, stools, shelves, crates, held-back paid
+4. **Requirements messaging plus `SAILING` category support.** CLOSED, D-0195. `Requirements` now
+   renders below Actions when no normal route exists but a capability-locked near-miss does.
+5. **Active Sailing edge data.** PARKED until verified gangplank/dock interaction tiles exist.
+   Port-task navigation points and wiki map pins are useful evidence, not safe land-route sources.
+6. **Paid or unnamed object-profile batches.** Hedges, stools, shelves, crates, held-back paid
    profiles, and unnamed object rows need their own proof pass and live-route pins.
-6. **Snap edge cases.** Revisit after the recorder and harness can tell
+7. **Snap edge cases.** Revisit after the recorder and harness can tell
    reachable dock routing from bad snap or missing water-side reachability.
 
 Do not reopen tonight's rejected paths without new evidence: broad Phase 2, global locType 10/11
@@ -514,6 +522,11 @@ blocking, `tileSetting` bit 4 as a terrain blocker, or route-specific shortcut h
       D-0188  DECISION   promote supported object profiles; held-back keys stay out
       D-0189  DECISION   confidence is explicit route-data metadata
       D-0190  CHANGELOG  session-close handoff after confidence tiers
+      D-0191  CHANGELOG  object and door-state evidence recorder
+      D-0192  CHANGELOG  route-validation harness
+      D-0193  DECISION   pilot cleanup hard gates require completed adjacent evidence
+      D-0194  DECISION   focused clean recaptures supersede stale interrupted pilot rows
+      D-0195  DECISION   requirement messaging uses same-policy unrestricted near-miss solves
 
 ## Historical Handoff - 2026-08-12 Recorder-First Plan
 
@@ -612,10 +625,10 @@ ACTIVE SEQUENCE - in order
 
 CARRIED, RE-RANKED
 
-      6. Sailing-aware routing + Requirements    Sequenced AFTER C. It needs movement modes
-                                                 and confidence tiers to land cleanly, and
-                                                 D-0136 RULE 7 fixes the search shape it
-                                                 depends on. Research complete - parked 30.
+      6. Sailing-aware routing + Requirements    PARTIAL, D-0195. Requirements messaging and
+                                                 SAILING category/cache support are built.
+                                                 Active sailing rows remain parked behind
+                                                 verified dock interaction tiles - parked 30.
       3. 2 regions 52_50 / 52_51                 OFF the critical path - Al Kharid, outside
                                                  the pilot area. Otherwise unchanged: ~30
                                                  minutes, fixes 137 of 171 known leaks,
@@ -640,10 +653,9 @@ being an errand that has to be scheduled and becomes a by-product of playing. Co
 **C, D and E are the plan's machinery**, and that order matters: tiers before the object recorder
 so object data lands already labelled, and the harness last so it has something to validate.
 
-**Sailing (item 6) is still the only user-visible feature on the list.** It sits after C purely
-because C and RULE 7 give it the right shape. If something visible is wanted sooner, moving it
-ahead of C is a reasonable call and costs little. Build steps are unchanged - parked 30 and the
-session 2 notes.
+**Sailing (item 6) is split now.** D-0195 built the visible requirements path and category support.
+The data slice is still parked because the graph needs walkable dock interaction tiles, not just map
+pins or boat navigation points.
 
 **Needs Mytharium in game - item 2 / Slice 1.** Unchanged: the ~74 Varlamore regions have zero
 live-client ground truth and need one capture walk before shipping. Deprioritised, not dropped.
@@ -664,9 +676,8 @@ gradle task. A `promoteCollisionMap` task must exist before adding NEW entries. 
       parked  27  cross-region seam drops S/W edges, 18 in rebuilt regions
       parked  28  526 false positives, likely cause of parked item 24's regression
       parked  29  legacy regions hold 147 of 171 leaks, concentrated 52_50 / 52_51
-      parked  30  full sailing research including every published data source
-      parked  31  "Requirements:" needs the near-miss retained - display is free,
-                  diagnosis needs building
+      parked  30  active sailing edge rows need verified gangplank/dock interaction tiles
+      closed  31  "Requirements:" near-miss diagnosis and display shipped in D-0195
 
 ### Corrections that supersede earlier notes
 
@@ -1333,7 +1344,7 @@ section has been changed. Append new findings here as they come up; strike them 
     REGIONS WILL BUY FAR MORE THAN ANY TERRAIN-RULE CHANGE: the v2 rebuild is measurably better
     than the v1 data sitting next to it. Highest-value follow-up of the three. Parked, not fixed.
 
-30. **Sailing-aware routing - researched, NOT built (2026-08-12).**
+30. **Sailing-aware routing - category ready, active edges NOT built (updated D-0195).**
     Requested by Mytharium: route ocean destinations by walking to a boat and sailing, and show a
     "Requirements:" message when Sailing is not unlocked.
     - **OSRS Sailing is FREE-ROAM STEERING** (click-to-steer, no autopilot, no port-to-port menu)
@@ -1371,30 +1382,26 @@ section has been changed. Append new findings here as they come up; strike them 
       game's not-boostable rule exactly. `SAILING("Sailing", true)` exists in RuneLite's `Skill`
       enum. Unknown transport categories are skipped rather than fatal, so `SAILING` rows can
       ship and older builds ignore them.
-    - **One-line trap:** `ROUTE_RELEVANT_SKILLS` at `DrewsHelperPlugin.java:111-114` is a
-      hardcoded allowlist and `Skill.SAILING` is absent from it. Without adding it, levelling
-      Sailing would not invalidate the cached route and newly-unlocked docks would not appear
-      until something else forced a rebuild. Silent bug.
+    - **D-0195 closed the one-line trap:** `SAILING` is now a transport category,
+      `DrewsHelperTransportPolicy` always enables it, `DrewsHelperTravelEstimate` labels it, and
+      `Skill.SAILING` is route-cache relevant. Future `SAILING` rows will therefore be gated and
+      refreshed correctly.
     - **Not published anywhere:** the exact walkable interaction tile per dock (wiki pins and
       port-tasks nav points disagree by 1-7 tiles); edge topology, because free-roam means
       effectively all-pairs at 57x56 = 3,192 and port-tasks only authored the 164 pairs its own
       tasks needed; and per-leg duration, which is genuinely variable by hull/sail/wind and is
       unsolved upstream too (issue #370).
-    - Estimated effort: an afternoon to a day for dock-to-dock edges. A true on-water path
-      overlay would be weeks and is explicitly NOT recommended. Parked, not built.
+    - Next safe implementation step: verify walkable gangplank/dock interaction tiles, then add
+      data-driven `SAILING` rows. A true on-water path overlay would be weeks and is explicitly
+      NOT recommended. Parked, no active rows shipped.
 
-31. **"Requirements:" message needs the near-miss retained (2026-08-12).**
-    The display half already exists: `DrewsHelperRouteSnapshot.noPath(..., String message, ...)`
-    carries a free-text reason and `DrewsHelperOverlay.routeStatusText()` renders
-    `route.getMessage()` for NO_PATH/ERROR/CALCULATING. But the only string ever passed is `"No
-    route to waypoint #" + (index + 1)` (`DrewsHelperWalkingRouteEngine.java:298`), there are no
-    chat messages anywhere in the plugin, and `DrewsHelperRouteStatus` has no locked or
-    unmet-requirement member. The structural problem is UPSTREAM OF THE UI: a capability-locked
-    edge is silently deleted at graph-load time (`DrewsHelperTransportGraph.java:116-119`), so by
-    the time routing fails the edge does not exist and nothing remembers why. To say "Requires 67
-    Sailing" the near-miss must be RETAINED - either have `satisfies()` return a reason object
-    instead of a boolean, or run a second unrestricted-capability solve on failure and diff the
-    two. The display is free; the diagnosis needs building. Parked, not built.
+31. ~~**"Requirements:" message needs the near-miss retained (2026-08-12).**~~ CLOSED, D-0195.
+    The engine now keeps the near-miss by running a second same-policy unrestricted diagnostic solve
+    when the normal filtered solve returns NO_PATH. If that diagnostic path uses edges blocked by
+    account capability, `DrewsHelperRouteSnapshot` carries player-facing requirement lines and
+    `DrewsHelperOverlay` renders them as a separate `Requirements` block below the waypoint/action
+    display. Example lines: `Agility = 90`, `Sailing = 67`, `Mith grapple = 1`, `Quest: The Grand
+    Tree`, or a var/cooldown line when the route data exposes only var metadata.
 
 32. **The level and route-leg records are temporary instrumentation (2026-08-12).**
     `writePlayerLevelsIfChanged` appends real (unboosted) levels to `drews-player-levels.txt`

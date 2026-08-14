@@ -98,6 +98,7 @@ final class DrewsHelperOverlay extends OverlayPanel
         // so they have to stay on screen before the first solve finishes - that is exactly
         // when you most want to see where you asked to go.
         addTravelEstimate(lastEstimate, ready);
+        addRequirementRows(route);
 
         String benchmarkSummary = plugin.getRouteBenchmarkSummary();
         if (!benchmarkSummary.isEmpty())
@@ -181,6 +182,28 @@ final class DrewsHelperOverlay extends OverlayPanel
                     .build());
                 step++;
             }
+        }
+    }
+
+    private void addRequirementRows(DrewsHelperRouteSnapshot route)
+    {
+        List<String> requirements = route.getRequirements();
+        if (requirements.isEmpty())
+        {
+            return;
+        }
+
+        panelComponent.getChildren().add(LineComponent.builder()
+            .left("Requirements")
+            .build());
+
+        for (String requirement : requirements)
+        {
+            panelComponent.getChildren().add(LineComponent.builder()
+                .left("  " + requirement)
+                .right("")
+                .rightColor(MUTED)
+                .build());
         }
     }
 

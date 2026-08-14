@@ -31,6 +31,7 @@ public class DrewsHelperTransportPolicyTest
         assertTrue(plain.allows(DrewsHelperTransportCategory.AGILITY_SHORTCUT));
         assertTrue(plain.allows(DrewsHelperTransportCategory.GRAPPLE_SHORTCUT));
         assertTrue(plain.allows(DrewsHelperTransportCategory.CANOE));
+        assertTrue(plain.allows(DrewsHelperTransportCategory.SAILING));
         assertTrue(plain.allows(DrewsHelperTransportCategory.GNOME_GLIDER));
         assertTrue(plain.allows(DrewsHelperTransportCategory.HOT_AIR_BALLOON));
         assertTrue(plain.allows(DrewsHelperTransportCategory.QUETZAL));

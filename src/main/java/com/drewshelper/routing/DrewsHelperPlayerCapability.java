@@ -1,8 +1,12 @@
 package com.drewshelper.routing;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -194,6 +198,203 @@ public final class DrewsHelperPlayerCapability
             && meetsQuests(edge.getQuests())
             && meetsVars(edge.getVarbits(), varbits)
             && meetsVars(edge.getVarPlayers(), varPlayers);
+    }
+
+    /**
+     * Human-readable requirements this account is missing for the edge.
+     *
+     * <p>This mirrors {@link #satisfies(DrewsHelperTransportEdge)} instead of inventing a second
+     * rule set. Unknown ordinary quest/var data stays permissive; cooldown vars still block when
+     * unknown, because that is already the routing rule.
+     */
+    List<String> unmetRequirements(DrewsHelperTransportEdge edge)
+    {
+        if (unrestricted || edge == null)
+        {
+            return Collections.emptyList();
+        }
+
+        LinkedHashSet<String> requirements = new LinkedHashSet<>();
+        addUnmetSkills(requirements, edge.getSkills());
+        addUnmetItems(requirements, edge.getItems());
+        addUnmetQuests(requirements, edge.getQuests());
+        addUnmetVars(requirements, edge.getVarbits(), varbits, "Varbit");
+        addUnmetVars(requirements, edge.getVarPlayers(), varPlayers, "VarPlayer");
+        if (requirements.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+        return Collections.unmodifiableList(new ArrayList<>(requirements));
+    }
+
+    private void addUnmetSkills(Set<String> requirements, String requirement)
+    {
+        if (requirement == null || requirement.isEmpty())
+        {
+            return;
+        }
+
+        for (String term : requirement.split(";"))
+        {
+            String trimmed = term.trim();
+            if (trimmed.isEmpty())
+            {
+                continue;
+            }
+
+            int split = trimmed.indexOf('=');
+            if (split <= 0)
+            {
+                continue;
+            }
+
+            String skillName = trimmed.substring(0, split).trim();
+            int needed = parseInt(trimmed.substring(split + 1), 0);
+            if (getSkillLevel(skillName) < needed)
+            {
+                requirements.add(displayRequirementName(skillName) + " = " + needed);
+            }
+        }
+    }
+
+    private void addUnmetItems(Set<String> requirements, String requirement)
+    {
+        if (requirement == null || requirement.isEmpty() || meetsItems(requirement))
+        {
+            return;
+        }
+
+        List<String> bestAlternative = Collections.emptyList();
+        for (String alternative : requirement.split("\\|"))
+        {
+            List<String> missing = missingItemRequirements(alternative);
+            if (missing.isEmpty())
+            {
+                return;
+            }
+            if (bestAlternative.isEmpty() || missing.size() < bestAlternative.size())
+            {
+                bestAlternative = missing;
+            }
+        }
+        requirements.addAll(bestAlternative);
+    }
+
+    private List<String> missingItemRequirements(String alternative)
+    {
+        List<String> missing = new ArrayList<>();
+        for (String term : alternative.split("&"))
+        {
+            String trimmed = term.trim();
+            if (trimmed.isEmpty())
+            {
+                continue;
+            }
+
+            int split = trimmed.indexOf('=');
+            String symbol = split > 0 ? trimmed.substring(0, split).trim() : trimmed;
+            int needed = Math.max(1, split > 0 ? parseInt(trimmed.substring(split + 1), 1) : 1);
+            if (countOf(symbol) < needed)
+            {
+                missing.add(displayItemRequirement(symbol) + " = " + needed);
+            }
+        }
+        return missing;
+    }
+
+    private void addUnmetQuests(Set<String> requirements, String requirement)
+    {
+        if (requirement == null || requirement.isEmpty())
+        {
+            return;
+        }
+
+        for (String term : requirement.split(";"))
+        {
+            String name = term.trim();
+            if (name.isEmpty())
+            {
+                continue;
+            }
+
+            Boolean finished = questsFinished.get(name);
+            if (finished != null && !finished)
+            {
+                requirements.add("Quest: " + name);
+            }
+        }
+    }
+
+    private void addUnmetVars(
+        Set<String> requirements,
+        String requirement,
+        Map<Integer, Integer> values,
+        String label
+    )
+    {
+        if (requirement == null || requirement.isEmpty())
+        {
+            return;
+        }
+
+        for (String term : requirement.split(";"))
+        {
+            String trimmed = term.trim();
+            if (trimmed.isEmpty() || meetsVarTerm(trimmed, values))
+            {
+                continue;
+            }
+            requirements.add(describeVarRequirement(label, trimmed));
+        }
+    }
+
+    private static String describeVarRequirement(String label, String term)
+    {
+        int split = indexOfOperator(term);
+        if (split < 0)
+        {
+            return label + " " + term;
+        }
+
+        String id = term.substring(0, split).trim();
+        String operand = term.substring(split + 1).trim();
+        switch (term.charAt(split))
+        {
+            case '@':
+                return "Cooldown: " + label + " " + id + " ready after " + operand + "m";
+            case '&':
+                return label + " " + id + " has bit " + operand;
+            case '=':
+                return label + " " + id + " = " + operand;
+            case '>':
+                return label + " " + id + " > " + operand;
+            case '<':
+                return label + " " + id + " < " + operand;
+            default:
+                return label + " " + term;
+        }
+    }
+
+    private static String displayItemRequirement(String symbol)
+    {
+        String trimmed = symbol == null ? "" : symbol.trim();
+        if (trimmed.matches("\\d+"))
+        {
+            return "Item " + trimmed;
+        }
+        return displayRequirementName(trimmed);
+    }
+
+    private static String displayRequirementName(String value)
+    {
+        String normalized = value == null
+            ? ""
+            : value.trim().replace('_', ' ').toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty())
+        {
+            return "";
+        }
+        return Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
     }
 
     /**
