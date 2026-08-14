@@ -224,6 +224,12 @@ not verified walkable dock interaction tiles for Drew's land-route graph. The sa
 slice is to capture or otherwise verify gangplank/dock interaction tiles before adding `SAILING`
 rows to `drewshelper-transports.tsv`.
 
+D-0196 keeps that rule and improves the capture path: the object/door-state recorder now tags
+gangplanks, ships, boats, docks, moorings, piers, quays, and direct sailing verbs as
+`category=sailing state=SAILING_ACCESS`. Generic `Travel` objects that are not boat/dock named stay
+ordinary traversal rows. This gives the next live pass a clean way to collect land-side sailing
+access tiles without adding unverified `SAILING` transport rows.
+
 ## 2026-08-14 Pre-D-0191 Session Pause Handoff
 
 The overnight route/collision push is paused after D-0189 with no Myth live reruns pending. The

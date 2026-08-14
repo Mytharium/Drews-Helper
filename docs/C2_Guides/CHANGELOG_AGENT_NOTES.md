@@ -2467,3 +2467,18 @@ D-0195 (2026-08-14) - Added Requirements messaging and SAILING category readines
   `Skill.SAILING` in route-cache invalidation, and taught travel labels to display `Sailing (...)`.
   No active sailing transport rows were shipped; port-task navigation points and wiki pins still
   need verified walkable dock/gangplank interaction tiles before they are safe Drew route data.
+
+D-0196 (2026-08-14) - Tagged sailing access candidates in the object-state recorder.
+
+  Myth's first in-game Sailing waypoint check still returned `No Route Available`, which confirmed
+  the expected data gap: the resource has zero active `SAILING` rows, so the unrestricted
+  diagnostic solver has no locked Sailing edge to explain yet.
+
+  Updated `DrewsHelperObjectStateRecorder` so likely ship access objects are captured as
+  `category=sailing state=SAILING_ACCESS`: gangplanks, ships, boats, docks, moorings, piers, quays,
+  rowboats, and direct sailing verbs such as `Sail`, `Set-sail`, `Embark`, `Disembark`, `Dock`, and
+  `Moor`.
+
+  Kept generic `Travel` and `Board` conservative: they only become sailing evidence when paired
+  with boat/dock/gangplank-style object names. Ordinary travel objects remain traversal rows. No
+  `drewshelper-transports.tsv` Sailing rows were added in this change.

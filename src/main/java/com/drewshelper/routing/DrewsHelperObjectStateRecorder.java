@@ -44,6 +44,17 @@ public final class DrewsHelperObjectStateRecorder
         "Crawl-through", "Enter", "Exit", "Pass", "Pass-through", "Go-through", "Walk-across",
         "Travel", "Board", "Leave", "Traverse"
     };
+    private static final String[] SAILING_ACTIONS = {
+        "Sail", "Set-sail", "Set sail", "Embark", "Disembark", "Dock", "Moor", "Board",
+        "Travel"
+    };
+    private static final String[] SAILING_DIRECT_ACTION_TOKENS = {
+        "sail", "set sail", "embark", "disembark", "dock", "moor"
+    };
+    private static final String[] SAILING_NAME_TOKENS = {
+        "sailing", "gangplank", "mooring", "moor", "dock", "pier", "quay", "ship", "boat",
+        "barge", "raft", "rowboat"
+    };
 
     private final File output;
     private final Set<String> seenStateRows = new HashSet<>();
@@ -224,7 +235,7 @@ public final class DrewsHelperObjectStateRecorder
         int activeId = selected == null ? object.objectId : selected.getId();
         String name = selected == null ? "-" : DrewsHelperObjectDefinitions.sanitise(selected.getName());
         String category = category(object.kind, name, actions, active);
-        String state = state(actions, active);
+        String state = state(name, actions, active);
         DrewsHelperDataProvenance safeMapProvenance = mapProvenance == null
             ? new DrewsHelperDataProvenance(DrewsHelperDataConfidence.CONTRADICTED, "missing-map-provenance")
             : mapProvenance;
@@ -268,12 +279,18 @@ public final class DrewsHelperObjectStateRecorder
         }
         return base.getImpostorIds() != null
             || active != null
+            || isSailingCandidate(base.getName(), actions)
             || hasAnyAction(actions, STATE_ACTIONS)
             || hasAnyAction(actions, TRAVERSAL_ACTIONS)
             || isDoorLike(kind, base.getName(), actions);
     }
 
     static String state(String[] actions, ObjectComposition active)
+    {
+        return state("", actions, active);
+    }
+
+    static String state(String nameToken, String[] actions, ObjectComposition active)
     {
         boolean open = DrewsHelperObjectDefinitions.hasAction(actions, "Open");
         boolean close = DrewsHelperObjectDefinitions.hasAction(actions, "Close");
@@ -293,6 +310,10 @@ public final class DrewsHelperObjectStateRecorder
         {
             return "STATEFUL_ACTION";
         }
+        if (isSailingCandidate(nameToken, actions))
+        {
+            return "SAILING_ACCESS";
+        }
         if (hasAnyAction(actions, TRAVERSAL_ACTIONS))
         {
             return "TRAVERSAL_ACTION";
@@ -305,6 +326,10 @@ public final class DrewsHelperObjectStateRecorder
         if (isDoorLike(kind, nameToken, actions))
         {
             return "door";
+        }
+        if (isSailingCandidate(nameToken, actions))
+        {
+            return "sailing";
         }
         if (hasAnyAction(actions, TRAVERSAL_ACTIONS))
         {
@@ -329,6 +354,60 @@ public final class DrewsHelperObjectStateRecorder
         return "wall".equals(kind)
             && (DrewsHelperObjectDefinitions.hasAction(actions, "Open")
                 || DrewsHelperObjectDefinitions.hasAction(actions, "Close"));
+    }
+
+    static boolean isSailingCandidate(String name, String[] actions)
+    {
+        String normalizedName = normalize(name);
+        boolean sailingNamed = containsAny(normalizedName, SAILING_NAME_TOKENS);
+        boolean directSailingAction = hasDirectSailingAction(actions);
+        if (sailingNamed && (directSailingAction
+            || hasAnyAction(actions, SAILING_ACTIONS)
+            || hasAnyAction(actions, TRAVERSAL_ACTIONS)))
+        {
+            return true;
+        }
+
+        // A direct sailing verb is strong enough evidence even when the object's name is generic.
+        return directSailingAction;
+    }
+
+    private static boolean hasDirectSailingAction(String[] actions)
+    {
+        if (actions == null)
+        {
+            return false;
+        }
+        for (String action : actions)
+        {
+            String normalized = normalize(DrewsHelperObjectDefinitions.plainText(action));
+            if (containsAny(normalized, SAILING_DIRECT_ACTION_TOKENS))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsAny(String normalized, String[] tokens)
+    {
+        if (normalized == null || tokens == null)
+        {
+            return false;
+        }
+        for (String token : tokens)
+        {
+            if (normalized.contains(token))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String normalize(String value)
+    {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).replace('_', ' ');
     }
 
     private static boolean hasAnyAction(String[] actions, String[] expected)

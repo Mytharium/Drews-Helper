@@ -85,4 +85,46 @@ public class DrewsHelperObjectStateRecorderTest
         assertTrue(DrewsHelperObjectStateRecorder.isStateCandidate(
             "game", shortcut, null, shortcut.getActions()));
     }
+
+    @Test
+    public void sailingAccessObjectsAreTaggedSeparately()
+    {
+        ObjectComposition gangplank = DrewsHelperObjectDefinitionsTest.composition(
+            300, "Gangplank", new String[]{"Cross", "Board", "Examine"}, null, null);
+
+        assertTrue(DrewsHelperObjectStateRecorder.isStateCandidate(
+            "game", gangplank, null, gangplank.getActions()));
+        assertTrue(DrewsHelperObjectStateRecorder.isSailingCandidate(
+            gangplank.getName(), gangplank.getActions()));
+        assertEquals("sailing", DrewsHelperObjectStateRecorder.category(
+            "game", gangplank.getName(), gangplank.getActions(), null));
+        assertEquals("SAILING_ACCESS", DrewsHelperObjectStateRecorder.state(
+            gangplank.getName(), gangplank.getActions(), null));
+    }
+
+    @Test
+    public void genericTravelObjectsStayTraversalNotSailing()
+    {
+        ObjectComposition cart = DrewsHelperObjectDefinitionsTest.composition(
+            301, "Cart", new String[]{"Travel", null, "Examine"}, null, null);
+
+        assertFalse(DrewsHelperObjectStateRecorder.isSailingCandidate(
+            cart.getName(), cart.getActions()));
+        assertEquals("traversal", DrewsHelperObjectStateRecorder.category(
+            "game", cart.getName(), cart.getActions(), null));
+        assertEquals("TRAVERSAL_ACTION", DrewsHelperObjectStateRecorder.state(
+            cart.getName(), cart.getActions(), null));
+    }
+
+    @Test
+    public void directSailingVerbsAreTaggedEvenWithGenericNames()
+    {
+        ObjectComposition accessPoint = DrewsHelperObjectDefinitionsTest.composition(
+            302, "Access point", new String[]{"Sail-to", null, "Examine"}, null, null);
+
+        assertTrue(DrewsHelperObjectStateRecorder.isSailingCandidate(
+            accessPoint.getName(), accessPoint.getActions()));
+        assertEquals("SAILING_ACCESS", DrewsHelperObjectStateRecorder.state(
+            accessPoint.getName(), accessPoint.getActions(), null));
+    }
 }

@@ -2801,3 +2801,23 @@ D-0195 (2026-08-14) - Requirement messaging uses same-policy unrestricted near-m
 
   Cross-reference: D-0143 account capability gates, D-0136 recorder-first route shape, D-0189
   confidence tiers, and D-0194 closed pilot cleanup.
+
+D-0196 (2026-08-14) - Sailing access capture is evidence, not active route data.
+
+  RULE 1 - NO SAILING ROW WITHOUT A VERIFIED LAND-SIDE ACCESS TILE. Myth confirmed that waypointing
+  into sailable areas still returns `No Route Available`, which is expected while
+  `drewshelper-transports.tsv` has zero `SAILING` rows. The `Requirements` overlay cannot diagnose a
+  missing Sailing level until an unrestricted diagnostic solve has at least one locked `SAILING`
+  edge to follow.
+
+  RULE 2 - TAG LIKELY SAILING ACCESS OBJECTS IN THE EXISTING RECORDER. The object/door-state
+  recorder now classifies gangplanks, ships, boats, docks, moorings, piers, quays, rowboats, and
+  direct sailing verbs as `category=sailing state=SAILING_ACCESS`. This keeps capture inside the
+  D-0191 evidence stream instead of creating a second recorder format.
+
+  RULE 3 - GENERIC TRAVEL IS NOT SAILING BY ITSELF. An object with action `Travel` or `Board` only
+  becomes sailing access when its name also indicates boat/dock/ship/gangplank-style context.
+  Generic carts, gates, tunnels, or other travel objects stay ordinary traversal evidence.
+
+  Cross-reference: extends D-0195 `SAILING` readiness and preserves the recorder-first rule from
+  D-0191/D-0189.
