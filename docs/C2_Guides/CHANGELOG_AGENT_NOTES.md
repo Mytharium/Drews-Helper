@@ -2497,3 +2497,21 @@ D-0197 (2026-08-16) - Captured focused passive object-profile blockers in the ob
 
   This remains evidence-only. The recorder does not promote collision-map data, object-profile
   allowlists, transports, confidence sidecars, or route-ranker behavior.
+
+D-0198 (2026-08-16) - Closed the C1 rerun and wrote the next-session paid/unnamed proof handoff.
+
+  Myth reran C1 after D-0197 and the passive table proof landed. The object-state log captured
+  `tile=3209,3221,0 objectId=596 locType=10 category=object-profile
+  state=PASSIVE_OBJECT_PROFILE objectSize=1x4 rawFlags=256`, and fresh C1 route segment rows
+  completed with no `illegalObservedEdges`.
+
+  Ran the route-validation harness in evidence-read mode after the C1 rerun. The report showed
+  `rows=83 completed=47 interrupted=36 matches=10 divergent=73 illegalObservedEdges=0` for
+  hand-walked route segments, plus object evidence `rows=1747`, `object-profile=703`, and
+  `PASSIVE_OBJECT_PROFILE=703`.
+
+  Updated the start-here block in `02_NEXT_WORK.md` so tomorrow starts at the paid/unnamed proof
+  batch, not the completed C1 rerun. The handoff includes exact coordinate anchors from
+  `tools/object-placement-probe.txt` for `1289/10`, `9661/10`, `7169/10`, `34803/10`,
+  `34804/10`, and unnamed `19143/10`, plus the required logger settings. `01_CURRENT_STATE.md`
+  now records the same session close.

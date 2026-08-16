@@ -1,6 +1,25 @@
 # Current State
 
-Last updated: 2026-08-14.
+Last updated: 2026-08-16.
+
+## 2026-08-16 Session Close
+
+Myth switched back from Fort Stewart work to Drew's Helper and started the object/door-state
+recorder path. C2 first verified that the live repo had already advanced through D-0191 to D-0196:
+object/door-state evidence, route-validation harness, pilot-region cleanup, Requirements messaging,
+and Sailing-access tagging were already present.
+
+The useful new work was D-0197. Myth's first C1 Lumbridge rerun proved route-segment logging worked
+and nearby doors were recorded, but the static dining-room table was absent because passive blockers
+had no state/traversal hook. C2 patched the existing recorder, not a second format, so object-state
+rows now include `locType=<n>` and focused passive object-profile keys emit
+`category=object-profile state=PASSIVE_OBJECT_PROFILE`.
+
+Myth reran C1 after the patch and it succeeded. Live evidence captured the Lumbridge table at
+`3209,3221,0` as `objectId=596 locType=10 state=PASSIVE_OBJECT_PROFILE`, and the route harness
+reported `illegalObservedEdges=0`. Next work is the paid/unnamed held-back object-profile proof
+batch using exact coordinate anchors from `tools/object-placement-probe.txt`; do not ask Myth for a
+generic area walk when a proof batch needs exact tiles.
 
 ## Current Runtime Reset
 

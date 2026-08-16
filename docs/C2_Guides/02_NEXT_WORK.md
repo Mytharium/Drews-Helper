@@ -2,20 +2,20 @@
 
 Last updated: 2026-08-16.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-16, after D-0197)
+## CURRENT HANDOFF - START HERE (written 2026-08-16, session close after C1 proof)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Rerun the C1 Lumbridge dining-table loop after the dev client is restarted with
-D-0197. The object-state recorder now captures focused passive object-profile keys as evidence
-rows, including the supported table/tree/dead-tree set and the D-0188 held-back proof candidates.
-After C1 shows `objectId=596 locType=10 category=object-profile state=PASSIVE_OBJECT_PROFILE`,
-continue C2/C3 or move to the paid/unnamed object-profile proof batch. Active sailing rows are still
-parked until land-side gangplank/dock interaction tiles are verified. Do not invent sailing dock
-tiles from map pins or port-task navigation waypoints.
+**WHAT'S NEXT:** C1 is done. Start the paid/unnamed object-profile proof batch using the exact
+coordinate anchors below. The goal is evidence only: capture `DREW_OBJECT_STATE` passive
+object-profile rows and paired `DREW_ROUTE_SEGMENT` rows for the held-back keys `1289/10`,
+`9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10`. Do not promote those keys to
+runtime map data until their proof rows are inspected and the route gate stays clean. Active sailing
+rows remain parked until land-side gangplank/dock interaction tiles are verified. Do not invent
+sailing dock tiles from map pins or port-task navigation waypoints.
 
-State through 2026-08-16 05:28 UTC:
+State through 2026-08-16 07:26 UTC:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
@@ -58,6 +58,67 @@ State through 2026-08-16 05:28 UTC:
    supported/held-back table/tree/dead-tree/rubble/etc. proof keys as
    `category=object-profile state=PASSIVE_OBJECT_PROFILE`. This is evidence-only and does not
    promote any object-profile key.
+14. Myth reran C1 after D-0197. The recorder captured the Lumbridge table exactly:
+   `tile=3209,3221,0 objectId=596 locType=10 category=object-profile
+   state=PASSIVE_OBJECT_PROFILE objectSize=1x4 rawFlags=256`. Fresh C1 segment rows also completed,
+   including `match`, `legal-detour-or-object-pressure`, and
+   `legal-route-ranker-or-click-shape` classifications with `illegalObservedEdges=0`.
+15. Current evidence harness after the C1 rerun completed with
+   `rows=83 completed=47 interrupted=36 matches=10 divergent=73 illegalObservedEdges=0` and object
+   evidence `rows=1747`, including `object-profile=703` and
+   `PASSIVE_OBJECT_PROFILE=703`.
+16. `tools/route-validation-harness.txt` is dirty evidence output from the harness run. It is not a
+   runtime behavior change and should not be bundled into an unrelated code commit.
+
+Next paid/unnamed proof batch:
+
+Settings for both blocks:
+
+```text
+In-game run: OFF
+Log Benchmark Movement: OFF
+Log Route Segments: ON
+Log Object/Door State: ON
+Validate Map Data: OFF
+```
+
+Pause about 5 seconds at each coordinate so the 25-tick object-state scan emits rows. Send both
+`%USERPROFILE%\.runelite\drews-object-states.txt` and
+`%USERPROFILE%\.runelite\drews-route-segments.txt` after the capture.
+
+```text
+P1 - Draynor/Manor held-back dead-tree proof
+Expected held-back key: 1289/10
+Waypoint target: 3109,3352,0
+Walk/pause anchors:
+3098,3318,0
+3096,3323,0
+3099,3331,0
+3104,3333,0
+3110,3341,0
+3109,3352,0
+```
+
+```text
+P2 - Varrock east / Sawmill held-back stump, rubble, table, unnamed proof
+Expected held-back keys:
+9661/10 at 3274,3445,0; 3300,3489,0; 3308,3483,0
+19143/10 unnamed 2x2 at 3296,3481..3297,3482
+34804/10 at 3303,3479,0 and 3305,3478,0
+34803/10 at 3307,3478,0
+7169/10 at 3301,3492,0
+
+Waypoint target: 3307,3491,0
+Walk/pause anchors:
+3274,3445,0
+3296,3481,0
+3303,3479,0
+3307,3478,0
+3308,3483,0
+3300,3489,0
+3301,3492,0
+3307,3491,0
+```
 
 Object/door-state recorder run procedure:
 
