@@ -55,6 +55,8 @@ public final class DrewsHelperObjectStateRecorder
         "sailing", "gangplank", "mooring", "moor", "dock", "pier", "quay", "ship", "boat",
         "barge", "raft", "rowboat"
     };
+    private static final int OBJECT_PROFILE_LOC_TYPE_MASK_BITS = 24;
+    private static final Set<Integer> PASSIVE_OBJECT_PROFILE_KEYS = passiveObjectProfileKeys();
 
     private final File output;
     private final Set<String> seenStateRows = new HashSet<>();
@@ -204,7 +206,7 @@ public final class DrewsHelperObjectStateRecorder
         ObjectComposition base = client.getObjectDefinition(object.objectId);
         ObjectComposition active = DrewsHelperObjectDefinitions.active(base);
         String[] actions = DrewsHelperObjectDefinitions.activeActions(base);
-        if (!isStateCandidate(object.kind, base, active, actions))
+        if (!isStateCandidate(object, base, active, actions))
         {
             return;
         }
@@ -234,8 +236,8 @@ public final class DrewsHelperObjectStateRecorder
         ObjectComposition selected = active == null ? base : active;
         int activeId = selected == null ? object.objectId : selected.getId();
         String name = selected == null ? "-" : DrewsHelperObjectDefinitions.sanitise(selected.getName());
-        String category = category(object.kind, name, actions, active);
-        String state = state(name, actions, active);
+        String category = category(object.kind, name, actions, active, object.objectId, activeId, object.config);
+        String state = state(name, actions, active, object.objectId, activeId, object.config);
         DrewsHelperDataProvenance safeMapProvenance = mapProvenance == null
             ? new DrewsHelperDataProvenance(DrewsHelperDataConfidence.CONTRADICTED, "missing-map-provenance")
             : mapProvenance;
@@ -257,6 +259,7 @@ public final class DrewsHelperObjectStateRecorder
             + " definitionSize=" + definitionSize(selected)
             + " orientation=" + safe(object.orientation)
             + " config=" + intOrDash(object.config)
+            + " locType=" + intOrDash(locTypeFromConfig(object.config))
             + " hash=" + object.hash
             + " liveEdges=" + liveEdges
             + " rawFlags=" + rawFlags
@@ -267,7 +270,33 @@ public final class DrewsHelperObjectStateRecorder
     }
 
     static boolean isStateCandidate(
+        ObservedObject object,
+        ObjectComposition base,
+        ObjectComposition active,
+        String[] actions
+    )
+    {
+        if (object == null)
+        {
+            return false;
+        }
+        return isStateCandidate(object.kind, object.objectId, object.config, base, active, actions);
+    }
+
+    static boolean isStateCandidate(
         String kind,
+        ObjectComposition base,
+        ObjectComposition active,
+        String[] actions
+    )
+    {
+        return isStateCandidate(kind, -1, -1, base, active, actions);
+    }
+
+    static boolean isStateCandidate(
+        String kind,
+        int objectId,
+        int config,
         ObjectComposition base,
         ObjectComposition active,
         String[] actions
@@ -277,12 +306,14 @@ public final class DrewsHelperObjectStateRecorder
         {
             return false;
         }
+        int activeId = active == null ? objectId : active.getId();
         return base.getImpostorIds() != null
             || active != null
             || isSailingCandidate(base.getName(), actions)
             || hasAnyAction(actions, STATE_ACTIONS)
             || hasAnyAction(actions, TRAVERSAL_ACTIONS)
-            || isDoorLike(kind, base.getName(), actions);
+            || isDoorLike(kind, base.getName(), actions)
+            || isPassiveObjectProfileCandidate(objectId, activeId, config);
     }
 
     static String state(String[] actions, ObjectComposition active)
@@ -291,6 +322,18 @@ public final class DrewsHelperObjectStateRecorder
     }
 
     static String state(String nameToken, String[] actions, ObjectComposition active)
+    {
+        return state(nameToken, actions, active, -1, -1, -1);
+    }
+
+    static String state(
+        String nameToken,
+        String[] actions,
+        ObjectComposition active,
+        int objectId,
+        int activeId,
+        int config
+    )
     {
         boolean open = DrewsHelperObjectDefinitions.hasAction(actions, "Open");
         boolean close = DrewsHelperObjectDefinitions.hasAction(actions, "Close");
@@ -318,10 +361,27 @@ public final class DrewsHelperObjectStateRecorder
         {
             return "TRAVERSAL_ACTION";
         }
+        if (isPassiveObjectProfileCandidate(objectId, activeId, config))
+        {
+            return "PASSIVE_OBJECT_PROFILE";
+        }
         return active == null ? "INTERACTIVE" : "IMPOSTOR_STATE";
     }
 
     static String category(String kind, String nameToken, String[] actions, ObjectComposition active)
+    {
+        return category(kind, nameToken, actions, active, -1, -1, -1);
+    }
+
+    static String category(
+        String kind,
+        String nameToken,
+        String[] actions,
+        ObjectComposition active,
+        int objectId,
+        int activeId,
+        int config
+    )
     {
         if (isDoorLike(kind, nameToken, actions))
         {
@@ -338,6 +398,10 @@ public final class DrewsHelperObjectStateRecorder
         if (active != null || hasAnyAction(actions, STATE_ACTIONS))
         {
             return "stateful";
+        }
+        if (isPassiveObjectProfileCandidate(objectId, activeId, config))
+        {
+            return "object-profile";
         }
         return "object";
     }
@@ -424,6 +488,57 @@ public final class DrewsHelperObjectStateRecorder
             }
         }
         return false;
+    }
+
+    static boolean isPassiveObjectProfileCandidate(int objectId, int activeId, int config)
+    {
+        int locType = locTypeFromConfig(config);
+        if (locType < 0)
+        {
+            return false;
+        }
+        return PASSIVE_OBJECT_PROFILE_KEYS.contains(objectProfileKey(objectId, locType))
+            || PASSIVE_OBJECT_PROFILE_KEYS.contains(objectProfileKey(activeId, locType));
+    }
+
+    static int locTypeFromConfig(int config)
+    {
+        return config < 0 ? -1 : config & 31;
+    }
+
+    private static int objectProfileKey(int objectId, int locType)
+    {
+        if (objectId < 0 || locType < 0 || locType >= OBJECT_PROFILE_LOC_TYPE_MASK_BITS)
+        {
+            return -1;
+        }
+        return objectId * OBJECT_PROFILE_LOC_TYPE_MASK_BITS + locType;
+    }
+
+    private static Set<Integer> passiveObjectProfileKeys()
+    {
+        Set<Integer> keys = new HashSet<>();
+
+        // D-0186/D-0188 supported table/tree/dead-tree profiles used by C1/C2/C3 proof.
+        keys.add(objectProfileKey(596, 10));
+        keys.add(objectProfileKey(10820, 10));
+        keys.add(objectProfileKey(1282, 10));
+        keys.add(objectProfileKey(1283, 10));
+        keys.add(objectProfileKey(11510, 10));
+        keys.add(objectProfileKey(1276, 10));
+        keys.add(objectProfileKey(1276, 11));
+        keys.add(objectProfileKey(1278, 10));
+        keys.add(objectProfileKey(1278, 11));
+
+        // D-0188 held-back keys: capture evidence only, still not promoted by this recorder.
+        keys.add(objectProfileKey(1289, 10));
+        keys.add(objectProfileKey(9661, 10));
+        keys.add(objectProfileKey(7169, 10));
+        keys.add(objectProfileKey(34803, 10));
+        keys.add(objectProfileKey(34804, 10));
+        keys.add(objectProfileKey(19143, 10));
+
+        return Collections.unmodifiableSet(keys);
     }
 
     private static String definitionSize(ObjectComposition composition)

@@ -1,21 +1,21 @@
 # Next Work
 
-Last updated: 2026-08-14.
+Last updated: 2026-08-16.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-14, after D-0196)
+## CURRENT HANDOFF - START HERE (written 2026-08-16, after D-0197)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Next high-value coding work is the paid/unnamed object-profile proof batch
-(hedges, stools, shelves, crates) or the parked Varlamore Slice 1 capture prep. The active sailing
-next step is a live dock/gangplank capture pass: D-0195 closed the generic `Requirements:`
-messaging gate and made `SAILING` a supported transport family, and D-0196 tags likely sailing
-access objects in `DREW_OBJECT_STATE` rows. Active sailing rows are still parked until land-side
-gangplank/dock interaction tiles are verified. Do not invent sailing dock tiles from map pins or
-port-task navigation waypoints.
+**WHAT'S NEXT:** Rerun the C1 Lumbridge dining-table loop after the dev client is restarted with
+D-0197. The object-state recorder now captures focused passive object-profile keys as evidence
+rows, including the supported table/tree/dead-tree set and the D-0188 held-back proof candidates.
+After C1 shows `objectId=596 locType=10 category=object-profile state=PASSIVE_OBJECT_PROFILE`,
+continue C2/C3 or move to the paid/unnamed object-profile proof batch. Active sailing rows are still
+parked until land-side gangplank/dock interaction tiles are verified. Do not invent sailing dock
+tiles from map pins or port-task navigation waypoints.
 
-Session close at 2026-08-14 06:56 UTC:
+State through 2026-08-16 05:28 UTC:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
@@ -53,6 +53,11 @@ Session close at 2026-08-14 06:56 UTC:
 12. D-0196 updated the object/door-state recorder so gangplanks, ships, boats, docks, moorings,
    piers, quays, and direct sailing verbs are captured as `category=sailing state=SAILING_ACCESS`.
    Generic `Travel` rows without boat/dock naming remain ordinary traversal evidence.
+13. D-0197 expanded that same evidence stream to focused passive object-profile blockers. It decodes
+   `TileObject.getConfig()` to `locType`, writes `locType=<n>` in every object-state row, and records
+   supported/held-back table/tree/dead-tree/rubble/etc. proof keys as
+   `category=object-profile state=PASSIVE_OBJECT_PROFILE`. This is evidence-only and does not
+   promote any object-profile key.
 
 Object/door-state recorder run procedure:
 
@@ -61,15 +66,18 @@ Object/door-state recorder run procedure:
 3. Leave `Validate Map Data` OFF unless C2 also asks for `DREW_TRAVERSAL` or full live-flag rows;
    the object-state recorder captures its own nearby live edge mask.
 4. Stand in or walk through the loaded scene that contains the door, gate, barrier, shortcut,
-   pulled object, or state-changing obstacle.
+   pulled object, state-changing obstacle, or focused passive object-profile blocker.
 5. Open/close/use the object normally, wait a few seconds after each visible state, then send the
    `DREW_OBJECT_STATE` rows from `%USERPROFILE%\.runelite\drews-object-states.txt`.
+   For passive table/tree/dead-tree/rubble-style blockers, no interaction is needed; walk the
+   coordinate loop and pause long enough for the 25-tick scene scan to emit rows.
    For Sailing access proof, stand at the land-side dock/gangplank tile and wait long enough for
    `category=sailing state=SAILING_ACCESS` rows to land before clicking the boarding object.
 6. Treat these rows as evidence only. They do not auto-merge collision, transport, or object-profile
    data and they do not change route behavior by themselves.
-7. Keep held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed
-   `19143/10` out until they get their own paid/unnamed proof pass.
+7. Held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10`
+   may appear in evidence rows after D-0197, but they stay out of promoted route data until they get
+   their own paid/unnamed proof pass.
 8. Keep the known accepted full-test failure visible:
    `shapeRankingShadowExposesDistinctSameLengthRandomChainRoute`.
 

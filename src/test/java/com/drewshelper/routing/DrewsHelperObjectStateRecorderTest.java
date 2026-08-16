@@ -47,6 +47,7 @@ public class DrewsHelperObjectStateRecorderTest
         assertTrue(body.contains("actions=Close|Examine"));
         assertTrue(body.contains("varbit=1234"));
         assertTrue(body.contains("varp=5678"));
+        assertTrue(body.contains("locType=3"));
         assertTrue(body.contains("liveEdges=01"));
         assertTrue(body.contains("rawFlags=16777216"));
         assertTrue(body.contains("confidence=CONFIRMED"));
@@ -70,6 +71,23 @@ public class DrewsHelperObjectStateRecorderTest
 
         assertFalse(DrewsHelperObjectStateRecorder.isStateCandidate(
             "game", staticTree, null, staticTree.getActions()));
+    }
+
+    @Test
+    public void focusedPassiveObjectProfileCandidatesAreRecorded()
+    {
+        ObjectComposition table = DrewsHelperObjectDefinitionsTest.composition(
+            596, "Table", new String[]{null, null, "Examine"}, null, null);
+
+        assertEquals(10, DrewsHelperObjectStateRecorder.locTypeFromConfig(10));
+        assertTrue(DrewsHelperObjectStateRecorder.isPassiveObjectProfileCandidate(596, 596, 10));
+        assertFalse(DrewsHelperObjectStateRecorder.isPassiveObjectProfileCandidate(596, 596, 22));
+        assertTrue(DrewsHelperObjectStateRecorder.isStateCandidate(
+            "game", 596, 10, table, null, table.getActions()));
+        assertEquals("object-profile", DrewsHelperObjectStateRecorder.category(
+            "game", table.getName(), table.getActions(), null, 596, 596, 10));
+        assertEquals("PASSIVE_OBJECT_PROFILE", DrewsHelperObjectStateRecorder.state(
+            table.getName(), table.getActions(), null, 596, 596, 10));
     }
 
     @Test

@@ -2482,3 +2482,18 @@ D-0196 (2026-08-14) - Tagged sailing access candidates in the object-state recor
   Kept generic `Travel` and `Board` conservative: they only become sailing evidence when paired
   with boat/dock/gangplank-style object names. Ordinary travel objects remain traversal rows. No
   `drewshelper-transports.tsv` Sailing rows were added in this change.
+
+D-0197 (2026-08-16) - Captured focused passive object-profile blockers in the object-state recorder.
+
+  Myth's C1 Lumbridge rerun proved the route segment logger was good but the object-state recorder
+  skipped the passive dining-room table: route rows completed, nearby door rows landed, and no
+  `objectId=596` table row appeared. The issue was recorder scope, not the walk test.
+
+  Updated `DrewsHelperObjectStateRecorder` to decode `TileObject.getConfig()` into `locType`, write
+  `locType=<n>` in every `DREW_OBJECT_STATE` row, and include a focused passive object-profile
+  allowlist. Supported D-0186/D-0188 table/tree/dead-tree keys and D-0188 held-back proof keys now
+  emit `category=object-profile state=PASSIVE_OBJECT_PROFILE` evidence rows when present in the
+  loaded scene.
+
+  This remains evidence-only. The recorder does not promote collision-map data, object-profile
+  allowlists, transports, confidence sidecars, or route-ranker behavior.

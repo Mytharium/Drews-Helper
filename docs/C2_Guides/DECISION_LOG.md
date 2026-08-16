@@ -2821,3 +2821,22 @@ D-0196 (2026-08-14) - Sailing access capture is evidence, not active route data.
 
   Cross-reference: extends D-0195 `SAILING` readiness and preserves the recorder-first rule from
   D-0191/D-0189.
+
+D-0197 (2026-08-16) - Passive object-profile capture stays focused and evidence-only.
+
+  RULE 1 - STATIC BLOCKERS NEED RECORDER COVERAGE TOO. Myth's C1 rerun showed completed segment
+  proof and nearby door-state rows, but no Lumbridge table row. Passive object-profile blockers can
+  have no state hook, traversal verb, or impostor id, so the object-state recorder must explicitly
+  include focused table/tree/dead-tree/rubble proof keys instead of treating silence as absence.
+
+  RULE 2 - USE OBJECT ID PLUS LOC TYPE, NOT OBJECT ID ALONE. Runtime rows now include `locType`
+  decoded from `TileObject.getConfig()`. Passive capture keys are matched as `objectId/locType` so
+  `596/10` table evidence does not become a broad "all object 596 everywhere" rule.
+
+  RULE 3 - CAPTURE IS NOT PROMOTION. Supported keys and held-back keys may both appear as
+  `category=object-profile state=PASSIVE_OBJECT_PROFILE` rows, but those rows do not change
+  `collision-map.zip`, `collision-map-confidence.tsv`, `drewshelper-transports.tsv`, route behavior,
+  or any object-profile allowlist. Held-back keys remain held back until their own proof pass clears.
+
+  Cross-reference: D-0191 object-state evidence stream, D-0186 supported object-profile proof,
+  D-0188 held-back keys, and D-0192 route-validation harness.
