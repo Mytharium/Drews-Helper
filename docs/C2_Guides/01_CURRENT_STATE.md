@@ -1,6 +1,57 @@
 # Current State
 
-Last updated: 2026-08-16.
+Last updated: 2026-08-17.
+
+## 2026-08-17 P1/P2 Paid/Unnamed Proof Capture
+
+Myth ran P1 and P2 and correctly reported that several supplied pause anchors were inaccessible. Those anchors were object footprint coordinates from `tools/object-placement-probe.txt`, not guaranteed standable tiles. Do not reuse them as stand-on-this-tile instructions.
+
+The capture still produced the needed object-state evidence. `C:\Users\drews\.runelite\drews-object-states.txt` now contains focused `DREW_OBJECT_STATE` rows for every held-back key: `1289/10`, `9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed/stateful `19143/10`. `gradlew validateRoutes --args=--skip-offline` read the current evidence and reported `rows=117 completed=78 interrupted=39 matches=13 divergent=104 illegalObservedEdges=0 nonPromotableIllegalObservedEdges=1`; the hard gate is still clean.
+
+C2 reviewed the suspicious unnamed/stateful rock before staging anything. The live scanner saw
+`objectId=19143 activeId=19131`, but both `19143/10` and `19131/10` resolve as missing/zero-effect
+focus rows in the cache-backed candidate builder, so they are parked and are not part of the live
+validation map.
+
+Runtime `src/main/resources/collision-map.zip` is now staged for controlled live validation with
+the stable held-back keys only: `1289/10`, `9661/10`, `7169/10`, `34803/10`, and `34804/10`, plus
+the already-supported D-0186 set. The staged map SHA256 is
+`4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the previous promoted map is
+backed up at `build/collision-map-pre-d0200.zip` with SHA256
+`8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`. Command-line gates stayed
+clean: candidate net gate stayed `55156 > 780`, `gradlew validateRoutes --args=--skip-offline`
+reported `illegalObservedEdges=0`, and `gradlew build -x test` passed. This is staged for live
+validation, not a commit-approved final promotion yet.
+
+## 2026-08-17 Session Close / Tomorrow Pickup
+
+The next session starts with controlled live validation of the staged D-0200 map. Nothing else is
+needed before Myth tests it. The old P1/P2 coordinate lists are retired as standable instructions
+because they were object footprint coordinates, not reachable pause anchors.
+
+Use target-only walks:
+
+```text
+Draynor/Manor route:
+Start: 3092,3245,0 or nearest walkable tile
+Target: 3109,3352,0
+
+Varrock/Sawmill route:
+Start: 3253,3420,0 or nearest walkable tile
+Target: 3307,3491,0
+```
+
+Capture settings are `In-game run` OFF, `Log Benchmark Movement` OFF, `Log Route Segments` ON,
+`Log Object/Door State` ON, and `Validate Map Data` OFF. Myth should restart the Drew's
+Helper/RuneLite dev client before walking so the staged `collision-map.zip` is loaded.
+
+After Myth sends `%USERPROFILE%\.runelite\drews-route-segments.txt` and
+`%USERPROFILE%\.runelite\drews-object-states.txt`, C2 should run
+`gradlew validateRoutes --args=--skip-offline` and inspect the new rows. Final promotion/commit is
+allowed only if the hard route gate stays clean and the live rows do not introduce a completed
+`static-map-disagrees-with-live-step` regression. If that happens, restore
+`build/collision-map-pre-d0200.zip` over `src/main/resources/collision-map.zip` and keep item 15
+open.
 
 ## 2026-08-16 Session Close
 
@@ -17,9 +68,9 @@ rows now include `locType=<n>` and focused passive object-profile keys emit
 
 Myth reran C1 after the patch and it succeeded. Live evidence captured the Lumbridge table at
 `3209,3221,0` as `objectId=596 locType=10 state=PASSIVE_OBJECT_PROFILE`, and the route harness
-reported `illegalObservedEdges=0`. Next work is the paid/unnamed held-back object-profile proof
-batch using exact coordinate anchors from `tools/object-placement-probe.txt`; do not ask Myth for a
-generic area walk when a proof batch needs exact tiles.
+reported `illegalObservedEdges=0`. The old paid/unnamed handoff from this session is superseded by
+the 2026-08-17 P1/P2 capture note above; do not reuse those object-footprint coordinates as
+standable pause anchors.
 
 ## Current Runtime Reset
 

@@ -1,21 +1,37 @@
 # Next Work
 
-Last updated: 2026-08-16.
+Last updated: 2026-08-17.
 
-## CURRENT HANDOFF - START HERE (written 2026-08-16, session close after C1 proof)
+## CURRENT HANDOFF - START HERE (updated 2026-08-17 after D-0200 candidate staging)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** C1 is done. Start the paid/unnamed object-profile proof batch using the exact
-coordinate anchors below. The goal is evidence only: capture `DREW_OBJECT_STATE` passive
-object-profile rows and paired `DREW_ROUTE_SEGMENT` rows for the held-back keys `1289/10`,
-`9661/10`, `7169/10`, `34803/10`, `34804/10`, and unnamed `19143/10`. Do not promote those keys to
-runtime map data until their proof rows are inspected and the route gate stays clean. Active sailing
-rows remain parked until land-side gangplank/dock interaction tiles are verified. Do not invent
-sailing dock tiles from map pins or port-task navigation waypoints.
+**WHAT'S NEXT:** Run controlled live validation against the staged D-0200 runtime map. Do not ask Myth to rerun the old P1/P2 pause-anchor lists; those were object footprint coordinates, not standable tiles. The staged runtime map includes the stable held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, and `34804/10`. The suspicious unnamed/stateful `19143/10` rock is parked because the live scanner saw `objectId=19143 activeId=19131`, but both `19143/10` and `19131/10` are missing/zero-effect focus rows in the cache-backed candidate builder.
 
-State through 2026-08-16 07:26 UTC:
+The staged map SHA256 is `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the previous promoted map is backed up at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`. C2 rebuilt the candidate excluding `19143/10` and `19131/10`, copied `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip`, and verified `gradlew validateRoutes --args=--skip-offline` plus `gradlew build -x test`. Active sailing rows remain parked until land-side gangplank/dock interaction tiles are verified. Do not invent sailing dock tiles from map pins or port-task navigation waypoints.
+
+Tomorrow pickup checklist:
+
+1. Start by confirming the runtime staged map is still loaded from `src/main/resources/collision-map.zip`
+   and still hashes to `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`.
+2. Have Myth restart the Drew's Helper/RuneLite dev client so the staged collision map is loaded.
+3. Capture with these settings: `In-game run` OFF, `Log Benchmark Movement` OFF,
+   `Log Route Segments` ON, `Log Object/Door State` ON, and `Validate Map Data` OFF.
+4. Run the Draynor/Manor validation as a target-only walk: start at `3092,3245,0` or the nearest
+   walkable tile, set target `3109,3352,0`, and walk normally. Do not use the old P1 pause anchors.
+5. Run the Varrock/Sawmill validation as a target-only walk: start at `3253,3420,0` or the nearest
+   walkable tile, set target `3307,3491,0`, and walk normally. Do not use the old P2 waypoint list.
+6. Ask Myth for `%USERPROFILE%\.runelite\drews-route-segments.txt` and
+   `%USERPROFILE%\.runelite\drews-object-states.txt`.
+7. After logs land, run `gradlew validateRoutes --args=--skip-offline`, inspect the new segment rows,
+   and promote/commit only if the hard route gate stays clean and no new completed
+   `static-map-disagrees-with-live-step` regression appears.
+8. If live validation regresses, restore `build/collision-map-pre-d0200.zip` over
+   `src/main/resources/collision-map.zip`, leave item 15 open, and keep the five held-back keys parked
+   until the bad key/window is isolated.
+
+State through 2026-08-17 02:23 UTC:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
@@ -69,8 +85,10 @@ State through 2026-08-16 07:26 UTC:
    `PASSIVE_OBJECT_PROFILE=703`.
 16. `tools/route-validation-harness.txt` is dirty evidence output from the harness run. It is not a
    runtime behavior change and should not be bundled into an unrelated code commit.
+17. D-0200 staged a live-validation map, but final promotion still requires Myth's controlled route
+   rerun. Use target-only route checks, not object-footprint pause anchors.
 
-Next paid/unnamed proof batch:
+Completed P1/P2 proof batch notes (old coordinates were object footprints, not standable anchors):
 
 Settings for both blocks:
 
@@ -82,9 +100,9 @@ Log Object/Door State: ON
 Validate Map Data: OFF
 ```
 
-Pause about 5 seconds at each coordinate so the 25-tick object-state scan emits rows. Send both
-`%USERPROFILE%\.runelite\drews-object-states.txt` and
-`%USERPROFILE%\.runelite\drews-route-segments.txt` after the capture.
+Historical note: these were the capture settings, but the listed P1/P2 coordinates are object
+footprints from the probe output. They produced useful evidence because the scene scanner captures nearby
+objects, but they are not safe standable pause anchors and should not be rerun as written.
 
 ```text
 P1 - Draynor/Manor held-back dead-tree proof

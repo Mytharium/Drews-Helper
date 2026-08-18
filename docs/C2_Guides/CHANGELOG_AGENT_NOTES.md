@@ -2515,3 +2515,60 @@ D-0198 (2026-08-16) - Closed the C1 rerun and wrote the next-session paid/unname
   `tools/object-placement-probe.txt` for `1289/10`, `9661/10`, `7169/10`, `34803/10`,
   `34804/10`, and unnamed `19143/10`, plus the required logger settings. `01_CURRENT_STATE.md`
   now records the same session close.
+
+
+D-0199 (2026-08-17) - Consumed P1/P2 paid/unnamed proof capture and corrected the bad anchors.
+
+  Myth ran P1/P2 and reported the important test-design bug: several supplied pause anchors were
+  inaccessible because C2 had copied object footprint coordinates from `tools/object-placement-probe.txt`
+  as if they were standable pause tiles. P1 was the outside Draynor Manor approach, not inside the
+  Manor, but the anchor wording was wrong.
+
+  Despite that, the object-state log captured all held-back proof keys: `1289/10`, `9661/10`,
+  `7169/10`, `34803/10`, `34804/10`, and unnamed/stateful `19143/10`. The evidence-read harness
+  reported `rows=117 completed=78 interrupted=39 matches=13 divergent=104 illegalObservedEdges=0`
+  with only the known non-promotable stale edge still visible.
+
+  Ran the required command-line candidate-map trial before any promotion. With the D-0186 supported
+  set plus held-back keys, the all-region net gate passed: `DANGEROUS_UNEXPLAINED` dropped
+  `139035 -> 83879` (`55156`) while route-aware `OVERBLOCK` rose `8264 -> 9044` (`780`).
+  No runtime `collision-map.zip` swap or promotion was made in this note.
+
+
+D-0200 (2026-08-17) - Staged stable held-back object profiles for controlled live validation.
+
+  Reviewed the suspicious unnamed/stateful rock before touching the runtime map. The object-state
+  log proves the live scanner saw `objectId=19143 activeId=19131`, but candidate-builder focus
+  rows for both `19143/10` and `19131/10` are missing/zero-effect (`comparedEdges=0`), so that
+  key is parked instead of promoted.
+
+  Rebuilt the candidate map with the D-0186 supported set plus only the stable held-back keys:
+  `1289/10`, `9661/10`, `7169/10`, `34803/10`, and `34804/10`. The all-region candidate kept the
+  same net gate result: `DANGEROUS_UNEXPLAINED` drop `55156` versus route-aware `OVERBLOCK` rise
+  `780`, and focus rows showed the five stable keys present while `19143/10` was absent by design.
+
+  Copied `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip` for live
+  validation. New staged runtime SHA256:
+  `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`. The previous promoted map
+  was backed up at `build/collision-map-pre-d0200.zip` with SHA256
+  `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
+
+  Verification passed with `gradlew validateRoutes --args=--skip-offline`
+  (`illegalObservedEdges=0`), `gradlew build -x test`, candidate/runtime hash comparison, and
+  `git diff --check`. This is staged for Myth's controlled live rerun, not final promotion.
+
+
+D-0201 (2026-08-17) - Wrote next-session handoff for D-0200 live validation.
+
+  Myth asked C2 to write the staged-map state down before stopping for the night. Updated the
+  `02_NEXT_WORK.md` start-here block and `01_CURRENT_STATE.md` session-close note with the exact
+  tomorrow pickup: restart the Drew's Helper/RuneLite dev client, keep `In-game run`,
+  `Log Benchmark Movement`, and `Validate Map Data` OFF, turn `Log Route Segments` and
+  `Log Object/Door State` ON, then walk only the two target routes
+  `(3092,3245,0) -> (3109,3352,0)` and `(3253,3420,0) -> (3307,3491,0)`.
+
+  The old P1/P2 pause-anchor lists remain documented only as historical object-footprint evidence
+  and must not be reused as standable waypoint instructions. Final promotion is still gated on
+  Myth's live rerun plus `gradlew validateRoutes --args=--skip-offline`; restore
+  `build/collision-map-pre-d0200.zip` if the staged map introduces a completed static-map/live-step
+  regression.
