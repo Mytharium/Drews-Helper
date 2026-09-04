@@ -2,30 +2,36 @@
 
 Last updated: 2026-09-04.
 
-## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0206 first capture triage)
+## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0206 clean repeat analysis)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Restart on D-0206 and run the focused repeat batch below before tuning the highlighted route. Myth's first A/B capture produced enough data to prove the tooling works, but it also found a walk-click guard issue and one possible map candidate that needs a repeat.
+**WHAT'S NEXT:** Build D-0207 as route-behavior work, not collision-map work. Myth's clean focused repeat produced 22 accepted walk clicks, 22 completed matched route segments, and zero `collision-map-wrong` buckets. The old diagonal candidate `3229,3262,0 -> 3228,3263,0` did not repeat as a completed illegal edge.
 
 Runtime `src/main/resources/collision-map.zip` is the promoted D-0204 map with SHA256 `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The previous D-0200 staged map is backed up at `build/collision-map-pre-d0203.zip` with SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the pre-D-0200 promoted-map backup remains at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
 
-Important harness note: old route-segment rows do not have D-0205 `forkCandidates={...}` or `ranking={...}` fields. D-0206 `analyzeClickPathing` now reports matched-only buckets and refuses to match pre-D-0205 rows to new clicks.
+Clean D-0206 analyzer result:
 
-Focused pickup checklist:
+```text
+clickRows=22 accepted=22 sources={walk=22}
+rows=22 completed=22 interrupted=0 matchedClicks=22 unmatchedSegments=0
+acceptedDestinationDiffersFromClickTile=0
+classifications={legal-detour-or-object-pressure=5 legal-route-ranker-or-click-shape=13 match=1 route-shape-mismatch=3}
+decisionBuckets={match=1 object-pressure-or-longer-detour=5 other=3 same-length-ranker-wrong=13}
+actualCandidateRanks={1=4 2=1 3=3 5=10}
+expectedCandidateRanks={1=13 2=2 3=3}
+```
 
-1. Restart the Drew's Helper/RuneLite dev client so D-0206 loads.
-2. Clear or rename `%USERPROFILE%\.runelite\drews-click-paths.txt` and `%USERPROFILE%\.runelite\drews-route-segments.txt`.
-3. Turn `Log Click Pathfinding` ON and `Log Route Segments` ON. Keep `Log Benchmark Movement`, `Validate Map Data`, and in-game run OFF.
-4. Keep `Log Object/Door State` OFF for the first three ranker repeats; turn it ON only for the collision-map candidate.
-5. Repeat each of these three times, one click then hands off: `3222,3219,0 -> 3221,3233,0`; `3221,3233,0 -> 3222,3218,0`; `3240,3281,0 -> 3229,3262,0`.
-6. With `Log Object/Door State` ON, repeat `3229,3262,0 -> 3193,3280,0` three times. This checks the candidate live step `3229,3262,0 -> 3228,3263,0`.
-7. Redo B5 once clean if convenient: `3035,3355,0 -> 3007,3355,0`.
-8. Skip B6 for now. Door pathing needs its own door-action batch, not mixed into the ranker pass.
-9. Run `gradlew analyzeClickPathing`, then use `tools/pathfinding-decision-report.txt` to separate `collision-map-wrong`, `object-pressure-or-longer-detour`, and `same-length-ranker-wrong` before changing route behavior.
+D-0207 pickup:
 
-State through 2026-09-04 D-0205:
+1. Do not change `collision-map.zip` from this capture; the focused repeat did not prove a static-map error.
+2. Treat the 13 same-length rows as ranker proof. The current `CLIENT` mode's primary-axis-first tie-break chose rank 1 where the client repeatedly walked rank 5 or rank 3 legal alternatives.
+3. Build a D-0207 ranker-experiment pass that replays `drews-click-paths.txt` and `drews-route-segments.txt` against candidate policies before changing the visible default.
+4. Add active-local-destination mirroring only after preserving waypoint ETA/leg accounting; the D-0206 rows include long-route clicks where `acceptedDest` differs from the final waypoint route target.
+5. Keep the current logs in place until D-0207 tooling consumes them. If Myth needs to rerun, C2 should back up and clear the files, not ask Myth to clear them manually.
+
+State through 2026-09-04 D-0206:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.

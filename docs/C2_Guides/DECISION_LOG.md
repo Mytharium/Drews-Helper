@@ -2905,3 +2905,24 @@ D-0205 (2026-09-04) - Click-path/ranker changes require fresh one-click evidence
   RULE 4 - ROUTE EXCEPTIONS STAY LAST RESORT. A local override is allowed only after the analyzer
   and fresh rows show that a general click-destination/ranker model cannot explain the repeated
   client path. Do not add new local windows as the first answer to legal same-length misses.
+
+D-0206 (2026-09-04) - Clean click-path repeats decide against a collision-map edit.
+
+  RULE 1 - NO COMPLETED ILLEGAL EDGE MEANS NO COLLISION-MAP PATCH. Myth's clean repeat produced
+  22 accepted walk clicks and 22 completed matched route segments with no `collision-map-wrong`
+  bucket. The previous diagonal candidate `3229,3262,0 -> 3228,3263,0` did not repeat as a hard
+  static/live disagreement, so the D-0204 collision map remains current.
+
+  RULE 2 - SAME-LENGTH ROUTE MISMATCHES ARE RANKER INPUT, NOT LOCAL OVERRIDES. The clean capture
+  has 13 `same-length-ranker-wrong` rows. Those rows are legal client paths with equal route cost,
+  so they should feed a replayable ranker experiment before any default route behavior changes.
+
+  RULE 3 - ROUTE-START ALIGNMENT ROWS ARE NOT MAP PROOF. Rows that start one tile after the click,
+  carry `edgeValidation={none}`, and miss at index 0 are timing/alignment evidence. They can improve
+  the recorder, but they do not justify opening or blocking map edges.
+
+  RULE 4 - ACTIVE DESTINATION MIRRORING MUST PRESERVE WAYPOINT ACCOUNTING. The D-0206 rows include
+  clicks where `acceptedDest` differs from the final waypoint route target. Mirroring
+  `client.getLocalDestinationLocation()` is still the right behavior direction, but the
+  implementation must not shift waypoint ETA rows or leg labels by inserting temporary destinations
+  into user waypoint accounting.

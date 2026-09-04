@@ -2,6 +2,31 @@
 
 Last updated: 2026-09-04.
 
+## 2026-09-04 D-0206 Clean Click-Path Repeat Analysis
+
+Myth reran the focused D-0206 pathfinding tests cleanly, skipping only the optional B5-clean row.
+The clean files contain 22 click rows, 22 accepted client destinations, and 22 matched completed
+route segments. There are no interrupted rows and no unmatched route segments.
+
+`gradlew analyzeClickPathing` now reports:
+
+```text
+decisionBuckets={match=1 object-pressure-or-longer-detour=5 other=3 same-length-ranker-wrong=13}
+matchedDecisionBuckets={match=1 object-pressure-or-longer-detour=5 other=3 same-length-ranker-wrong=13}
+actualCandidateRanks={1=4 2=1 3=3 5=10}
+expectedCandidateRanks={1=13 2=2 3=3}
+```
+
+The previous possible collision-map candidate did not repeat as a completed illegal edge. The three
+outbound `3229,3262,0 -> 3193,3280,0` rows start recording from `(3228,3263,0)` with
+`edgeValidation={none}`, so they are route-start alignment/shape evidence, not map-edit proof. The
+D-0204 collision map stays current.
+
+The useful D-0206 signal is route-ranker behavior. The current `CLIENT` route mode still prefers
+rank 1 in many same-length forks, but Myth's client repeatedly walked legal rank 5 and rank 3
+alternatives. D-0207 should add a replayable ranker experiment/report and only then change the
+visible default.
+
 ## 2026-09-04 D-0206 First Click-Path Capture Triage
 
 Myth ran the first D-0205 A/B click-path capture batch. B5 includes a double-click/noise row after

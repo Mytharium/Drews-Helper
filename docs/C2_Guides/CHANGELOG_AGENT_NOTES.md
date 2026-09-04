@@ -2677,3 +2677,24 @@ D-0205 (2026-09-04) - Built click-path instrumentation for route-ranker tuning.
   object/longer-detour pressure, same-length ranker misses, reclick/noise, and exact matches. Old
   route-segment rows still parse but do not contain candidate/ranking fields; fresh one-click rows
   are required before tuning the ranker or active-destination overlay.
+
+D-0206 (2026-09-04) - Analyzed clean focused click-path repeat.
+
+  Myth reran the focused D-0206 tests cleanly and skipped only the optional B5-clean row. The active
+  files now hold 22 `DREW_CLICK_PATH v1` rows and 22 matched completed `DREW_ROUTE_SEGMENT v1` rows.
+  `gradlew analyzeClickPathing` completed successfully and wrote `tools/pathfinding-decision-report.txt`.
+
+  Analyzer result: `clickRows=22 accepted=22`, route rows `completed=22 interrupted=0
+  matchedClicks=22 unmatchedSegments=0`, and matched decision buckets
+  `same-length-ranker-wrong=13`, `object-pressure-or-longer-detour=5`, `other=3`, `match=1`.
+  Candidate rank evidence was `actualCandidateRanks={1=4 2=1 3=3 5=10}` versus
+  `expectedCandidateRanks={1=13 2=2 3=3}`.
+
+  The previously suspected diagonal collision-map candidate did not repeat as a completed illegal
+  edge. The `3229,3262,0 -> 3193,3280,0` outbound rows start recording at `(3228,3263,0)` and have
+  `edgeValidation={none}`. Treat them as route-start alignment/shape evidence, not static-map proof.
+  The D-0204 runtime collision map remains current.
+
+  Next step is D-0207 route-ranker/replay tooling. Do not add local route overrides or collision-map
+  patches from this capture. The useful repeated problem is legal same-length route choice, especially
+  rows where the current ranker chose candidate rank 1 while the client walked rank 5 or rank 3.
