@@ -2572,3 +2572,69 @@ D-0201 (2026-08-17) - Wrote next-session handoff for D-0200 live validation.
   Myth's live rerun plus `gradlew validateRoutes --args=--skip-offline`; restore
   `build/collision-map-pre-d0200.zip` if the staged map introduces a completed static-map/live-step
   regression.
+
+D-0202 (2026-09-04) - Consumed staged-map live validation and found connector blocker.
+
+  Myth completed the requested D-0200 staged-map validation routes and also walked from the Route 1
+  end toward the Route 2 start waypoint as extra connector data. Requested Route 1
+  `(3092,3245,0) -> (3109,3352,0)` and Route 2 `(3253,3420,0) -> (3307,3491,0)`
+  produced no completed adjacent illegal edge.
+
+  The bonus connector walk exposed one completed cardinal `static-map-disagrees-with-live-step`:
+  `3235,3262,0 -> 3236,3262,0`, inside segment `(3229,3262,0) -> (3240,3282,0)`
+  with route target `(3253,3420,0)`. The route harness reported `rows=140 completed=100
+  interrupted=40 illegalObservedEdges=1 nonPromotableIllegalObservedEdges=1`, with object evidence
+  `rows=15310`.
+
+  C2 validated the same fresh evidence against both the staged D-0200 runtime map
+  (`4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`) and the pre-D-0200
+  backup (`8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`). The same hard
+  blocker remained, proving it is pre-existing and not introduced by the five staged object-profile
+  keys. Runtime was restored to the staged D-0200 map.
+
+  `probeObjectPlacements --args="3232,3259,0,3242,3265,d0202_edge_3235_3262"` found unnamed
+  `5611/3` orientation `0` at `3236,3262,0`, matching the current locType-3 west-blocking rule.
+  Final promotion stays blocked until a focused connector recapture confirms whether this edge needs
+  a builder/resource fix or should be parked as one-sample route variance.
+
+D-0203 (2026-09-04) - Staged exact connector live-edge correction.
+
+  Myth's focused connector recapture repeated the completed cardinal live step
+  `3235,3262,0 -> 3236,3262,0`, matching the earlier D-0202 bonus connector row. C2 treated that
+  as confirmed local overblock evidence, not a broad `5611/3` or locType-3 rule change.
+
+  Added a narrow forced-passable edge overlay in `CollisionMapBuilder` after deferred neighbor edges.
+  The overlay opens only `3235,3262,0` east and the stored reverse edge from `3236,3262,0` west.
+  The all-region map was rebuilt with the D-0186 supported object-profile keys plus the D-0200 stable
+  held-back keys: `1289/10`, `9661/10`, `7169/10`, `34803/10`, and `34804/10`.
+
+  Copied the candidate to runtime. New staged runtime `src/main/resources/collision-map.zip` SHA256:
+  `5417D8AF05EA45633DB9A9E8C68CBADE51175190CF6158001C602794579A2901`. Backed up the previous
+  D-0200 staged map to `build/collision-map-pre-d0203.zip` with SHA256
+  `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`.
+
+  Added a focused shipped-map test asserting east/west movement across the connector edge. Verification
+  passed `compileCachetoolsJava`, `buildCollisionMapV2`, the focused shipped-map test, `build -x test`,
+  and `git diff --check`. `validateRoutes --skip-offline` still reports the old illegal counts from
+  recorded pre-D-0203 `edgeValidation={...}` strings, so Myth must restart and recapture the connector
+  once before final promotion.
+
+D-0204 (2026-09-04) - Promoted the connector edge fix after post-restart proof.
+
+  Myth restarted Drew's Helper/RuneLite with the D-0203 runtime map loaded and recaptured the
+  connector toward `3240,3282,0`. The newest connector row was `start=(3231,3262,0)
+  clickDest=(3240,3282,0)` and the same live edge now records `edgeValidation={from=(3235,3262,0)
+  actual=(3236,3262,0) legal=true type=cardinal}` with
+  `classification=legal-detour-or-object-pressure`.
+
+  Moved the validated paid/held-back keys (`1289/10`, `9661/10`, `7169/10`, `34803/10`, and
+  `34804/10`) into `DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS` so the promoted map is reproducible from
+  the default builder path. Rebuilt runtime `src/main/resources/collision-map.zip` from that code
+  path; promoted D-0204 SHA256 is
+  `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The D-0200 staged backup
+  remains `build/collision-map-pre-d0203.zip` with SHA256
+  `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`.
+
+  `gradlew validateRoutes --args=--skip-offline` still reports historical illegal counts because it
+  reads old pre-D-0203 `edgeValidation={...}` strings from the cumulative route log. The current
+  proof row is post-restart and clean, so the connector promotion gate is closed.

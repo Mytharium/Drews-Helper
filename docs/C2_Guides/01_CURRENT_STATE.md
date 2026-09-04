@@ -1,6 +1,49 @@
 # Current State
 
-Last updated: 2026-08-17.
+Last updated: 2026-09-04.
+
+## 2026-09-04 D-0204 Connector Fix Promoted
+
+Myth restarted Drew's Helper/RuneLite after the D-0203 map swap and recaptured the connector toward
+`3240,3282,0`. The newest connector row is `start=(3231,3262,0) clickDest=(3240,3282,0)` and the
+same live step now reports:
+
+```text
+edgeValidation={from=(3235,3262,0) actual=(3236,3262,0) legal=true type=cardinal}
+classification=legal-detour-or-object-pressure
+```
+
+That clears the D-0203 staged-map gate. C2 then moved the validated paid/held-back keys into
+`DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS` so the promoted map is reproducible from the default builder
+path. Runtime `src/main/resources/collision-map.zip` is the D-0204 promoted map with SHA256
+`55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`.
+The historical `legal=false` connector rows remain in `%USERPROFILE%\.runelite\drews-route-segments.txt`
+because `edgeValidation={...}` strings are recorded at capture time and are not recomputed by the
+harness. The post-restart row is the current proof row, and the shipped-map test pins the current
+runtime map's east/west movement across that connector edge.
+
+Next work returns to Varlamore Slice 1 capture prep. Do not open the roughly 74 safe-blocked
+Varlamore regions until target-only route walks identify the exact live blocker classes.
+
+## 2026-09-04 D-0203 Connector Fix Staged
+
+Myth ran the focused connector recapture after D-0202. The focused row repeated the same completed cardinal live step, `3235,3262,0 -> 3236,3262,0`, during the connector segment toward `3240,3282,0`. That confirmed the D-0202 bonus row was not a one-sample route variance.
+
+C2 fixed this as a narrow map-builder correction: one exact forced-passable stored edge is applied after deferred neighbor edges for `3235,3262,0` east and its reverse west edge from `3236,3262,0`. This does not change the global locType-3 rule and does not promote a broad rule for unnamed `5611/3`.
+
+Runtime `src/main/resources/collision-map.zip` is now staged with the D-0203 map, SHA256 `5417D8AF05EA45633DB9A9E8C68CBADE51175190CF6158001C602794579A2901`. The previous D-0200 staged runtime is backed up at `build/collision-map-pre-d0203.zip`, SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the pre-D-0200 promoted-map backup remains at `build/collision-map-pre-d0200.zip`, SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
+
+Verification passed `compileCachetoolsJava`, `buildCollisionMapV2`, a focused shipped-map movement test for the connector edge, `build -x test`, and `git diff --check`. `validateRoutes --skip-offline` still reports the old completed illegal rows because it reads the `edgeValidation={...}` strings already recorded before the D-0203 map swap. Final promotion still needs a restart and one post-fix live recapture of the connector.
+
+## 2026-09-04 D-0202 Connector Validation
+
+Myth reran the staged D-0200 map validation with fresh route-segment and object/door-state logging. The two requested target routes stayed clean: `3092,3245,0 -> 3109,3352,0` and `3253,3420,0 -> 3307,3491,0` did not produce a completed adjacent illegal edge.
+
+Myth also walked from the end of Route 1 toward the Route 2 start waypoint. That extra connector data found one completed cardinal `static-map-disagrees-with-live-step`: `3235,3262,0 -> 3236,3262,0` during segment `3229,3262,0 -> 3240,3282,0`, target `3253,3420,0`. Harness summary was `rows=140 completed=100 interrupted=40 illegalObservedEdges=1 nonPromotableIllegalObservedEdges=1 objectRows=15310`.
+
+C2 compared the same fresh evidence against both the staged D-0200 map and the pre-D-0200 backup map. The blocker remained in both runs, so this is not caused by promoted keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, or `34804/10`. Runtime `src/main/resources/collision-map.zip` remains staged at SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`.
+
+Focused object placement probe around the blocker found unnamed `5611/3` orientation `0` at `3236,3262,0`, which matches the current locType-3 rule that blocks west for orientation 0. Do not final-promote the staged map yet and do not add a permanent exception from one sample. Next step is a focused recapture of the connector segment near `3229,3262,0 -> 3240,3282,0`.
 
 ## 2026-08-17 P1/P2 Paid/Unnamed Proof Capture
 

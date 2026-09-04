@@ -2840,3 +2840,37 @@ D-0197 (2026-08-16) - Passive object-profile capture stays focused and evidence-
 
   Cross-reference: D-0191 object-state evidence stream, D-0186 supported object-profile proof,
   D-0188 held-back keys, and D-0192 route-validation harness.
+
+D-0203 (2026-09-04) - Repeated completed live/static edge mismatches get exact edge fixes first.
+
+  RULE 1 - DO NOT CHANGE GLOBAL OBJECT RULES FROM ONE LOCAL OVERBLOCK. The connector issue involved
+  unnamed `5611/3` orientation `0`, but the fix is not a global locType-3 rewrite and not a broad
+  `5611/3` object-profile promotion. A local repeated edge only proves the local edge.
+
+  RULE 2 - REPEATED COMPLETED ADJACENT STEPS MAY BECOME EXACT FORCED-PASSABLE EDGES. Myth produced
+  two completed live captures of `3235,3262,0 -> 3236,3262,0` while the static map blocked that
+  cardinal edge. For this evidence class, prefer a documented builder overlay for the exact stored
+  edge after deferred neighbor edges, then add a focused shipped-map assertion.
+
+  RULE 3 - OLD ROUTE EVIDENCE DOES NOT RECOMPUTE AGAINST A NEW MAP. `validateRoutes --skip-offline`
+  reads the `edgeValidation={...}` strings already recorded in `%USERPROFILE%\.runelite\drews-route-segments.txt`.
+  A fixed `collision-map.zip` does not rewrite those historical rows. Final confirmation needs a
+  restarted client and fresh route-segment row captured after the map swap.
+
+  RULE 4 - POST-SWAP ROWS DECIDE THE FIX GATE. When the cumulative route log still contains
+  historical `legal=false` rows for the same edge, inspect the newest post-restart connector row by
+  line order. A completed adjacent row for the same edge with `legal=true` clears the staged-map
+  promotion gate; the old rows remain historical evidence, not current runtime failures.
+
+D-0204 (2026-09-04) - Promoted object-profile keys belong in the default builder allowlist.
+
+  RULE 1 - DEFAULT BUILDS MUST REPRODUCE PROMOTED MAPS. Once a command-line
+  `--add-object-profile-keys` trial is live-validated and promoted, move those keys into
+  `DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS` before committing. Leaving a promoted runtime zip that
+  only exists through remembered CLI args makes later `buildCollisionMapV2 ... all` runs silently
+  drop shipped behavior.
+
+  RULE 2 - UNNAMED/UNPROVEN KEYS STAY PARKED. D-0204 promotes `1289/10`, `9661/10`, `7169/10`,
+  `34803/10`, and `34804/10` after the target-route and connector gates. Unnamed/stateful
+  `19143/10` and `19131/10` remain excluded because the cache-backed builder still cannot prove a
+  non-zero object-profile effect for them.

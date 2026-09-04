@@ -1,16 +1,16 @@
 collision map v2 build
 cache: C:\Users\drews\.runelite\jagexcache\oldschool\LIVE
 project: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper
-output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\build\collision-map-v2.zip
+output zip: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\src\main\resources\collision-map.zip
 report: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\collision-map-v2-report.txt
 region selector: all
 object profile blocking: enabled
-object profile keys: 10790/10,10791/10,10820/10,1088/10,1088/11,1104/10,1118/10,11190/10,11192/10,11193/10,1122/10,1123/10,11510/10,11911/10,1276/10,1276/11,1278/10,1278/11,1282/10,1283/10,1289/10,1329/10,1369/10,1391/10,1392/10,1394/10,1405/10,1406/10,18895/10,34803/10,34804/10,595/10,596/10,7169/10,879/10,9661/10
-object profile focus keys: 1289/10,34803/10,34804/10,7169/10,9661/10
-merge source: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\src\main\resources\collision-map.zip
+object profile keys: 10790/10,10791/10,1088/10,1088/11,1104/10,1118/10,11190/10,11192/10,11193/10,1122/10,1123/10,11911/10,1289/10,1329/10,1369/10,1391/10,1392/10,1394/10,1405/10,1406/10,18895/10,34803/10,34804/10,595/10,7169/10,879/10,9661/10
+object profile focus keys: none
+merge source: none
 phase3 roof blocking (locTypes 12,13,14,16,17,18,19,21): enabled
 archive format: 2 runtime passability flags; door flags are report-only
-ROUND TRIP OK 2936 regions MERGE 0 carried (built 2936 already covers collision-map.zip)
+ROUND TRIP OK 2936 regions
 
 proof-edge comparison:
   proof edges parsed: 23078
@@ -52,7 +52,7 @@ proof-edge comparison:
     2602,3331,0 E
 
 dangerous-direction pass:
-  live capture: C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\build\frozen-live-flags-object-profile-pass-20260814.txt
+  live capture: C:\Users\drews\.runelite\drews-live-flags.txt
   border histogram interpretation rule:
     BORDER   = maxBorderDistance 0..2
     INTERIOR = maxBorderDistance >= 20
@@ -70,43 +70,43 @@ dangerous-direction pass:
   interpretation rule:
     orientation 3 is IMPLICATED only if BOTH: dangerousRateOrient3 >= 3x dangerousRateAll AND at least 30 dangerous edges land on orient-3 tiles. Below 30 the sample is too small to conclude either way and the report must say so rather than read noise.
     if dangerousRateOrient3 is at or below dangerousRateAll, orientation 3 is EXONERATED: it is no worse than the map average and the rule stays.
-  live scene blocks: 549
-  live rows parsed: 1674785
-  live rows with raw flags: 1674785
+  live scene blocks: 645
+  live rows parsed: 1954718
+  live rows with raw flags: 1954718
   live rows without raw flags: 0
-  raw flag coverage: 1.000000 (100.000%) (1674785/1674785)
-  live covered tile observations: 5824341
-  live unique covered tiles: 1133016
+  raw flag coverage: 1.000000 (100.000%) (1954718/1954718)
+  live covered tile observations: 6842805
+  live unique covered tiles: 1170584
   live duplicate rows: 0
   live duplicate row conflicts: 0
-  live conflicting north observations: 624000
-  live conflicting north tiles: 263789
-  live conflicting east observations: 628803
-  live conflicting east tiles: 265138
+  live conflicting north observations: 752881
+  live conflicting north tiles: 299581
+  live conflicting east observations: 759899
+  live conflicting east tiles: 301364
   border-ring exclusion: ACTIVE (maxBorderDistance 0..2 withheld from every count below)
-    borderExcludedEdges: 123936
-    borderExcludedDangerous: 77757
-    borderExcludedDangerousUnexplained: 76926
+    borderExcludedEdges: 124704
+    borderExcludedDangerous: 79038
+    borderExcludedDangerousUnexplained: 77980
     these edges are scene-capture artifacts, not map defects; the histogram below still counts them
-  comparedEdges: 2027328
+  comparedEdges: 2101696
   outsideBuiltRegions: 57384
-  DANGEROUS: 228059
-  DOOR_SHUT: 574
-  AGREE_BLOCKED: 197088
-  AGREE_OPEN: 1576377
-  OVERBLOCK: 25230
-  OVERBLOCK with source tile carrying live BLOCKED_TILE raw flag: 16186 (64.154% of OVERBLOCK)
+  DANGEROUS: 261353
+  DOOR_SHUT: 581
+  AGREE_BLOCKED: 192518
+  AGREE_OPEN: 1621617
+  OVERBLOCK: 25627
+  OVERBLOCK with source tile carrying live BLOCKED_TILE raw flag: 16706 (65.189% of OVERBLOCK)
   dangerous split:
-    DANGEROUS_DOOR_CAPABLE: 342 (0.1% of DANGEROUS)
-    DANGEROUS_CONFLICTED: 143838 (63.1% of DANGEROUS)
-    DANGEROUS_UNEXPLAINED: 83879 (36.8% of DANGEROUS)
-    DANGEROUS_BOTH is NOT a bucket - door-capable wins before conflicted (overlap assigned to DANGEROUS_DOOR_CAPABLE: 131)
-    DANGEROUS split assertion: DANGEROUS_DOOR_CAPABLE + DANGEROUS_CONFLICTED + DANGEROUS_UNEXPLAINED == DANGEROUS: OK (228059 == 228059)
+    DANGEROUS_DOOR_CAPABLE: 348 (0.1% of DANGEROUS)
+    DANGEROUS_CONFLICTED: 165393 (63.3% of DANGEROUS)
+    DANGEROUS_UNEXPLAINED: 95612 (36.6% of DANGEROUS)
+    DANGEROUS_BOTH is NOT a bucket - door-capable wins before conflicted (overlap assigned to DANGEROUS_DOOR_CAPABLE: 140)
+    DANGEROUS split assertion: DANGEROUS_DOOR_CAPABLE + DANGEROUS_CONFLICTED + DANGEROUS_UNEXPLAINED == DANGEROUS: OK (261353 == 261353)
     DANGEROUS_DOOR_CAPABLE locType histogram:
-      locType 0 (shapeFor HANDLED): 187
-      locType 10 (shapeFor IGNORED): 154
+      locType 0 (shapeFor HANDLED): 186
+      locType 10 (shapeFor IGNORED): 161
       locType 4 (shapeFor IGNORED): 1
-    door-capable on IGNORED locType: 155 (45.3% of DANGEROUS_DOOR_CAPABLE)
+    door-capable on IGNORED locType: 162 (46.6% of DANGEROUS_DOOR_CAPABLE)
     largest door-capable locType group ignored by shapeFor: false
     example DANGEROUS_UNEXPLAINED edges:
       1459,3442,0 N
@@ -131,27 +131,27 @@ dangerous-direction pass:
       1460,3443,1 E
   border histogram verdict: CONFIRMED (border artifact)
   compared edges with NO containing block on their plane: 0
-  compared edges where minBorderDistance != maxBorderDistance: 1490194
+  compared edges where minBorderDistance != maxBorderDistance: 1632650
   maxBorderDistance border histogram:
     bucket comparedEdges DANGEROUS dangerousRate DANGEROUS_UNEXPLAINED
-    0 41728 37402 0.896329 (89.633%) 37394
-    1 41312 20329 0.492085 (49.208%) 19962
-    2 40896 20026 0.489681 (48.968%) 19570
-    3 40872 19637 0.480451 (48.045%) 18879
-    4 40896 11059 0.270418 (27.042%) 9892
-    5-9 204760 20941 0.102271 (10.227%) 5323
-    10-19 402644 38364 0.095280 (9.528%) 11414
-    20+ 1338156 138058 0.103170 (10.317%) 38371
+    0 41984 37806 0.900486 (90.049%) 37795
+    1 41568 20765 0.499543 (49.954%) 20296
+    2 41152 20467 0.497351 (49.735%) 19889
+    3 40936 20046 0.489691 (48.969%) 19196
+    4 40768 11347 0.278331 (27.833%) 10093
+    5-9 201760 25181 0.124807 (12.481%) 5867
+    10-19 398868 41739 0.104644 (10.464%) 11969
+    20+ 1419364 163040 0.114868 (11.487%) 48487
   minBorderDistance border histogram:
     bucket comparedEdges DANGEROUS dangerousRate DANGEROUS_UNEXPLAINED
-    0 287808 104818 0.364194 (36.419%) 45168
-    1 259840 55629 0.214089 (21.409%) 25399
-    2 231872 51686 0.222907 (22.291%) 24631
-    3 187304 42833 0.228682 (22.868%) 22349
-    4 153548 19873 0.129425 (12.943%) 12372
-    5-9 485648 13113 0.027001 (2.700%) 13066
-    10-19 306428 10332 0.033718 (3.372%) 10294
-    20+ 238816 7532 0.031539 (3.154%) 7526
+    0 323704 115596 0.357104 (35.710%) 48679
+    1 288648 64516 0.223511 (22.351%) 28125
+    2 253592 58933 0.232393 (23.239%) 26965
+    3 199412 47028 0.235833 (23.583%) 23827
+    4 160010 21659 0.135360 (13.536%) 13425
+    5-9 486720 15277 0.031388 (3.139%) 15226
+    10-19 290290 10486 0.036122 (3.612%) 10452
+    20+ 224024 6896 0.030782 (3.078%) 6893
   interior measurement pass:
     interior interpretation rule:
       UPPER = plane > 0
@@ -166,66 +166,66 @@ dangerous-direction pass:
       - REFUTED: rate(INTERIOR) < 1.5x rate(OUTDOOR).
       - INCONCLUSIVE: anything else.
     bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
-    UPPER 1511140 147075 0.097327 (9.733%) (147075/1511140) 34554 0.411951 (41.195%) (34554/83879)
-    UNDER_STRUCTURE 60586 10261 0.169363 (16.936%) (10261/60586) 7412 0.088365 (8.837%) (7412/83879)
+    UPPER 1566916 165258 0.105467 (10.547%) (165258/1566916) 35122 0.367339 (36.734%) (35122/95612)
+    UNDER_STRUCTURE 61758 11001 0.178131 (17.813%) (11001/61758) 7683 0.080356 (8.036%) (7683/95612)
       caveat: UNDER_STRUCTURE includes bridge tiles and they are unquantified in this pass.
-    OUTDOOR 455602 70723 0.155230 (15.523%) (70723/455602) 41913 0.499684 (49.968%) (41913/83879)
-    UPPER.comparedEdges + UNDER_STRUCTURE.comparedEdges + OUTDOOR.comparedEdges == comparedEdges: OK (1511140 + 60586 + 455602 == 2027328)
-    UPPER.dangerous + UNDER_STRUCTURE.dangerous + OUTDOOR.dangerous == DANGEROUS: OK (147075 + 10261 + 70723 == 228059)
-    UPPER.unexplained + UNDER_STRUCTURE.unexplained + OUTDOOR.unexplained == DANGEROUS_UNEXPLAINED: OK (34554 + 7412 + 41913 == 83879)
-    sum over planes of comparedEdges == comparedEdges: OK (516188 + 513900 + 498620 + 498620 == 2027328)
-    verdict combined INTERIOR (UPPER + UNDER_STRUCTURE): REFUTED - INTERIOR rate 0.100104 (10.010%) (157336/1571726), OUTDOOR rate 0.155230 (15.523%) (70723/455602), unexplainedShare 0.500316 (50.032%) (41966/83879)
-    verdict sub-result UPPER: REFUTED - UPPER rate 0.097327 (9.733%) (147075/1511140), OUTDOOR rate 0.155230 (15.523%) (70723/455602), unexplainedShare 0.411951 (41.195%) (34554/83879)
-    verdict sub-result UNDER_STRUCTURE: REFUTED - UNDER_STRUCTURE rate 0.169363 (16.936%) (10261/60586), OUTDOOR rate 0.155230 (15.523%) (70723/455602), unexplainedShare 0.088365 (8.837%) (7412/83879)
+    OUTDOOR 473022 85094 0.179894 (17.989%) (85094/473022) 52807 0.552305 (55.231%) (52807/95612)
+    UPPER.comparedEdges + UNDER_STRUCTURE.comparedEdges + OUTDOOR.comparedEdges == comparedEdges: OK (1566916 + 61758 + 473022 == 2101696)
+    UPPER.dangerous + UNDER_STRUCTURE.dangerous + OUTDOOR.dangerous == DANGEROUS: OK (165258 + 11001 + 85094 == 261353)
+    UPPER.unexplained + UNDER_STRUCTURE.unexplained + OUTDOOR.unexplained == DANGEROUS_UNEXPLAINED: OK (35122 + 7683 + 52807 == 95612)
+    sum over planes of comparedEdges == comparedEdges: OK (534780 + 532492 + 517212 + 517212 == 2101696)
+    verdict combined INTERIOR (UPPER + UNDER_STRUCTURE): REFUTED - INTERIOR rate 0.108222 (10.822%) (176259/1628674), OUTDOOR rate 0.179894 (17.989%) (85094/473022), unexplainedShare 0.447695 (44.769%) (42805/95612)
+    verdict sub-result UPPER: REFUTED - UPPER rate 0.105467 (10.547%) (165258/1566916), OUTDOOR rate 0.179894 (17.989%) (85094/473022), unexplainedShare 0.367339 (36.734%) (35122/95612)
+    verdict sub-result UNDER_STRUCTURE: REFUTED - UNDER_STRUCTURE rate 0.178131 (17.813%) (11001/61758), OUTDOOR rate 0.179894 (17.989%) (85094/473022), unexplainedShare 0.080356 (8.036%) (7683/95612)
     per-plane interior measurement:
       plane comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
-      0 516188 80984 0.156889 (15.689%) (80984/516188) 49325 0.588049 (58.805%) (49325/83879)
-      1 513900 51521 0.100255 (10.025%) (51521/513900) 14634 0.174466 (17.447%) (14634/83879)
-      2 498620 47816 0.095897 (9.590%) (47816/498620) 10008 0.119315 (11.931%) (10008/83879)
-      3 498620 47738 0.095740 (9.574%) (47738/498620) 9912 0.118170 (11.817%) (9912/83879)
+      0 534780 96095 0.179691 (17.969%) (96095/534780) 60490 0.632661 (63.266%) (60490/95612)
+      1 532492 57571 0.108116 (10.812%) (57571/532492) 14794 0.154730 (15.473%) (14794/95612)
+      2 517212 54148 0.104692 (10.469%) (54148/517212) 10396 0.108731 (10.873%) (10396/95612)
+      3 517212 53539 0.103515 (10.351%) (53539/517212) 9932 0.103878 (10.388%) (9932/95612)
     per-region-per-plane interior measurement:
       region plane comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
-      7502 (29_78) 0 8192 36 0.004395 (0.439%) (36/8192) 36 0.000429 (0.043%) (36/83879)
-      7502 (29_78) 1 8192 0 0.000000 (0.000%) (0/8192) 0 0.000000 (0.000%) (0/83879)
-      7502 (29_78) 2 8192 0 0.000000 (0.000%) (0/8192) 0 0.000000 (0.000%) (0/83879)
-      7502 (29_78) 3 8192 0 0.000000 (0.000%) (0/8192) 0 0.000000 (0.000%) (0/83879)
-      10033 (39_49) 0 8192 2467 0.301147 (30.115%) (2467/8192) 2402 0.028636 (2.864%) (2402/83879)
-      10033 (39_49) 1 8192 191 0.023315 (2.332%) (191/8192) 97 0.001156 (0.116%) (97/83879)
-      10291 (40_51) 0 8192 1635 0.199585 (19.958%) (1635/8192) 699 0.008333 (0.833%) (699/83879)
-      10291 (40_51) 1 8192 1518 0.185303 (18.530%) (1518/8192) 215 0.002563 (0.256%) (215/83879)
-      10291 (40_51) 2 8192 1425 0.173950 (17.395%) (1425/8192) 131 0.001562 (0.156%) (131/83879)
-      10291 (40_51) 3 8192 1670 0.203857 (20.386%) (1670/8192) 8 0.000095 (0.010%) (8/83879)
-      10547 (41_51) 0 8192 1688 0.206055 (20.605%) (1688/8192) 805 0.009597 (0.960%) (805/83879)
-      10547 (41_51) 1 8192 1097 0.133911 (13.391%) (1097/8192) 216 0.002575 (0.258%) (216/83879)
-      10547 (41_51) 2 8192 974 0.118896 (11.890%) (974/8192) 2 0.000024 (0.002%) (2/83879)
-      10547 (41_51) 3 8192 658 0.080322 (8.032%) (658/8192) 1 0.000012 (0.001%) (1/83879)
-      11058 (43_50) 0 8192 410 0.050049 (5.005%) (410/8192) 410 0.004888 (0.489%) (410/83879)
-      11058 (43_50) 1 8192 53 0.006470 (0.647%) (53/8192) 53 0.000632 (0.063%) (53/83879)
-      11058 (43_50) 2 8192 71 0.008667 (0.867%) (71/8192) 71 0.000846 (0.085%) (71/83879)
-      11058 (43_50) 3 8192 96 0.011719 (1.172%) (96/8192) 96 0.001145 (0.114%) (96/83879)
-      11570 (45_50) 0 8192 1096 0.133789 (13.379%) (1096/8192) 530 0.006319 (0.632%) (530/83879)
-      11570 (45_50) 1 8192 871 0.106323 (10.632%) (871/8192) 103 0.001228 (0.123%) (103/83879)
-      11570 (45_50) 2 8192 881 0.107544 (10.754%) (881/8192) 86 0.001025 (0.103%) (86/83879)
-      11570 (45_50) 3 8192 740 0.090332 (9.033%) (740/8192) 0 0.000000 (0.000%) (0/83879)
-      11826 (46_50) 0 8192 2150 0.262451 (26.245%) (2150/8192) 833 0.009931 (0.993%) (833/83879)
-      11826 (46_50) 1 8192 651 0.079468 (7.947%) (651/8192) 65 0.000775 (0.077%) (65/83879)
-      11826 (46_50) 2 8192 611 0.074585 (7.458%) (611/8192) 26 0.000310 (0.031%) (26/83879)
-      11826 (46_50) 3 8192 585 0.071411 (7.141%) (585/8192) 0 0.000000 (0.000%) (0/83879)
-      11827 (46_51) 0 8192 1262 0.154053 (15.405%) (1262/8192) 574 0.006843 (0.684%) (574/83879)
-      11827 (46_51) 1 8192 1094 0.133545 (13.354%) (1094/8192) 0 0.000000 (0.000%) (0/83879)
-      11827 (46_51) 2 8192 1111 0.135620 (13.562%) (1111/8192) 0 0.000000 (0.000%) (0/83879)
-      11827 (46_51) 3 8192 1102 0.134521 (13.452%) (1102/8192) 0 0.000000 (0.000%) (0/83879)
-      11828 (46_52) 0 8192 795 0.097046 (9.705%) (795/8192) 505 0.006021 (0.602%) (505/83879)
-      11828 (46_52) 1 8192 715 0.087280 (8.728%) (715/8192) 316 0.003767 (0.377%) (316/83879)
-      11828 (46_52) 2 8192 462 0.056396 (5.640%) (462/8192) 88 0.001049 (0.105%) (88/83879)
-      11828 (46_52) 3 8192 497 0.060669 (6.067%) (497/8192) 26 0.000310 (0.031%) (26/83879)
-      11829 (46_53) 0 8192 1330 0.162354 (16.235%) (1330/8192) 598 0.007129 (0.713%) (598/83879)
-      12083 (47_51) 0 8192 1503 0.183472 (18.347%) (1503/8192) 852 0.010157 (1.016%) (852/83879)
-      12083 (47_51) 1 8192 604 0.073730 (7.373%) (604/8192) 1 0.000012 (0.001%) (1/83879)
-      12083 (47_51) 2 8192 695 0.084839 (8.484%) (695/8192) 0 0.000000 (0.000%) (0/83879)
-      12083 (47_51) 3 8192 695 0.084839 (8.484%) (695/8192) 0 0.000000 (0.000%) (0/83879)
-      12084 (47_52) 0 8192 983 0.119995 (12.000%) (983/8192) 543 0.006474 (0.647%) (543/83879)
-      suppressed 403 region-plane rows with fewer compared edges
+      7502 (29_78) 0 8192 36 0.004395 (0.439%) (36/8192) 36 0.000377 (0.038%) (36/95612)
+      7502 (29_78) 1 8192 0 0.000000 (0.000%) (0/8192) 0 0.000000 (0.000%) (0/95612)
+      7502 (29_78) 2 8192 0 0.000000 (0.000%) (0/8192) 0 0.000000 (0.000%) (0/95612)
+      7502 (29_78) 3 8192 0 0.000000 (0.000%) (0/8192) 0 0.000000 (0.000%) (0/95612)
+      10033 (39_49) 0 8192 2634 0.321533 (32.153%) (2634/8192) 2569 0.026869 (2.687%) (2569/95612)
+      10033 (39_49) 1 8192 191 0.023315 (2.332%) (191/8192) 97 0.001015 (0.101%) (97/95612)
+      10291 (40_51) 0 8192 1709 0.208618 (20.862%) (1709/8192) 773 0.008085 (0.808%) (773/95612)
+      10291 (40_51) 1 8192 1518 0.185303 (18.530%) (1518/8192) 215 0.002249 (0.225%) (215/95612)
+      10291 (40_51) 2 8192 1425 0.173950 (17.395%) (1425/8192) 131 0.001370 (0.137%) (131/95612)
+      10291 (40_51) 3 8192 1670 0.203857 (20.386%) (1670/8192) 8 0.000084 (0.008%) (8/95612)
+      10547 (41_51) 0 8192 1786 0.218018 (21.802%) (1786/8192) 903 0.009444 (0.944%) (903/95612)
+      10547 (41_51) 1 8192 1101 0.134399 (13.440%) (1101/8192) 220 0.002301 (0.230%) (220/95612)
+      10547 (41_51) 2 8192 974 0.118896 (11.890%) (974/8192) 2 0.000021 (0.002%) (2/95612)
+      10547 (41_51) 3 8192 658 0.080322 (8.032%) (658/8192) 1 0.000010 (0.001%) (1/95612)
+      11058 (43_50) 0 8192 929 0.113403 (11.340%) (929/8192) 410 0.004288 (0.429%) (410/95612)
+      11058 (43_50) 1 8192 629 0.076782 (7.678%) (629/8192) 53 0.000554 (0.055%) (53/95612)
+      11058 (43_50) 2 8192 647 0.078979 (7.898%) (647/8192) 71 0.000743 (0.074%) (71/95612)
+      11058 (43_50) 3 8192 672 0.082031 (8.203%) (672/8192) 96 0.001004 (0.100%) (96/95612)
+      11570 (45_50) 0 8192 743 0.090698 (9.070%) (743/8192) 607 0.006349 (0.635%) (607/95612)
+      11570 (45_50) 1 8192 201 0.024536 (2.454%) (201/8192) 103 0.001077 (0.108%) (103/95612)
+      11570 (45_50) 2 8192 206 0.025146 (2.515%) (206/8192) 86 0.000899 (0.090%) (86/95612)
+      11570 (45_50) 3 8192 79 0.009644 (0.964%) (79/8192) 0 0.000000 (0.000%) (0/95612)
+      11826 (46_50) 0 8192 1672 0.204102 (20.410%) (1672/8192) 1260 0.013178 (1.318%) (1260/95612)
+      11826 (46_50) 1 8192 473 0.057739 (5.774%) (473/8192) 59 0.000617 (0.062%) (59/95612)
+      11826 (46_50) 2 8192 433 0.052856 (5.286%) (433/8192) 26 0.000272 (0.027%) (26/95612)
+      11826 (46_50) 3 8192 407 0.049683 (4.968%) (407/8192) 0 0.000000 (0.000%) (0/95612)
+      11827 (46_51) 0 8192 2107 0.257202 (25.720%) (2107/8192) 855 0.008942 (0.894%) (855/95612)
+      11827 (46_51) 1 8192 1828 0.223145 (22.314%) (1828/8192) 0 0.000000 (0.000%) (0/95612)
+      11827 (46_51) 2 8192 1910 0.233154 (23.315%) (1910/8192) 0 0.000000 (0.000%) (0/95612)
+      11827 (46_51) 3 8192 1901 0.232056 (23.206%) (1901/8192) 0 0.000000 (0.000%) (0/95612)
+      11828 (46_52) 0 8192 870 0.106201 (10.620%) (870/8192) 580 0.006066 (0.607%) (580/95612)
+      11828 (46_52) 1 8192 715 0.087280 (8.728%) (715/8192) 316 0.003305 (0.331%) (316/95612)
+      11828 (46_52) 2 8192 462 0.056396 (5.640%) (462/8192) 88 0.000920 (0.092%) (88/95612)
+      11828 (46_52) 3 8192 497 0.060669 (6.067%) (497/8192) 26 0.000272 (0.027%) (26/95612)
+      11829 (46_53) 0 8192 1409 0.171997 (17.200%) (1409/8192) 677 0.007081 (0.708%) (677/95612)
+      12082 (47_50) 0 8192 1198 0.146240 (14.624%) (1198/8192) 787 0.008231 (0.823%) (787/95612)
+      12082 (47_50) 1 8192 468 0.057129 (5.713%) (468/8192) 147 0.001537 (0.154%) (147/95612)
+      12082 (47_50) 2 8192 441 0.053833 (5.383%) (441/8192) 18 0.000188 (0.019%) (18/95612)
+      12082 (47_50) 3 8192 549 0.067017 (6.702%) (549/8192) 4 0.000042 (0.004%) (4/95612)
+      12083 (47_51) 0 8192 2213 0.270142 (27.014%) (2213/8192) 1225 0.012812 (1.281%) (1225/95612)
+      suppressed 407 region-plane rows with fewer compared edges
     upper-floor occupancy subdivision:
       upper occupancy interpretation rule:
         UPPER_NEAR_STRUCTURE = plane > 0 AND NEAR_STRUCTURE
@@ -239,26 +239,26 @@ dangerous-direction pass:
         - REFUTED: rate(UPPER_NEAR_STRUCTURE) < 1.5x rate(OUTDOOR).
         - INCONCLUSIVE: anything else.
       bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum)
-      UPPER_NEAR_STRUCTURE 186064 19944 0.107189 (10.719%) (19944/186064) 12479 0.148774 (14.877%) (12479/83879)
-      UPPER_OPEN 1325076 127131 0.095942 (9.594%) (127131/1325076) 22075 0.263177 (26.318%) (22075/83879)
+      UPPER_NEAR_STRUCTURE 189830 21514 0.113333 (11.333%) (21514/189830) 12767 0.133529 (13.353%) (12767/95612)
+      UPPER_OPEN 1377086 143744 0.104383 (10.438%) (143744/1377086) 22355 0.233810 (23.381%) (22355/95612)
       caveat: a large open interior (a hall wider than 3 tiles) has floor tiles further than 1 from any wall, so they land in UPPER_OPEN. That biases this test AGAINST the occupied-upper-floor hypothesis.
-      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.comparedEdges + UPPER_OPEN.comparedEdges == UPPER.comparedEdges: OK (186064 + 1325076 == 1511140)
-      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.dangerous + UPPER_OPEN.dangerous == UPPER.dangerous: OK (19944 + 127131 == 147075)
-      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.unexplained + UPPER_OPEN.unexplained == UPPER.unexplained: OK (12479 + 22075 == 34554)
-      verdict occupied upper floors: REFUTED - UPPER_NEAR_STRUCTURE rate 0.107189 (10.719%) (19944/186064), OUTDOOR rate 0.155230 (15.523%) (70723/455602), unexplainedShare 0.148774 (14.877%) (12479/83879)
-      secondary read (NOT the verdict) UPPER_NEAR_STRUCTURE vs UPPER_OPEN: dangerousRate ratio 1.117x - UPPER_NEAR_STRUCTURE rate 0.107189 (10.719%) (19944/186064), UPPER_OPEN rate 0.095942 (9.594%) (127131/1325076)
+      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.comparedEdges + UPPER_OPEN.comparedEdges == UPPER.comparedEdges: OK (189830 + 1377086 == 1566916)
+      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.dangerous + UPPER_OPEN.dangerous == UPPER.dangerous: OK (21514 + 143744 == 165258)
+      UPPER occupancy split assertion: UPPER_NEAR_STRUCTURE.unexplained + UPPER_OPEN.unexplained == UPPER.unexplained: OK (12767 + 22355 == 35122)
+      verdict occupied upper floors: REFUTED - UPPER_NEAR_STRUCTURE rate 0.113333 (11.333%) (21514/189830), OUTDOOR rate 0.179894 (17.989%) (85094/473022), unexplainedShare 0.133529 (13.353%) (12767/95612)
+      secondary read (NOT the verdict) UPPER_NEAR_STRUCTURE vs UPPER_OPEN: dangerousRate ratio 1.086x - UPPER_NEAR_STRUCTURE rate 0.113333 (11.333%) (21514/189830), UPPER_OPEN rate 0.104383 (10.438%) (143744/1377086)
     occupancy census (post-exclusion compared edges):
       NEAR_STRUCTURE = any placement tile in the same-plane 3x3 block around the compared edge tile.
       This census tests whether upper planes are mostly empty sky; it does not decide the occupied-upper-floor verdict.
       plane comparedEdges NEAR_STRUCTURE notNEAR_STRUCTURE nearStructureRate(NEAR_STRUCTURE/comparedEdges)
-      0 516188 403026 113162 0.780774 (78.077%) (403026/516188)
-      1 513900 111226 402674 0.216435 (21.644%) (111226/513900)
-      2 498620 53842 444778 0.107982 (10.798%) (53842/498620)
-      3 498620 20996 477624 0.042108 (4.211%) (20996/498620)
-      plane 0 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (403026 + 113162 == 516188)
-      plane 1 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (111226 + 402674 == 513900)
-      plane 2 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (53842 + 444778 == 498620)
-      plane 3 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (20996 + 477624 == 498620)
+      0 534780 415102 119678 0.776211 (77.621%) (415102/534780)
+      1 532492 113546 418946 0.213235 (21.324%) (113546/532492)
+      2 517212 55152 462060 0.106633 (10.663%) (55152/517212)
+      3 517212 21132 496080 0.040858 (4.086%) (21132/517212)
+      plane 0 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (415102 + 119678 == 534780)
+      plane 1 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (113546 + 418946 == 532492)
+      plane 2 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (55152 + 462060 == 517212)
+      plane 3 occupancy census assertion: NEAR_STRUCTURE + notNEAR_STRUCTURE == comparedEdges: OK (21132 + 496080 == 517212)
       region 11828 (46_52) occupancy census:
       region plane comparedEdges NEAR_STRUCTURE notNEAR_STRUCTURE nearStructureRate(NEAR_STRUCTURE/comparedEdges)
       11828 (46_52) 0 8192 7440 752 0.908203 (90.820%) (7440/8192)
@@ -279,133 +279,126 @@ dangerous-direction pass:
       - REFUTED: rate(ADJ_SCENERY) < 1.5x rate(NOT_ADJACENT).
       - INCONCLUSIVE: anything else.
     bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED dangerousUnexplainedRate(DANGEROUS_UNEXPLAINED/comparedEdges) unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum) OVERBLOCK overblockRate(OVERBLOCK/comparedEdges)
-    ADJ_SCENERY 98798 33898 0.343104 (34.310%) (33898/98798) 31055 0.314328 (31.433%) (31055/98798) 0.370236 (37.024%) (31055/83879) 1621 0.016407 (1.641%) (1621/98798)
-    ADJ_OTHER_IGNORED 67300 1486 0.022080 (2.208%) (1486/67300) 471 0.006999 (0.700%) (471/67300) 0.005615 (0.562%) (471/83879) 6117 0.090892 (9.089%) (6117/67300)
-    NOT_ADJACENT 1861230 192675 0.103520 (10.352%) (192675/1861230) 52353 0.028128 (2.813%) (52353/1861230) 0.624149 (62.415%) (52353/83879) 17492 0.009398 (0.940%) (17492/1861230)
-    ADJ_IGNORED 166098 35384 0.213031 (21.303%) (35384/166098) 31526 0.189804 (18.980%) (31526/166098) 0.375851 (37.585%) (31526/83879) 7738 0.046587 (4.659%) (7738/166098)
-    adjacency split assertion: ADJ_SCENERY.comparedEdges + ADJ_OTHER_IGNORED.comparedEdges + NOT_ADJACENT.comparedEdges == comparedEdges: OK (98798 + 67300 + 1861230 == 2027328)
-    adjacency split assertion: ADJ_SCENERY.dangerous + ADJ_OTHER_IGNORED.dangerous + NOT_ADJACENT.dangerous == DANGEROUS: OK (33898 + 1486 + 192675 == 228059)
-    adjacency split assertion: ADJ_SCENERY.dangerousUnexplained + ADJ_OTHER_IGNORED.dangerousUnexplained + NOT_ADJACENT.dangerousUnexplained == DANGEROUS_UNEXPLAINED: OK (31055 + 471 + 52353 == 83879)
-    adjacency split assertion: ADJ_SCENERY.overblock + ADJ_OTHER_IGNORED.overblock + NOT_ADJACENT.overblock == OVERBLOCK: OK (1621 + 6117 + 17492 == 25230)
-    adjacency union assertion: ADJ_SCENERY.comparedEdges + ADJ_OTHER_IGNORED.comparedEdges == ADJ_IGNORED.comparedEdges: OK (98798 + 67300 == 166098)
-    adjacency union assertion: ADJ_SCENERY.dangerous + ADJ_OTHER_IGNORED.dangerous == ADJ_IGNORED.dangerous: OK (33898 + 1486 == 35384)
-    adjacency union assertion: ADJ_SCENERY.dangerousUnexplained + ADJ_OTHER_IGNORED.dangerousUnexplained == ADJ_IGNORED.dangerousUnexplained: OK (31055 + 471 == 31526)
-    adjacency union assertion: ADJ_SCENERY.overblock + ADJ_OTHER_IGNORED.overblock == ADJ_IGNORED.overblock: OK (1621 + 6117 == 7738)
-    ignored-solid split assertion: ADJ_SOLID_FLAGGED.comparedEdges + ADJ_NONSOLID_ONLY.comparedEdges == ADJ_IGNORED.comparedEdges: OK (148747 + 17351 == 166098)
-    ignored-solid split assertion: ADJ_SOLID_FLAGGED.dangerous + ADJ_NONSOLID_ONLY.dangerous == ADJ_IGNORED.dangerous: OK (33108 + 2276 == 35384)
-    ignored-solid split assertion: ADJ_SOLID_FLAGGED.dangerousUnexplained + ADJ_NONSOLID_ONLY.dangerousUnexplained == ADJ_IGNORED.dangerousUnexplained: OK (30902 + 624 == 31526)
-    ignored-solid split assertion: ADJ_SOLID_FLAGGED.overblock + ADJ_NONSOLID_ONLY.overblock == ADJ_IGNORED.overblock: OK (7395 + 343 == 7738)
-    verdict ADJ_SCENERY vs NOT_ADJACENT: INCONCLUSIVE - ADJ_SCENERY dangerousUnexplainedRate 0.314328 (31.433%) (31055/98798), NOT_ADJACENT dangerousUnexplainedRate 0.028128 (2.813%) (52353/1861230), rateRatio 11.175x, unexplainedShare 0.370236 (37.024%) (31055/83879)
-    secondary read ADJ_OTHER_IGNORED vs NOT_ADJACENT: REFUTED - ADJ_OTHER_IGNORED dangerousUnexplainedRate 0.006999 (0.700%) (471/67300), NOT_ADJACENT dangerousUnexplainedRate 0.028128 (2.813%) (52353/1861230), rateRatio 0.249x, unexplainedShare 0.005615 (0.562%) (471/83879)
+    ADJ_SCENERY 102166 44722 0.437739 (43.774%) (44722/102166) 41582 0.407004 (40.700%) (41582/102166) 0.434904 (43.490%) (41582/95612) 1709 0.016728 (1.673%) (1709/102166)
+    ADJ_OTHER_IGNORED 67875 1661 0.024471 (2.447%) (1661/67875) 454 0.006689 (0.669%) (454/67875) 0.004748 (0.475%) (454/95612) 6100 0.089871 (8.987%) (6100/67875)
+    NOT_ADJACENT 1931655 214970 0.111288 (11.129%) (214970/1931655) 53576 0.027736 (2.774%) (53576/1931655) 0.560348 (56.035%) (53576/95612) 17818 0.009224 (0.922%) (17818/1931655)
+    ADJ_IGNORED 170041 46383 0.272775 (27.278%) (46383/170041) 42036 0.247211 (24.721%) (42036/170041) 0.439652 (43.965%) (42036/95612) 7809 0.045924 (4.592%) (7809/170041)
+    adjacency split assertion: ADJ_SCENERY.comparedEdges + ADJ_OTHER_IGNORED.comparedEdges + NOT_ADJACENT.comparedEdges == comparedEdges: OK (102166 + 67875 + 1931655 == 2101696)
+    adjacency split assertion: ADJ_SCENERY.dangerous + ADJ_OTHER_IGNORED.dangerous + NOT_ADJACENT.dangerous == DANGEROUS: OK (44722 + 1661 + 214970 == 261353)
+    adjacency split assertion: ADJ_SCENERY.dangerousUnexplained + ADJ_OTHER_IGNORED.dangerousUnexplained + NOT_ADJACENT.dangerousUnexplained == DANGEROUS_UNEXPLAINED: OK (41582 + 454 + 53576 == 95612)
+    adjacency split assertion: ADJ_SCENERY.overblock + ADJ_OTHER_IGNORED.overblock + NOT_ADJACENT.overblock == OVERBLOCK: OK (1709 + 6100 + 17818 == 25627)
+    adjacency union assertion: ADJ_SCENERY.comparedEdges + ADJ_OTHER_IGNORED.comparedEdges == ADJ_IGNORED.comparedEdges: OK (102166 + 67875 == 170041)
+    adjacency union assertion: ADJ_SCENERY.dangerous + ADJ_OTHER_IGNORED.dangerous == ADJ_IGNORED.dangerous: OK (44722 + 1661 == 46383)
+    adjacency union assertion: ADJ_SCENERY.dangerousUnexplained + ADJ_OTHER_IGNORED.dangerousUnexplained == ADJ_IGNORED.dangerousUnexplained: OK (41582 + 454 == 42036)
+    adjacency union assertion: ADJ_SCENERY.overblock + ADJ_OTHER_IGNORED.overblock == ADJ_IGNORED.overblock: OK (1709 + 6100 == 7809)
+    ignored-solid split assertion: ADJ_SOLID_FLAGGED.comparedEdges + ADJ_NONSOLID_ONLY.comparedEdges == ADJ_IGNORED.comparedEdges: OK (152227 + 17814 == 170041)
+    ignored-solid split assertion: ADJ_SOLID_FLAGGED.dangerous + ADJ_NONSOLID_ONLY.dangerous == ADJ_IGNORED.dangerous: OK (43927 + 2456 == 46383)
+    ignored-solid split assertion: ADJ_SOLID_FLAGGED.dangerousUnexplained + ADJ_NONSOLID_ONLY.dangerousUnexplained == ADJ_IGNORED.dangerousUnexplained: OK (41377 + 659 == 42036)
+    ignored-solid split assertion: ADJ_SOLID_FLAGGED.overblock + ADJ_NONSOLID_ONLY.overblock == ADJ_IGNORED.overblock: OK (7465 + 344 == 7809)
+    verdict ADJ_SCENERY vs NOT_ADJACENT: CONFIRMED (ignored scenery) - ADJ_SCENERY dangerousUnexplainedRate 0.407004 (40.700%) (41582/102166), NOT_ADJACENT dangerousUnexplainedRate 0.027736 (2.774%) (53576/1931655), rateRatio 14.674x, unexplainedShare 0.434904 (43.490%) (41582/95612)
+    secondary read ADJ_OTHER_IGNORED vs NOT_ADJACENT: REFUTED - ADJ_OTHER_IGNORED dangerousUnexplainedRate 0.006689 (0.669%) (454/67875), NOT_ADJACENT dangerousUnexplainedRate 0.027736 (2.774%) (53576/1931655), rateRatio 0.241x, unexplainedShare 0.004748 (0.475%) (454/95612)
     NOTE: this union verdict is arithmetic on two buckets already measured in the previous run. It records the union as a stated test; it is NOT new evidence. The new evidence in this report is the solid-flag split below.
-    verdict ADJ_IGNORED vs NOT_ADJACENT: INCONCLUSIVE - ADJ_IGNORED dangerousUnexplainedRate 0.189804 (18.980%) (31526/166098), NOT_ADJACENT dangerousUnexplainedRate 0.028128 (2.813%) (52353/1861230), rateRatio 6.748x, unexplainedShare 0.375851 (37.585%) (31526/83879)
+    verdict ADJ_IGNORED vs NOT_ADJACENT: CONFIRMED - ADJ_IGNORED dangerousUnexplainedRate 0.247211 (24.721%) (42036/170041), NOT_ADJACENT dangerousUnexplainedRate 0.027736 (2.774%) (53576/1931655), rateRatio 8.913x, unexplainedShare 0.439652 (43.965%) (42036/95612)
     union overblock control: NOT APPLICABLE - object profile blocking is ENABLED. Re-run with --disable-object-profile-blocking to evaluate it.
     ignored-solid split:
       PREDICTION (stated before the run): if ignored solid objects are the cause, ADJ_SOLID_FLAGGED carries the errors and ADJ_NONSOLID_ONLY looks like NOT_ADJACENT. If ADJ_NONSOLID_ONLY is just as bad as ADJ_SOLID_FLAGGED, then adjacency is tracking clutter, not solidity, and the object theory is weakened even though the union verdict passed.
       bucket comparedEdges DANGEROUS dangerousRate(DANGEROUS/comparedEdges) DANGEROUS_UNEXPLAINED dangerousUnexplainedRate(DANGEROUS_UNEXPLAINED/comparedEdges) unexplainedShare(DANGEROUS_UNEXPLAINED/bucket-sum) OVERBLOCK overblockRate(OVERBLOCK/comparedEdges)
-      ADJ_SOLID_FLAGGED 148747 33108 0.222579 (22.258%) (33108/148747) 30902 0.207749 (20.775%) (30902/148747) 0.368412 (36.841%) (30902/83879) 7395 0.049715 (4.972%) (7395/148747)
-      ADJ_NONSOLID_ONLY 17351 2276 0.131174 (13.117%) (2276/17351) 624 0.035963 (3.596%) (624/17351) 0.007439 (0.744%) (624/83879) 343 0.019768 (1.977%) (343/17351)
-      verdict ADJ_SOLID_FLAGGED vs NOT_ADJACENT: INCONCLUSIVE - ADJ_SOLID_FLAGGED dangerousUnexplainedRate 0.207749 (20.775%) (30902/148747), NOT_ADJACENT dangerousUnexplainedRate 0.028128 (2.813%) (52353/1861230), rateRatio 7.386x, unexplainedShare 0.368412 (36.841%) (30902/83879)
-      rate ADJ_NONSOLID_ONLY vs NOT_ADJACENT: ADJ_NONSOLID_ONLY dangerousUnexplainedRate 0.035963 (3.596%) (624/17351), NOT_ADJACENT dangerousUnexplainedRate 0.028128 (2.813%) (52353/1861230), rateRatio 1.279x
+      ADJ_SOLID_FLAGGED 152227 43927 0.288562 (28.856%) (43927/152227) 41377 0.271811 (27.181%) (41377/152227) 0.432759 (43.276%) (41377/95612) 7465 0.049039 (4.904%) (7465/152227)
+      ADJ_NONSOLID_ONLY 17814 2456 0.137869 (13.787%) (2456/17814) 659 0.036993 (3.699%) (659/17814) 0.006892 (0.689%) (659/95612) 344 0.019311 (1.931%) (344/17814)
+      verdict ADJ_SOLID_FLAGGED vs NOT_ADJACENT: CONFIRMED - ADJ_SOLID_FLAGGED dangerousUnexplainedRate 0.271811 (27.181%) (41377/152227), NOT_ADJACENT dangerousUnexplainedRate 0.027736 (2.774%) (53576/1931655), rateRatio 9.800x, unexplainedShare 0.432759 (43.276%) (41377/95612)
+      rate ADJ_NONSOLID_ONLY vs NOT_ADJACENT: ADJ_NONSOLID_ONLY dangerousUnexplainedRate 0.036993 (3.699%) (659/17814), NOT_ADJACENT dangerousUnexplainedRate 0.027736 (2.774%) (53576/1931655), rateRatio 1.334x
     flag discrimination - higher ratio = better separator; benefit column estimates the cost of turning that flag into a blocker:
       flag markedAdjIgnoredEdges dangerousUnexplainedRate ratioAgainstNOT_ADJACENT projectedNewOverblock benefitPerNewOverblock
-      getInteractType() != 0: 148747 0.207749 (20.775%) (30902/148747) 7.386x 23399 1.321x
-      isBlocksProjectile(): 130268 0.179054 (17.905%) (23325/130268) 6.366x 20042 1.164x
-      isObstructsGround(): 309 0.077670 (7.767%) (24/309) 2.761x 109 0.220x
-      locType10/11 named: 70735 0.313423 (31.342%) (22170/70735) 11.143x 19660 1.128x
-      locType10/11 unnamed: 28930 0.321880 (32.188%) (9312/28930) 11.443x 7267 1.281x
-      locType10/11 named + getInteractType() != 0: 56939 0.380723 (38.072%) (21678/56939) 13.535x 9147 2.370x
-      locType10/11 named + !isBlocksProjectile(): 33310 0.248364 (24.836%) (8273/33310) 8.830x 13853 0.597x
-      locType10/11 named + !isBlocksProjectile() + getInteractType() != 0: 19055 0.396274 (39.627%) (7551/19055) 14.088x 3292 2.294x
-      locType10/11 named + getInteractType() != 0 + size 1x1: 32736 0.413734 (41.373%) (13544/32736) 14.709x 8457 1.602x
-      locType10/11 named + !isBlocksProjectile() + getInteractType() != 0 + size 1x1: 11792 0.416978 (41.698%) (4917/11792) 14.824x 3011 1.633x
+      getInteractType() != 0: 152227 0.271811 (27.181%) (41377/152227) 9.800x 23724 1.744x
+      isBlocksProjectile(): 132642 0.252250 (25.225%) (33459/132642) 9.095x 20260 1.651x
+      isObstructsGround(): 313 0.076677 (7.668%) (24/313) 2.765x 113 0.212x
+      locType10/11 named: 73292 0.442668 (44.267%) (32444/73292) 15.960x 20108 1.613x
+      locType10/11 unnamed: 29769 0.321878 (32.188%) (9582/29769) 11.605x 7468 1.283x
+      locType10/11 named + getInteractType() != 0: 59057 0.540461 (54.046%) (31918/59057) 19.486x 9381 3.402x
+      locType10/11 named + !isBlocksProjectile(): 34854 0.251707 (25.171%) (8773/34854) 9.075x 14179 0.619x
+      locType10/11 named + !isBlocksProjectile() + getInteractType() != 0: 20131 0.391883 (39.188%) (7889/20131) 14.129x 3402 2.319x
+      locType10/11 named + getInteractType() != 0 + size 1x1: 33794 0.413742 (41.374%) (13982/33794) 14.917x 8695 1.608x
+      locType10/11 named + !isBlocksProjectile() + getInteractType() != 0 + size 1x1: 12372 0.416586 (41.659%) (5154/12372) 15.020x 3124 1.650x
     named-solid scenery object ranking:
       Rows overlap: an edge touching two object ids is counted in both rows. This is a diagnostic ranker, not a proposed rule.
       rank objectId locType name size blocksProjectile openAction comparedEdges dangerousUnexplainedRate ratioAgainstNOT_ADJACENT projectedNewOverblock benefitPerNewOverblock currentOverblock
-      1 1116 10 Hedge 1x1 true none 2893 0.664708 (66.471%) (1923/2893) 23.631x 787 2.443x 0
-      2 23271 10 Wilderness_Ditch 1x2 false none 748 0.997326 (99.733%) (746/748) 35.456x 0 no-cost 0
-      3 1304 10 Tree 2x2 true none 511 0.939335 (93.933%) (480/511) 33.395x 0 no-cost 0
-      4 2091 10 Evergreen_tree 2x2 true none 403 0.980149 (98.015%) (395/403) 34.846x 0 no-cost 0
-      5 1124 10 Bush 1x1 false none 777 0.480051 (48.005%) (373/777) 17.067x 248 1.504x 4
-      6 1393 10 Plant 1x1 false none 835 0.441916 (44.192%) (369/835) 15.711x 278 1.327x 3
-      7 1117 10 Hedge 1x1 true none 494 0.728745 (72.874%) (360/494) 25.908x 123 2.927x 0
-      8 1286 10 Dead_tree 1x1 true none 678 0.500000 (50.000%) (339/678) 17.776x 280 1.211x 3
-      9 1102 10 Stool 1x1 false none 582 0.496564 (49.656%) (289/582) 17.654x 157 1.841x 3
-      10 10819 10 Willow_tree 2x2 true none 303 0.927393 (92.739%) (281/303) 32.970x 0 no-cost 0
-      11 362 10 Barrel 1x1 true none 394 0.454315 (45.431%) (179/394) 16.152x 84 2.131x 2
-      12 7182 10 Chair 1x1 false none 246 0.536585 (53.659%) (132/246) 19.076x 52 2.538x 0
-      13 202 10 Candles 1x1 true none 314 0.398089 (39.809%) (125/314) 14.153x 62 2.016x 0
-      14 2092 10 Evergreen_tree 3x3 true none 125 0.992000 (99.200%) (124/125) 35.267x 0 no-cost 0
-      15 5106 10 Crate 1x1 false none 214 0.560748 (56.075%) (120/214) 19.935x 32 3.750x 0
-      16 1158 10 Potted_plant 1x1 false none 358 0.329609 (32.961%) (118/358) 11.718x 66 1.788x 0
-      17 51792 10 Rockslide 2x2 false none 292 0.373288 (37.329%) (109/292) 13.271x 0 no-cost 0
-      18 2670 10 Kharidian_cactus_(Healthy) 1x1 true none 203 0.527094 (52.709%) (107/203) 18.739x 82 1.305x 0
-      19 7167 10 Stool 1x1 true none 204 0.524510 (52.451%) (107/204) 18.647x 44 2.432x 0
-      20 1341 10 Tree_stump 1x1 true none 213 0.502347 (50.235%) (107/213) 17.859x 90 1.189x 1
-      21 1106 10 Bench 2x1 false none 159 0.622642 (62.264%) (99/159) 22.136x 22 4.500x 0
-      22 1016 10 Shelves 1x1 true none 184 0.538043 (53.804%) (99/184) 19.128x 25 3.960x 0
-      23 1090 10 Chair 1x1 false none 165 0.575758 (57.576%) (95/165) 20.469x 31 3.065x 0
-      24 5107 10 Crate 1x1 false none 164 0.567073 (56.707%) (93/164) 20.160x 11 8.455x 0
-      25 52823 10 Tree 2x2 true none 94 0.978723 (97.872%) (92/94) 34.795x 0 no-cost 0
-      26 357 10 Crate 1x1 true none 177 0.514124 (51.412%) (91/177) 18.278x 23 3.957x 0
-      27 822 10 Cannonballs 1x1 true none 155 0.580645 (58.065%) (90/155) 20.643x 24 3.750x 0
-      28 52449 10 Cypress_Tree 2x2 true none 92 0.978261 (97.826%) (90/92) 34.779x 0 no-cost 0
-      29 1374 10 Tropical_tree 4x3 true none 88 1.000000 (100.000%) (88/88) 35.552x 0 no-cost 0
-      30 1326 10 Tropical_tree 1x1 true none 160 0.543750 (54.375%) (87/160) 19.331x 64 1.359x 0
-      31 10822 10 Yew_tree 3x3 true none 92 0.934783 (93.478%) (86/92) 33.233x 0 no-cost 0
-      32 1017 10 Shelves 1x1 true none 163 0.515337 (51.534%) (84/163) 18.321x 21 4.000x 0
-      33 24103 10 Chair 1x1 false none 150 0.546667 (54.667%) (82/150) 19.435x 36 2.278x 0
-      34 1327 10 Tropical_tree 1x1 true none 160 0.500000 (50.000%) (80/160) 17.776x 76 1.053x 0
-      35 849 10 Spear_wall 1x1 false none 256 0.308594 (30.859%) (79/256) 10.971x 38 2.079x 44
-      36 422 10 Bed 1x2 true none 127 0.606299 (60.630%) (77/127) 21.555x 13 5.923x 0
-      37 817 10 Suit_of_armour 1x1 true none 191 0.366492 (36.649%) (70/191) 13.029x 37 1.892x 1
-      38 2798 10 Bush 1x1 true none 134 0.514925 (51.493%) (69/134) 18.306x 65 1.062x 0
-      39 16679 10 Ladder 1x1 true none 162 0.419753 (41.975%) (68/162) 14.923x 51 1.333x 0
-      40 365 10 Sacks 1x1 true none 180 0.377778 (37.778%) (68/180) 13.431x 45 1.511x 0
-      41 1286 11 Dead_tree 1x1 true none 121 0.553719 (55.372%) (67/121) 19.686x 43 1.558x 0
-      42 5615 10 Bench 2x1 false none 92 0.717391 (71.739%) (66/92) 25.504x 14 4.714x 0
-      43 358 10 Crate 1x1 true none 125 0.520000 (52.000%) (65/125) 18.487x 8 8.125x 2
-      44 2620 10 Crate 1x1 false none 105 0.619048 (61.905%) (65/105) 22.008x 19 3.421x 1
-      45 604 10 Table 1x1 false none 148 0.439189 (43.919%) (65/148) 15.614x 24 2.708x 0
-      46 1018 10 Shelves 1x1 true none 126 0.492063 (49.206%) (62/126) 17.494x 19 3.263x 0
-      47 24089 10 Stool 1x1 true none 127 0.488189 (48.819%) (62/127) 17.356x 25 2.480x 0
-      48 1314 10 Plant 3x2 true none 84 0.726190 (72.619%) (61/84) 25.817x 0 no-cost 0
-      49 52451 10 Cypress_Tree 2x2 true none 60 1.000000 (100.000%) (60/60) 35.552x 0 no-cost 0
-      50 52510 10 Potted_fan 2x2 true none 76 0.789474 (78.947%) (60/76) 28.067x 0 no-cost 0
-      emitted top rows: 50 of 2013 named-solid object profiles
-    named-solid object focus rows:
-      objectId locType name size blocksProjectile openAction comparedEdges dangerousUnexplainedRate ratioAgainstNOT_ADJACENT projectedNewOverblock benefitPerNewOverblock currentOverblock
-      1289 10 Dead_tree 1x1 true none 1093 0.000000 (0.000%) (0/1093) 0.000x 0 no-cost 270
-      7169 10 Table 1x1 false none 64 0.000000 (0.000%) (0/64) 0.000x 0 no-cost 20
-      9661 10 Tree_stump 1x1 false none 280 0.000000 (0.000%) (0/280) 0.000x 0 no-cost 107
-      34803 10 Rubble 1x1 true none 56 0.000000 (0.000%) (0/56) 0.000x 0 no-cost 16
-      34804 10 Rubble 1x1 true none 83 0.000000 (0.000%) (0/83) 0.000x 0 no-cost 20
+      1 1276 10 Tree 2x2 true none 3634 0.982664 (98.266%) (3571/3634) 35.429x 0 no-cost 0
+      2 1278 10 Tree 2x2 true none 2711 0.985245 (98.525%) (2671/2711) 35.523x 0 no-cost 0
+      3 1116 10 Hedge 1x1 true none 2893 0.667819 (66.782%) (1932/2893) 24.078x 787 2.455x 0
+      4 1282 10 Dead_tree 2x2 true none 1407 0.933191 (93.319%) (1313/1407) 33.646x 0 no-cost 0
+      5 10820 10 Oak_tree 3x3 true none 1297 0.987664 (98.766%) (1281/1297) 35.610x 0 no-cost 0
+      6 23271 10 Wilderness_Ditch 1x2 false none 748 0.997326 (99.733%) (746/748) 35.958x 0 no-cost 0
+      7 1304 10 Tree 2x2 true none 634 0.951104 (95.110%) (603/634) 34.292x 0 no-cost 0
+      8 1124 10 Bush 1x1 false none 920 0.491304 (49.130%) (452/920) 17.714x 291 1.553x 7
+      9 2091 10 Evergreen_tree 2x2 true none 403 0.980149 (98.015%) (395/403) 35.339x 0 no-cost 0
+      10 1393 10 Plant 1x1 false none 884 0.444570 (44.457%) (393/884) 16.029x 310 1.268x 4
+      11 1283 10 Dead_tree 2x2 true none 406 0.911330 (91.133%) (370/406) 32.858x 0 no-cost 0
+      12 1117 10 Hedge 1x1 true none 494 0.728745 (72.874%) (360/494) 26.275x 123 2.927x 0
+      13 1286 10 Dead_tree 1x1 true none 678 0.501475 (50.147%) (340/678) 18.080x 275 1.236x 3
+      14 10819 10 Willow_tree 2x2 true none 335 0.934328 (93.433%) (313/335) 33.687x 0 no-cost 0
+      15 1102 10 Stool 1x1 false none 582 0.496564 (49.656%) (289/582) 17.903x 145 1.993x 3
+      16 362 10 Barrel 1x1 true none 401 0.451372 (45.137%) (181/401) 16.274x 86 2.105x 2
+      17 1276 11 Tree 2x2 true none 163 0.975460 (97.546%) (159/163) 35.170x 0 no-cost 0
+      18 7182 10 Chair 1x1 false none 246 0.536585 (53.659%) (132/246) 19.346x 51 2.588x 0
+      19 51792 10 Rockslide 2x2 false none 332 0.391566 (39.157%) (130/332) 14.118x 0 no-cost 0
+      20 202 10 Candles 1x1 true none 315 0.393651 (39.365%) (124/315) 14.193x 58 2.138x 0
+      21 2092 10 Evergreen_tree 3x3 true none 125 0.992000 (99.200%) (124/125) 35.766x 0 no-cost 0
+      22 1158 10 Potted_plant 1x1 false none 370 0.332432 (33.243%) (123/370) 11.986x 68 1.809x 0
+      23 5106 10 Crate 1x1 false none 214 0.560748 (56.075%) (120/214) 20.217x 30 4.000x 0
+      24 1341 10 Tree_stump 1x1 true none 213 0.507042 (50.704%) (108/213) 18.281x 85 1.271x 1
+      25 2670 10 Kharidian_cactus_(Healthy) 1x1 true none 203 0.527094 (52.709%) (107/203) 19.004x 82 1.305x 0
+      26 7167 10 Stool 1x1 true none 204 0.524510 (52.451%) (107/204) 18.911x 42 2.548x 0
+      27 1374 10 Tropical_tree 4x3 true none 104 1.000000 (100.000%) (104/104) 36.054x 0 no-cost 0
+      28 1106 10 Bench 2x1 false none 159 0.622642 (62.264%) (99/159) 22.449x 22 4.500x 0
+      29 1016 10 Shelves 1x1 true none 184 0.538043 (53.804%) (99/184) 19.399x 24 4.125x 0
+      30 1090 10 Chair 1x1 false none 165 0.593939 (59.394%) (98/165) 21.414x 31 3.161x 0
+      31 357 10 Crate 1x1 true none 181 0.519337 (51.934%) (94/181) 18.724x 25 3.760x 0
+      32 52449 10 Cypress_Tree 2x2 true none 96 0.979167 (97.917%) (94/96) 35.303x 0 no-cost 0
+      33 5107 10 Crate 1x1 false none 164 0.567073 (56.707%) (93/164) 20.446x 10 9.300x 0
+      34 52823 10 Tree 2x2 true none 94 0.978723 (97.872%) (92/94) 35.287x 0 no-cost 0
+      35 1326 10 Tropical_tree 1x1 true none 168 0.541667 (54.167%) (91/168) 19.530x 66 1.379x 0
+      36 822 10 Cannonballs 1x1 true none 155 0.580645 (58.065%) (90/155) 20.935x 25 3.600x 0
+      37 10822 10 Yew_tree 3x3 true none 92 0.934783 (93.478%) (86/92) 33.703x 0 no-cost 0
+      38 1302 10 Leafy_tree 2x2 true none 90 0.944444 (94.444%) (85/90) 34.051x 0 no-cost 0
+      39 1017 10 Shelves 1x1 true none 163 0.515337 (51.534%) (84/163) 18.580x 22 3.818x 0
+      40 1327 10 Tropical_tree 1x1 true none 168 0.500000 (50.000%) (84/168) 18.027x 78 1.077x 0
+      41 24103 10 Chair 1x1 false none 150 0.546667 (54.667%) (82/150) 19.710x 36 2.278x 0
+      42 52431 10 Crate 1x1 false none 158 0.500000 (50.000%) (79/158) 18.027x 22 3.591x 1
+      43 849 10 Spear_wall 1x1 false none 256 0.308594 (30.859%) (79/256) 11.126x 38 2.079x 44
+      44 422 10 Bed 1x2 true none 127 0.606299 (60.630%) (77/127) 21.860x 13 5.923x 0
+      45 11191 10 Rockslide 2x2 false none 88 0.875000 (87.500%) (77/88) 31.548x 0 no-cost 0
+      46 1278 11 Tree 2x2 true none 77 1.000000 (100.000%) (77/77) 36.054x 0 no-cost 0
+      47 5615 10 Bench 2x1 false none 96 0.729167 (72.917%) (70/96) 26.290x 15 4.667x 0
+      48 817 10 Suit_of_armour 1x1 true none 191 0.366492 (36.649%) (70/191) 13.214x 37 1.892x 1
+      49 2798 10 Bush 1x1 true none 134 0.514925 (51.493%) (69/134) 18.565x 65 1.062x 0
+      50 16679 10 Ladder 1x1 true none 163 0.417178 (41.718%) (68/163) 15.041x 49 1.388x 0
+      emitted top rows: 50 of 2042 named-solid object profiles
     overblock control rule:
       Missing ignored objects can only make this builder say PASSABLE where the client says BLOCKED; they cannot cause OVERBLOCK because no edge is written for them.
       control PASS if overblockRate(ADJ_SCENERY) <= overblockRate(NOT_ADJACENT) * 1.5.
     overblock rates:
-      ADJ_SCENERY 0.016407 (1.641%) (1621/98798)
-      ADJ_OTHER_IGNORED 0.090892 (9.089%) (6117/67300)
-      NOT_ADJACENT 0.009398 (0.940%) (17492/1861230)
+      ADJ_SCENERY 0.016728 (1.673%) (1709/102166)
+      ADJ_OTHER_IGNORED 0.089871 (8.987%) (6100/67875)
+      NOT_ADJACENT 0.009224 (0.922%) (17818/1931655)
     overblock control: NOT APPLICABLE - object profile blocking is ENABLED, so the premise above does not hold and the rates shown are informational only. Re-run with --disable-object-profile-blocking to evaluate this control.
     ignored-placement adjacency census:
-      unique tiles in sceneryPlacementTileKeys: 2403486
+      unique tiles in sceneryPlacementTileKeys: 2403488
       unique tiles in otherIgnoredTileKeys: 133268
       plane comparedEdges ADJ_SCENERY ADJ_OTHER_IGNORED NOT_ADJACENT
-      0 516188 80211 10315 425662
-      1 513900 12859 27599 473442
-      2 498620 3913 21904 472803
-      3 498620 1815 7482 489323
-      plane 0 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (80211 + 10315 + 425662 == 516188)
-      plane 1 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (12859 + 27599 + 473442 == 513900)
-      plane 2 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (3913 + 21904 + 472803 == 498620)
-      plane 3 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (1815 + 7482 + 489323 == 498620)
+      0 534780 82959 10370 441451
+      1 532492 13270 27793 491429
+      2 517212 4106 22209 490897
+      3 517212 1831 7503 507878
+      plane 0 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (82959 + 10370 + 441451 == 534780)
+      plane 1 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (13270 + 27793 + 491429 == 532492)
+      plane 2 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (4106 + 22209 + 490897 == 517212)
+      plane 3 adjacency split assertion: ADJ_SCENERY + ADJ_OTHER_IGNORED + NOT_ADJACENT == comparedEdges: OK (1831 + 7503 + 507878 == 517212)
     ignored non-decor ObjectDefinition census:
-      placements: 2536905
+      placements: 2536907
       missing definitions: 0
-      getInteractType() counts: 0=357804 1=279103 2=1899998 other=0
+      getInteractType() counts: 0=357804 1=279105 2=1899998 other=0
       footprint histogram, largest 12 rows:
-        1x1: 2376419
+        1x1: 2376421
         2x2: 93851
         3x3: 21731
         2x1: 19121
@@ -419,9 +412,9 @@ dangerous-direction pass:
         4x1: 998
         suppressed 59 footprint rows with fewer placements
       placements with footprint larger than 1x1: 160486
-      isBlocksProjectile() true: 2033095
+      isBlocksProjectile() true: 2033096
       isObstructsGround() true: 38345
-      getWallOrDoor() != 0: 262377
+      getWallOrDoor() != 0: 262374
       getBlockingMask() != 0: 6864
     per-locType ignored-placement proof pass:
       PREDICTION (stated before the run): phase 2 blocks only locTypes 10 and 11 and excludes every other ignored locType as unsafe without its own proof pass. If that exclusion is correct, no excluded locType clears the same bar 10 and 11 clear. If some excluded locType does clear it, the exclusion list is itself the defect.
@@ -436,39 +429,39 @@ dangerous-direction pass:
       The overblockRate column measures what THIS build already overblocks, so on a run with the rule switched off it reads zero for that rule by construction. projectedNewOverblock is the column that can see the cost of a rule that is not enabled yet, and it is the one the verdict uses. Added 2026-08-12 after the earlier set was chosen on the blind column.
       - INCONCLUSIVE: anything else.
       WARNING: object profile blocking is ENABLED, so the overblock column for locTypes 10 and 11 counts edges this build wrote itself. Read this table from a run with --disable-object-profile-blocking.
-      baseline NOT_ADJACENT comparedEdges 1861230 dangerousUnexplainedRate 0.028128 (2.813%) (52353/1861230) overblockRate 0.009398 (0.940%) (17492/1861230)
+      baseline NOT_ADJACENT comparedEdges 1931655 dangerousUnexplainedRate 0.027736 (2.774%) (53576/1931655) overblockRate 0.009224 (0.922%) (17818/1931655)
       locType phase2Handled comparedEdges DANGEROUS dangerousUnexplainedRate unexplainedRatio overblockRate overblockRatio projectedNewOverblock benefitPerNewOverblock verdict
-      4 no 14661 2783 0.142078 (14.208%) (2083/14661) 5.051x 0.017325 (1.732%) (254/14661) 1.843x 6415 0.325x UNSAFE-OVERBLOCK
-      5 no 9355 1098 0.065420 (6.542%) (612/9355) 2.326x 0.030358 (3.036%) (284/9355) 3.230x 4771 0.128x INCONCLUSIVE
-      6 no 363 3 0.008264 (0.826%) (3/363) 0.294x 0.278237 (27.824%) (101/363) 29.606x 3 1.000x INCONCLUSIVE-VACUOUS
-      7 no 966 0 0.000000 (0.000%) (0/966) 0.000x 0.290890 (29.089%) (281/966) 30.952x 0 no-cost REFUTED
-      8 no 317 0 0.000000 (0.000%) (0/317) 0.000x 0.309148 (30.915%) (98/317) 32.895x 0 no-cost INCONCLUSIVE-VACUOUS
-      10 yes 94980 32346 0.311445 (31.144%) (29581/94980) 11.072x 0.016130 (1.613%) (1532/94980) 1.716x 25637 1.154x UNSAFE-OVERBLOCK
-      11 yes 4354 1899 0.415480 (41.548%) (1809/4354) 14.771x 0.021360 (2.136%) (93/4354) 2.273x 1221 1.482x UNSAFE-OVERBLOCK
-      12 no 21320 0 0.000000 (0.000%) (0/21320) 0.000x 0.050610 (5.061%) (1079/21320) 5.385x 0 no-cost REFUTED
-      13 no 1594 0 0.000000 (0.000%) (0/1594) 0.000x 0.030740 (3.074%) (49/1594) 3.271x 0 no-cost REFUTED
-      14 no 1045 0 0.000000 (0.000%) (0/1045) 0.000x 0.016268 (1.627%) (17/1045) 1.731x 0 no-cost REFUTED
-      15 no 575 45 0.069565 (6.957%) (40/575) 2.473x 0.000000 (0.000%) (0/575) 0.000x 17 2.353x INCONCLUSIVE
-      16 no 3552 0 0.000000 (0.000%) (0/3552) 0.000x 0.051802 (5.180%) (184/3552) 5.512x 0 no-cost REFUTED
-      17 no 13831 0 0.000000 (0.000%) (0/13831) 0.000x 0.010122 (1.012%) (140/13831) 1.077x 0 no-cost REFUTED
-      18 no 18976 0 0.000000 (0.000%) (0/18976) 0.000x 0.140757 (14.076%) (2671/18976) 14.977x 0 no-cost REFUTED
-      19 no 3221 0 0.000000 (0.000%) (0/3221) 0.000x 0.223533 (22.353%) (720/3221) 23.785x 0 no-cost REFUTED
-      20 no 568 2 0.003521 (0.352%) (2/568) 0.125x 0.000000 (0.000%) (0/568) 0.000x 5 0.400x REFUTED
-      21 no 1928 0 0.000000 (0.000%) (0/1928) 0.000x 0.217324 (21.732%) (419/1928) 23.124x 0 no-cost REFUTED
-      tiles carrying more than one ignored locType: 4833 of 2532072 masked tiles
+      4 no 14842 2896 0.139671 (13.967%) (2073/14842) 5.036x 0.017518 (1.752%) (260/14842) 1.899x 6417 0.323x UNSAFE-OVERBLOCK
+      5 no 9472 1219 0.064823 (6.482%) (614/9472) 2.337x 0.030194 (3.019%) (286/9472) 3.273x 4660 0.132x INCONCLUSIVE
+      6 no 363 3 0.008264 (0.826%) (3/363) 0.298x 0.280992 (28.099%) (102/363) 30.462x 3 1.000x INCONCLUSIVE-VACUOUS
+      7 no 993 0 0.000000 (0.000%) (0/993) 0.000x 0.311178 (31.118%) (309/993) 33.735x 0 no-cost REFUTED
+      8 no 317 0 0.000000 (0.000%) (0/317) 0.000x 0.309148 (30.915%) (98/317) 33.515x 0 no-cost INCONCLUSIVE-VACUOUS
+      10 yes 98206 42905 0.405647 (40.565%) (39837/98206) 14.625x 0.016414 (1.641%) (1612/98206) 1.779x 26220 1.519x UNSAFE-OVERBLOCK
+      11 yes 4528 2182 0.463560 (46.356%) (2099/4528) 16.713x 0.022306 (2.231%) (101/4528) 2.418x 1291 1.626x UNSAFE-OVERBLOCK
+      12 no 21565 0 0.000000 (0.000%) (0/21565) 0.000x 0.049293 (4.929%) (1063/21565) 5.344x 0 no-cost REFUTED
+      13 no 1594 0 0.000000 (0.000%) (0/1594) 0.000x 0.030740 (3.074%) (49/1594) 3.333x 0 no-cost REFUTED
+      14 no 1045 0 0.000000 (0.000%) (0/1045) 0.000x 0.016268 (1.627%) (17/1045) 1.764x 0 no-cost REFUTED
+      15 no 575 42 0.069565 (6.957%) (40/575) 2.508x 0.000000 (0.000%) (0/575) 0.000x 20 2.000x INCONCLUSIVE
+      16 no 3553 0 0.000000 (0.000%) (0/3553) 0.000x 0.050380 (5.038%) (179/3553) 5.462x 0 no-cost REFUTED
+      17 no 13844 0 0.000000 (0.000%) (0/13844) 0.000x 0.010329 (1.033%) (143/13844) 1.120x 0 no-cost REFUTED
+      18 no 19056 0 0.000000 (0.000%) (0/19056) 0.000x 0.139746 (13.975%) (2663/19056) 15.150x 0 no-cost REFUTED
+      19 no 3225 0 0.000000 (0.000%) (0/3225) 0.000x 0.213953 (21.395%) (690/3225) 23.195x 0 no-cost REFUTED
+      20 no 572 2 0.003497 (0.350%) (2/572) 0.126x 0.000000 (0.000%) (0/572) 0.000x 5 0.400x REFUTED
+      21 no 1936 0 0.000000 (0.000%) (0/1936) 0.000x 0.222624 (22.262%) (431/1936) 24.135x 0 no-cost REFUTED
+      tiles carrying more than one ignored locType: 4833 of 2532074 masked tiles
     caveat: adjacency does not prove causation. A tile next to a tree is also a tile in a cluttered part of the world, and clutter correlates with lots of things. This test can rule the theory OUT cheaply; it cannot on its own prove the objects are what block those edges.
   object-blocking diagnostic (objectProfiles=on phase3=on): NET-PASS / PROOF-BELOW-NO-BLOCKING-CONTROL (baseline measured live: same regions, same capture, object blocking off)
-    DANGEROUS_UNEXPLAINED: baseline 139035, current 83879, drop 55156
-    OVERBLOCK: baseline 19422, current 25230, rise 5808
-    route-aware OVERBLOCK: baseline 8264, current 9044 (OVERBLOCK minus source-tile live BLOCKED_TILE cases), rise 780
+    DANGEROUS_UNEXPLAINED: baseline 142119, current 95612, drop 46507
+    OVERBLOCK: baseline 19855, current 25627, rise 5772
+    route-aware OVERBLOCK: baseline 8179, current 8921 (OVERBLOCK minus source-tile live BLOCKED_TILE cases), rise 742
     proof edges fixed: baseline 0.705997 (70.600%), current 0.632377 (63.238%) -> FAIL
-    net criterion: DANGEROUS_UNEXPLAINED drop must be > max(0, route-aware OVERBLOCK rise) -> OK (55156 > 780)
+    net criterion: DANGEROUS_UNEXPLAINED drop must be > max(0, route-aware OVERBLOCK rise) -> OK (46507 > 742)
     proof control: no-object baseline is intentionally strict and any real blocker can lower it. Use this with route tests and cost columns, not as the only ship gate.
-  dangerousRateAll: 0.112492 (11.249%)
+  dangerousRateAll: 0.124353 (12.435%)
   orient-3 tile count: 31825
-  orient-3 compared-edge count: 2750
-  orient-3 dangerous edges: 480
-  dangerousRateOrient3: 0.174545 (17.455%)
+  orient-3 compared-edge count: 2776
+  orient-3 dangerous edges: 503
+  dangerousRateOrient3: 0.181196 (18.120%)
   interpretation result: orientation 3 is not implicated: its dangerous rate is above average but below the 3x rule
   example DANGEROUS edges:
     1459,3442,0 N orient3=false
@@ -515,8 +508,8 @@ build statistics:
     7: 2707
     8: 390
     9: 139560
-    10: 2364471
-    11: 39015
+    10: 2364472
+    11: 39016
     12: 25812
     13: 1863
     14: 1016
@@ -527,7 +520,7 @@ build statistics:
     19: 3575
     20: 456
     21: 1256
-    22: 1607819
+    22: 1607825
   locType1-orient0 placements: 30987
   locType1-orient1 placements: 31436
   locType1-orient2 placements: 31295
@@ -535,21 +528,23 @@ build statistics:
   locType1 edges blocked total: 125154
   locType1 orientation-3 placements: 31825
   locType1 invalid-orientation fallbacks: 0
-  ignored-locType count: 4144724
+  ignored-locType count: 4144732
   Phase 3 roof placements blocked: 86205
   Phase 3 roof placements blocked by plane: 73 33388 33425 19319
   Phase 3 roof open-style placements blocked: 0
-  object profile placements blocked: 20383
+  object profile placements blocked: 10432
   object profile open-style placements blocked: 0
   object profile missing-definition placements skipped: 0
   object profile footprint-held-back placements: 0
   door-capable placement tiles: 4973
   door-capable placement tile collisions: 14
-  terrain-blocked count: 4176103
+  terrain-blocked count: 4172455
   bridge-branch count: 132865
-  out-of-region neighbour edges deferred: 166998
-  out-of-region neighbour edges applied: 117319
-  out-of-region neighbour skips: 49679
-  total edges made passable: 86483136
+  out-of-region neighbour edges deferred: 166591
+  out-of-region neighbour edges applied: 116929
+  out-of-region neighbour skips: 49662
+  forced passable edges applied: 1
+  forced passable edge skips: 0
+  total edges made passable: 86524281
   door edges written: 3272
   terrain note: tile-setting floor blocking and bridge lowering are VERIFIED against live client ground truth (2026-08-12): precision 98.086%, recall 100.000%.

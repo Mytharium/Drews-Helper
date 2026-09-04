@@ -127,6 +127,8 @@ public final class CollisionMapBuilder
      * profiles came from the ranked object report. The first slice was table/bench/chair; the
      * second slice adds only no-cost scenery profiles whose measured projectedNewOverblock was 0
      * on the frozen all-region live capture and which did not move a pinned live-matching route.
+     * D-0204 promotes the stable paid/held-back keys after Myth's target-route validation stayed
+     * clean; unnamed/stateful 19143/10 remains out because the cache-backed builder cannot prove it.
      * Do not widen this back to "all named 1x1 scenery" or "all solid locType 10/11"; those rules
      * were measured and were too blunt, including sealing the Ruins of Unkah ferry beach.
      */
@@ -196,6 +198,14 @@ public final class CollisionMapBuilder
     };
     private static final Direction[] LOC_TYPE_9_EDGES = {
         Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
+    };
+    /*
+     * Exact live-client passable edges that correct cache-shape overblocks. Keep this narrow:
+     * D-0203 repeated the Draynor-to-Sawmill connector step twice, and both captures walked
+     * 3235,3262,0 -> 3236,3262,0 even though unnamed 5611/3 orientation 0 would normally block W.
+     */
+    private static final ForcedPassableEdge[] FORCED_PASSABLE_EDGES = {
+        new ForcedPassableEdge(3235, 3262, 0, Direction.EAST)
     };
 
     private static final Method PROOF_PARSE_EDGES = findProofParseEdges();
@@ -582,6 +592,7 @@ public final class CollisionMapBuilder
         }
 
         applyDeferredNeighbourEdges(regions, stats);
+        applyForcedPassableEdges(regions, stats);
 
         stats.totalRegionsBuilt = regions.size();
         for (BuiltRegion region : regions.values())
@@ -606,6 +617,20 @@ public final class CollisionMapBuilder
 
             region.bits.markStoredEdge(edge, deferred.openable);
             stats.outOfRegionNeighbourEdgesApplied++;
+        }
+    }
+
+    private static void applyForcedPassableEdges(TreeMap<String, BuiltRegion> regions, BuildStats stats)
+    {
+        for (ForcedPassableEdge edge : FORCED_PASSABLE_EDGES)
+        {
+            BuiltRegion region = regions.get(regionNameFor(edge.x, edge.y));
+            if (region == null || !region.bits.markPassableEdge(edge.x, edge.y, edge.plane, edge.direction))
+            {
+                stats.forcedPassableEdgeSkips++;
+                continue;
+            }
+            stats.forcedPassableEdgesApplied++;
         }
     }
 
@@ -984,6 +1009,12 @@ public final class CollisionMapBuilder
         keys.add(objectProfileKey(11193, 10));  // Rockslide, no projected overblock.
         keys.add(objectProfileKey(18895, 10));  // Rockslide, no projected overblock.
         keys.add(objectProfileKey(879, 10));    // Fountain, no projected overblock.
+
+        keys.add(objectProfileKey(1289, 10));   // Dead tree, promoted by D-0204.
+        keys.add(objectProfileKey(9661, 10));   // Tree stump, promoted by D-0204.
+        keys.add(objectProfileKey(7169, 10));   // Table, promoted by D-0204.
+        keys.add(objectProfileKey(34803, 10));  // Rubble, promoted by D-0204.
+        keys.add(objectProfileKey(34804, 10));  // Rubble, promoted by D-0204.
         return Collections.unmodifiableSet(keys);
     }
 
@@ -4569,6 +4600,10 @@ public final class CollisionMapBuilder
         report.append("  out-of-region neighbour edges applied: ")
             .append(stats.outOfRegionNeighbourEdgesApplied).append('\n');
         report.append("  out-of-region neighbour skips: ").append(stats.outOfRegionNeighbourSkips).append('\n');
+        report.append("  forced passable edges applied: ")
+            .append(stats.forcedPassableEdgesApplied).append('\n');
+        report.append("  forced passable edge skips: ")
+            .append(stats.forcedPassableEdgeSkips).append('\n');
         report.append("  total edges made passable: ").append(stats.totalEdgesMadePassable).append('\n');
         report.append("  door edges written: ").append(stats.doorEdgesWritten).append('\n');
         report.append("  terrain note: tile-setting floor blocking and bridge lowering are VERIFIED against ");
@@ -5199,6 +5234,8 @@ public final class CollisionMapBuilder
         private long outOfRegionNeighbourEdgesDeferred;
         private long outOfRegionNeighbourEdgesApplied;
         private long outOfRegionNeighbourSkips;
+        private long forcedPassableEdgesApplied;
+        private long forcedPassableEdgeSkips;
         private long totalEdgesMadePassable;
         private long doorEdgesWritten;
         private long totalRegionsBuilt;
@@ -5449,6 +5486,20 @@ public final class CollisionMapBuilder
             flags.set(index(edge.x, edge.y, edge.plane, edge.doorFlag));
         }
 
+        private boolean markPassableEdge(int x, int y, int plane, Direction direction)
+        {
+            StoredEdge edge = storedEdgeFor(x, y, plane, direction);
+            if (edge == null || !contains(edge.x, edge.y, edge.plane))
+            {
+                return false;
+            }
+
+            solidEdges.clear(edgeIndex(edge));
+            flags.set(index(edge.x, edge.y, edge.plane, edge.passableFlag));
+            flags.clear(index(edge.x, edge.y, edge.plane, edge.doorFlag));
+            return true;
+        }
+
         private boolean isPassable(int x, int y, int plane, char direction)
         {
             int flag = direction == 'N' ? FLAG_NORTH_PASSABLE : FLAG_EAST_PASSABLE;
@@ -5516,6 +5567,22 @@ public final class CollisionMapBuilder
         {
             return (edge.plane * width * height + (edge.y - minY) * width + (edge.x - minX))
                 * STORED_EDGE_COUNT + edge.storedEdgeOrdinal;
+        }
+    }
+
+    private static final class ForcedPassableEdge
+    {
+        private final int x;
+        private final int y;
+        private final int plane;
+        private final Direction direction;
+
+        private ForcedPassableEdge(int x, int y, int plane, Direction direction)
+        {
+            this.x = x;
+            this.y = y;
+            this.plane = plane;
+            this.direction = direction;
         }
     }
 

@@ -1,37 +1,27 @@
 # Next Work
 
-Last updated: 2026-08-17.
+Last updated: 2026-09-04.
 
-## CURRENT HANDOFF - START HERE (updated 2026-08-17 after D-0200 candidate staging)
+## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0204 collision-map promotion)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Run controlled live validation against the staged D-0200 runtime map. Do not ask Myth to rerun the old P1/P2 pause-anchor lists; those were object footprint coordinates, not standable tiles. The staged runtime map includes the stable held-back keys `1289/10`, `9661/10`, `7169/10`, `34803/10`, and `34804/10`. The suspicious unnamed/stateful `19143/10` rock is parked because the live scanner saw `objectId=19143 activeId=19131`, but both `19143/10` and `19131/10` are missing/zero-effect focus rows in the cache-backed candidate builder.
+**WHAT'S NEXT:** Start Varlamore Slice 1 capture prep. D-0204 final-promoted the no-cost object-profile map plus the exact connector edge fix. Myth restarted Drew's Helper/RuneLite, recaptured the connector, and the newest connector row for `3235,3262,0 -> 3236,3262,0` reported `legal=true` with `classification=legal-detour-or-object-pressure`; C2 then hardcoded the validated paid/held-back keys into the default builder allowlist and rebuilt the promoted runtime map from that code path.
 
-The staged map SHA256 is `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the previous promoted map is backed up at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`. C2 rebuilt the candidate excluding `19143/10` and `19131/10`, copied `build/collision-map-v2.zip` into `src/main/resources/collision-map.zip`, and verified `gradlew validateRoutes --args=--skip-offline` plus `gradlew build -x test`. Active sailing rows remain parked until land-side gangplank/dock interaction tiles are verified. Do not invent sailing dock tiles from map pins or port-task navigation waypoints.
+Runtime `src/main/resources/collision-map.zip` is the promoted D-0204 map with SHA256 `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The previous D-0200 staged map is backed up at `build/collision-map-pre-d0203.zip` with SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the pre-D-0200 promoted-map backup remains at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
 
-Tomorrow pickup checklist:
+Important harness note: `gradlew validateRoutes --args=--skip-offline` reads the `edgeValidation={...}` strings already written into `%USERPROFILE%\.runelite\drews-route-segments.txt`. Historical rows recorded before the D-0203 map swap still report the old illegal edge; the post-restart row is the current proof row for the connector and is clean.
 
-1. Start by confirming the runtime staged map is still loaded from `src/main/resources/collision-map.zip`
-   and still hashes to `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`.
-2. Have Myth restart the Drew's Helper/RuneLite dev client so the staged collision map is loaded.
-3. Capture with these settings: `In-game run` OFF, `Log Benchmark Movement` OFF,
-   `Log Route Segments` ON, `Log Object/Door State` ON, and `Validate Map Data` OFF.
-4. Run the Draynor/Manor validation as a target-only walk: start at `3092,3245,0` or the nearest
-   walkable tile, set target `3109,3352,0`, and walk normally. Do not use the old P1 pause anchors.
-5. Run the Varrock/Sawmill validation as a target-only walk: start at `3253,3420,0` or the nearest
-   walkable tile, set target `3307,3491,0`, and walk normally. Do not use the old P2 waypoint list.
-6. Ask Myth for `%USERPROFILE%\.runelite\drews-route-segments.txt` and
-   `%USERPROFILE%\.runelite\drews-object-states.txt`.
-7. After logs land, run `gradlew validateRoutes --args=--skip-offline`, inspect the new segment rows,
-   and promote/commit only if the hard route gate stays clean and no new completed
-   `static-map-disagrees-with-live-step` regression appears.
-8. If live validation regresses, restore `build/collision-map-pre-d0200.zip` over
-   `src/main/resources/collision-map.zip`, leave item 15 open, and keep the five held-back keys parked
-   until the bad key/window is isolated.
+Focused pickup checklist:
 
-State through 2026-08-17 02:23 UTC:
+1. Treat runtime `src/main/resources/collision-map.zip` hash
+   `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6` as the promoted baseline.
+2. Build the Varlamore Slice 1 capture list before opening the roughly 74 safe-blocked regions.
+3. Use target-only route walks and existing `Log Route Segments` / `Log Object/Door State` evidence.
+4. Do not add active collision rows, object-profile keys, or transport rows for Varlamore until the live proof identifies the exact blocker class.
+
+State through 2026-09-04 D-0204:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
@@ -87,6 +77,23 @@ State through 2026-08-17 02:23 UTC:
    runtime behavior change and should not be bundled into an unrelated code commit.
 17. D-0200 staged a live-validation map, but final promotion still requires Myth's controlled route
    rerun. Use target-only route checks, not object-footprint pause anchors.
+18. D-0202 consumed Myth's staged-map rerun. Requested Route 1 and Route 2 did not introduce a
+   completed adjacent illegal edge. Myth's bonus connector walk found one hard completed cardinal
+   mismatch at `3235,3262,0 -> 3236,3262,0`; backup-map comparison proves it is pre-existing, not
+   introduced by D-0200. The likely static source is unnamed `5611/3` orientation `0` at
+   `3236,3262,0`, but this needs focused recapture before a permanent fix.
+19. D-0203 consumed Myth's focused connector recapture and confirmed the edge repeated. C2 staged
+   one exact forced-passable builder edge for `3235,3262,0 -> 3236,3262,0`, rebuilt the all-region
+   map with the D-0186 supported object profiles plus the D-0200 stable held-back keys, added a
+   focused shipped-map test for east/west movement across that edge, and copied the candidate to
+   runtime with SHA256 `5417D8AF05EA45633DB9A9E8C68CBADE51175190CF6158001C602794579A2901`.
+20. D-0204 consumed Myth's post-restart connector recapture. The newest connector row was
+   `start=(3231,3262,0) clickDest=(3240,3282,0)`, and the same live step recorded
+   `edgeValidation={from=(3235,3262,0) actual=(3236,3262,0) legal=true type=cardinal}`. C2 then
+   moved the validated paid/held-back keys into `DEFAULT_OBJECT_PROFILE_BLOCKING_KEYS` so the
+   promoted map is reproducible from the default code path, rebuilt runtime to SHA256
+   `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`, and kept the connector
+   edge pinned by shipped-map east/west assertions.
 
 Completed P1/P2 proof batch notes (old coordinates were object footprints, not standable anchors):
 

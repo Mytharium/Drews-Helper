@@ -874,6 +874,10 @@ public class DrewsHelperWalkingRouteEngineTest
             map.canMoveSouth(3148, 2843, 0));
         assertTrue("Ruins of Unkah beach strip must remain walkable",
             map.canMoveEast(3155, 2839, 0));
+        assertTrue("D-0203 connector edge must match live walking",
+            map.canMoveEast(3235, 3262, 0));
+        assertTrue("D-0203 connector reverse edge must match live walking",
+            map.canMoveWest(3236, 3262, 0));
     }
 
     private static void assertTileFullyBlocked(
