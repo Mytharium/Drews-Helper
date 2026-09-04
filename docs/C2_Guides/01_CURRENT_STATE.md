@@ -2,6 +2,37 @@
 
 Last updated: 2026-09-04.
 
+## 2026-09-04 D-0207 Active Click-Destination Mirroring Built
+
+D-0207 makes route display follow the client's accepted local click destination before continuing
+toward the saved waypoint route. The base `routeSnapshot` is still the canonical waypoint route for
+ETA, leg labels, travel accounting, and requirements. The new display snapshot is used only by the
+tile/minimap/world-map route overlays and by click-path diagnostics.
+
+When `client.getLocalDestinationLocation()` is active and the destination is within the local solve
+cap, Drew now solves a walking-only local path from the player tile to that accepted destination,
+then stitches that path into the normal waypoint route when the local destination lands on the base
+route. If the accepted destination is off the base route, the display shows only the active local
+path until the client reaches it; this avoids drawing a fake jump back to the waypoint route.
+
+`gradlew analyzeClickPathing` now reports baseline display agreement versus active-local-destination
+replay on the D-0206 corpus:
+
+```text
+baselineRows=22 baselineExactRows=1 baselineNextStepMatches=143/532
+rows=22 skipped=0 exactRows=1 correctedRows=0 nextStepMatches=433/557
+```
+
+That is a major next-step agreement improvement, but not a full client-ranker solution yet. Exact
+full-row matches remain `1/22`, so the next behavior pass should tune the remaining same-length
+route-shape policy using the replay examples instead of adding local route exceptions.
+
+Collision-map status is unchanged. A focused Lumbridge object-profile check showed `879/10`
+(`Fountain`) is already in the default object-profile key set and a temporary build with
+`--add-object-profile-keys=879/10` produced the same D-0204 runtime map hash:
+`55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The D-0206 diagonal
+candidate still does not justify a map patch.
+
 ## 2026-09-04 D-0206 Clean Click-Path Repeat Analysis
 
 Myth reran the focused D-0206 pathfinding tests cleanly, skipping only the optional B5-clean row.

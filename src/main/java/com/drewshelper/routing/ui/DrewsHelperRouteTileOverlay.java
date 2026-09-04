@@ -85,7 +85,7 @@ public final class DrewsHelperRouteTileOverlay extends Overlay
 
         // Ground tiles show the CURRENT leg only. The world map still draws the whole journey -
         // see DrewsHelperRouteSnapshot#getCurrentLegPath for why the two differ.
-        DrewsHelperRouteSnapshot snapshot = plugin.getRouteSnapshot();
+        DrewsHelperRouteSnapshot snapshot = plugin.getDisplayRouteSnapshot();
         if (snapshot.hasPath())
         {
             Color color = translucentPathColor();

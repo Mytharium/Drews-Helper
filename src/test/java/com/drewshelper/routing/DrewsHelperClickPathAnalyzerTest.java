@@ -2,9 +2,11 @@ package com.drewshelper.routing;
 
 import java.util.Arrays;
 import java.util.Collections;
+import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class DrewsHelperClickPathAnalyzerTest
 {
@@ -38,6 +40,8 @@ public class DrewsHelperClickPathAnalyzerTest
         assertEquals(1, (int) analysis.actualCandidateRanks.get("2"));
         assertEquals(1, (int) analysis.expectedCandidateRanks.get("1"));
         assertEquals(1, analysis.matchedExamples.size());
+        assertEquals(1, analysis.baselineRows);
+        assertEquals(0, analysis.baselineExactRows);
     }
 
     @Test
@@ -68,5 +72,85 @@ public class DrewsHelperClickPathAnalyzerTest
         assertEquals(1, analysis.clickRows);
         assertEquals(1, (int) analysis.clickSources.get("destination-change"));
         assertEquals(0, analysis.segmentRows);
+    }
+
+    @Test
+    public void replaysActiveLocalDestinationAgainstActualSteps()
+    {
+        String click = "DREW_CLICK_PATH v1 tick=2 result=accepted source=walk"
+            + " start=(0,0,0) clickedTile=(null) acceptedDest=(2,0,0)";
+        String segment = "DREW_ROUTE_SEGMENT v1 tick=4 reason=destination completed=true"
+            + " start=(0,0,0) clickDest=(2,0,0) routeTarget=(2,0,0)"
+            + " classification=legal-route-ranker-or-click-shape"
+            + " ranking={actualRank=2 expectedRank=1}"
+            + " expectedPath=[(0,0,0) -> (0,1,0) -> (2,0,0)]"
+            + " actualPath=[(0,0,0) -> (1,0,0) -> (2,0,0)]";
+
+        DrewsHelperClickPathAnalyzer.Analysis analysis =
+            DrewsHelperClickPathAnalyzer.analyse(
+                Collections.singletonList(click),
+                Collections.singletonList(segment),
+                new DrewsHelperWalkingRouteEngine(new OpenMovementMap())
+            );
+
+        assertEquals(1, analysis.baselineRows);
+        assertEquals(0, analysis.baselineExactRows);
+        assertEquals(1, analysis.activeMirrorRows);
+        assertEquals(1, analysis.activeMirrorExactRows);
+        assertEquals(1, analysis.activeMirrorCorrectedRows);
+        assertEquals(2, analysis.activeMirrorNextStepChecks);
+        assertEquals(2, analysis.activeMirrorNextStepMatches);
+        assertTrue(analysis.activeMirrorExamples.isEmpty());
+    }
+
+    private static final class OpenMovementMap implements DrewsHelperMovementMap
+    {
+        @Override
+        public boolean canMoveNorth(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveSouth(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveEast(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveWest(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveNorthEast(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveNorthWest(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveSouthEast(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveSouthWest(int x, int y, int plane)
+        {
+            return true;
+        }
     }
 }

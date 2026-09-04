@@ -2926,3 +2926,30 @@ D-0206 (2026-09-04) - Clean click-path repeats decide against a collision-map ed
   `client.getLocalDestinationLocation()` is still the right behavior direction, but the
   implementation must not shift waypoint ETA rows or leg labels by inserting temporary destinations
   into user waypoint accounting.
+
+D-0207 (2026-09-04) - Active click destinations are display-only route state.
+
+  RULE 1 - DO NOT MUTATE WAYPOINT ACCOUNTING FOR LOCAL CLICKS. The accepted local destination from
+  `client.getLocalDestinationLocation()` is temporary client movement state, not a Drew waypoint.
+  Use it for overlay display and diagnostics, but keep base `routeSnapshot` as the owner of ETA,
+  leg labels, requirements, destinations, and committed route accounting.
+
+  RULE 2 - DISPLAY SNAPSHOTS MAY STITCH ONTO THE BASE ROUTE. When the active local destination
+  appears on the base route, draw `player -> acceptedDest -> remaining waypoint route`. When it
+  does not appear on the base route, draw the active local route only until the client reaches it.
+  Do not draw artificial jumps back to the waypoint route.
+
+  RULE 3 - SCORE MIRRORING WITH REPLAY BEFORE CLAIMING CLIENT-PERFECT PATHING. On the D-0206 corpus,
+  baseline display agreement was `143/532` next-step matches and active-destination replay improved
+  to `433/557`, but exact full-row matches stayed `1/22`. Treat D-0207 as a visible-route alignment
+  improvement plus replay scaffold; remaining same-length route-shape misses still need ranker-policy
+  tuning.
+
+  RULE 4 - REJECT WORSE RANKER TRIALS EVEN IF THEY LOOK PLAUSIBLE. A `SHAPE` active-solve trial
+  replayed worse (`420/557`) than the current client-mode walking solve (`433/557`), so keep active
+  local solves on the current client-mode policy until a measured policy beats it.
+
+  RULE 5 - NO D-0207 COLLISION-MAP CHANGE. The D-0206 diagonal candidate did not repeat as a hard
+  static/live disagreement, and a focused `879/10` fountain check was already represented in the
+  default object-profile set with an unchanged D-0204 runtime hash. Do not patch `collision-map.zip`
+  for this behavior pass.

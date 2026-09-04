@@ -2,36 +2,33 @@
 
 Last updated: 2026-09-04.
 
-## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0206 clean repeat analysis)
+## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0207 active click-destination mirroring)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Build D-0207 as route-behavior work, not collision-map work. Myth's clean focused repeat produced 22 accepted walk clicks, 22 completed matched route segments, and zero `collision-map-wrong` buckets. The old diagonal candidate `3229,3262,0 -> 3228,3263,0` did not repeat as a completed illegal edge.
+**WHAT'S NEXT:** Myth needs one logged/dev-client validation pass for D-0207. The route overlays now use a display snapshot that mirrors the client's active local destination before continuing onto the normal waypoint route. The base `routeSnapshot` remains the source of truth for waypoint ETA, leg labels, requirements, and route accounting.
 
 Runtime `src/main/resources/collision-map.zip` is the promoted D-0204 map with SHA256 `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The previous D-0200 staged map is backed up at `build/collision-map-pre-d0203.zip` with SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the pre-D-0200 promoted-map backup remains at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
 
-Clean D-0206 analyzer result:
+D-0207 replay result against the clean D-0206 corpus:
 
 ```text
-clickRows=22 accepted=22 sources={walk=22}
-rows=22 completed=22 interrupted=0 matchedClicks=22 unmatchedSegments=0
-acceptedDestinationDiffersFromClickTile=0
-classifications={legal-detour-or-object-pressure=5 legal-route-ranker-or-click-shape=13 match=1 route-shape-mismatch=3}
-decisionBuckets={match=1 object-pressure-or-longer-detour=5 other=3 same-length-ranker-wrong=13}
-actualCandidateRanks={1=4 2=1 3=3 5=10}
-expectedCandidateRanks={1=13 2=2 3=3}
+baselineRows=22 baselineExactRows=1 baselineNextStepMatches=143/532
+rows=22 skipped=0 exactRows=1 correctedRows=0 nextStepMatches=433/557
 ```
 
-D-0207 pickup:
+D-0207 validation pickup:
 
-1. Do not change `collision-map.zip` from this capture; the focused repeat did not prove a static-map error.
-2. Treat the 13 same-length rows as ranker proof. The current `CLIENT` mode's primary-axis-first tie-break chose rank 1 where the client repeatedly walked rank 5 or rank 3 legal alternatives.
-3. Build a D-0207 ranker-experiment pass that replays `drews-click-paths.txt` and `drews-route-segments.txt` against candidate policies before changing the visible default.
-4. Add active-local-destination mirroring only after preserving waypoint ETA/leg accounting; the D-0206 rows include long-route clicks where `acceptedDest` differs from the final waypoint route target.
-5. Keep the current logs in place until D-0207 tooling consumes them. If Myth needs to rerun, C2 should back up and clear the files, not ask Myth to clear them manually.
+1. Restart the logged/dev Drew's Helper client after the D-0207 commit.
+2. Keep `Log Click Pathfinding` and `Log Route Segments` ON, run OFF, benchmark OFF, and validate-map-data OFF.
+3. Re-run the focused one-click rows from D-0206 so the live overlay output can be compared against the replay result:
+   `3222,3219,0 -> 3221,3233,0`, `3221,3233,0 -> 3222,3218,0`, `3240,3281,0 -> 3229,3262,0`,
+   and `3229,3262,0 -> 3193,3280,0`.
+4. C2 should back up and clear the `.runelite` evidence files before asking Myth for the validation run.
+5. If the live rows match the replay trend but exact full-row mismatches remain, continue with ranker-policy tuning. Do not patch `collision-map.zip`; the D-0206 diagonal candidate did not repeat and the D-0207 `879/10` fountain check produced no runtime map change.
 
-State through 2026-09-04 D-0206:
+State through 2026-09-04 D-0207:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
@@ -109,6 +106,10 @@ State through 2026-09-04 D-0206:
    rows now include `forkCandidates={...}` and `ranking={...}`; `gradlew analyzeClickPathing` writes
    `tools/pathfinding-decision-report.txt`. This is evidence-only and does not change route
    selection yet.
+22. D-0207 added display-only active click-destination mirroring. Tile/minimap/world-map overlays and
+   click-path diagnostics use `displayRouteSnapshot`, while base waypoint ETA/accounting continues
+   to use `routeSnapshot`. Replay improved next-step agreement from `143/532` to `433/557`, with
+   exact full-row matches still `1/22`.
 
 Completed P1/P2 proof batch notes (old coordinates were object footprints, not standable anchors):
 

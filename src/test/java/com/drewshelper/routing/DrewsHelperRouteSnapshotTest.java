@@ -122,6 +122,61 @@ public class DrewsHelperRouteSnapshotTest
     }
 
     @Test
+    public void activeLocalPathStitchesIntoWaypointRouteAtAnchor()
+    {
+        DrewsHelperRouteSnapshot snapshot = DrewsHelperRouteSnapshot.ready(
+            Arrays.asList(
+                new WorldPoint(100, 100, 0),
+                new WorldPoint(100, 101, 0),
+                new WorldPoint(100, 102, 0),
+                new WorldPoint(100, 103, 0)
+            ),
+            Arrays.asList(new WorldPoint(100, 103, 0)),
+            3
+        );
+
+        DrewsHelperRouteSnapshot display = snapshot.withActiveLocalPath(Arrays.asList(
+            new WorldPoint(100, 100, 0),
+            new WorldPoint(101, 101, 0),
+            new WorldPoint(100, 102, 0)
+        ));
+
+        assertEquals(Arrays.asList(
+            new WorldPoint(100, 100, 0),
+            new WorldPoint(101, 101, 0),
+            new WorldPoint(100, 102, 0),
+            new WorldPoint(100, 103, 0)
+        ), display.getPath());
+        assertEquals(snapshot.getWalkingDistance(), display.getWalkingDistance());
+        assertEquals(snapshot.getDestinations(), display.getDestinations());
+    }
+
+    @Test
+    public void activeLocalPathDoesNotInventJumpBackToWaypointRoute()
+    {
+        DrewsHelperRouteSnapshot snapshot = DrewsHelperRouteSnapshot.ready(
+            Arrays.asList(
+                new WorldPoint(100, 100, 0),
+                new WorldPoint(100, 101, 0),
+                new WorldPoint(100, 102, 0)
+            ),
+            Arrays.asList(new WorldPoint(100, 102, 0)),
+            2
+        );
+
+        DrewsHelperRouteSnapshot display = snapshot.withActiveLocalPath(Arrays.asList(
+            new WorldPoint(100, 100, 0),
+            new WorldPoint(101, 101, 0)
+        ));
+
+        assertEquals(Arrays.asList(
+            new WorldPoint(100, 100, 0),
+            new WorldPoint(101, 101, 0)
+        ), display.getPath());
+        assertEquals(snapshot.getWalkingDistance(), display.getWalkingDistance());
+    }
+
+    @Test
     public void doesNotTreatNormalWalkingStepsAsTransportJumps()
     {
         WorldPoint point = new WorldPoint(100, 100, 0);

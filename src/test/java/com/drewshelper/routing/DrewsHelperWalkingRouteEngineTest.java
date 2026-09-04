@@ -67,6 +67,26 @@ public class DrewsHelperWalkingRouteEngineTest
     }
 
     @Test
+    public void activeLocalDestinationSolvesWithoutTransportGraph() throws Exception
+    {
+        WorldPoint source = new WorldPoint(0, 0, 0);
+        WorldPoint transportDestination = new WorldPoint(100, 100, 0);
+        DrewsHelperTransportGraph graph = DrewsHelperTransportGraph.of(Collections.singletonList(
+            new DrewsHelperTransportEdge(source, transportDestination, DrewsHelperTransportCategory.BASELINE, "Test ship")
+        ));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap(), graph);
+
+        DrewsHelperRouteSnapshot route = engine.solveActiveLocalDestination(
+            source,
+            new WorldPoint(2, 2, 0)
+        );
+
+        assertEquals(DrewsHelperRouteStatus.READY, route.getStatus());
+        assertFalse(DrewsHelperRouteSnapshot.isTransportJump(route.getPath().get(0), route.getPath().get(1)));
+        assertEquals(new WorldPoint(2, 2, 0), route.getPath().get(route.getPath().size() - 1));
+    }
+
+    @Test
     public void transportEdgeCanChangePlanes() throws Exception
     {
         WorldPoint source = new WorldPoint(10, 10, 0);

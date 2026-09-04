@@ -67,7 +67,7 @@ public final class DrewsHelperRouteMapOverlay extends Overlay
             return null;
         }
 
-        DrewsHelperRouteSnapshot snapshot = plugin.getRouteSnapshot();
+        DrewsHelperRouteSnapshot snapshot = plugin.getDisplayRouteSnapshot();
         if (!snapshot.hasPath())
         {
             return null;

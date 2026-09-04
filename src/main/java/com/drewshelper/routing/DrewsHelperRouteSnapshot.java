@@ -248,6 +248,30 @@ public final class DrewsHelperRouteSnapshot
         return requirements;
     }
 
+    public DrewsHelperRouteSnapshot withActiveLocalPath(List<WorldPoint> activeLocalPath)
+    {
+        if (status != DrewsHelperRouteStatus.READY)
+        {
+            return this;
+        }
+
+        List<WorldPoint> displayPath = activeLocalDisplayPath(path, activeLocalPath);
+        if (displayPath.equals(path))
+        {
+            return this;
+        }
+
+        return new DrewsHelperRouteSnapshot(
+            status,
+            displayPath,
+            destinations,
+            message,
+            walkingDistance,
+            primaryMetrics,
+            requirements
+        );
+    }
+
     public DrewsHelperRouteSnapshot consumeFirstPathTile()
     {
         return consumeLeadingPathTiles(1);
@@ -302,5 +326,28 @@ public final class DrewsHelperRouteSnapshot
         int deltaX = Math.abs(from.getX() - to.getX());
         int deltaY = Math.abs(from.getY() - to.getY());
         return Math.max(deltaX, deltaY) > 1;
+    }
+
+    static List<WorldPoint> activeLocalDisplayPath(List<WorldPoint> routePath, List<WorldPoint> activeLocalPath)
+    {
+        if (routePath == null || routePath.isEmpty()
+            || activeLocalPath == null || activeLocalPath.size() < 2)
+        {
+            return routePath == null ? Collections.emptyList() : routePath;
+        }
+
+        WorldPoint activeEnd = activeLocalPath.get(activeLocalPath.size() - 1);
+        if (activeEnd == null)
+        {
+            return routePath;
+        }
+
+        List<WorldPoint> displayPath = new ArrayList<>(activeLocalPath);
+        int anchorIndex = routePath.indexOf(activeEnd);
+        if (anchorIndex >= 0 && anchorIndex + 1 < routePath.size())
+        {
+            displayPath.addAll(routePath.subList(anchorIndex + 1, routePath.size()));
+        }
+        return displayPath;
     }
 }

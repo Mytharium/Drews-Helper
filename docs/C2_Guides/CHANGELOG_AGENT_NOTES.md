@@ -2698,3 +2698,21 @@ D-0206 (2026-09-04) - Analyzed clean focused click-path repeat.
   Next step is D-0207 route-ranker/replay tooling. Do not add local route overrides or collision-map
   patches from this capture. The useful repeated problem is legal same-length route choice, especially
   rows where the current ranker chose candidate rank 1 while the client walked rank 5 or rank 3.
+
+D-0207 (2026-09-04) - Built active click-destination route mirroring.
+
+  Added a display-only route snapshot path for the live overlays. The base `routeSnapshot` remains
+  the waypoint route used for ETA, leg labels, requirements, and route accounting. Tile, minimap,
+  and world-map overlays now read `displayRouteSnapshot`, which can temporarily draw from the
+  player tile to `client.getLocalDestinationLocation()` before rejoining the normal waypoint route.
+
+  Added active-local-destination replay to `gradlew analyzeClickPathing`. Against the clean D-0206
+  corpus, baseline display agreement was `baselineNextStepMatches=143/532`; active destination
+  replay improved that to `nextStepMatches=433/557`. Exact full-row matches stayed `1/22`, so this
+  is a strong display-behavior improvement but not the final same-length ranker solution.
+
+  Rejected a `SHAPE`-mode active-solve trial because it was worse on the same replay set
+  (`420/557` next-step matches versus `433/557` for current client-mode walking). Also checked the
+  Lumbridge fountain path pressure: `879/10` is already in the default object-profile key set and a
+  temporary focused map build produced the same D-0204 runtime hash, so `collision-map.zip` remains
+  unchanged.

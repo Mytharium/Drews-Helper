@@ -228,9 +228,11 @@ public class DrewsHelperPlugin extends Plugin
     private String routeEngineCacheKey = "";
     private final Map<Skill, Integer> lastKnownSkillLevels = new HashMap<>();
     private volatile DrewsHelperRouteSnapshot routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
+    private volatile DrewsHelperRouteSnapshot displayRouteSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
     private int routeRequestId;
     private boolean routeDirty = true;
     private String lastRouteSignature = "";
+    private String lastDisplayRouteSignature = "";
     private RouteBenchmarkCapture routeBenchmarkCapture;
     private final Map<String, Integer> routeBenchmarkObservedEdgeCounts = new HashMap<>();
     private volatile String routeBenchmarkSummary = "";
@@ -266,8 +268,10 @@ public class DrewsHelperPlugin extends Plugin
             return thread;
         });
         routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
+        displayRouteSnapshot = routeSnapshot;
         routeDirty = true;
         lastRouteSignature = "";
+        lastDisplayRouteSignature = "";
         lastCooldownEpochMinute = -1;
         lastValidatedSceneKey = null;
         lastValidationTick = 0;
@@ -326,6 +330,8 @@ public class DrewsHelperPlugin extends Plugin
             routeExecutor = null;
         }
         routeSnapshot = DrewsHelperRouteSnapshot.disabled();
+        displayRouteSnapshot = routeSnapshot;
+        lastDisplayRouteSignature = "";
         clearRouteBenchmark();
         if (routeSegmentRecorder != null)
         {
@@ -365,6 +371,7 @@ public class DrewsHelperPlugin extends Plugin
         // The diagnostic clocks run before waypoint clearing and route re-solves. Arrival clears
         // the final waypoint later in this tick, and off-path movement may immediately submit a
         // replacement route, so the original journey capture must see this position first.
+        refreshDisplayRouteSnapshot();
         updateEtaDebugCapture();
         recordRouteBenchmarkPosition();
         recordClickPathIfEnabled();
@@ -377,6 +384,7 @@ public class DrewsHelperPlugin extends Plugin
         if (routeDirty)
         {
             refreshRouteIfNeeded();
+            refreshDisplayRouteSnapshot();
             return;
         }
 
@@ -385,6 +393,7 @@ public class DrewsHelperPlugin extends Plugin
             advanceCommittedRouteIfNeeded();
         }
 
+        refreshDisplayRouteSnapshot();
         refreshTravelEstimate();
     }
 
@@ -910,7 +919,7 @@ public class DrewsHelperPlugin extends Plugin
         List<String> lines = clickPathRecorder.onTick(
             localPlayer.getWorldLocation(),
             currentWalkDestination(),
-            routeSnapshot,
+            displayRouteSnapshot,
             routeEngine,
             tickCounter
         );
@@ -953,7 +962,7 @@ public class DrewsHelperPlugin extends Plugin
         List<String> lines = routeSegmentRecorder.onTick(
             localPlayer.getWorldLocation(),
             currentWalkDestination(),
-            routeSnapshot,
+            displayRouteSnapshot,
             routeEngine,
             tickCounter
         );
@@ -1261,6 +1270,11 @@ public class DrewsHelperPlugin extends Plugin
         return routeSnapshot;
     }
 
+    public DrewsHelperRouteSnapshot getDisplayRouteSnapshot()
+    {
+        return displayRouteSnapshot;
+    }
+
     public String getRouteBenchmarkSummary()
     {
         return routeBenchmarkSummary;
@@ -1436,6 +1450,8 @@ public class DrewsHelperPlugin extends Plugin
             cancelRouteFuture();
             clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.disabled();
+            displayRouteSnapshot = routeSnapshot;
+            lastDisplayRouteSignature = "";
             return;
         }
 
@@ -1447,6 +1463,8 @@ public class DrewsHelperPlugin extends Plugin
             cancelRouteFuture();
             clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.noWaypoints();
+            displayRouteSnapshot = routeSnapshot;
+            lastDisplayRouteSignature = "";
             return;
         }
 
@@ -1458,6 +1476,8 @@ public class DrewsHelperPlugin extends Plugin
             cancelRouteFuture();
             clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.noPlayer();
+            displayRouteSnapshot = routeSnapshot;
+            lastDisplayRouteSignature = "";
             return;
         }
 
@@ -1485,6 +1505,8 @@ public class DrewsHelperPlugin extends Plugin
             cancelRouteFuture();
             clearRouteBenchmark();
             routeSnapshot = DrewsHelperRouteSnapshot.noPlayer();
+            displayRouteSnapshot = routeSnapshot;
+            lastDisplayRouteSignature = "";
             return;
         }
 
@@ -1505,6 +1527,91 @@ public class DrewsHelperPlugin extends Plugin
         {
             routeSnapshot = snapshot.consumeLeadingPathTiles(progress.getConsumeCount());
         }
+    }
+
+    private void refreshDisplayRouteSnapshot()
+    {
+        DrewsHelperRouteSnapshot base = routeSnapshot;
+        if (base == null || base.getStatus() != DrewsHelperRouteStatus.READY || !base.hasPath())
+        {
+            displayRouteSnapshot = base == null ? DrewsHelperRouteSnapshot.noWaypoints() : base;
+            lastDisplayRouteSignature = "";
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        WorldPoint start = localPlayer == null ? null : localPlayer.getWorldLocation();
+        WorldPoint destination = currentWalkDestination();
+        DrewsHelperWalkingRouteEngine engine = routeEngine;
+        if (start == null || destination == null || start.equals(destination) || engine == null
+            || samePlaneDistance(start, destination) > 128)
+        {
+            displayRouteSnapshot = base;
+            lastDisplayRouteSignature = "";
+            return;
+        }
+
+        String signature = displayRouteSignature(base, start, destination);
+        if (signature.equals(lastDisplayRouteSignature))
+        {
+            return;
+        }
+
+        DrewsHelperRouteSnapshot display = base;
+        try
+        {
+            DrewsHelperRouteSnapshot active = engine.solveActiveLocalDestination(start, destination);
+            if (active.getStatus() == DrewsHelperRouteStatus.READY && active.getPath().size() > 1)
+            {
+                display = base.withActiveLocalPath(active.getPath());
+            }
+        }
+        catch (InterruptedException ex)
+        {
+            displayRouteSnapshot = base;
+            lastDisplayRouteSignature = "";
+            return;
+        }
+        catch (RuntimeException ex)
+        {
+            log.debug("Drew's Helper: active local route display solve failed", ex);
+        }
+
+        displayRouteSnapshot = display;
+        lastDisplayRouteSignature = signature;
+    }
+
+    private static String displayRouteSignature(
+        DrewsHelperRouteSnapshot base,
+        WorldPoint start,
+        WorldPoint destination
+    )
+    {
+        List<WorldPoint> path = base.getPath();
+        WorldPoint first = path.isEmpty() ? null : path.get(0);
+        WorldPoint last = path.isEmpty() ? null : path.get(path.size() - 1);
+        return pointKey(start) + '|' + pointKey(destination) + '|'
+            + base.getStatus() + '|' + path.size() + '|' + path.hashCode() + '|'
+            + pointKey(first) + '|' + pointKey(last) + '|'
+            + base.getWalkingDistance();
+    }
+
+    private static String pointKey(WorldPoint point)
+    {
+        if (point == null)
+        {
+            return "-";
+        }
+        return point.getX() + "," + point.getY() + "," + point.getPlane();
+    }
+
+    private static int samePlaneDistance(WorldPoint first, WorldPoint second)
+    {
+        if (first == null || second == null || first.getPlane() != second.getPlane())
+        {
+            return Integer.MAX_VALUE;
+        }
+        return Math.max(Math.abs(first.getX() - second.getX()), Math.abs(first.getY() - second.getY()));
     }
 
     private List<WorldPoint> orderedWaypointDestinations()
@@ -1539,6 +1646,8 @@ public class DrewsHelperPlugin extends Plugin
         boolean keepRouteBenchmarkCapture = shouldKeepRouteBenchmarkCapture(routeDestinations);
         DrewsHelperRouteSnapshot previousSnapshot = routeSnapshot;
         routeSnapshot = DrewsHelperRouteSnapshot.calculating(routeDestinations, previousSnapshot.getPath());
+        displayRouteSnapshot = routeSnapshot;
+        lastDisplayRouteSignature = "";
         if (!keepRouteBenchmarkCapture)
         {
             clearRouteBenchmark();
@@ -1573,6 +1682,8 @@ public class DrewsHelperPlugin extends Plugin
                 if (requestId == routeRequestId)
                 {
                     routeSnapshot = publishSnapshot;
+                    displayRouteSnapshot = publishSnapshot;
+                    lastDisplayRouteSignature = "";
                     startRouteBenchmarkIfNeeded(publishSnapshot);
                 }
                 return true;

@@ -21,6 +21,8 @@ public final class DrewsHelperClickPathAnalyzer
 {
     static final String CLICK_PREFIX = "DREW_CLICK_PATH v1";
     private static final int EXAMPLE_LIMIT = 12;
+    private static final int ACTIVE_MIRROR_REPLAY_MAX_DISTANCE = 128;
+    private static final int ACTIVE_MIRROR_REPLAY_MAX_POINTS = 80;
 
     private DrewsHelperClickPathAnalyzer()
     {
@@ -29,9 +31,12 @@ public final class DrewsHelperClickPathAnalyzer
     public static void main(String[] args) throws Exception
     {
         Request request = Request.parse(args, Paths.get(System.getProperty("user.dir")));
+        DrewsHelperWalkingRouteEngine replayEngine =
+            new DrewsHelperWalkingRouteEngine(DrewsHelperCollisionMap.loadDefault());
         Analysis analysis = analyse(
             readLinesIfPresent(request.clicksFile),
-            readLinesIfPresent(request.segmentsFile)
+            readLinesIfPresent(request.segmentsFile),
+            replayEngine
         );
         String report = analysis.render(request);
         Path parent = request.outputFile.getParent();
@@ -44,6 +49,15 @@ public final class DrewsHelperClickPathAnalyzer
     }
 
     static Analysis analyse(List<String> clickLines, List<String> segmentLines)
+    {
+        return analyse(clickLines, segmentLines, null);
+    }
+
+    static Analysis analyse(
+        List<String> clickLines,
+        List<String> segmentLines,
+        DrewsHelperWalkingRouteEngine replayEngine
+    )
     {
         Analysis analysis = new Analysis();
         List<ClickEvidence> clicks = new ArrayList<>();
@@ -109,6 +123,8 @@ public final class DrewsHelperClickPathAnalyzer
                 {
                     analysis.addMatchedExample(segment.decisionBucket() + " " + segment.compact());
                 }
+                analysis.recordBaselineReplay(segment);
+                analysis.recordActiveMirrorReplay(segment, replayEngine);
             }
 
             if (!"match".equals(segment.classification))
@@ -117,6 +133,50 @@ public final class DrewsHelperClickPathAnalyzer
             }
         }
         return analysis;
+    }
+
+    private static ActiveMirrorReplay replayActiveMirror(
+        SegmentEvidence segment,
+        DrewsHelperWalkingRouteEngine replayEngine
+    ) throws InterruptedException
+    {
+        if (replayEngine == null || !segment.completed || segment.clickDest == null || segment.actualPath.size() < 2)
+        {
+            return ActiveMirrorReplay.skipped(segment, "not-replayable");
+        }
+        if (samePlaneDistance(segment.start, segment.clickDest) > ACTIVE_MIRROR_REPLAY_MAX_DISTANCE
+            || segment.actualPath.size() > ACTIVE_MIRROR_REPLAY_MAX_POINTS)
+        {
+            return ActiveMirrorReplay.skipped(segment, "replay-too-large");
+        }
+
+        int checks = 0;
+        int matches = 0;
+        String firstMiss = "";
+        for (int i = 0; i < segment.actualPath.size() - 1; i++)
+        {
+            WorldPoint here = segment.actualPath.get(i);
+            WorldPoint actualNext = segment.actualPath.get(i + 1);
+            DrewsHelperRouteSnapshot active = replayEngine.solveActiveLocalDestination(here, segment.clickDest);
+            if (active.getStatus() != DrewsHelperRouteStatus.READY || active.getPath().size() < 2)
+            {
+                return ActiveMirrorReplay.skipped(segment, "active-solve-failed");
+            }
+
+            WorldPoint predictedNext = active.getPath().get(1);
+            checks++;
+            if (samePoint(predictedNext, actualNext))
+            {
+                matches++;
+            }
+            else if (firstMiss.isEmpty())
+            {
+                firstMiss = "missAt=" + i
+                    + " predicted=" + DrewsHelperRouteBenchmark.formatPoint(predictedNext)
+                    + " actual=" + DrewsHelperRouteBenchmark.formatPoint(actualNext);
+            }
+        }
+        return ActiveMirrorReplay.replayed(segment, checks, matches, firstMiss);
     }
 
     private static ClickEvidence matchingClick(SegmentEvidence segment, List<ClickEvidence> clicks)
@@ -223,6 +283,7 @@ public final class DrewsHelperClickPathAnalyzer
         final Map<String, Integer> expectedCandidateRanks = new TreeMap<>();
         final List<String> matchedExamples = new ArrayList<>();
         final List<String> examples = new ArrayList<>();
+        final List<String> activeMirrorExamples = new ArrayList<>();
         int clickRows;
         int segmentRows;
         int completedSegments;
@@ -230,6 +291,16 @@ public final class DrewsHelperClickPathAnalyzer
         int matchedSegments;
         int unmatchedSegments;
         int acceptedDestinationDiffersFromClickTile;
+        int activeMirrorRows;
+        int activeMirrorSkippedRows;
+        int activeMirrorExactRows;
+        int activeMirrorCorrectedRows;
+        int activeMirrorNextStepChecks;
+        int activeMirrorNextStepMatches;
+        int baselineRows;
+        int baselineExactRows;
+        int baselineNextStepChecks;
+        int baselineNextStepMatches;
 
         private void addExample(String example)
         {
@@ -244,6 +315,80 @@ public final class DrewsHelperClickPathAnalyzer
             if (matchedExamples.size() < EXAMPLE_LIMIT)
             {
                 matchedExamples.add(example);
+            }
+        }
+
+        private void addActiveMirrorExample(String example)
+        {
+            if (activeMirrorExamples.size() < EXAMPLE_LIMIT)
+            {
+                activeMirrorExamples.add(example);
+            }
+        }
+
+        private void recordActiveMirrorReplay(
+            SegmentEvidence segment,
+            DrewsHelperWalkingRouteEngine replayEngine
+        )
+        {
+            try
+            {
+                ActiveMirrorReplay replay = replayActiveMirror(segment, replayEngine);
+                if (replay.skipped)
+                {
+                    if (replayEngine != null)
+                    {
+                        activeMirrorSkippedRows++;
+                    }
+                    return;
+                }
+
+                activeMirrorRows++;
+                activeMirrorNextStepChecks += replay.nextStepChecks;
+                activeMirrorNextStepMatches += replay.nextStepMatches;
+                if (replay.exact())
+                {
+                    activeMirrorExactRows++;
+                    if (!"match".equals(segment.classification))
+                    {
+                        activeMirrorCorrectedRows++;
+                    }
+                }
+                else
+                {
+                    addActiveMirrorExample(replay.compact());
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private void recordBaselineReplay(SegmentEvidence segment)
+        {
+            if (segment.expectedPath.size() < 2 || segment.actualPath.size() < 2)
+            {
+                return;
+            }
+
+            baselineRows++;
+            int checks = Math.min(segment.expectedPath.size(), segment.actualPath.size()) - 1;
+            int matches = 0;
+            for (int i = 0; i < checks; i++)
+            {
+                if (samePoint(segment.expectedPath.get(i), segment.actualPath.get(i))
+                    && samePoint(segment.expectedPath.get(i + 1), segment.actualPath.get(i + 1)))
+                {
+                    matches++;
+                }
+            }
+
+            baselineNextStepChecks += checks;
+            baselineNextStepMatches += matches;
+            if (checks == matches)
+            {
+                baselineExactRows++;
             }
         }
 
@@ -276,6 +421,32 @@ public final class DrewsHelperClickPathAnalyzer
             out.append("matchedDecisionBuckets=").append(formatCounts(matchedDecisionBuckets)).append('\n');
             out.append("actualCandidateRanks=").append(formatCounts(actualCandidateRanks)).append('\n');
             out.append("expectedCandidateRanks=").append(formatCounts(expectedCandidateRanks)).append('\n');
+            out.append('\n');
+            out.append("ACTIVE LOCAL DESTINATION REPLAY\n");
+            out.append("baselineRows=").append(baselineRows)
+                .append(" baselineExactRows=").append(baselineExactRows)
+                .append(" baselineNextStepMatches=").append(baselineNextStepMatches)
+                .append('/').append(baselineNextStepChecks)
+                .append('\n');
+            out.append("rows=").append(activeMirrorRows)
+                .append(" skipped=").append(activeMirrorSkippedRows)
+                .append(" exactRows=").append(activeMirrorExactRows)
+                .append(" correctedRows=").append(activeMirrorCorrectedRows)
+                .append(" nextStepMatches=").append(activeMirrorNextStepMatches)
+                .append('/').append(activeMirrorNextStepChecks)
+                .append('\n');
+            if (activeMirrorExamples.isEmpty())
+            {
+                out.append("activeMirrorExamples=none\n");
+            }
+            else
+            {
+                for (int i = 0; i < activeMirrorExamples.size(); i++)
+                {
+                    out.append("activeMirrorExample").append(i + 1).append('=')
+                        .append(activeMirrorExamples.get(i)).append('\n');
+                }
+            }
             out.append('\n');
             out.append("MATCHED CLICK EXAMPLES\n");
             if (matchedExamples.isEmpty())
@@ -420,6 +591,8 @@ public final class DrewsHelperClickPathAnalyzer
         private final int rankingActualRank;
         private final int rankingExpectedRank;
         private final boolean hasPathfindingDiagnostics;
+        private final List<WorldPoint> expectedPath;
+        private final List<WorldPoint> actualPath;
 
         private SegmentEvidence(
             boolean completed,
@@ -430,7 +603,9 @@ public final class DrewsHelperClickPathAnalyzer
             String edgeValidation,
             int rankingActualRank,
             int rankingExpectedRank,
-            boolean hasPathfindingDiagnostics
+            boolean hasPathfindingDiagnostics,
+            List<WorldPoint> expectedPath,
+            List<WorldPoint> actualPath
         )
         {
             this.completed = completed;
@@ -442,6 +617,8 @@ public final class DrewsHelperClickPathAnalyzer
             this.rankingActualRank = rankingActualRank;
             this.rankingExpectedRank = rankingExpectedRank;
             this.hasPathfindingDiagnostics = hasPathfindingDiagnostics;
+            this.expectedPath = expectedPath == null ? Collections.emptyList() : expectedPath;
+            this.actualPath = actualPath == null ? Collections.emptyList() : actualPath;
         }
 
         private static SegmentEvidence parse(String line)
@@ -462,7 +639,9 @@ public final class DrewsHelperClickPathAnalyzer
                 fields.getOrDefault("edgeValidation", ""),
                 parseIntField(ranking, "actualRank"),
                 parseIntField(ranking, "expectedRank"),
-                fields.containsKey("ranking")
+                fields.containsKey("ranking"),
+                DrewsHelperRouteValidationHarness.parsePath(fields.get("expectedPath")),
+                DrewsHelperRouteValidationHarness.parsePath(fields.get("actualPath"))
             );
         }
 
@@ -507,6 +686,57 @@ public final class DrewsHelperClickPathAnalyzer
                 + " edgeValidation=" + edgeValidation
                 + " actualRank=" + rankingActualRank
                 + " expectedRank=" + rankingExpectedRank;
+        }
+    }
+
+    private static final class ActiveMirrorReplay
+    {
+        private final SegmentEvidence segment;
+        private final boolean skipped;
+        private final String detail;
+        private final int nextStepChecks;
+        private final int nextStepMatches;
+
+        private ActiveMirrorReplay(
+            SegmentEvidence segment,
+            boolean skipped,
+            String detail,
+            int nextStepChecks,
+            int nextStepMatches
+        )
+        {
+            this.segment = segment;
+            this.skipped = skipped;
+            this.detail = detail;
+            this.nextStepChecks = nextStepChecks;
+            this.nextStepMatches = nextStepMatches;
+        }
+
+        private static ActiveMirrorReplay skipped(SegmentEvidence segment, String reason)
+        {
+            return new ActiveMirrorReplay(segment, true, reason, 0, 0);
+        }
+
+        private static ActiveMirrorReplay replayed(
+            SegmentEvidence segment,
+            int nextStepChecks,
+            int nextStepMatches,
+            String firstMiss
+        )
+        {
+            return new ActiveMirrorReplay(segment, false, firstMiss, nextStepChecks, nextStepMatches);
+        }
+
+        private boolean exact()
+        {
+            return nextStepChecks > 0 && nextStepChecks == nextStepMatches;
+        }
+
+        private String compact()
+        {
+            return segment.compact()
+                + " activeMirrorNextSteps=" + nextStepMatches + "/" + nextStepChecks
+                + " " + detail;
         }
     }
 }

@@ -183,6 +183,46 @@ public final class DrewsHelperWalkingRouteEngine
         );
     }
 
+    public DrewsHelperRouteSnapshot solveActiveLocalDestination(
+        WorldPoint start,
+        WorldPoint destination
+    ) throws InterruptedException
+    {
+        if (start == null)
+        {
+            return DrewsHelperRouteSnapshot.noPlayer();
+        }
+
+        if (destination == null)
+        {
+            return DrewsHelperRouteSnapshot.noWaypoints();
+        }
+
+        DrewsHelperWalkingRouteEngine walkingOnlyEngine = new DrewsHelperWalkingRouteEngine(movementMap);
+        RouteComputation route = walkingOnlyEngine.solveRoute(
+            start,
+            Collections.singletonList(destination),
+            true,
+            RouteRankingMode.CLIENT
+        );
+        if (!route.isRouteFound())
+        {
+            return DrewsHelperRouteSnapshot.noPath(
+                route.path,
+                Collections.singletonList(destination),
+                route.message,
+                route.walkingDistance
+            );
+        }
+
+        return DrewsHelperRouteSnapshot.ready(
+            route.path,
+            Collections.singletonList(destination),
+            route.walkingDistance,
+            route.metrics
+        );
+    }
+
     /** Needed by the travel-time estimator to tell a transport hop from a walked tile. */
     public DrewsHelperTransportGraph getTransportGraph()
     {

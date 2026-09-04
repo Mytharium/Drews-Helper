@@ -67,7 +67,7 @@ public final class DrewsHelperRouteMinimapOverlay extends Overlay
             return null;
         }
 
-        DrewsHelperRouteSnapshot snapshot = plugin.getRouteSnapshot();
+        DrewsHelperRouteSnapshot snapshot = plugin.getDisplayRouteSnapshot();
         WorldPoint playerLocation = localPlayer.getWorldLocation();
         if (playerLocation == null)
         {
