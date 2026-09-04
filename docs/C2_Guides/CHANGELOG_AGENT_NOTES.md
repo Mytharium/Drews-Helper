@@ -1,5 +1,20 @@
 # Changelog Agent Notes
 
+## 2026-09-04 - Session Close / D-0207 Pickup Handoff
+
+- Wrote the 2026-09-04 session-close summary into `01_CURRENT_STATE.md` and made
+  `02_NEXT_WORK.md` the explicit start point for the next session.
+- Today's pathfinding sequence: D-0204 promoted the connector collision-map fix; D-0205 added click
+  path instrumentation; D-0206 analyzed Myth's clean 22-row focused repeat and rejected a
+  collision-map patch; D-0207 built display-only active click-destination mirroring in commit
+  `7002143`.
+- Next pickup is one logged/dev-client D-0207 validation pass on the focused D-0206 coordinates.
+  C2 already backed up and cleared the active `.runelite` evidence files for that run; if stale rows
+  are present later, C2 should clear them again before Myth walks.
+- If D-0207 live validation follows replay but exact path shape still drifts, continue with measured
+  ranker-policy tuning through `gradlew analyzeClickPathing`. Do not patch `collision-map.zip` or add
+  new local route exceptions from the D-0206 diagonal candidate.
+
 ## 2026-09-04 - D-0206 Click-Path First Capture Triage
 
 - Myth ran the first D-0205 A/B capture batch. B5 has one double-click/noise row because the first

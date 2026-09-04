@@ -2,6 +2,30 @@
 
 Last updated: 2026-09-04.
 
+## 2026-09-04 Session Close - D-0204 through D-0207 Pathfinding Work
+
+Today's Drew's Helper work finished the connector collision promotion and moved suggested-route
+fidelity from guesswork into measurable click-path replay.
+
+Completed sequence:
+
+1. D-0204 promoted the focused connector fix. Myth's post-restart row proved
+   `3235,3262,0 -> 3236,3262,0` is legal, and C2 committed the reproducible D-0204 runtime map with
+   SHA256 `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`.
+2. D-0205 added click-path instrumentation: `Log Click Pathfinding`, `DREW_CLICK_PATH v1`,
+   `forkCandidates={...}`, `ranking={...}`, and `gradlew analyzeClickPathing`.
+3. D-0206 used Myth's clean focused repeat to reject a collision-map patch for the diagonal
+   candidate and isolate the main failure as legal same-length route ranking: 13 of 22 matched rows
+   were `same-length-ranker-wrong`.
+4. D-0207 added display-only active click-destination mirroring. Overlays now use
+   `displayRouteSnapshot` while base `routeSnapshot` continues to own waypoint ETA, labels,
+   requirements, and route accounting.
+
+Resume point: validate D-0207 live on the logged/dev client at commit `7002143`, using the focused
+one-click D-0206 coordinates. If the live rows improve like replay but exact shape drift remains,
+the next code pass is ranker-policy tuning from `analyzeClickPathing`, not a collision-map edit or
+new local route override.
+
 ## 2026-09-04 D-0207 Active Click-Destination Mirroring Built
 
 D-0207 makes route display follow the client's accepted local click destination before continuing
