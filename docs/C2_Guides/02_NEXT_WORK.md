@@ -2,26 +2,28 @@
 
 Last updated: 2026-09-04.
 
-## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0205 click-path instrumentation)
+## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0206 first capture triage)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Capture short one-click pathfinding rows before tuning the highlighted route. D-0205 added `Settings` -> `Log Click Pathfinding`, upgraded `Log Route Segments` with first-divergence candidate ranks and client/shape shadow solves, and added `gradlew analyzeClickPathing`, which writes `tools/pathfinding-decision-report.txt`.
+**WHAT'S NEXT:** Restart on D-0206 and run the focused repeat batch below before tuning the highlighted route. Myth's first A/B capture produced enough data to prove the tooling works, but it also found a walk-click guard issue and one possible map candidate that needs a repeat.
 
 Runtime `src/main/resources/collision-map.zip` is the promoted D-0204 map with SHA256 `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The previous D-0200 staged map is backed up at `build/collision-map-pre-d0203.zip` with SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the pre-D-0200 promoted-map backup remains at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
 
-Important harness note: old route-segment rows do not have D-0205 `forkCandidates={...}` or `ranking={...}` fields. Fresh rows are required before changing route ranking or active-destination overlay behavior.
+Important harness note: old route-segment rows do not have D-0205 `forkCandidates={...}` or `ranking={...}` fields. D-0206 `analyzeClickPathing` now reports matched-only buckets and refuses to match pre-D-0205 rows to new clicks.
 
 Focused pickup checklist:
 
-1. Restart the Drew's Helper/RuneLite dev client so the new recorder code loads.
-2. Turn `Log Click Pathfinding` ON and `Log Route Segments` ON. Keep `Log Benchmark Movement`, `Log Object/Door State`, `Validate Map Data`, and in-game run OFF for the open-ground batch.
-3. Use one click, then hands off until the character stops or reaches the accepted local destination.
-4. First open-ground batch: from a stable tile, make 10-25 short clicks in multiple directions, including equal diagonal, x-dominant, y-dominant, and one-off diagonal targets.
-5. Second obstacle batch: repeat the same one-click style around the known Falador/tree-line style forks. Turn `Log Object/Door State` ON only for obstacle/object batches.
-6. Send `%USERPROFILE%\.runelite\drews-click-paths.txt` and `%USERPROFILE%\.runelite\drews-route-segments.txt`.
-7. Run `gradlew analyzeClickPathing`, then use `tools/pathfinding-decision-report.txt` to separate `click-destination-off-route`, `collision-map-wrong`, `object-pressure-or-longer-detour`, and `same-length-ranker-wrong` before making route behavior changes.
+1. Restart the Drew's Helper/RuneLite dev client so D-0206 loads.
+2. Clear or rename `%USERPROFILE%\.runelite\drews-click-paths.txt` and `%USERPROFILE%\.runelite\drews-route-segments.txt`.
+3. Turn `Log Click Pathfinding` ON and `Log Route Segments` ON. Keep `Log Benchmark Movement`, `Validate Map Data`, and in-game run OFF.
+4. Keep `Log Object/Door State` OFF for the first three ranker repeats; turn it ON only for the collision-map candidate.
+5. Repeat each of these three times, one click then hands off: `3222,3219,0 -> 3221,3233,0`; `3221,3233,0 -> 3222,3218,0`; `3240,3281,0 -> 3229,3262,0`.
+6. With `Log Object/Door State` ON, repeat `3229,3262,0 -> 3193,3280,0` three times. This checks the candidate live step `3229,3262,0 -> 3228,3263,0`.
+7. Redo B5 once clean if convenient: `3035,3355,0 -> 3007,3355,0`.
+8. Skip B6 for now. Door pathing needs its own door-action batch, not mixed into the ranker pass.
+9. Run `gradlew analyzeClickPathing`, then use `tools/pathfinding-decision-report.txt` to separate `collision-map-wrong`, `object-pressure-or-longer-detour`, and `same-length-ranker-wrong` before changing route behavior.
 
 State through 2026-09-04 D-0205:
 

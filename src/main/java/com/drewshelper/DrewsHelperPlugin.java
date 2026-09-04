@@ -816,8 +816,7 @@ public class DrewsHelperPlugin extends Plugin
 
     private WorldPoint clickedWorldTile(MenuOptionClicked event)
     {
-        MenuAction action = event.getMenuAction();
-        if (action == MenuAction.WALK || isSceneObjectAction(action))
+        if (isSceneObjectAction(event.getMenuAction()))
         {
             return new WorldPoint(
                 client.getBaseX() + event.getParam0(),

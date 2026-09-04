@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-09-04 - D-0206 Walk Click Destination Semantics
+
+- Decision: Do not decode `MenuAction.WALK` `param0/param1` as a world or scene tile in Drew's
+  Helper click-path logs. Keep those values as raw audit fields, write `clickedTile=(null)` for walk
+  clicks, and use the client accepted local destination as the reliable clicked route target.
+- Evidence: Myth's first D-0205 capture showed walk rows with impossible decoded world points while
+  `acceptedDest` matched the intended local destination. The bad decode polluted
+  `acceptedDestinationDiffersFromClickTile`; D-0206 suppresses that false signal and adds
+  matched-only analyzer buckets.
+- Consequence: Future route-ranker tuning uses fresh `DREW_ROUTE_SEGMENT` matched buckets and
+  accepted local destinations, not guessed walk-click world points.
+
 ## D-0001: Drew Uses Shortest Path As The Solver For Now
 
 Date: 2026-08-06

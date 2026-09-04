@@ -1,5 +1,21 @@
 # Changelog Agent Notes
 
+## 2026-09-04 - D-0206 Click-Path First Capture Triage
+
+- Myth ran the first D-0205 A/B capture batch. B5 has one double-click/noise row because the first
+  click landed one tile off, and B6 is not a clean door test because the door-open click cadence was
+  not captured.
+- Ran `gradlew analyzeClickPathing` against the capture. The batch produced 29 click rows, 25
+  accepted destinations, and 25 matched fresh route segments.
+- Fixed the live logger assumption exposed by the batch: `MenuAction.WALK` `param0/param1` are raw
+  menu fields, not reliable scene/world tile coordinates. Walk rows now write `clickedTile=(null)`
+  and use `acceptedDest` as the reliable client-chosen target.
+- Updated `analyzeClickPathing` to report matched-only segment buckets and avoid matching old
+  pre-D-0205 route rows to fresh clicks.
+- Current matched buckets are `same-length-ranker-wrong=7`, `object-pressure-or-longer-detour=9`,
+  `route-shape/other=6`, `match=2`, and one focused `collision-map-wrong` candidate at
+  `3229,3262,0 -> 3228,3263,0` during `3229,3262,0 -> 3193,3280,0`.
+
 ## 2026-08-06
 
 - Built Drew's Helper RuneLite plugin scaffold and local Gradle run path.

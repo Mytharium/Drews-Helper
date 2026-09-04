@@ -2,6 +2,44 @@
 
 Last updated: 2026-09-04.
 
+## 2026-09-04 D-0206 First Click-Path Capture Triage
+
+Myth ran the first D-0205 A/B click-path capture batch. B5 includes a double-click/noise row after
+the first click landed one tile off, and B6 is not a clean door test because it did not include the
+extra door-open clicks. The rest of the batch is usable for route-ranker evidence.
+
+`gradlew analyzeClickPathing` read the current logs and reported 29 click rows, 25 accepted walk
+destinations, and 25 matched fresh route segments. Matched decision buckets are:
+
+```text
+same-length-ranker-wrong=7
+object-pressure-or-longer-detour=9
+other/route-shape-mismatch=6
+match=2
+collision-map-wrong=1
+```
+
+The capture also exposed a D-0205 logger assumption bug: for `MenuAction.WALK`, RuneLite
+`param0/param1` were not reliable scene/world tile coordinates in live rows. They decoded into
+impossible world coordinates while `acceptedDest` was correct. D-0206 keeps walk-click
+`param0/param1` as raw audit fields, writes `clickedTile=(null)` for walk clicks, and treats the
+accepted client local destination as the reliable route target. Scene-object actions may still
+provide a clicked scene tile.
+
+D-0206 also updates `analyzeClickPathing` so matched click/segment buckets are reported separately
+from old historical segment rows. Matching now requires D-0205 segment diagnostics and a sane tick
+window, which prevents old pre-D-0205/pre-D-0204 rows from being matched to the new click batch.
+
+Current evidence is strong enough to plan focused repeats, but not strong enough to change the
+visible route behavior yet. The highest-value next repeat is the possible collision-map candidate
+from the manual travel leg:
+
+```text
+start=(3229,3262,0)
+clickDest=(3193,3280,0)
+client step=(3229,3262,0) -> (3228,3263,0)
+```
+
 ## 2026-09-04 D-0205 Click-Path Instrumentation Built
 
 Myth asked to learn how the OSRS client chooses the walked path after a click so Drew's Helper can
@@ -10,9 +48,9 @@ analysis only; it does not change the visible route solver yet.
 
 Added `Settings` -> `Log Click Pathfinding`, default OFF. When enabled, Drew writes
 `DREW_CLICK_PATH v1` rows to `%USERPROFILE%\.runelite\drews-click-paths.txt`. Rows record the
-walk-relevant menu click when available, the player tile at click time, the clicked scene/object
-tile if RuneLite exposes one, the destination before the click, and the accepted local destination
-seen on the following ticks. Destination changes without a menu event are still logged as
+walk-relevant menu click when available, the player tile at click time, the raw menu parameters,
+the clicked scene/object tile if RuneLite exposes one, the destination before the click, and the
+accepted local destination seen on the following ticks. Destination changes without a menu event are still logged as
 `source=destination-change`, which keeps minimap or other client-side pathing changes visible.
 
 Fresh `DREW_ROUTE_SEGMENT v1` rows now add `forkCandidates={...}` at the first divergence plus a

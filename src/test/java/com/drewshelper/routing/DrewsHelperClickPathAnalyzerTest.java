@@ -13,7 +13,7 @@ public class DrewsHelperClickPathAnalyzerTest
     {
         String click = "DREW_CLICK_PATH v1 tick=2 result=accepted source=walk"
             + " clickTick=1 clickAge=1 action=WALK option=Walk_here target=- id=0 param0=2 param1=0"
-            + " start=(0,0,0) clickedTile=(2,0,0) destBefore=(null)"
+            + " start=(0,0,0) clickedTile=(null) destBefore=(null)"
             + " acceptedDest=(2,0,0) routeTarget=(2,0,0) forkCandidates={none}";
         String segment = "DREW_ROUTE_SEGMENT v1 tick=4 reason=destination completed=true"
             + " start=(0,0,0) clickDest=(2,0,0) routeTarget=(2,0,0)"
@@ -34,8 +34,26 @@ public class DrewsHelperClickPathAnalyzerTest
         assertEquals(1, analysis.segmentRows);
         assertEquals(1, analysis.matchedSegments);
         assertEquals(1, (int) analysis.decisionBuckets.get("same-length-ranker-wrong"));
+        assertEquals(1, (int) analysis.matchedDecisionBuckets.get("same-length-ranker-wrong"));
         assertEquals(1, (int) analysis.actualCandidateRanks.get("2"));
         assertEquals(1, (int) analysis.expectedCandidateRanks.get("1"));
+        assertEquals(1, analysis.matchedExamples.size());
+    }
+
+    @Test
+    public void ignoresWalkMenuParamsWhenCountingDestinationShifts()
+    {
+        String click = "DREW_CLICK_PATH v1 tick=2 result=accepted source=walk"
+            + " start=(0,0,0) clickedTile=(99,99,0) acceptedDest=(2,0,0)";
+        String segment = "DREW_ROUTE_SEGMENT v1 tick=4 reason=destination completed=true"
+            + " start=(0,0,0) clickDest=(2,0,0) routeTarget=(2,0,0)"
+            + " classification=match ranking={actualRank=-1 expectedRank=-1}";
+
+        DrewsHelperClickPathAnalyzer.Analysis analysis =
+            DrewsHelperClickPathAnalyzer.analyse(Collections.singletonList(click), Collections.singletonList(segment));
+
+        assertEquals(1, analysis.matchedSegments);
+        assertEquals(0, analysis.acceptedDestinationDiffersFromClickTile);
     }
 
     @Test

@@ -4,14 +4,30 @@ clicksFile=C:\Users\drews\.runelite\drews-click-paths.txt
 segmentsFile=C:\Users\drews\.runelite\drews-route-segments.txt
 
 CLICK PATH ROWS
-rows=0 results={} sources={}
+rows=29 results={accepted=25 no-destination=4} sources={walk=29}
 
 ROUTE SEGMENT DECISION BUCKETS
-rows=142 completed=102 interrupted=40 matchedClicks=0 unmatchedSegments=142 acceptedDestinationDiffersFromClickTile=0
-classifications={click-destination-off-route=4 client-stopped-after-divergence=1 client-stopped-clean-prefix=1 edge-validation-unavailable=3 expected-start-off-route=3 interrupted-reclick-after-divergence=3 interrupted-reclick-clean-prefix=1 legal-detour-or-object-pressure=23 legal-route-ranker-or-click-shape=23 match=19 route-shape-mismatch=58 static-map-disagrees-with-live-step=3}
-decisionBuckets={click-destination-off-route=3 collision-map-wrong=2 match=17 object-pressure-or-longer-detour=21 other=44 reclick-or-noise=40 same-length-ranker-wrong=15}
-actualCandidateRanks={}
-expectedCandidateRanks={}
+rows=167 completed=127 interrupted=40 matchedClicks=25 unmatchedSegments=142 acceptedDestinationDiffersFromClickTile=0
+classifications={click-destination-off-route=4 client-stopped-after-divergence=1 client-stopped-clean-prefix=1 edge-validation-unavailable=3 expected-start-off-route=3 interrupted-reclick-after-divergence=3 interrupted-reclick-clean-prefix=1 legal-detour-or-object-pressure=32 legal-route-ranker-or-click-shape=30 match=21 route-shape-mismatch=64 static-map-disagrees-with-live-step=4}
+decisionBuckets={click-destination-off-route=3 collision-map-wrong=3 match=19 object-pressure-or-longer-detour=30 other=50 reclick-or-noise=40 same-length-ranker-wrong=22}
+matchedClassifications={legal-detour-or-object-pressure=9 legal-route-ranker-or-click-shape=7 match=2 route-shape-mismatch=6 static-map-disagrees-with-live-step=1}
+matchedDecisionBuckets={collision-map-wrong=1 match=2 object-pressure-or-longer-detour=9 other=6 same-length-ranker-wrong=7}
+actualCandidateRanks={1=3 2=5 3=3 4=1 5=2 6=1 7=1}
+expectedCandidateRanks={1=9 2=3 3=2 4=2 5=1}
+
+MATCHED CLICK EXAMPLES
+matchedExample1=other classification=route-shape-mismatch completed=true start=(3223,3218,0) clickDest=(3232,3228,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+matchedExample2=other classification=route-shape-mismatch completed=true start=(3232,3227,0) clickDest=(3222,3218,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+matchedExample3=same-length-ranker-wrong classification=legal-route-ranker-or-click-shape completed=true start=(3222,3219,0) clickDest=(3221,3233,0) edgeValidation={from=(3222,3224,0) actual=(3223,3225,0) target=(3221,3233,0) legal=true type=diagonal continuation=found continuationDist=8 totalFromFork=9 expectedFromFork=9 delta=0 longer=false expanded=120 repeat=1 overrideCandidate=false} actualRank=5 expectedRank=1
+matchedExample4=same-length-ranker-wrong classification=legal-route-ranker-or-click-shape completed=true start=(3221,3233,0) clickDest=(3222,3218,0) edgeValidation={from=(3221,3229,0) actual=(3220,3228,0) target=(3222,3218,0) legal=true type=diagonal continuation=found continuationDist=10 totalFromFork=11 expectedFromFork=11 delta=0 longer=false expanded=297 repeat=1 overrideCandidate=false} actualRank=5 expectedRank=1
+matchedExample5=object-pressure-or-longer-detour classification=legal-detour-or-object-pressure completed=true start=(3223,3218,0) clickDest=(3236,3224,0) edgeValidation={from=(3230,3218,0) actual=(3231,3218,0) target=(3236,3224,0) legal=true type=cardinal continuation=found continuationDist=6 totalFromFork=7 expectedFromFork=6 delta=1 longer=true expanded=103 repeat=1 overrideCandidate=false} actualRank=2 expectedRank=1
+matchedExample6=object-pressure-or-longer-detour classification=legal-detour-or-object-pressure completed=true start=(3236,3224,0) clickDest=(3222,3218,0) edgeValidation={from=(3236,3224,0) actual=(3236,3223,0) target=(3222,3218,0) legal=true type=cardinal continuation=found continuationDist=14 totalFromFork=15 expectedFromFork=14 delta=1 longer=true expanded=628 repeat=1 overrideCandidate=false} actualRank=2 expectedRank=1
+matchedExample7=object-pressure-or-longer-detour classification=legal-detour-or-object-pressure completed=true start=(3222,3218,0) clickDest=(3228,3233,0) edgeValidation={from=(3229,3218,0) actual=(3230,3218,0) target=(3228,3233,0) legal=true type=cardinal continuation=found continuationDist=15 totalFromFork=16 expectedFromFork=15 delta=1 longer=true expanded=501 repeat=1 overrideCandidate=false} actualRank=6 expectedRank=5
+matchedExample8=other classification=route-shape-mismatch completed=true start=(3229,3233,0) clickDest=(3232,3228,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+matchedExample9=other classification=route-shape-mismatch completed=true start=(3232,3227,0) clickDest=(3222,3218,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+matchedExample10=object-pressure-or-longer-detour classification=legal-detour-or-object-pressure completed=true start=(3222,3218,0) clickDest=(3230,3262,0) edgeValidation={from=(3229,3218,0) actual=(3230,3218,0) target=(3230,3262,0) legal=true type=cardinal continuation=found continuationDist=45 totalFromFork=46 expectedFromFork=45 delta=1 longer=true expanded=5711 repeat=1 overrideCandidate=false} actualRank=2 expectedRank=3
+matchedExample11=object-pressure-or-longer-detour classification=legal-detour-or-object-pressure completed=true start=(3231,3262,0) clickDest=(3240,3282,0) edgeValidation={from=(3235,3262,0) actual=(3236,3262,0) target=(3240,3282,0) legal=true type=cardinal continuation=found continuationDist=24 totalFromFork=25 expectedFromFork=24 delta=1 longer=true expanded=1081 repeat=1 overrideCandidate=false} actualRank=1 expectedRank=2
+matchedExample12=same-length-ranker-wrong classification=legal-route-ranker-or-click-shape completed=true start=(3240,3281,0) clickDest=(3229,3262,0) edgeValidation={from=(3240,3273,0) actual=(3240,3272,0) target=(3229,3262,0) legal=true type=cardinal continuation=found continuationDist=20 totalFromFork=21 expectedFromFork=21 delta=0 longer=false expanded=779 repeat=1 overrideCandidate=false} actualRank=3 expectedRank=1
 
 EXAMPLES
 example1=reclick-or-noise classification=static-map-disagrees-with-live-step completed=false start=(3092,3245,0) clickDest=(3131,3252,0) edgeValidation={from=(3092,3245,0) actual=(3093,3247,0) target=(3131,3252,0) legal=false type=non-adjacent continuation=found continuationDist=38 totalFromFork=39 expectedFromFork=40 delta=-1 longer=false expanded=5069 repeat=1 overrideCandidate=false} actualRank=-1 expectedRank=-1

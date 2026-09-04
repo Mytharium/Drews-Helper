@@ -95,13 +95,19 @@ public final class DrewsHelperClickPathAnalyzer
             else
             {
                 analysis.matchedSegments++;
-                if (click.clickedTile != null && !samePoint(click.clickedTile, segment.clickDest))
+                increment(analysis.matchedSegmentClassifications, segment.classification);
+                increment(analysis.matchedDecisionBuckets, segment.decisionBucket());
+                if (click.hasReliableClickedTile() && !samePoint(click.clickedTile, segment.clickDest))
                 {
                     analysis.acceptedDestinationDiffersFromClickTile++;
-                    analysis.addExample("accepted-differs clickTile="
+                    analysis.addMatchedExample("accepted-differs clickTile="
                         + DrewsHelperRouteBenchmark.formatPoint(click.clickedTile)
                         + " acceptedDest=" + DrewsHelperRouteBenchmark.formatPoint(click.acceptedDest)
                         + " segment=" + segment.compact());
+                }
+                if (!"match".equals(segment.classification))
+                {
+                    analysis.addMatchedExample(segment.decisionBucket() + " " + segment.compact());
                 }
             }
 
@@ -115,16 +121,31 @@ public final class DrewsHelperClickPathAnalyzer
 
     private static ClickEvidence matchingClick(SegmentEvidence segment, List<ClickEvidence> clicks)
     {
+        if (!segment.hasPathfindingDiagnostics)
+        {
+            return null;
+        }
         for (int i = clicks.size() - 1; i >= 0; i--)
         {
             ClickEvidence click = clicks.get(i);
             if (samePoint(click.acceptedDest, segment.clickDest)
-                && samePlaneDistance(click.start, segment.start) <= 2)
+                && samePlaneDistance(click.start, segment.start) <= 2
+                && sameTickWindow(click, segment))
             {
                 return click;
             }
         }
         return null;
+    }
+
+    private static boolean sameTickWindow(ClickEvidence click, SegmentEvidence segment)
+    {
+        if (click.tick < 0 || segment.tick < 0)
+        {
+            return true;
+        }
+        int delta = segment.tick - click.tick;
+        return delta >= 0 && delta <= 400;
     }
 
     private static int parseIntField(String fields, String name)
@@ -196,8 +217,11 @@ public final class DrewsHelperClickPathAnalyzer
         final Map<String, Integer> clickSources = new TreeMap<>();
         final Map<String, Integer> segmentClassifications = new TreeMap<>();
         final Map<String, Integer> decisionBuckets = new TreeMap<>();
+        final Map<String, Integer> matchedSegmentClassifications = new TreeMap<>();
+        final Map<String, Integer> matchedDecisionBuckets = new TreeMap<>();
         final Map<String, Integer> actualCandidateRanks = new TreeMap<>();
         final Map<String, Integer> expectedCandidateRanks = new TreeMap<>();
+        final List<String> matchedExamples = new ArrayList<>();
         final List<String> examples = new ArrayList<>();
         int clickRows;
         int segmentRows;
@@ -212,6 +236,14 @@ public final class DrewsHelperClickPathAnalyzer
             if (examples.size() < EXAMPLE_LIMIT)
             {
                 examples.add(example);
+            }
+        }
+
+        private void addMatchedExample(String example)
+        {
+            if (matchedExamples.size() < EXAMPLE_LIMIT)
+            {
+                matchedExamples.add(example);
             }
         }
 
@@ -240,8 +272,23 @@ public final class DrewsHelperClickPathAnalyzer
                 .append('\n');
             out.append("classifications=").append(formatCounts(segmentClassifications)).append('\n');
             out.append("decisionBuckets=").append(formatCounts(decisionBuckets)).append('\n');
+            out.append("matchedClassifications=").append(formatCounts(matchedSegmentClassifications)).append('\n');
+            out.append("matchedDecisionBuckets=").append(formatCounts(matchedDecisionBuckets)).append('\n');
             out.append("actualCandidateRanks=").append(formatCounts(actualCandidateRanks)).append('\n');
             out.append("expectedCandidateRanks=").append(formatCounts(expectedCandidateRanks)).append('\n');
+            out.append('\n');
+            out.append("MATCHED CLICK EXAMPLES\n");
+            if (matchedExamples.isEmpty())
+            {
+                out.append("matchedExamples=none\n");
+            }
+            else
+            {
+                for (int i = 0; i < matchedExamples.size(); i++)
+                {
+                    out.append("matchedExample").append(i + 1).append('=').append(matchedExamples.get(i)).append('\n');
+                }
+            }
             out.append('\n');
             out.append("EXAMPLES\n");
             if (examples.isEmpty())
@@ -317,6 +364,7 @@ public final class DrewsHelperClickPathAnalyzer
     {
         private final String result;
         private final String source;
+        private final int tick;
         private final WorldPoint start;
         private final WorldPoint clickedTile;
         private final WorldPoint acceptedDest;
@@ -324,6 +372,7 @@ public final class DrewsHelperClickPathAnalyzer
         private ClickEvidence(
             String result,
             String source,
+            int tick,
             WorldPoint start,
             WorldPoint clickedTile,
             WorldPoint acceptedDest
@@ -331,6 +380,7 @@ public final class DrewsHelperClickPathAnalyzer
         {
             this.result = result;
             this.source = source;
+            this.tick = tick;
             this.start = start;
             this.clickedTile = clickedTile;
             this.acceptedDest = acceptedDest;
@@ -346,10 +396,16 @@ public final class DrewsHelperClickPathAnalyzer
             return new ClickEvidence(
                 fields.getOrDefault("result", "-"),
                 fields.getOrDefault("source", "-"),
+                parseIntField(line, "tick"),
                 DrewsHelperRouteValidationHarness.parsePoint(fields.get("start")),
                 DrewsHelperRouteValidationHarness.parsePoint(fields.get("clickedTile")),
                 DrewsHelperRouteValidationHarness.parsePoint(fields.get("acceptedDest"))
             );
+        }
+
+        private boolean hasReliableClickedTile()
+        {
+            return clickedTile != null && !"walk".equals(source);
         }
     }
 
@@ -357,29 +413,35 @@ public final class DrewsHelperClickPathAnalyzer
     {
         private final boolean completed;
         private final String classification;
+        private final int tick;
         private final WorldPoint start;
         private final WorldPoint clickDest;
         private final String edgeValidation;
         private final int rankingActualRank;
         private final int rankingExpectedRank;
+        private final boolean hasPathfindingDiagnostics;
 
         private SegmentEvidence(
             boolean completed,
             String classification,
+            int tick,
             WorldPoint start,
             WorldPoint clickDest,
             String edgeValidation,
             int rankingActualRank,
-            int rankingExpectedRank
+            int rankingExpectedRank,
+            boolean hasPathfindingDiagnostics
         )
         {
             this.completed = completed;
             this.classification = classification;
+            this.tick = tick;
             this.start = start;
             this.clickDest = clickDest;
             this.edgeValidation = edgeValidation;
             this.rankingActualRank = rankingActualRank;
             this.rankingExpectedRank = rankingExpectedRank;
+            this.hasPathfindingDiagnostics = hasPathfindingDiagnostics;
         }
 
         private static SegmentEvidence parse(String line)
@@ -394,11 +456,13 @@ public final class DrewsHelperClickPathAnalyzer
             return new SegmentEvidence(
                 Boolean.parseBoolean(fields.getOrDefault("completed", "false")),
                 fields.getOrDefault("classification", "-"),
+                parseIntField(line, "tick"),
                 DrewsHelperRouteValidationHarness.parsePoint(fields.get("start")),
                 DrewsHelperRouteValidationHarness.parsePoint(fields.get("clickDest")),
                 fields.getOrDefault("edgeValidation", ""),
                 parseIntField(ranking, "actualRank"),
-                parseIntField(ranking, "expectedRank")
+                parseIntField(ranking, "expectedRank"),
+                fields.containsKey("ranking")
             );
         }
 

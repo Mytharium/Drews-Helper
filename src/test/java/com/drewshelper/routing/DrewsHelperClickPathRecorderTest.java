@@ -33,7 +33,7 @@ public class DrewsHelperClickPathRecorderTest
             0,
             2,
             0,
-            point(2, 0),
+            null,
             point(0, 0),
             null,
             1
@@ -49,7 +49,7 @@ public class DrewsHelperClickPathRecorderTest
         assertTrue(line.contains("clickAge=1"));
         assertTrue(line.contains("option=Walk_here"));
         assertTrue(line.contains("start=(0,0,0)"));
-        assertTrue(line.contains("clickedTile=(2,0,0)"));
+        assertTrue(line.contains("clickedTile=(null)"));
         assertTrue(line.contains("destBefore=(null)"));
         assertTrue(line.contains("acceptedDest=(2,0,0)"));
         assertTrue(line.contains("routeTarget=(2,0,0)"));
@@ -97,6 +97,7 @@ public class DrewsHelperClickPathRecorderTest
         assertTrue(lines.get(0).contains("result=no-destination"));
         assertTrue(lines.get(0).contains("source=scene-object"));
         assertTrue(lines.get(0).contains("clickAge=4"));
+        assertTrue(lines.get(0).contains("clickedTile=(1,0,0)"));
         assertTrue(lines.get(0).contains("acceptedDest=(null)"));
     }
 
