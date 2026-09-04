@@ -148,6 +148,16 @@ public class DrewsHelperConfigTest
     public void objectStateRecorderControlDefaultsOffAndSitsBelowRouteSegments() throws Exception
     {
         DrewsHelperConfig config = new DrewsHelperConfig() {};
+        Method clickMethod = DrewsHelperConfig.class.getMethod("clickPathfindingLoggingEnabled");
+        ConfigItem clickItem = clickMethod.getAnnotation(ConfigItem.class);
+
+        assertNotNull(clickItem);
+        assertEquals("clickPathfindingLoggingEnabled", clickItem.keyName());
+        assertEquals("Log Click Pathfinding", clickItem.name());
+        assertEquals("waypointSettings", clickItem.section());
+        assertEquals(13, clickItem.position());
+        assertFalse(config.clickPathfindingLoggingEnabled());
+
         Method method = DrewsHelperConfig.class.getMethod("objectStateRecordingEnabled");
         ConfigItem item = method.getAnnotation(ConfigItem.class);
 
@@ -155,7 +165,7 @@ public class DrewsHelperConfigTest
         assertEquals("objectStateRecordingEnabled", item.keyName());
         assertEquals("Log Object/Door State", item.name());
         assertEquals("waypointSettings", item.section());
-        assertEquals(13, item.position());
+        assertEquals(14, item.position());
         assertFalse(config.objectStateRecordingEnabled());
     }
 

@@ -2,6 +2,7 @@ package com.drewshelper;
 
 import com.google.inject.Provides;
 import com.drewshelper.routing.DrewsHelperCollisionMap;
+import com.drewshelper.routing.DrewsHelperClickPathRecorder;
 import com.drewshelper.routing.DrewsHelperMapValidator;
 import com.drewshelper.routing.DrewsHelperObjectStateRecorder;
 import com.drewshelper.routing.DrewsHelperPlayerCapability;
@@ -246,6 +247,8 @@ public class DrewsHelperPlugin extends Plugin
     private DrewsHelperTraversalRecorder traversalRecorder;
     /** Records clicked walk segments against the route visible at click time. */
     private DrewsHelperRouteSegmentRecorder routeSegmentRecorder;
+    /** Records accepted client walk destinations after walk-relevant clicks. */
+    private DrewsHelperClickPathRecorder clickPathRecorder;
     /** Records stateful scene objects/doors without changing route behaviour. */
     private DrewsHelperObjectStateRecorder objectStateRecorder;
     private int lastStaminaDuration;
@@ -290,6 +293,8 @@ public class DrewsHelperPlugin extends Plugin
             new File(RuneLite.RUNELITE_DIR, "drews-traversals.txt"));
         routeSegmentRecorder = new DrewsHelperRouteSegmentRecorder(
             new File(RuneLite.RUNELITE_DIR, "drews-route-segments.txt"));
+        clickPathRecorder = new DrewsHelperClickPathRecorder(
+            new File(RuneLite.RUNELITE_DIR, "drews-click-paths.txt"));
         objectStateRecorder = new DrewsHelperObjectStateRecorder(
             new File(RuneLite.RUNELITE_DIR, "drews-object-states.txt"));
         // Learned once, then reused - no need to re-measure the stamina unit every session.
@@ -327,6 +332,11 @@ public class DrewsHelperPlugin extends Plugin
             routeSegmentRecorder.reset();
             routeSegmentRecorder = null;
         }
+        if (clickPathRecorder != null)
+        {
+            clickPathRecorder.reset();
+            clickPathRecorder = null;
+        }
         if (objectStateRecorder != null)
         {
             objectStateRecorder.reset();
@@ -357,6 +367,7 @@ public class DrewsHelperPlugin extends Plugin
         // replacement route, so the original journey capture must see this position first.
         updateEtaDebugCapture();
         recordRouteBenchmarkPosition();
+        recordClickPathIfEnabled();
         recordRouteSegmentIfEnabled();
 
         // Runs before the dirty check so arriving at a waypoint takes effect immediately,
@@ -716,6 +727,8 @@ public class DrewsHelperPlugin extends Plugin
     @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event)
     {
+        recordClickPathfindingClick(event);
+
         if (traversalRecorder == null || !config().validateMapData())
         {
             return;
@@ -750,6 +763,68 @@ public class DrewsHelperPlugin extends Plugin
             || action == MenuAction.GAME_OBJECT_THIRD_OPTION
             || action == MenuAction.GAME_OBJECT_FOURTH_OPTION
             || action == MenuAction.GAME_OBJECT_FIFTH_OPTION;
+    }
+
+    private void recordClickPathfindingClick(MenuOptionClicked event)
+    {
+        if (clickPathRecorder == null || !config().clickPathfindingLoggingEnabled())
+        {
+            return;
+        }
+
+        String source = clickPathSource(event);
+        if (source == null)
+        {
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null || localPlayer.getWorldLocation() == null)
+        {
+            return;
+        }
+
+        MenuAction action = event.getMenuAction();
+        clickPathRecorder.recordClick(
+            source,
+            action == null ? "-" : action.name(),
+            event.getMenuOption(),
+            event.getMenuTarget(),
+            event.getId(),
+            event.getParam0(),
+            event.getParam1(),
+            clickedWorldTile(event),
+            localPlayer.getWorldLocation(),
+            currentWalkDestination(),
+            tickCounter
+        );
+    }
+
+    private static String clickPathSource(MenuOptionClicked event)
+    {
+        MenuAction action = event.getMenuAction();
+        if (action == MenuAction.WALK || "Walk here".equalsIgnoreCase(event.getMenuOption()))
+        {
+            return "walk";
+        }
+        if (isSceneObjectAction(action))
+        {
+            return "scene-object";
+        }
+        return null;
+    }
+
+    private WorldPoint clickedWorldTile(MenuOptionClicked event)
+    {
+        MenuAction action = event.getMenuAction();
+        if (action == MenuAction.WALK || isSceneObjectAction(action))
+        {
+            return new WorldPoint(
+                client.getBaseX() + event.getParam0(),
+                client.getBaseY() + event.getParam1(),
+                client.getPlane());
+        }
+        return null;
     }
 
     private void recordTraversalIfSettled()
@@ -810,6 +885,43 @@ public class DrewsHelperPlugin extends Plugin
         if (objectStateRecorder.hasWriteFailed())
         {
             log.warn("Drew's Helper: could not write object/door state proof rows");
+        }
+    }
+
+    private void recordClickPathIfEnabled()
+    {
+        if (clickPathRecorder == null)
+        {
+            return;
+        }
+
+        if (!config().clickPathfindingLoggingEnabled())
+        {
+            clickPathRecorder.reset();
+            return;
+        }
+
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer == null || localPlayer.getWorldLocation() == null)
+        {
+            clickPathRecorder.reset();
+            return;
+        }
+
+        List<String> lines = clickPathRecorder.onTick(
+            localPlayer.getWorldLocation(),
+            currentWalkDestination(),
+            routeSnapshot,
+            routeEngine,
+            tickCounter
+        );
+        for (String line : lines)
+        {
+            log.info("{}", line);
+        }
+        if (clickPathRecorder.hasWriteFailed())
+        {
+            log.warn("Drew's Helper: could not write click pathfinding proof rows");
         }
     }
 

@@ -24,6 +24,7 @@ public final class DrewsHelperRouteSegmentRecorder
     private static final int ROUTE_ANCHOR_TOLERANCE = 2;
     private static final int SETTLE_TICKS = 2;
     private static final int MAX_SEGMENT_EXTRA_TICKS = 25;
+    private static final int MAX_SHADOW_SOLVE_DISTANCE = 160;
     private static final int OBSERVED_EDGE_REPEAT_COUNT = 1;
     private static final int OBSERVED_EDGE_OVERRIDE_THRESHOLD = 2;
 
@@ -274,6 +275,8 @@ public final class DrewsHelperRouteSegmentRecorder
             String routeTrace = "unavailable";
             String divergenceTrace = "unavailable";
             String edgeValidationTrace = "none";
+            String forkCandidateTrace = "none";
+            String rankingTrace = "skipped";
             if (!expectedPath.isEmpty())
             {
                 DrewsHelperRouteBenchmark.Report report =
@@ -285,6 +288,8 @@ public final class DrewsHelperRouteSegmentRecorder
                     completed
                 );
                 edgeValidationTrace = edgeValidationTrace(routeEngine, completed);
+                forkCandidateTrace = forkCandidateTrace(routeEngine, completed);
+                rankingTrace = rankingTrace(routeEngine, completed);
             }
 
             return "DREW_ROUTE_SEGMENT v1"
@@ -302,6 +307,8 @@ public final class DrewsHelperRouteSegmentRecorder
                 + " route={" + routeTrace + "}"
                 + " divergence={" + divergenceTrace + "}"
                 + " edgeValidation={" + edgeValidationTrace + "}"
+                + " forkCandidates={" + forkCandidateTrace + "}"
+                + " ranking={" + rankingTrace + "}"
                 + " expectedPath=" + DrewsHelperRouteBenchmark.formatPath(expectedPath)
                 + " actualPath=" + DrewsHelperRouteBenchmark.formatPath(actualPath);
         }
@@ -338,6 +345,125 @@ public final class DrewsHelperRouteSegmentRecorder
                 OBSERVED_EDGE_REPEAT_COUNT,
                 OBSERVED_EDGE_OVERRIDE_THRESHOLD
             );
+        }
+
+        private String forkCandidateTrace(
+            DrewsHelperWalkingRouteEngine routeEngine,
+            boolean completed
+        )
+        {
+            int divergenceIndex = DrewsHelperRouteBenchmark.firstDivergenceIndex(
+                expectedPath,
+                actualPath,
+                completed
+            );
+            if (divergenceIndex < 1 || routeEngine == null)
+            {
+                return "none";
+            }
+
+            WorldPoint from = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex - 1);
+            WorldPoint expected = DrewsHelperRouteBenchmark.pointAt(expectedPath, divergenceIndex);
+            WorldPoint actual = DrewsHelperRouteBenchmark.pointAt(actualPath, divergenceIndex);
+            WorldPoint target = expectedPath.get(expectedPath.size() - 1);
+            return DrewsHelperRouteDiagnostics.formatCandidates(
+                routeEngine.moveCandidates(from, target),
+                expected,
+                actual
+            );
+        }
+
+        private String rankingTrace(
+            DrewsHelperWalkingRouteEngine routeEngine,
+            boolean completed
+        )
+        {
+            if (!completed || routeEngine == null)
+            {
+                return "skipped";
+            }
+            if (DrewsHelperRouteBenchmark.pathDistance(actualPath) > MAX_SHADOW_SOLVE_DISTANCE)
+            {
+                return "skipped=segment-too-long";
+            }
+
+            int divergenceIndex = DrewsHelperRouteBenchmark.firstDivergenceIndex(
+                expectedPath,
+                actualPath,
+                true
+            );
+            int expectedRank = candidateRank(routeEngine, divergenceIndex, expectedPath);
+            int actualRank = candidateRank(routeEngine, divergenceIndex, actualPath);
+            ShadowFit client = shadowFit("client", routeEngine, ShadowMode.CLIENT);
+            ShadowFit clientRaw = shadowFit("clientRaw", routeEngine, ShadowMode.CLIENT_RAW);
+            ShadowFit shapeRaw = shadowFit("shapeRaw", routeEngine, ShadowMode.SHAPE_RAW);
+            return "actualRank=" + actualRank
+                + " expectedRank=" + expectedRank
+                + " clientWon=" + client.isWinner()
+                + " clientRawWon=" + clientRaw.isWinner()
+                + " shapeRawWon=" + shapeRaw.isWinner()
+                + " " + client.format()
+                + " " + clientRaw.format()
+                + " " + shapeRaw.format();
+        }
+
+        private ShadowFit shadowFit(
+            String name,
+            DrewsHelperWalkingRouteEngine routeEngine,
+            ShadowMode mode
+        )
+        {
+            try
+            {
+                DrewsHelperRouteSnapshot snapshot;
+                if (mode == ShadowMode.CLIENT)
+                {
+                    snapshot = routeEngine.solve(start, Collections.singletonList(clickDestination));
+                }
+                else if (mode == ShadowMode.CLIENT_RAW)
+                {
+                    snapshot = routeEngine.solveWithoutLocalWalkingOverrides(
+                        start,
+                        Collections.singletonList(clickDestination)
+                    );
+                }
+                else
+                {
+                    snapshot = routeEngine.solveWithShapeRankingWithoutLocalWalkingOverrides(
+                        start,
+                        Collections.singletonList(clickDestination)
+                    );
+                }
+                return ShadowFit.fromSnapshot(name, snapshot, actualPath);
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.currentThread().interrupt();
+                return ShadowFit.error(name, "interrupted");
+            }
+        }
+
+        private int candidateRank(
+            DrewsHelperWalkingRouteEngine routeEngine,
+            int divergenceIndex,
+            List<WorldPoint> path
+        )
+        {
+            if (divergenceIndex < 1 || divergenceIndex >= path.size())
+            {
+                return -1;
+            }
+            WorldPoint from = path.get(divergenceIndex - 1);
+            WorldPoint next = path.get(divergenceIndex);
+            WorldPoint target = expectedPath.get(expectedPath.size() - 1);
+            for (DrewsHelperWalkingRouteEngine.MoveCandidate candidate : routeEngine.moveCandidates(from, target))
+            {
+                if (next.equals(candidate.getDestination()))
+                {
+                    return candidate.getOrder();
+                }
+            }
+            return -1;
         }
 
         private String classification(
@@ -438,6 +564,85 @@ public final class DrewsHelperRouteSegmentRecorder
             }
             return Collections.unmodifiableList(new ArrayList<>(
                 routePath.subList(startAnchor.getIndex(), destinationAnchor.getIndex() + 1)));
+        }
+    }
+
+    private enum ShadowMode
+    {
+        CLIENT,
+        CLIENT_RAW,
+        SHAPE_RAW
+    }
+
+    private static final class ShadowFit
+    {
+        private final String name;
+        private final String status;
+        private final List<WorldPoint> path;
+        private final boolean winner;
+        private final String fit;
+
+        private ShadowFit(String name, String status, List<WorldPoint> path, boolean winner, String fit)
+        {
+            this.name = name;
+            this.status = status;
+            this.path = path == null ? Collections.emptyList() : path;
+            this.winner = winner;
+            this.fit = fit == null ? "-" : fit;
+        }
+
+        private static ShadowFit fromSnapshot(
+            String name,
+            DrewsHelperRouteSnapshot snapshot,
+            List<WorldPoint> actualPath
+        )
+        {
+            if (snapshot == null)
+            {
+                return error(name, "no-snapshot");
+            }
+            if (snapshot.getStatus() != DrewsHelperRouteStatus.READY || !snapshot.hasPath())
+            {
+                return error(name, snapshot.getStatus().name().toLowerCase());
+            }
+            DrewsHelperRouteBenchmark.Report report =
+                DrewsHelperRouteBenchmark.compare(snapshot.getPath(), actualPath);
+            return new ShadowFit(
+                name,
+                "ready",
+                snapshot.getPath(),
+                report.isFullTileSequenceMatches(),
+                compactSummary(report)
+            );
+        }
+
+        private static ShadowFit error(String name, String status)
+        {
+            return new ShadowFit(name, status, Collections.emptyList(), false, "-");
+        }
+
+        private boolean isWinner()
+        {
+            return winner;
+        }
+
+        private String format()
+        {
+            if (!"ready".equals(status))
+            {
+                return name + "=status:" + status;
+            }
+            return name
+                + "=fit:" + fit
+                + ":points:" + path.size()
+                + ":distance:" + DrewsHelperRouteBenchmark.pathDistance(path)
+                + ":turns:" + DrewsHelperRouteBenchmark.turnCount(path)
+                + ":path:" + DrewsHelperRouteBenchmark.formatPathPrefix(path, 8);
+        }
+
+        private static String compactSummary(DrewsHelperRouteBenchmark.Report report)
+        {
+            return report.summary().replace(' ', ',');
         }
     }
 

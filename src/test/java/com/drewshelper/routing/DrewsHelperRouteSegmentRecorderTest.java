@@ -139,6 +139,30 @@ public class DrewsHelperRouteSegmentRecorderTest
         assertTrue(Files.readAllLines(output.toPath(), StandardCharsets.UTF_8).isEmpty());
     }
 
+    @Test
+    public void divergentCompletedSegmentIncludesForkCandidatesAndRanking() throws Exception
+    {
+        File output = temporaryFolder.newFile();
+        DrewsHelperRouteSegmentRecorder recorder = new DrewsHelperRouteSegmentRecorder(output);
+        DrewsHelperRouteSnapshot snapshot = route(point(0, 0), point(1, 0), point(2, 0));
+        DrewsHelperWalkingRouteEngine engine = new DrewsHelperWalkingRouteEngine(new OpenMovementMap());
+
+        assertTrue(recorder.onTick(point(0, 0), point(2, 0), snapshot, engine, 1).isEmpty());
+        assertTrue(recorder.onTick(point(0, 1), point(2, 0), snapshot, engine, 2).isEmpty());
+        assertTrue(recorder.onTick(point(1, 1), point(2, 0), snapshot, engine, 3).isEmpty());
+        List<String> lines = recorder.onTick(point(2, 0), point(2, 0), snapshot, engine, 4);
+
+        assertEquals(1, lines.size());
+        assertTrue(lines.get(0).contains("classification=legal-"));
+        assertTrue(lines.get(0).contains("forkCandidates={"));
+        assertTrue(lines.get(0).contains(":expected=true"));
+        assertTrue(lines.get(0).contains(":actual=true"));
+        assertTrue(lines.get(0).contains("ranking={actualRank="));
+        assertTrue(lines.get(0).contains("expectedRank="));
+        assertTrue(lines.get(0).contains("clientWon="));
+        assertTrue(lines.get(0).contains("shapeRawWon="));
+    }
+
     private static DrewsHelperRouteSnapshot route(WorldPoint... path)
     {
         List<WorldPoint> points = Arrays.asList(path);
@@ -152,5 +176,56 @@ public class DrewsHelperRouteSegmentRecorderTest
     private static WorldPoint point(int x, int y)
     {
         return new WorldPoint(x, y, 0);
+    }
+
+    private static final class OpenMovementMap implements DrewsHelperMovementMap
+    {
+        @Override
+        public boolean canMoveNorth(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveSouth(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveEast(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveWest(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveNorthEast(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveNorthWest(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveSouthEast(int x, int y, int plane)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean canMoveSouthWest(int x, int y, int plane)
+        {
+            return true;
+        }
     }
 }

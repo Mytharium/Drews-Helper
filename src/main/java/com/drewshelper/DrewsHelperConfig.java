@@ -307,7 +307,13 @@ public interface DrewsHelperConfig extends Config
         return false;
     }
 
-    @ConfigItem(keyName = "objectStateRecordingEnabled", name = "Log Object/Door State", description = "Log live object and door state evidence from the loaded scene. Off by default - enable only when collecting map/state proof.", section = waypointSettings, position = 13)
+    @ConfigItem(keyName = "clickPathfindingLoggingEnabled", name = "Log Click Pathfinding", description = "Log each accepted walk click and the client destination it creates. Off by default - enable only while collecting click-pathing evidence.", section = waypointSettings, position = 13)
+    default boolean clickPathfindingLoggingEnabled()
+    {
+        return false;
+    }
+
+    @ConfigItem(keyName = "objectStateRecordingEnabled", name = "Log Object/Door State", description = "Log live object and door state evidence from the loaded scene. Off by default - enable only when collecting map/state proof.", section = waypointSettings, position = 14)
     default boolean objectStateRecordingEnabled()
     {
         return false;

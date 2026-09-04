@@ -2874,3 +2874,22 @@ D-0204 (2026-09-04) - Promoted object-profile keys belong in the default builder
   `34803/10`, and `34804/10` after the target-route and connector gates. Unnamed/stateful
   `19143/10` and `19131/10` remain excluded because the cache-backed builder still cannot prove a
   non-zero object-profile effect for them.
+
+D-0205 (2026-09-04) - Click-path/ranker changes require fresh one-click evidence.
+
+  RULE 1 - CAPTURE ACCEPTED CLIENT DESTINATIONS BEFORE CHANGING RANKING. The route display must not
+  be tuned from screenshots or whole-route drift alone. Use `Log Click Pathfinding` plus `Log Route
+  Segments` so each row contains the click-time player tile, accepted local destination, walked path,
+  first divergence, legal candidates, and shadow-ranker results.
+
+  RULE 2 - ACTIVE DESTINATION MIRRORING IS A FUTURE BEHAVIOR CHANGE, NOT PART OF THE RECORDER.
+  D-0205 only records and reports. Do not make the overlay route follow `client.getLocalDestinationLocation()`
+  until fresh rows prove which click-destination and same-length ranking policy should win.
+
+  RULE 3 - ONE-CLICK ROWS BEAT LONG-WALK GENERALIZATION. For ranker work, prefer short one-click,
+  hands-off samples over multi-click routes. Long route rows remain useful triage, but they mix
+  player reclick cadence, object pressure, clicked visible-tile choice, and solver tie-breaks.
+
+  RULE 4 - ROUTE EXCEPTIONS STAY LAST RESORT. A local override is allowed only after the analyzer
+  and fresh rows show that a general click-destination/ranker model cannot explain the repeated
+  client path. Do not add new local windows as the first answer to legal same-length misses.

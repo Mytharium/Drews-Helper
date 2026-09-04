@@ -14,9 +14,9 @@ rows=142 completed=102 interrupted=40 matches=19 divergent=123 illegalObservedEd
 classificationCounts={click-destination-off-route=4 client-stopped-after-divergence=1 client-stopped-clean-prefix=1 edge-validation-unavailable=3 expected-start-off-route=3 interrupted-reclick-after-divergence=3 interrupted-reclick-clean-prefix=1 legal-detour-or-object-pressure=23 legal-route-ranker-or-click-shape=23 match=19 route-shape-mismatch=58 static-map-disagrees-with-live-step=3}
 
 OBJECT AND DOOR STATE EVIDENCE
-rows=15604 categories={door=1239 object=2850 object-profile=8437 sailing=128 stateful=1887 traversal=1063}
-states={CLOSED_OPENABLE=1441 IMPOSTOR_STATE=1243 INTERACTIVE=2921 OPEN_CLOSEABLE=156 PASSIVE_OBJECT_PROFILE=8499 SAILING_ACCESS=128 STATEFUL_ACTION=140 TRAVERSAL_ACTION=1076}
-mapConfidence={CONTRADICTED=1166 INFERRED=14438}
+rows=15746 categories={door=1262 object=2851 object-profile=8516 sailing=128 stateful=1924 traversal=1065}
+states={CLOSED_OPENABLE=1462 IMPOSTOR_STATE=1279 INTERACTIVE=2924 OPEN_CLOSEABLE=157 PASSIVE_OBJECT_PROFILE=8578 SAILING_ACCESS=128 STATEFUL_ACTION=140 TRAVERSAL_ACTION=1078}
+mapConfidence={CONTRADICTED=1308 INFERRED=14438}
 
 CORRELATED ROUTE/OBJECT EXAMPLES
 example1=classification=static-map-disagrees-with-live-step start=(3092,3245,0) clickDest=(3131,3252,0) routeTarget=(3222,3218,0) divergenceIdx=1 predicted=(3093,3246,0) actual=(3093,3247,0) nearbyObjects=none

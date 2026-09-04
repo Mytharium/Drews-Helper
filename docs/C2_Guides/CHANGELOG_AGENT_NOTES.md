@@ -2638,3 +2638,26 @@ D-0204 (2026-09-04) - Promoted the connector edge fix after post-restart proof.
   `gradlew validateRoutes --args=--skip-offline` still reports historical illegal counts because it
   reads old pre-D-0203 `edgeValidation={...}` strings from the cumulative route log. The current
   proof row is post-restart and clean, so the connector promotion gate is closed.
+
+D-0205 (2026-09-04) - Built click-path instrumentation for route-ranker tuning.
+
+  Myth asked to find out how the OSRS client decides where the character walks after a click, then
+  make Drew's highlighted route mirror that. This change is the recorder/reporting pass only; it
+  does not change route selection yet.
+
+  Added `Settings` -> `Log Click Pathfinding`, default OFF. When enabled, Drew records
+  `DREW_CLICK_PATH v1` rows to `%USERPROFILE%\.runelite\drews-click-paths.txt`, including
+  walk-relevant menu click fields, the clicked scene/object tile when RuneLite exposes one, the
+  destination before the click, and the accepted local destination seen on following ticks. Client
+  destination changes with no matching menu event are still logged as `source=destination-change`.
+
+  Upgraded `DREW_ROUTE_SEGMENT v1` rows with first-divergence `forkCandidates={...}` and
+  `ranking={...}` diagnostics. The ranking block records actual/expected candidate ranks and
+  compares the walked segment against current client mode, client mode without local walking
+  overrides, and shape mode without local walking overrides.
+
+  Added `gradlew analyzeClickPathing`, which writes `tools/pathfinding-decision-report.txt`. The
+  report groups current evidence into click-destination misses, collision-map disagreements,
+  object/longer-detour pressure, same-length ranker misses, reclick/noise, and exact matches. Old
+  route-segment rows still parse but do not contain candidate/ranking fields; fresh one-click rows
+  are required before tuning the ranker or active-destination overlay.

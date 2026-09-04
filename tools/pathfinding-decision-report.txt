@@ -1,0 +1,31 @@
+DREW_CLICK_PATH_ANALYSIS v1
+output=C:\Users\drews\OneDrive\Documents\My Games\RuneScape\Drews Helper\tools\pathfinding-decision-report.txt
+clicksFile=C:\Users\drews\.runelite\drews-click-paths.txt
+segmentsFile=C:\Users\drews\.runelite\drews-route-segments.txt
+
+CLICK PATH ROWS
+rows=0 results={} sources={}
+
+ROUTE SEGMENT DECISION BUCKETS
+rows=142 completed=102 interrupted=40 matchedClicks=0 unmatchedSegments=142 acceptedDestinationDiffersFromClickTile=0
+classifications={click-destination-off-route=4 client-stopped-after-divergence=1 client-stopped-clean-prefix=1 edge-validation-unavailable=3 expected-start-off-route=3 interrupted-reclick-after-divergence=3 interrupted-reclick-clean-prefix=1 legal-detour-or-object-pressure=23 legal-route-ranker-or-click-shape=23 match=19 route-shape-mismatch=58 static-map-disagrees-with-live-step=3}
+decisionBuckets={click-destination-off-route=3 collision-map-wrong=2 match=17 object-pressure-or-longer-detour=21 other=44 reclick-or-noise=40 same-length-ranker-wrong=15}
+actualCandidateRanks={}
+expectedCandidateRanks={}
+
+EXAMPLES
+example1=reclick-or-noise classification=static-map-disagrees-with-live-step completed=false start=(3092,3245,0) clickDest=(3131,3252,0) edgeValidation={from=(3092,3245,0) actual=(3093,3247,0) target=(3131,3252,0) legal=false type=non-adjacent continuation=found continuationDist=38 totalFromFork=39 expectedFromFork=40 delta=-1 longer=false expanded=5069 repeat=1 overrideCandidate=false} actualRank=-1 expectedRank=-1
+example2=reclick-or-noise classification=expected-start-off-route completed=false start=(3120,3253,0) clickDest=(3144,3251,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+example3=reclick-or-noise classification=edge-validation-unavailable completed=false start=(3131,3252,0) clickDest=(3151,3251,0) edgeValidation={status=unavailable reason=missing-point repeat=1 overrideCandidate=false} actualRank=-1 expectedRank=-1
+example4=reclick-or-noise classification=legal-route-ranker-or-click-shape completed=false start=(3142,3251,0) clickDest=(3160,3244,0) edgeValidation={from=(3143,3251,0) actual=(3144,3250,0) target=(3160,3244,0) legal=true type=diagonal continuation=found continuationDist=16 totalFromFork=17 expectedFromFork=17 delta=0 longer=false expanded=1165 repeat=1 overrideCandidate=false} actualRank=-1 expectedRank=-1
+example5=reclick-or-noise classification=route-shape-mismatch completed=false start=(3156,3249,0) clickDest=(3191,3225,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+example6=reclick-or-noise classification=route-shape-mismatch completed=false start=(3191,3224,0) clickDest=(3198,3218,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+example7=reclick-or-noise classification=route-shape-mismatch completed=false start=(3195,3223,0) clickDest=(3203,3216,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+example8=reclick-or-noise classification=route-shape-mismatch completed=false start=(3197,3220,0) clickDest=(3204,3214,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+example9=reclick-or-noise classification=legal-route-ranker-or-click-shape completed=false start=(3201,3218,0) clickDest=(3207,3217,0) edgeValidation={from=(3202,3217,0) actual=(3202,3216,0) target=(3207,3217,0) legal=true type=cardinal continuation=found continuationDist=7 totalFromFork=8 expectedFromFork=8 delta=0 longer=false expanded=164 repeat=1 overrideCandidate=false} actualRank=-1 expectedRank=-1
+example10=reclick-or-noise classification=route-shape-mismatch completed=false start=(3207,3219,0) clickDest=(3212,3221,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+example11=reclick-or-noise classification=legal-route-ranker-or-click-shape completed=false start=(3092,3246,0) clickDest=(3083,3282,0) edgeValidation={from=(3092,3247,0) actual=(3091,3247,0) target=(3083,3282,0) legal=true type=cardinal continuation=found continuationDist=37 totalFromFork=38 expectedFromFork=38 delta=0 longer=false expanded=5361 repeat=1 overrideCandidate=false} actualRank=-1 expectedRank=-1
+example12=reclick-or-noise classification=route-shape-mismatch completed=false start=(3088,3248,0) clickDest=(3082,3255,0) edgeValidation={none} actualRank=-1 expectedRank=-1
+
+ANALYZER DECISION
+This report is evidence-only. Use click/segment matches to separate raw click destination shifts from collision-map errors, object pressure, and same-length route-ranking misses before changing the visible route model.

@@ -133,6 +133,13 @@ tasks.register('validateRoutes', JavaExec) {
     mainClass = 'com.drewshelper.routing.DrewsHelperRouteValidationHarness'
 }
 
+tasks.register('analyzeClickPathing', JavaExec) {
+    group = 'drewshelper'
+    description = 'Summarize click-path and route-segment evidence for route-ranker tuning.'
+    classpath = sourceSets.cachetools.runtimeClasspath
+    mainClass = 'com.drewshelper.routing.DrewsHelperClickPathAnalyzer'
+}
+
 tasks.register('pilotRegionCleanup', JavaExec) {
     group = 'drewshelper'
     description = 'Summarize current evidence for the recorder-first pilot region cleanup gate.'

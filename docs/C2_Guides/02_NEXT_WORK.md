@@ -2,26 +2,28 @@
 
 Last updated: 2026-09-04.
 
-## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0204 collision-map promotion)
+## CURRENT HANDOFF - START HERE (updated 2026-09-04 after D-0205 click-path instrumentation)
 
 This is the only active start-here block. Older handoffs below are retained for evidence and
 design context; use them only when this section points back to a parked item.
 
-**WHAT'S NEXT:** Start Varlamore Slice 1 capture prep. D-0204 final-promoted the no-cost object-profile map plus the exact connector edge fix. Myth restarted Drew's Helper/RuneLite, recaptured the connector, and the newest connector row for `3235,3262,0 -> 3236,3262,0` reported `legal=true` with `classification=legal-detour-or-object-pressure`; C2 then hardcoded the validated paid/held-back keys into the default builder allowlist and rebuilt the promoted runtime map from that code path.
+**WHAT'S NEXT:** Capture short one-click pathfinding rows before tuning the highlighted route. D-0205 added `Settings` -> `Log Click Pathfinding`, upgraded `Log Route Segments` with first-divergence candidate ranks and client/shape shadow solves, and added `gradlew analyzeClickPathing`, which writes `tools/pathfinding-decision-report.txt`.
 
 Runtime `src/main/resources/collision-map.zip` is the promoted D-0204 map with SHA256 `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`. The previous D-0200 staged map is backed up at `build/collision-map-pre-d0203.zip` with SHA256 `4C6541D05886C0BE61546716D35DFBA223B0CEF804F222333DA6A90651FEEF4F`; the pre-D-0200 promoted-map backup remains at `build/collision-map-pre-d0200.zip` with SHA256 `8BE900A1FFD4A6F19E5C47FCEF8F3D13FE4BB24C47272A35E7EC8B965BCD27C3`.
 
-Important harness note: `gradlew validateRoutes --args=--skip-offline` reads the `edgeValidation={...}` strings already written into `%USERPROFILE%\.runelite\drews-route-segments.txt`. Historical rows recorded before the D-0203 map swap still report the old illegal edge; the post-restart row is the current proof row for the connector and is clean.
+Important harness note: old route-segment rows do not have D-0205 `forkCandidates={...}` or `ranking={...}` fields. Fresh rows are required before changing route ranking or active-destination overlay behavior.
 
 Focused pickup checklist:
 
-1. Treat runtime `src/main/resources/collision-map.zip` hash
-   `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6` as the promoted baseline.
-2. Build the Varlamore Slice 1 capture list before opening the roughly 74 safe-blocked regions.
-3. Use target-only route walks and existing `Log Route Segments` / `Log Object/Door State` evidence.
-4. Do not add active collision rows, object-profile keys, or transport rows for Varlamore until the live proof identifies the exact blocker class.
+1. Restart the Drew's Helper/RuneLite dev client so the new recorder code loads.
+2. Turn `Log Click Pathfinding` ON and `Log Route Segments` ON. Keep `Log Benchmark Movement`, `Log Object/Door State`, `Validate Map Data`, and in-game run OFF for the open-ground batch.
+3. Use one click, then hands off until the character stops or reaches the accepted local destination.
+4. First open-ground batch: from a stable tile, make 10-25 short clicks in multiple directions, including equal diagonal, x-dominant, y-dominant, and one-off diagonal targets.
+5. Second obstacle batch: repeat the same one-click style around the known Falador/tree-line style forks. Turn `Log Object/Door State` ON only for obstacle/object batches.
+6. Send `%USERPROFILE%\.runelite\drews-click-paths.txt` and `%USERPROFILE%\.runelite\drews-route-segments.txt`.
+7. Run `gradlew analyzeClickPathing`, then use `tools/pathfinding-decision-report.txt` to separate `click-destination-off-route`, `collision-map-wrong`, `object-pressure-or-longer-detour`, and `same-length-ranker-wrong` before making route behavior changes.
 
-State through 2026-09-04 D-0204:
+State through 2026-09-04 D-0205:
 
 1. Falador route-window work is live-verified for primary, reverse, and east-pressure pins.
 2. Batch A proved the issue is broader than Falador and moved diagnosis to segment evidence.
@@ -94,6 +96,11 @@ State through 2026-09-04 D-0204:
    promoted map is reproducible from the default code path, rebuilt runtime to SHA256
    `55036429678B422AEE77F4982DF0E849CF94183A3A8AE58BAE06AD254F963EB6`, and kept the connector
    edge pinned by shipped-map east/west assertions.
+21. D-0205 added click-path instrumentation for route-ranker work. `Log Click Pathfinding` writes
+   `DREW_CLICK_PATH v1` rows to `%USERPROFILE%\.runelite\drews-click-paths.txt`; fresh route-segment
+   rows now include `forkCandidates={...}` and `ranking={...}`; `gradlew analyzeClickPathing` writes
+   `tools/pathfinding-decision-report.txt`. This is evidence-only and does not change route
+   selection yet.
 
 Completed P1/P2 proof batch notes (old coordinates were object footprints, not standable anchors):
 

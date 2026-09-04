@@ -2,6 +2,31 @@
 
 Last updated: 2026-09-04.
 
+## 2026-09-04 D-0205 Click-Path Instrumentation Built
+
+Myth asked to learn how the OSRS client chooses the walked path after a click so Drew's Helper can
+make the highlighted route mirror the character's actual local path. D-0205 is instrumentation and
+analysis only; it does not change the visible route solver yet.
+
+Added `Settings` -> `Log Click Pathfinding`, default OFF. When enabled, Drew writes
+`DREW_CLICK_PATH v1` rows to `%USERPROFILE%\.runelite\drews-click-paths.txt`. Rows record the
+walk-relevant menu click when available, the player tile at click time, the clicked scene/object
+tile if RuneLite exposes one, the destination before the click, and the accepted local destination
+seen on the following ticks. Destination changes without a menu event are still logged as
+`source=destination-change`, which keeps minimap or other client-side pathing changes visible.
+
+Fresh `DREW_ROUTE_SEGMENT v1` rows now add `forkCandidates={...}` at the first divergence plus a
+`ranking={...}` block. The ranking block records the actual and expected first-divergence candidate
+ranks and shadow solves for current client mode, client mode without local walking overrides, and
+shape mode without local walking overrides. That lets the next pass separate same-length ranker
+misses from object pressure and collision-map errors.
+
+Added `gradlew analyzeClickPathing`, which writes `tools/pathfinding-decision-report.txt`. The
+report is evidence-only. It groups rows into `click-destination-off-route`, `collision-map-wrong`,
+`object-pressure-or-longer-detour`, `same-length-ranker-wrong`, `reclick-or-noise`, and `match`.
+Old route-segment rows still parse, but they have no D-0205 ranking fields, so fresh one-click rows
+are required before route behavior is changed.
+
 ## 2026-09-04 D-0204 Connector Fix Promoted
 
 Myth restarted Drew's Helper/RuneLite after the D-0203 map swap and recaptured the connector toward

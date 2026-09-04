@@ -814,7 +814,7 @@ public final class DrewsHelperRouteValidationHarness
         counts.merge(key == null || key.isEmpty() ? "-" : key, 1, Integer::sum);
     }
 
-    private static WorldPoint parsePoint(String value)
+    static WorldPoint parsePoint(String value)
     {
         if (value == null)
         {
